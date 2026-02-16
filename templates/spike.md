@@ -28,3 +28,13 @@ Recommended decision and rationale.
 # Next Steps
 
 Implementation or follow-up experiments.
+
+## Inputs
+- User reports:
+- Support notes:
+- Developer notes:
+- Logs:
+- Screenshots:
+
+## Attached Evidence
+(auto populated by `eaw ingest`)

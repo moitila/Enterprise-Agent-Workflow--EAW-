@@ -38,3 +38,13 @@ Open questions for stakeholders.
 # Evidence
 
 References to context files in `context/`.
+
+## Inputs
+- User reports:
+- Support notes:
+- Developer notes:
+- Logs:
+- Screenshots:
+
+## Attached Evidence
+(auto populated by `eaw ingest`)

@@ -105,3 +105,35 @@ bash governance/scripts/install-hooks.sh
 If a hook already exists, run the installer with `--force` to overwrite.
 
 Why this matters: making risk and scope explicit at commit time enables deterministic CI gating, review triage, and stronger audit trails required by enterprise governance.
+
+## AI Integration Mode (EAW Mode D)
+
+EAW Mode D provides a deterministic path to integrate an external AI/assistant into the engineering workflow by generating a complete, structured prompt, ingesting evidence, and producing a test plan and action plan in a reproducible output folder.
+
+Workflow (example):
+
+1. Create a card: `./scripts/eaw feature 12345 "Short title"`
+2. Fill the dossier following the template sections.
+3. Ingest evidence (logs, screenshots, traces):
+
+```bash
+./scripts/eaw ingest 12345 path/to/smoke-log.txt
+```
+
+4. Generate the AI prompt and analysis artifacts:
+
+```bash
+./scripts/eaw analyze 12345
+```
+
+This produces deterministic files under `out/12345/`:
+
+- `feature_12345.md` — original dossier
+- `AI_PROMPT_12345.md` — complete prompt to feed to an assistant
+- `TEST_PLAN_12345.md` — deterministic test plan produced by the analysis
+- `context/` — repository context captured earlier
+- `inputs/` — ingested evidence files
+
+5. Copy `AI_PROMPT_12345.md` to your chosen agent, run the analysis, and capture outputs back into `out/12345/dev/` as needed (manual step). The generated artifacts are deterministic and versionable.
+
+Why Mode D: it standardizes how AI is given context and how outputs are captured for traceability, making AI-assisted changes auditable and safe for enterprise environments.
