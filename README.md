@@ -59,3 +59,30 @@ This repository contains no proprietary code or internal names. It is intentiona
 ## PT-BR
 
 EAW é um fluxo de trabalho leve para gerar dossiês determinísticos (features, spikes, bugs). Use `./scripts/eaw init` e depois `./scripts/eaw feature|spike|bug`.
+
+## Commit Governance (ECS)
+
+This repository uses the EAW Commit Standard (ECS) to ensure commits are traceable and auditable. ECS is compatible with Conventional Commits and requires a small metadata block in the commit body.
+
+To install the repository hook locally (Ubuntu / Linux / WSL):
+
+```bash
+chmod +x scripts/install-hooks.sh
+bash scripts/install-hooks.sh
+```
+
+After installing, commits will be validated. Example of a valid commit message:
+
+```
+feat(feature): introduce EAW Commit Standard (ECS)
+
+[Risk-Level]: low
+[Impact-Scope]: module
+[Phase]: implementation
+[EAW-ID]: 000000
+
+Decision:
+- Add commit governance model
+```
+
+Why ECS matters: it makes risk explicit at commit time, enables deterministic automation and improves auditability for enterprise workflows.
