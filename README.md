@@ -86,3 +86,22 @@ Decision:
 ```
 
 Why ECS matters: it makes risk explicit at commit time, enables deterministic automation and improves auditability for enterprise workflows.
+
+## Governance Layer
+
+The repository includes a dedicated Governance Layer (`/governance`) that codifies the EAW Commit Standard (ECS) and provides git hooks and installation scripts to enforce it locally.
+
+- `governance/commit-standard.md` — formal specification of ECS
+- `governance/hooks/commit-msg` — commit-msg hook that validates ECS metadata
+- `governance/scripts/install-hooks.sh` — installer for the governance hooks
+
+Install the governance hooks (Ubuntu / Linux / WSL):
+
+```bash
+chmod +x governance/scripts/install-hooks.sh
+bash governance/scripts/install-hooks.sh
+```
+
+If a hook already exists, run the installer with `--force` to overwrite.
+
+Why this matters: making risk and scope explicit at commit time enables deterministic CI gating, review triage, and stronger audit trails required by enterprise governance.

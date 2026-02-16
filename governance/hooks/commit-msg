@@ -1,0 +1,71 @@
+#!/usr/bin/env bash
+# governance/hooks/commit-msg
+# Enforce EAW Commit Standard (ECS)
+# Validates header and required metadata fields.
+set -euo pipefail
+
+# Commit message file is passed as first arg by git
+MSG_FILE="${1:-}"
+if [[ -z "$MSG_FILE" ]]; then
+  echo "[ECS] commit-msg hook: missing commit message file argument" >&2
+  exit 1
+fi
+
+# Read the first non-empty line (subject)
+msg_subject=$(sed -n '1p' "$MSG_FILE" | sed 's/\r$//')
+
+# Validate subject: type(work-type): summary
+if ! [[ "$msg_subject" =~ ^(feat|fix|refactor|docs|chore|test)\((feature|spike|bug)\):[[:space:]]+.+ ]]; then
+  echo "[ECS] Invalid commit header." >&2
+  echo "  Expected: <type>(<work-type>): <summary>" >&2
+  echo "  <type> ∈ [feat|fix|refactor|docs|chore|test]" >&2
+  echo "  <work-type> ∈ [feature|spike|bug]" >&2
+  echo "Offending header: '$msg_subject'" >&2
+  exit 1
+fi
+
+# Helper: find metadata line '^\[Key\]:' and return value (trim CR and spaces)
+find_meta_value() {
+  local key="$1"
+  grep -E "^\[$key\]:" "$MSG_FILE" 2>/dev/null | sed -E "s/^\[$key\]:[[:space:]]*//" | sed 's/\r$//'
+}
+
+# Validate presence and allowed values
+value=$(find_meta_value "Risk-Level")
+if [[ -z "$value" ]]; then
+  echo "[ECS] Missing required metadata: [Risk-Level]: <low|medium|high>" >&2
+  exit 1
+fi
+if ! [[ "$value" =~ ^(low|medium|high)$ ]]; then
+  echo "[ECS] Invalid [Risk-Level]: '$value' — allowed: low, medium, high" >&2
+  exit 1
+fi
+
+value=$(find_meta_value "Impact-Scope")
+if [[ -z "$value" ]]; then
+  echo "[ECS] Missing required metadata: [Impact-Scope]: <local|module|cross-module|system>" >&2
+  exit 1
+fi
+if ! [[ "$value" =~ ^(local|module|cross-module|system)$ ]]; then
+  echo "[ECS] Invalid [Impact-Scope]: '$value' — allowed: local, module, cross-module, system" >&2
+  exit 1
+fi
+
+value=$(find_meta_value "Phase")
+if [[ -z "$value" ]]; then
+  echo "[ECS] Missing required metadata: [Phase]: <analysis|implementation|validation>" >&2
+  exit 1
+fi
+if ! [[ "$value" =~ ^(analysis|implementation|validation)$ ]]; then
+  echo "[ECS] Invalid [Phase]: '$value' — allowed: analysis, implementation, validation" >&2
+  exit 1
+fi
+
+value=$(find_meta_value "EAW-ID")
+if [[ -z "$value" ]]; then
+  echo "[ECS] Missing or empty [EAW-ID]: field — must reference an EAW card or ID" >&2
+  exit 1
+fi
+
+# All checks passed
+exit 0
