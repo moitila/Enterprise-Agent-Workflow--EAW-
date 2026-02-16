@@ -1,0 +1,112 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Simple CLI for EAW
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+LIB="$SCRIPT_DIR/lib.sh"
+
+if [[ -f "$LIB" ]]; then
+  # shellcheck disable=SC1090
+  source "$LIB"
+else
+  echo "Missing library $LIB" >&2
+  exit 1
+fi
+
+CONFIG_DIR="$ROOT_DIR/config"
+REPOS_CONF="$CONFIG_DIR/repos.conf"
+SEARCH_CONF="$CONFIG_DIR/search.conf"
+
+usage() {
+  cat <<EOF
+Usage: eaw init
+       eaw feature <CARD> "<TITLE>"
+       eaw spike  <CARD> "<TITLE>"
+       eaw bug    <CARD> "<TITLE>"
+EOF
+}
+
+cmd_init() {
+  ensure_dir "$CONFIG_DIR"
+  if [[ ! -f "$REPOS_CONF" ]]; then
+    cp "$CONFIG_DIR/repos.example.conf" "$REPOS_CONF"
+    echo "Created $REPOS_CONF"
+  else
+    echo "$REPOS_CONF already exists; skipping"
+  fi
+  if [[ ! -f "$SEARCH_CONF" ]]; then
+    cp "$CONFIG_DIR/search.example.conf" "$SEARCH_CONF"
+    echo "Created $SEARCH_CONF"
+  else
+    echo "$SEARCH_CONF already exists; skipping"
+  fi
+}
+
+cmd_card() {
+  local type="$1"
+  local card="$2"
+  local title="$3"
+  local outdir="$ROOT_DIR/out/$card"
+  ensure_dir "$outdir"
+  local tpl="$ROOT_DIR/templates/$(echo "$type" | tr '[:upper:]' '[:lower:]').md"
+  local date
+  date=$(iso_date)
+  if [[ ! -f "$tpl" ]]; then
+    echo "Template not found: $tpl" >&2
+    exit 1
+  fi
+  local target_md="$outdir/${type}_${card}.md"
+  render_template "$tpl" "$target_md" "$card" "$title" "$type" "$date"
+  echo "Wrote $target_md"
+
+  # Collect context per repos.conf
+  if [[ ! -f "$REPOS_CONF" ]]; then
+    echo "Missing $REPOS_CONF. Run 'eaw init' to create example config." >&2
+    return 0
+  fi
+  while IFS= read -r line; do
+    # normalize CRLF issues and skip blanks/comments
+    line="${line//$'\r'/}"
+    if [[ -z "$line" || "$line" =~ ^\s*# ]]; then
+      continue
+    fi
+    IFS='|' read -r key path <<< "$line"
+    if [[ -z "$key" || -z "$path" ]]; then
+      continue
+    fi
+    # Allow relative paths
+    repoPath="$ROOT_DIR/$path"
+    repoOutDir="$outdir/context/$key"
+    ensure_dir "$repoOutDir"
+    echo "Collecting context for $key -> $repoPath"
+    gather_context_for_repo "$key" "$repoPath" "$repoOutDir" || true
+    collect_search_hits "$key" "$repoPath" "$repoOutDir" "$SEARCH_CONF" || true
+  done < "$REPOS_CONF"
+}
+
+main() {
+  if [[ $# -lt 1 ]]; then
+    usage
+    exit 1
+  fi
+  case "$1" in
+    init)
+      cmd_init
+      ;;
+    feature|spike|bug)
+      if [[ $# -lt 3 ]]; then
+        echo "Missing args" >&2
+        usage
+        exit 1
+      fi
+      cmd_card "${1}" "$2" "$3"
+      ;;
+    *)
+      usage
+      exit 1
+      ;;
+  esac
+}
+
+main "$@"

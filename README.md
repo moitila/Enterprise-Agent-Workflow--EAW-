@@ -1,0 +1,61 @@
+# Enterprise Agent Workflow (EAW)
+
+EAW is a lightweight, deterministic workflow for generating engineering dossiers for features, spikes, and bugs. It focuses on context engineering, deterministic outputs, and risk-aware decision making.
+
+## What is EAW
+
+EAW helps engineers collect repository context and produce structured Markdown artifacts for traceability and safer engineering in complex systems.
+
+## Installation (bash)
+
+Ensure you have `bash`, `git`, and optionally `rg` (ripgrep) installed.
+
+```bash
+# make scripts executable (on Unix)
+chmod +x scripts/eaw scripts/lib.sh
+```
+
+## Quickstart
+
+```bash
+# from repo root
+./scripts/eaw init
+./scripts/eaw feature 12345 "Short title"
+./scripts/eaw spike 23456 "Research question"
+./scripts/eaw bug 99999 "Short bug title"
+```
+
+If you are on Windows and using PowerShell, run via `bash`:
+
+```powershell
+bash ./scripts/eaw init
+bash ./scripts/eaw bug 999999 "Smoke test"
+```
+
+## Output structure
+
+- `out/<CARD>/<TYPE>_<CARD>.md` — the generated dossier
+- `out/<CARD>/context/<repoKey>/git-status.txt` — git status
+- `out/<CARD>/context/<repoKey>/git-diff.patch` — diff
+- `out/<CARD>/context/<repoKey>/changed-files.txt` — changed file list
+- `out/<CARD>/context/<repoKey>/rg-symbols.txt` — symbol search hits
+
+## Config
+
+- `config/repos.conf` — map of repoKey to path (created by `eaw init` from `repos.example.conf`)
+- `config/search.conf` — symbol search patterns (created by `eaw init`)
+
+Edit `config/repos.conf` to point to your local repositories. Format is `key|path` per line.
+
+## No proprietary code
+
+This repository contains no proprietary code or internal names. It is intentionally generic and suitable for public release.
+
+## Roadmap
+
+- v0.1: Basic scaffolding, deterministic output, context capture (this release)
+- v0.2: Plugin architecture, richer collectors, JSON output contract, CI validation
+
+## PT-BR
+
+EAW é um fluxo de trabalho leve para gerar dossiês determinísticos (features, spikes, bugs). Use `./scripts/eaw init` e depois `./scripts/eaw feature|spike|bug`.
