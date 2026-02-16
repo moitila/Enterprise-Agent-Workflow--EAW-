@@ -1,0 +1,5 @@
+# SC2034: intentional unused variables / exported constants
+# - EAW_BASE_DIR is set for potential external consumption / convention
+# - function signatures intentionally include repoKey for clarity even if unused
+# Justification: these are benign and used by external tools or kept for API parity.
+disable=SC2034
