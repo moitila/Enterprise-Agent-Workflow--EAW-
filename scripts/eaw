@@ -158,7 +158,7 @@ PROCESS (mandatory 8 phases):
 8) Validation & Monitoring: Post-deploy checks, metrics to watch, and rollback criteria.
 
 OUTPUTS (write to dev/ within the dossier output):
-- TEST_PLAN_${card}.md — deterministic test plan (unit/integration/smoke)
+- TEST_PLAN_${card}.md - deterministic test plan (unit/integration/smoke)
 - PATCH/PR summary (one paragraph)
 - RISK_SUMMARY (one paragraph)
 
@@ -236,9 +236,9 @@ cmd_ingest() {
   # insert or append Attached Evidence section
   if grep -q "^## Attached Evidence" "$main_md"; then
     # append bullet
-    printf "- %s — %s\n" "$fname" "$ts" >> "$main_md"
+    printf "- %s - %s\n" "$fname" "$ts" >> "$main_md"
   else
-    printf "\n## Attached Evidence\n- %s — %s\n" "$fname" "$ts" >> "$main_md"
+    printf "\n## Attached Evidence\n- %s - %s\n" "$fname" "$ts" >> "$main_md"
   fi
   echo "Registered evidence in $main_md"
 }
@@ -275,6 +275,10 @@ main() {
         exit 1
       fi
       cmd_ingest "$2" "$3"
+      ;;
+    --help|-h)
+      usage
+      exit 0
       ;;
     *)
       usage
