@@ -16,6 +16,26 @@ ensure_dir() {
 
 iso_date() { date -u +%Y-%m-%d; }
 
+resolve_workdirs() {
+	local root_dir="${1:-$EAW_BASE_DIR}"
+	EAW_ROOT_DIR="$root_dir"
+	EAW_WORKDIR="${EAW_WORKDIR:-}"
+
+	if [[ -n "$EAW_WORKDIR" ]]; then
+		EAW_CONFIG_DIR="$EAW_WORKDIR/config"
+		if [[ -d "$EAW_WORKDIR/templates" ]]; then
+			EAW_TEMPLATES_DIR="$EAW_WORKDIR/templates"
+		else
+			EAW_TEMPLATES_DIR="$EAW_ROOT_DIR/templates"
+		fi
+		EAW_OUT_DIR="${EAW_OUT_DIR:-$EAW_WORKDIR/out}"
+	else
+		EAW_CONFIG_DIR="$EAW_ROOT_DIR/config"
+		EAW_TEMPLATES_DIR="$EAW_ROOT_DIR/templates"
+		EAW_OUT_DIR="${EAW_OUT_DIR:-$EAW_ROOT_DIR/out}"
+	fi
+}
+
 # Resolve repository path: support absolute (/), home (~), or relative to EAW root
 # Usage: resolve_repo_path "<path>"
 # Output: canonical absolute path
@@ -31,8 +51,8 @@ resolve_repo_path() {
 		# Home-relative path
 		printf '%s\n' "${path/#\~/$HOME}"
 	else
-		# Relative to EAW root
-		printf '%s\n' "$EAW_BASE_DIR/$path"
+		# Relative to EAW root (resolved workdir keeps this stable).
+		printf '%s\n' "${EAW_ROOT_DIR:-$EAW_BASE_DIR}/$path"
 	fi
 }
 
