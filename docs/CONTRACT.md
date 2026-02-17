@@ -24,7 +24,22 @@ Outputs
   - `AI_PROMPT_<CARD>.md` — optional prompt file (when analyze runs)
   - `TEST_PLAN_<CARD>.md` — placeholder test plan
   - `context/<repoKey>/` — per-repo metadata files (git-branch.txt, git-commit.txt, changed-files.txt, git-diff.patch, git-status.txt)
-  - `_warnings.txt` — optional; contains best-effort collection warnings (created only on tolerated failures)
+  - `context/<repoKey>/_warnings.txt` — optional; contains best-effort collection warnings (created only on tolerated failures)
+
+Determinism
+-----------
+- Filenames and artifact paths are deterministic and must match the contract exactly (e.g. `out/<CARD>/feature_<CARD>.md`).
+- Where EAW emits `date` values it uses UTC in ISO 8601 `YYYY-MM-DD` format (see `iso_date()` in `scripts/lib.sh`).
+- `git-commit.txt` contains the canonical commit SHA; `git-branch.txt` contains the branch name.
+- `changed-files.txt` is a newline-separated list of paths. Implementations SHOULD present this list in stable (sorted) order to improve reproducibility; callers must not rely on directory listing order.
+- Locale-sensitive output must not be relied upon by callers; implementations should use POSIX/C semantics for sorting/formatting where determinism matters.
+
+Notes on `_warnings.txt`
+-----------------------
+- `_warnings.txt` is created per-repo under `out/<CARD>/context/<repoKey>/` only when a best-effort collection step fails.
+- Each line in `_warnings.txt` should contain a short, human-readable reason and a pointer to the related artifact (example: `allowed to fail: git diff failed (see git-diff.patch)`).
+- Presence of `_warnings.txt` is informational and does not constitute a fatal error by contract.
+
 
 Operational rules / invariants
 ------------------------------

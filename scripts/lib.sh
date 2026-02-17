@@ -107,7 +107,9 @@ gather_context_for_repo() {
 	if ! git -C "$repoPath" diff >"$outdir/git-diff.patch" 2>&1; then
 		echo "allowed to fail: best-effort collection; git diff failed (see $outdir/git-diff.patch)" >>"$outdir/_warnings.txt"
 	fi
-	if ! git -C "$repoPath" diff --name-only >"$outdir/changed-files.txt" 2>&1; then
+	if git -C "$repoPath" diff --name-only >"$outdir/changed-files.txt" 2>&1; then
+		sort -u "$outdir/changed-files.txt" -o "$outdir/changed-files.txt" 2>/dev/null || true
+	else
 		echo "allowed to fail: best-effort collection; git diff --name-only failed (see $outdir/changed-files.txt)" >>"$outdir/_warnings.txt"
 	fi
 }
