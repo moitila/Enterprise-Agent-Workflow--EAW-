@@ -61,47 +61,148 @@ cmd_init() {
 	fi
 }
 
+# --- Execution lifecycle engine -------------------------------------------------
+run_phase() {
+	# run_phase <phase-name> <fatal:true|false> <fn> [args...]
+	local phase="$1"
+	shift
+	local fatal="$1"
+	shift || true
+	local fn="$1"
+	shift
+	local start end dur rc status
+	local note=""
+	start=$(date +%s%3N)
+	if "$fn" "$@"; then
+		rc=0
+		status="OK"
+	else
+		rc=$?
+		status="FAIL"
+	fi
+	end=$(date +%s%3N)
+	dur=$((end - start))
+	# record to execution log
+	printf "%s|%s|%s|%s\n" "$phase" "$status" "$dur" "$note" >>"$OUTDIR/execution.log"
+	# print summary line
+	echo "[phase] $phase -> $status (${dur}ms)"
+	if [[ "$status" != "OK" && "$fatal" == "true" ]]; then
+		echo "phase '$phase' failed (fatal) with rc=$rc" >&2
+		return "$rc"
+	fi
+	return 0
+}
+
+phase_init_runtime() {
+	# $1 = type, $2 = card, $3 = title, $4 = outdir
+	local type="$1" card="$2" title="$3" outdir="$4"
+	# deterministic runtime for phases
+	export LC_ALL=C
+	export TZ=UTC
+	ensure_dir "$outdir"
+	local tpl
+	tpl="$ROOT_DIR/templates/$(echo "$type" | tr '[:upper:]' '[:lower:]').md"
+	if [[ ! -f "$tpl" ]]; then
+		echo "Template not found: $tpl" >&2
+		return 1
+	fi
+	local date
+	date=$(iso_date)
+	local target_md="$outdir/${type}_${card}.md"
+	render_template "$tpl" "$target_md" "$card" "$title" "$type" "$date"
+	echo "Wrote $target_md"
+	# initialize execution.log
+	: >"$outdir/execution.log"
+	printf "phase|status|duration_ms|note\n" >>"$outdir/execution.log"
+	return 0
+}
+
+phase_load_config() {
+	# verify minimal config presence; not fatal if repos.conf missing (best-effort)
+	local outdir="$1"
+	if [[ ! -f "$REPOS_CONF" ]]; then
+		echo "Missing $REPOS_CONF; proceeding without repository context (best-effort)" >&2
+		return 0
+	fi
+	return 0
+}
+
+phase_resolve_repos() {
+	# build list of repo entries (key|path) into REPO_ENTRIES array
+	REPO_ENTRIES=()
+	if [[ -f "$REPOS_CONF" ]]; then
+		while IFS= read -r line; do
+			line="${line//$'\r'/}"
+			if [[ -z "$line" || "$line" =~ ^\s*# ]]; then
+				continue
+			fi
+			REPO_ENTRIES+=("$line")
+		done <"$REPOS_CONF"
+	fi
+	return 0
+}
+
+phase_collect_context() {
+	local card="$1" outdir="$2"
+	# iterate resolved repos and gather context
+	for entry in "${REPO_ENTRIES[@]:-}"; do
+		IFS='|' read -r key path <<<"$entry"
+		if [[ -z "$key" || -z "$path" ]]; then
+			continue
+		fi
+		repoPath="$(resolve_repo_path "$path")"
+		repoOutDir="$outdir/context/$key"
+		ensure_dir "$repoOutDir"
+		echo "Collecting context for $key -> $repoPath"
+		# gather context; failures are tolerated and produce _warnings.txt within gather_context_for_repo
+		if ! gather_context_for_repo "$key" "$repoPath" "$repoOutDir"; then
+			echo "allowed to fail: gather_context_for_repo failed for $key (see $repoOutDir)" >>"$repoOutDir/_warnings.txt"
+		fi
+	done
+	return 0
+}
+
+phase_search_hits() {
+	local outdir="$1"
+	for entry in "${REPO_ENTRIES[@]:-}"; do
+		IFS='|' read -r key path <<<"$entry"
+		repoPath="$(resolve_repo_path "$path")"
+		repoOutDir="$outdir/context/$key"
+		if ! collect_search_hits "$key" "$repoPath" "$repoOutDir" "$SEARCH_CONF"; then
+			echo "allowed to fail: collect_search_hits failed for $key (see $repoOutDir)" >>"$repoOutDir/_warnings.txt"
+		fi
+	done
+	return 0
+}
+
+phase_finalize() {
+	local card="$1" outdir="$2"
+	# summarize execution.log to stdout
+	if [[ -f "$outdir/execution.log" ]]; then
+		echo "Execution log for $card:" >&2
+		sed -n '1,200p' "$outdir/execution.log" >&2 || true
+	fi
+	return 0
+}
+
+# --- end lifecycle engine ----------------------------------------------------
+
 cmd_card() {
 	local type="$1"
 	local card="$2"
 	local title="$3"
 	local outdir="$ROOT_DIR/out/$card"
+	# expose OUTDIR for run_phase and others
+	OUTDIR="$outdir"
 	ensure_dir "$outdir"
-	local tpl
-	tpl="$ROOT_DIR/templates/$(echo "$type" | tr '[:upper:]' '[:lower:]').md"
-	local date
-	date=$(iso_date)
-	if [[ ! -f "$tpl" ]]; then
-		echo "Template not found: $tpl" >&2
-		exit 1
-	fi
-	local target_md="$outdir/${type}_${card}.md"
-	render_template "$tpl" "$target_md" "$card" "$title" "$type" "$date"
-	echo "Wrote $target_md"
 
-	# Collect context per repos.conf
-	if [[ ! -f "$REPOS_CONF" ]]; then
-		echo "Missing $REPOS_CONF. Run 'eaw init' to create example config." >&2
-		return 0
-	fi
-	while IFS= read -r line; do
-		# normalize CRLF issues and skip blanks/comments
-		line="${line//$'\r'/}"
-		if [[ -z "$line" || "$line" =~ ^\s*# ]]; then
-			continue
-		fi
-		IFS='|' read -r key path <<<"$line"
-		if [[ -z "$key" || -z "$path" ]]; then
-			continue
-		fi
-		# Resolve path (absolute, ~/, or relative to EAW root)
-		repoPath="$(resolve_repo_path "$path")"
-		repoOutDir="$outdir/context/$key"
-		ensure_dir "$repoOutDir"
-		echo "Collecting context for $key -> $repoPath"
-		gather_context_for_repo "$key" "$repoPath" "$repoOutDir" || true
-		collect_search_hits "$key" "$repoPath" "$repoOutDir" "$SEARCH_CONF" || true
-	done <"$REPOS_CONF"
+	# run lifecycle phases in order; preserve original behavior and tolerances
+	run_phase "init_runtime" true phase_init_runtime "$type" "$card" "$title" "$outdir" || return 1
+	run_phase "load_config" false phase_load_config "$outdir"
+	run_phase "resolve_repos" false phase_resolve_repos
+	run_phase "collect_context" false phase_collect_context "$card" "$outdir"
+	run_phase "search_hits" false phase_search_hits "$outdir"
+	run_phase "finalize" false phase_finalize "$card" "$outdir"
 }
 
 cmd_analyze() {
@@ -304,4 +405,6 @@ main() {
 	esac
 }
 
-main "$@"
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+	main "$@"
+fi

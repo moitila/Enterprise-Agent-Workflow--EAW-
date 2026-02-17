@@ -44,6 +44,12 @@ jobs:
           set -euo pipefail
           shellcheck scripts/eaw scripts/lib.sh
 
+      - name: Run - run_phase smoke test
+        run: |
+          set -euo pipefail
+          # test directly via bash to avoid execution/permission differences
+          bash tests/run_phase_smoke.sh
+
       - name: shfmt check
         run: |
           set -euo pipefail
