@@ -33,7 +33,8 @@ cleanup() {
 	rm -rf "$TMPDIR" "$REPO_ROOT/out/$CARD_ID" || true
 	exit "$rc"
 }
-trap cleanup EXIT
+# ensure cleanup on EXIT, INT and TERM
+trap cleanup EXIT INT TERM
 
 # create minimal git repo
 REPO_DIR="$TMPDIR/test-repo"
