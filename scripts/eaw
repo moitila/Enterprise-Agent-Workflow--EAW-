@@ -7,11 +7,11 @@ ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 LIB="$SCRIPT_DIR/lib.sh"
 
 if [[ -f "$LIB" ]]; then
-  # shellcheck disable=SC1090
-  source "$LIB"
+	# shellcheck disable=SC1090
+	source "$LIB"
 else
-  echo "Missing library $LIB" >&2
-  exit 1
+	echo "Missing library $LIB" >&2
+	exit 1
 fi
 
 CONFIG_DIR="$ROOT_DIR/config"
@@ -19,7 +19,7 @@ REPOS_CONF="$CONFIG_DIR/repos.conf"
 SEARCH_CONF="$CONFIG_DIR/search.conf"
 
 usage() {
-  cat <<EOF
+	cat <<EOF
 Usage: eaw init
   eaw feature <CARD> "<TITLE>"
   eaw spike  <CARD> "<TITLE>"
@@ -30,106 +30,106 @@ EOF
 }
 
 cmd_init() {
-  ensure_dir "$CONFIG_DIR"
-  if [[ ! -f "$REPOS_CONF" ]]; then
-    cp "$CONFIG_DIR/repos.example.conf" "$REPOS_CONF"
-    echo "Created $REPOS_CONF"
-  else
-    echo "$REPOS_CONF already exists; skipping"
-  fi
-  if [[ ! -f "$SEARCH_CONF" ]]; then
-    cp "$CONFIG_DIR/search.example.conf" "$SEARCH_CONF"
-    echo "Created $SEARCH_CONF"
-  else
-    echo "$SEARCH_CONF already exists; skipping"
-  fi
+	ensure_dir "$CONFIG_DIR"
+	if [[ ! -f "$REPOS_CONF" ]]; then
+		cp "$CONFIG_DIR/repos.example.conf" "$REPOS_CONF"
+		echo "Created $REPOS_CONF"
+	else
+		echo "$REPOS_CONF already exists; skipping"
+	fi
+	if [[ ! -f "$SEARCH_CONF" ]]; then
+		cp "$CONFIG_DIR/search.example.conf" "$SEARCH_CONF"
+		echo "Created $SEARCH_CONF"
+	else
+		echo "$SEARCH_CONF already exists; skipping"
+	fi
 }
 
 cmd_card() {
-  local type="$1"
-  local card="$2"
-  local title="$3"
-  local outdir="$ROOT_DIR/out/$card"
-  ensure_dir "$outdir"
-  local tpl
-  tpl="$ROOT_DIR/templates/$(echo "$type" | tr '[:upper:]' '[:lower:]').md"
-  local date
-  date=$(iso_date)
-  if [[ ! -f "$tpl" ]]; then
-    echo "Template not found: $tpl" >&2
-    exit 1
-  fi
-  local target_md="$outdir/${type}_${card}.md"
-  render_template "$tpl" "$target_md" "$card" "$title" "$type" "$date"
-  echo "Wrote $target_md"
+	local type="$1"
+	local card="$2"
+	local title="$3"
+	local outdir="$ROOT_DIR/out/$card"
+	ensure_dir "$outdir"
+	local tpl
+	tpl="$ROOT_DIR/templates/$(echo "$type" | tr '[:upper:]' '[:lower:]').md"
+	local date
+	date=$(iso_date)
+	if [[ ! -f "$tpl" ]]; then
+		echo "Template not found: $tpl" >&2
+		exit 1
+	fi
+	local target_md="$outdir/${type}_${card}.md"
+	render_template "$tpl" "$target_md" "$card" "$title" "$type" "$date"
+	echo "Wrote $target_md"
 
-  # Collect context per repos.conf
-  if [[ ! -f "$REPOS_CONF" ]]; then
-    echo "Missing $REPOS_CONF. Run 'eaw init' to create example config." >&2
-    return 0
-  fi
-  while IFS= read -r line; do
-    # normalize CRLF issues and skip blanks/comments
-    line="${line//$'\r'/}"
-    if [[ -z "$line" || "$line" =~ ^\s*# ]]; then
-      continue
-    fi
-    IFS='|' read -r key path <<< "$line"
-    if [[ -z "$key" || -z "$path" ]]; then
-      continue
-    fi
-    # Resolve path (absolute, ~/, or relative to EAW root)
-    repoPath="$(resolve_repo_path "$path")"
-    repoOutDir="$outdir/context/$key"
-    ensure_dir "$repoOutDir"
-    echo "Collecting context for $key -> $repoPath"
-    gather_context_for_repo "$key" "$repoPath" "$repoOutDir" || true
-    collect_search_hits "$key" "$repoPath" "$repoOutDir" "$SEARCH_CONF" || true
-  done < "$REPOS_CONF"
+	# Collect context per repos.conf
+	if [[ ! -f "$REPOS_CONF" ]]; then
+		echo "Missing $REPOS_CONF. Run 'eaw init' to create example config." >&2
+		return 0
+	fi
+	while IFS= read -r line; do
+		# normalize CRLF issues and skip blanks/comments
+		line="${line//$'\r'/}"
+		if [[ -z "$line" || "$line" =~ ^\s*# ]]; then
+			continue
+		fi
+		IFS='|' read -r key path <<<"$line"
+		if [[ -z "$key" || -z "$path" ]]; then
+			continue
+		fi
+		# Resolve path (absolute, ~/, or relative to EAW root)
+		repoPath="$(resolve_repo_path "$path")"
+		repoOutDir="$outdir/context/$key"
+		ensure_dir "$repoOutDir"
+		echo "Collecting context for $key -> $repoPath"
+		gather_context_for_repo "$key" "$repoPath" "$repoOutDir" || true
+		collect_search_hits "$key" "$repoPath" "$repoOutDir" "$SEARCH_CONF" || true
+	done <"$REPOS_CONF"
 }
 
 cmd_analyze() {
-  local card="$1"
-  local outdir="$ROOT_DIR/out/$card"
-  if [[ ! -d "$outdir" ]]; then
-    echo "Card output not found: $outdir" >&2
-    exit 1
-  fi
-  # detect type
-  local type=""
-  for t in feature spike bug; do
-    if [[ -f "$outdir/${t}_${card}.md" ]]; then
-      type="$t"
-      break
-    fi
-  done
-  if [[ -z "$type" ]]; then
-    echo "Could not detect card type for $card. Expected feature/spike/bug file in $outdir" >&2
-    exit 1
-  fi
+	local card="$1"
+	local outdir="$ROOT_DIR/out/$card"
+	if [[ ! -d "$outdir" ]]; then
+		echo "Card output not found: $outdir" >&2
+		exit 1
+	fi
+	# detect type
+	local type=""
+	for t in feature spike bug; do
+		if [[ -f "$outdir/${t}_${card}.md" ]]; then
+			type="$t"
+			break
+		fi
+	done
+	if [[ -z "$type" ]]; then
+		echo "Could not detect card type for $card. Expected feature/spike/bug file in $outdir" >&2
+		exit 1
+	fi
 
-  local main_md="$outdir/${type}_${card}.md"
-  if [[ ! -f "$main_md" ]]; then
-    echo "Main dossier not found: $main_md" >&2
-    exit 1
-  fi
+	local main_md="$outdir/${type}_${card}.md"
+	if [[ ! -f "$main_md" ]]; then
+		echo "Main dossier not found: $main_md" >&2
+		exit 1
+	fi
 
-  ensure_dir "$outdir/inputs"
+	ensure_dir "$outdir/inputs"
 
-  # Build AI prompt
-  local prompt_file="$outdir/AI_PROMPT_${card}.md"
-  local date_now
-  date_now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+	# Build AI prompt
+	local prompt_file="$outdir/AI_PROMPT_${card}.md"
+	local date_now
+	date_now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 
-  # collect repos list
-  local repos_list
-  if [[ -f "$REPOS_CONF" ]]; then
-    repos_list=$(awk -F"|" '!/^\s*#/ && NF>=2 {print "- " $1 " => " $2}' "$REPOS_CONF" )
-  else
-    repos_list="(no repos.conf present)"
-  fi
+	# collect repos list
+	local repos_list
+	if [[ -f "$REPOS_CONF" ]]; then
+		repos_list=$(awk -F"|" '!/^\s*#/ && NF>=2 {print "- " $1 " => " $2}' "$REPOS_CONF")
+	else
+		repos_list="(no repos.conf present)"
+	fi
 
-  cat > "$prompt_file" <<EOF
+	cat >"$prompt_file" <<EOF
 # AI_PROMPT for card ${card}
 
 ROLE:
@@ -178,12 +178,12 @@ $(sed -n '1,400p' "$main_md")
 
 EOF
 
-  echo "Wrote $prompt_file"
+	echo "Wrote $prompt_file"
 
-  # create TEST_PLAN placeholder in outdir
-  local test_plan="$outdir/TEST_PLAN_${card}.md"
-  if [[ ! -f "$test_plan" ]]; then
-    cat > "$test_plan" <<TP
+	# create TEST_PLAN placeholder in outdir
+	local test_plan="$outdir/TEST_PLAN_${card}.md"
+	if [[ ! -f "$test_plan" ]]; then
+		cat >"$test_plan" <<TP
 # Test Plan for ${type}_${card}
 
 ## Summary
@@ -199,93 +199,93 @@ Describe deterministic tests to validate changes.
 - Run ...
 
 TP
-    echo "Wrote $test_plan"
-  fi
+		echo "Wrote $test_plan"
+	fi
 }
 
 cmd_ingest() {
-  local card="$1"
-  local src_path="$2"
-  local outdir="$ROOT_DIR/out/$card"
-  if [[ ! -f "$src_path" ]]; then
-    echo "Source file not found: $src_path" >&2
-    exit 1
-  fi
-  ensure_dir "$outdir/inputs"
-  local fname
-  fname=$(basename "$src_path")
-  cp "$src_path" "$outdir/inputs/"
-  echo "Copied $src_path -> $outdir/inputs/$fname"
+	local card="$1"
+	local src_path="$2"
+	local outdir="$ROOT_DIR/out/$card"
+	if [[ ! -f "$src_path" ]]; then
+		echo "Source file not found: $src_path" >&2
+		exit 1
+	fi
+	ensure_dir "$outdir/inputs"
+	local fname
+	fname=$(basename "$src_path")
+	cp "$src_path" "$outdir/inputs/"
+	echo "Copied $src_path -> $outdir/inputs/$fname"
 
-  # update main dossier
-  # detect type and main md
-  local type=""
-  for t in feature spike bug; do
-    if [[ -f "$outdir/${t}_${card}.md" ]]; then
-      type="$t"
-      break
-    fi
-  done
-  if [[ -z "$type" ]]; then
-    echo "Cannot find main dossier to attach evidence: expected ${type}_${card}.md" >&2
-    exit 1
-  fi
-  local main_md="$outdir/${type}_${card}.md"
-  local ts
-  ts=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+	# update main dossier
+	# detect type and main md
+	local type=""
+	for t in feature spike bug; do
+		if [[ -f "$outdir/${t}_${card}.md" ]]; then
+			type="$t"
+			break
+		fi
+	done
+	if [[ -z "$type" ]]; then
+		echo "Cannot find main dossier to attach evidence: expected ${type}_${card}.md" >&2
+		exit 1
+	fi
+	local main_md="$outdir/${type}_${card}.md"
+	local ts
+	ts=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 
-  # insert or append Attached Evidence section
-  if grep -q "^## Attached Evidence" "$main_md"; then
-    # append bullet
-    printf "- %s - %s\n" "$fname" "$ts" >> "$main_md"
-  else
-    printf "\n## Attached Evidence\n- %s - %s\n" "$fname" "$ts" >> "$main_md"
-  fi
-  echo "Registered evidence in $main_md"
+	# insert or append Attached Evidence section
+	if grep -q "^## Attached Evidence" "$main_md"; then
+		# append bullet
+		printf "- %s - %s\n" "$fname" "$ts" >>"$main_md"
+	else
+		printf "\n## Attached Evidence\n- %s - %s\n" "$fname" "$ts" >>"$main_md"
+	fi
+	echo "Registered evidence in $main_md"
 }
 
 main() {
-  if [[ $# -lt 1 ]]; then
-    usage
-    exit 1
-  fi
-  case "$1" in
-    init)
-      cmd_init
-      ;;
-    feature|spike|bug)
-      if [[ $# -lt 3 ]]; then
-        echo "Missing args" >&2
-        usage
-        exit 1
-      fi
-      cmd_card "${1}" "$2" "$3"
-      ;;
-    analyze)
-      if [[ $# -lt 2 ]]; then
-        echo "Missing args" >&2
-        usage
-        exit 1
-      fi
-      cmd_analyze "$2"
-      ;;
-    ingest)
-      if [[ $# -lt 3 ]]; then
-        echo "Missing args" >&2
-        usage
-        exit 1
-      fi
-      cmd_ingest "$2" "$3"
-      ;;
-    --help|-h)
-      usage
-      exit 0
-      ;;
-    *)
-      usage
-      exit 1
-      ;;
-  esac
+	if [[ $# -lt 1 ]]; then
+		usage
+		exit 1
+	fi
+	case "$1" in
+	init)
+		cmd_init
+		;;
+	feature | spike | bug)
+		if [[ $# -lt 3 ]]; then
+			echo "Missing args" >&2
+			usage
+			exit 1
+		fi
+		cmd_card "${1}" "$2" "$3"
+		;;
+	analyze)
+		if [[ $# -lt 2 ]]; then
+			echo "Missing args" >&2
+			usage
+			exit 1
+		fi
+		cmd_analyze "$2"
+		;;
+	ingest)
+		if [[ $# -lt 3 ]]; then
+			echo "Missing args" >&2
+			usage
+			exit 1
+		fi
+		cmd_ingest "$2" "$3"
+		;;
+	--help | -h)
+		usage
+		exit 0
+		;;
+	*)
+		usage
+		exit 1
+		;;
+	esac
 }
 
 main "$@"
