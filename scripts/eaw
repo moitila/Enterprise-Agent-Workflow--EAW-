@@ -155,10 +155,13 @@ init_workspace_workdir() {
 }
 
 validate_runtime_workdir() {
-	if [[ -n "${EAW_WORKDIR:-}" && ! -d "$EAW_CONFIG_DIR" ]]; then
-		echo "EAW_WORKDIR is set to '$EAW_WORKDIR', but '$EAW_CONFIG_DIR' was not found." >&2
-		echo "Initialize this workspace with: ./scripts/eaw init --workdir \"$EAW_WORKDIR\"" >&2
-		exit 1
+	if [[ -n "${EAW_WORKDIR:-}" ]]; then
+		if [[ ! -d "$EAW_CONFIG_DIR" || ! -f "$REPOS_CONF" ]]; then
+			echo "EAW_WORKDIR is set but workspace config is incomplete." >&2
+			echo "Run:" >&2
+			echo "  ./scripts/eaw init --workdir \"$EAW_WORKDIR\"" >&2
+			exit 1
+		fi
 	fi
 }
 

@@ -51,8 +51,12 @@ resolve_repo_path() {
 		# Home-relative path
 		printf '%s\n' "${path/#\~/$HOME}"
 	else
-		# Relative to EAW root (resolved workdir keeps this stable).
-		printf '%s\n' "${EAW_ROOT_DIR:-$EAW_BASE_DIR}/$path"
+		# Relative path follows workspace root when workspace mode is enabled.
+		if [[ -n "${EAW_WORKDIR:-}" ]]; then
+			printf '%s\n' "${EAW_WORKDIR}/$path"
+		else
+			printf '%s\n' "${EAW_ROOT_DIR:-$EAW_BASE_DIR}/$path"
+		fi
 	fi
 }
 
