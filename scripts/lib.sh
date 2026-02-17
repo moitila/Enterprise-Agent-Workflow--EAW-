@@ -93,9 +93,11 @@ gather_context_for_repo() {
 	fi
 
 	ensure_dir "$outdir"
+	# allowed to fail: git status may be empty or have no changes
 	git -C "$repoPath" status --porcelain >"$outdir/git-status.txt" 2>&1 || true
 	git -C "$repoPath" rev-parse --abbrev-ref HEAD >"$outdir/git-branch.txt" 2>&1 || true
 	git -C "$repoPath" rev-parse HEAD >"$outdir/git-commit.txt" 2>&1 || true
+	# allowed to fail: diff may be empty if no changes
 	git -C "$repoPath" diff >"$outdir/git-diff.patch" 2>&1 || true
 	git -C "$repoPath" diff --name-only >"$outdir/changed-files.txt" 2>&1 || true
 }
@@ -123,8 +125,10 @@ collect_search_hits() {
 	while IFS= read -r pat; do
 		if [[ -z "$pat" ]]; then continue; fi
 		if [[ "$rg_cmd" == "rg -n" ]]; then
+			# allowed to fail: pattern may find no matches
 			rg -n --hidden --no-ignore -S -- "$pat" "$repoPath" >>"$outdir/rg-symbols.txt" 2>/dev/null || true
 		else
+			# allowed to fail: grep without matches returns exit code 1
 			grep -R --line-number -n --exclude-dir=.git -E "$pat" "$repoPath" >>"$outdir/rg-symbols.txt" 2>/dev/null || true
 		fi
 	done <<<"$patterns"

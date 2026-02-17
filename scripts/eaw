@@ -1,6 +1,19 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Error handling: trap ERR to show file, line, command
+set -E
+on_err() {
+	local exit_code=$?
+	local cmd_line="${BASH_COMMAND}"
+	local source_file="${BASH_SOURCE[1]##*/}"
+	local line_num="${BASH_LINENO[0]}"
+	printf "EAW_ERROR: exit=%d at %s:%d cmd: %s\n" \
+		"$exit_code" "$source_file" "$line_num" "$cmd_line" >&2
+	exit "$exit_code"
+}
+trap on_err ERR
+
 # Simple CLI for EAW
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
