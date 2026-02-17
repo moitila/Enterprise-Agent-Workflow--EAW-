@@ -49,7 +49,7 @@ jobs:
           set -euo pipefail
           shfmt -d scripts/eaw scripts/lib.sh
 
-      - name: Smoke: help runs
+      - name: Smoke - help runs
         run: |
           set -euo pipefail
           chmod +x scripts/eaw
