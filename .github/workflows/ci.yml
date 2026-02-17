@@ -54,3 +54,9 @@ jobs:
           set -euo pipefail
           chmod +x scripts/eaw
           ./scripts/eaw --help >/dev/null
+
+      - name: Smoke - e2e test
+        run: |
+          set -euo pipefail
+          chmod +x tests/smoke.sh
+          ./tests/smoke.sh
