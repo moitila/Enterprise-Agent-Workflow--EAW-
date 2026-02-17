@@ -35,21 +35,64 @@ resolve_workdirs "$ROOT_DIR"
 CONFIG_DIR="$EAW_CONFIG_DIR"
 REPOS_CONF="$CONFIG_DIR/repos.conf"
 SEARCH_CONF="$CONFIG_DIR/search.conf"
+EAW_CONF="$CONFIG_DIR/eaw.conf"
+REQUIRED_CONFIG_VERSION=1
 
 usage() {
 	cat <<EOF
-Usage: eaw init [--workdir <path>] [--force]
+Usage: eaw init [--workdir <path>] [--force] [--upgrade]
   eaw feature <CARD> "<TITLE>"
   eaw spike  <CARD> "<TITLE>"
   eaw bug    <CARD> "<TITLE>"
   eaw analyze <CARD>
   eaw ingest <CARD> <file-path>
+  eaw validate
+  eaw doctor
 EOF
+}
+
+read_config_version() {
+	local conf="$1"
+	if [[ ! -f "$conf" ]]; then
+		return 1
+	fi
+	local v
+	v=$(awk -F'=' '/^[[:space:]]*config_version[[:space:]]*=/{gsub(/[[:space:]]/, "", $2); print $2; exit}' "$conf")
+	if [[ -n "$v" ]]; then
+		printf "%s\n" "$v"
+		return 0
+	fi
+	return 1
+}
+
+check_config_version_validate() {
+	local warnings_ref="$1"
+	if [[ ! -f "$EAW_CONF" ]]; then
+		echo "WARNING: $EAW_CONF missing, assuming v1 defaults"
+		eval "$warnings_ref=\$(( $warnings_ref + 1 ))"
+		return 0
+	fi
+
+	local cv
+	if cv="$(read_config_version "$EAW_CONF")"; then
+		if [[ "$cv" =~ ^[0-9]+$ ]] && [[ "$cv" -lt "$REQUIRED_CONFIG_VERSION" ]]; then
+			if [[ -n "${EAW_WORKDIR:-}" ]]; then
+				echo "WARNING: config_version=$cv is older than required=$REQUIRED_CONFIG_VERSION; run: ./scripts/eaw init --workdir \"$EAW_WORKDIR\" --upgrade"
+			else
+				echo "WARNING: config_version=$cv is older than required=$REQUIRED_CONFIG_VERSION; update $EAW_CONF"
+			fi
+			eval "$warnings_ref=\$(( $warnings_ref + 1 ))"
+		fi
+	else
+		echo "WARNING: $EAW_CONF exists but config_version is missing; add: config_version=$REQUIRED_CONFIG_VERSION"
+		eval "$warnings_ref=\$(( $warnings_ref + 1 ))"
+	fi
 }
 
 cmd_init() {
 	local force="false"
 	local workdir=""
+	local upgrade="false"
 	while [[ $# -gt 0 ]]; do
 		case "$1" in
 		--workdir)
@@ -63,6 +106,9 @@ cmd_init() {
 		--force)
 			force="true"
 			;;
+		--upgrade)
+			upgrade="true"
+			;;
 		*)
 			echo "Unknown init option: $1" >&2
 			usage
@@ -73,8 +119,13 @@ cmd_init() {
 	done
 
 	if [[ -n "$workdir" ]]; then
-		init_workspace_workdir "$workdir" "$force"
+		init_workspace_workdir "$workdir" "$force" "$upgrade"
 		return 0
+	fi
+
+	if [[ "$upgrade" == "true" ]]; then
+		echo "--upgrade requires --workdir <path>" >&2
+		exit 1
 	fi
 
 	ensure_dir "$CONFIG_DIR"
@@ -108,9 +159,45 @@ write_or_skip() {
 	echo "Created $target"
 }
 
+write_eaw_conf_if_needed() {
+	local cfg="$1"
+	local workdir="$2"
+	local force="$3"
+	local upgrade="$4"
+	local conf="$cfg/eaw.conf"
+	local new_conf="$cfg/eaw.conf.new"
+
+	if [[ ! -f "$conf" ]]; then
+		printf "config_version=%s\n" "$REQUIRED_CONFIG_VERSION" >"$conf"
+		echo "Created $conf"
+		return 0
+	fi
+
+	local current_v
+	if current_v="$(read_config_version "$conf")"; then
+		if [[ "$current_v" =~ ^[0-9]+$ ]] && [[ "$current_v" -lt "$REQUIRED_CONFIG_VERSION" ]] && [[ "$upgrade" == "true" ]]; then
+			printf "config_version=%s\n" "$REQUIRED_CONFIG_VERSION" >"$new_conf"
+			echo "$conf has older config_version=$current_v; wrote upgrade hint to $new_conf"
+		fi
+	else
+		if [[ "$upgrade" == "true" ]]; then
+			printf "config_version=%s\n" "$REQUIRED_CONFIG_VERSION" >"$new_conf"
+			echo "$conf is missing config_version; wrote $new_conf"
+		else
+			echo "$conf exists but config_version is missing; run: ./scripts/eaw init --workdir \"$workdir\" --upgrade"
+		fi
+	fi
+
+	if [[ "$force" == "true" ]]; then
+		printf "config_version=%s\n" "$REQUIRED_CONFIG_VERSION" >"$conf"
+		echo "Created $conf"
+	fi
+}
+
 init_workspace_workdir() {
 	local workdir="$1"
 	local force="$2"
+	local upgrade="$3"
 	local cfg="$workdir/config"
 	local tpl="$workdir/templates"
 	local out="$workdir/out"
@@ -152,6 +239,8 @@ init_workspace_workdir() {
 # Example:
 # TODO|FIXME"
 	fi
+
+	write_eaw_conf_if_needed "$cfg" "$workdir" "$force" "$upgrade"
 }
 
 validate_runtime_workdir() {
@@ -163,6 +252,153 @@ validate_runtime_workdir() {
 			exit 1
 		fi
 	fi
+}
+
+trim_spaces() {
+	local s="$1"
+	s="${s#"${s%%[![:space:]]*}"}"
+	s="${s%"${s##*[![:space:]]}"}"
+	printf "%s\n" "$s"
+}
+
+cmd_validate() {
+	local errors=0
+	local warnings=0
+	local line lineno key path extra resolved_path
+
+	echo "EAW validate"
+	echo "Resolved dirs:"
+	echo "  EAW_ROOT_DIR=$EAW_ROOT_DIR"
+	echo "  EAW_WORKDIR=${EAW_WORKDIR:-}"
+	echo "  EAW_CONFIG_DIR=$EAW_CONFIG_DIR"
+	echo "  EAW_TEMPLATES_DIR=$EAW_TEMPLATES_DIR"
+	echo "  EAW_OUT_DIR=$EAW_OUT_DIR"
+
+	if [[ -n "${EAW_WORKDIR:-}" ]]; then
+		if [[ ! -d "$EAW_CONFIG_DIR" ]]; then
+			echo "ERROR: workspace config directory missing: $EAW_CONFIG_DIR"
+			errors=$((errors + 1))
+		fi
+		if [[ ! -f "$REPOS_CONF" ]]; then
+			echo "ERROR: workspace repos.conf missing: $REPOS_CONF"
+			errors=$((errors + 1))
+		fi
+	fi
+
+	check_config_version_validate warnings
+
+	if [[ -f "$REPOS_CONF" ]]; then
+		lineno=0
+		while IFS= read -r line; do
+			lineno=$((lineno + 1))
+			line="${line//$'\r'/}"
+			if [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]]; then
+				continue
+			fi
+			if [[ "$line" != *"|"* ]]; then
+				echo "ERROR: repos.conf:$lineno invalid format (expected key|path): $line"
+				errors=$((errors + 1))
+				continue
+			fi
+			IFS='|' read -r key path extra <<<"$line"
+			key="$(trim_spaces "$key")"
+			path="$(trim_spaces "$path")"
+			if [[ -n "${extra:-}" ]]; then
+				echo "ERROR: repos.conf:$lineno invalid format (too many '|'): $line"
+				errors=$((errors + 1))
+				continue
+			fi
+			if [[ -z "$key" || -z "$path" ]]; then
+				echo "ERROR: repos.conf:$lineno key/path cannot be empty: $line"
+				errors=$((errors + 1))
+				continue
+			fi
+			resolved_path="$(resolve_repo_path "$path")"
+			if [[ ! -e "$resolved_path" ]]; then
+				echo "WARNING: repos.conf:$lineno path does not exist: $resolved_path"
+				warnings=$((warnings + 1))
+			fi
+		done <"$REPOS_CONF"
+		echo "OK: repos.conf parsed"
+	else
+		echo "WARNING: repos.conf missing: $REPOS_CONF"
+		warnings=$((warnings + 1))
+	fi
+
+	if [[ -f "$SEARCH_CONF" ]]; then
+		echo "OK: search.conf found: $SEARCH_CONF"
+	else
+		echo "WARNING: search.conf missing: $SEARCH_CONF"
+		warnings=$((warnings + 1))
+	fi
+
+	if [[ -n "${EAW_WORKDIR:-}" && -d "$EAW_WORKDIR/templates" ]]; then
+		for tpl_name in feature.md bug.md spike.md; do
+			if [[ ! -r "$EAW_WORKDIR/templates/$tpl_name" ]]; then
+				echo "WARNING: missing or unreadable workspace template: $EAW_WORKDIR/templates/$tpl_name"
+				warnings=$((warnings + 1))
+			fi
+		done
+	fi
+
+	echo "SUMMARY: errors=$errors warnings=$warnings"
+	if [[ "$errors" -gt 0 ]]; then
+		return 2
+	fi
+	return 0
+}
+
+cmd_doctor() {
+	local warnings=0
+	local errors=0
+	local status="OK"
+	local config_version=""
+
+	echo "EAW doctor"
+	echo "Resolved dirs:"
+	echo "  EAW_ROOT_DIR=$EAW_ROOT_DIR"
+	echo "  EAW_WORKDIR=${EAW_WORKDIR:-}"
+	echo "  EAW_CONFIG_DIR=$EAW_CONFIG_DIR"
+	echo "  EAW_TEMPLATES_DIR=$EAW_TEMPLATES_DIR"
+	echo "  EAW_OUT_DIR=$EAW_OUT_DIR"
+
+	echo "Tools:"
+	if command -v git >/dev/null 2>&1; then echo "  git: OK"; else echo "  git: MISSING"; warnings=$((warnings + 1)); fi
+	if command -v rg >/dev/null 2>&1; then
+		echo "  rg: OK"
+	elif command -v grep >/dev/null 2>&1; then
+		echo "  rg: MISSING (grep fallback: OK)"
+		warnings=$((warnings + 1))
+	else
+		echo "  rg/grep: MISSING"
+		errors=$((errors + 1))
+	fi
+	if command -v awk >/dev/null 2>&1; then echo "  awk: OK"; else echo "  awk: MISSING"; errors=$((errors + 1)); fi
+	if command -v sed >/dev/null 2>&1; then echo "  sed: OK"; else echo "  sed: MISSING"; errors=$((errors + 1)); fi
+	echo "  bash: $(bash --version | head -n 1)"
+
+	echo "Files:"
+	if [[ -f "$REPOS_CONF" ]]; then echo "  repos.conf: OK ($REPOS_CONF)"; else echo "  repos.conf: MISSING ($REPOS_CONF)"; [[ -n "${EAW_WORKDIR:-}" ]] && errors=$((errors + 1)) || warnings=$((warnings + 1)); fi
+	if [[ -f "$SEARCH_CONF" ]]; then echo "  search.conf: OK ($SEARCH_CONF)"; else echo "  search.conf: MISSING ($SEARCH_CONF)"; warnings=$((warnings + 1)); fi
+	if [[ -f "$EAW_CONF" ]]; then
+		if config_version="$(read_config_version "$EAW_CONF")"; then
+			echo "  eaw.conf: OK ($EAW_CONF, config_version=$config_version)"
+		else
+			echo "  eaw.conf: WARN ($EAW_CONF, config_version missing)"
+			warnings=$((warnings + 1))
+		fi
+	else
+		echo "  eaw.conf: MISSING ($EAW_CONF)"
+		warnings=$((warnings + 1))
+	fi
+
+	if [[ "$errors" -gt 0 ]]; then
+		status="ERROR"
+	elif [[ "$warnings" -gt 0 ]]; then
+		status="WARN"
+	fi
+	echo "STATUS: $status (errors=$errors warnings=$warnings)"
+	return 0
 }
 
 # --- Execution lifecycle engine -------------------------------------------------
@@ -503,6 +739,16 @@ main() {
 		fi
 		validate_runtime_workdir
 		cmd_ingest "$2" "$3"
+		;;
+	validate)
+		if cmd_validate; then
+			exit 0
+		else
+			exit $?
+		fi
+		;;
+	doctor)
+		cmd_doctor
 		;;
 	--help | -h)
 		usage
