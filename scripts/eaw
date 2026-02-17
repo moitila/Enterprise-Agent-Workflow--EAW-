@@ -47,11 +47,15 @@ EOF
 
 cmd_init() {
 	ensure_dir "$CONFIG_DIR"
-	if [[ ! -f "$REPOS_CONF" ]]; then
-		cp "$CONFIG_DIR/repos.example.conf" "$REPOS_CONF"
-		echo "Created $REPOS_CONF"
+	if [[ -f "$SCRIPT_DIR/sync-repos-config.sh" ]]; then
+		bash "$SCRIPT_DIR/sync-repos-config.sh"
 	else
-		echo "$REPOS_CONF already exists; skipping"
+		if [[ ! -f "$REPOS_CONF" ]]; then
+			cp "$CONFIG_DIR/repos.example.conf" "$REPOS_CONF"
+			echo "Created $REPOS_CONF"
+		else
+			echo "$REPOS_CONF already exists; skipping"
+		fi
 	fi
 	if [[ ! -f "$SEARCH_CONF" ]]; then
 		cp "$CONFIG_DIR/search.example.conf" "$SEARCH_CONF"
