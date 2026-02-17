@@ -93,13 +93,23 @@ gather_context_for_repo() {
 	fi
 
 	ensure_dir "$outdir"
-	# allowed to fail: git status may be empty or have no changes
-	git -C "$repoPath" status --porcelain >"$outdir/git-status.txt" 2>&1 || true
-	git -C "$repoPath" rev-parse --abbrev-ref HEAD >"$outdir/git-branch.txt" 2>&1 || true
-	git -C "$repoPath" rev-parse HEAD >"$outdir/git-commit.txt" 2>&1 || true
-	# allowed to fail: diff may be empty if no changes
-	git -C "$repoPath" diff >"$outdir/git-diff.patch" 2>&1 || true
-	git -C "$repoPath" diff --name-only >"$outdir/changed-files.txt" 2>&1 || true
+	# allowed to fail: best-effort collection; failures are captured in output
+	if ! git -C "$repoPath" status --porcelain >"$outdir/git-status.txt" 2>&1; then
+		echo "allowed to fail: best-effort collection; git status failed (see $outdir/git-status.txt)" >>"$outdir/_warnings.txt"
+	fi
+	if ! git -C "$repoPath" rev-parse --abbrev-ref HEAD >"$outdir/git-branch.txt" 2>&1; then
+		echo "allowed to fail: best-effort collection; rev-parse branch failed (see $outdir/git-branch.txt)" >>"$outdir/_warnings.txt"
+	fi
+	if ! git -C "$repoPath" rev-parse HEAD >"$outdir/git-commit.txt" 2>&1; then
+		echo "allowed to fail: best-effort collection; rev-parse HEAD failed (see $outdir/git-commit.txt)" >>"$outdir/_warnings.txt"
+	fi
+	# allowed to fail: best-effort collection; failures are captured in output
+	if ! git -C "$repoPath" diff >"$outdir/git-diff.patch" 2>&1; then
+		echo "allowed to fail: best-effort collection; git diff failed (see $outdir/git-diff.patch)" >>"$outdir/_warnings.txt"
+	fi
+	if ! git -C "$repoPath" diff --name-only >"$outdir/changed-files.txt" 2>&1; then
+		echo "allowed to fail: best-effort collection; git diff --name-only failed (see $outdir/changed-files.txt)" >>"$outdir/_warnings.txt"
+	fi
 }
 
 collect_search_hits() {
@@ -125,11 +135,15 @@ collect_search_hits() {
 	while IFS= read -r pat; do
 		if [[ -z "$pat" ]]; then continue; fi
 		if [[ "$rg_cmd" == "rg -n" ]]; then
-			# allowed to fail: pattern may find no matches
-			rg -n --hidden --no-ignore -S -- "$pat" "$repoPath" >>"$outdir/rg-symbols.txt" 2>/dev/null || true
+			# allowed to fail: best-effort collection; failures are captured in output
+			if ! rg -n --hidden --no-ignore -S -- "$pat" "$repoPath" >>"$outdir/rg-symbols.txt" 2>/dev/null; then
+				echo "allowed to fail: best-effort collection; rg failed or no matches for pattern '$pat' (see $outdir/rg-symbols.txt)" >>"$outdir/_warnings.txt"
+			fi
 		else
-			# allowed to fail: grep without matches returns exit code 1
-			grep -R --line-number -n --exclude-dir=.git -E "$pat" "$repoPath" >>"$outdir/rg-symbols.txt" 2>/dev/null || true
+			# allowed to fail: best-effort collection; failures are captured in output
+			if ! grep -R --line-number -n --exclude-dir=.git -E "$pat" "$repoPath" >>"$outdir/rg-symbols.txt" 2>/dev/null; then
+				echo "allowed to fail: best-effort collection; grep failed or no matches for pattern '$pat' (see $outdir/rg-symbols.txt)" >>"$outdir/_warnings.txt"
+			fi
 		fi
 	done <<<"$patterns"
 }
