@@ -2,8 +2,15 @@ name: ci
 
 on:
   push:
-    branches: [ "master", "main" ]
+    branches: ["master", "main"]
   pull_request:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
 
 jobs:
   bash-quality:
@@ -23,6 +30,7 @@ jobs:
           set -euo pipefail
           if grep -RIl $'\r' scripts; then
             echo "CRLF detected in scripts. Please convert files to LF."
+            echo "Fix (WSL/Linux): dos2unix scripts/eaw scripts/lib.sh"
             exit 1
           fi
 
