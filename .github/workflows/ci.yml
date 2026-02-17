@@ -1,0 +1,48 @@
+name: ci
+
+on:
+  push:
+    branches: [ "master", "main" ]
+  pull_request:
+
+jobs:
+  bash-quality:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y shellcheck shfmt
+
+      - name: Guard: no CRLF in scripts
+        run: |
+          set -euo pipefail
+          if grep -RIl $'\r' scripts; then
+            echo "CRLF detected in scripts. Please convert files to LF."
+            exit 1
+          fi
+
+      - name: Bash syntax check
+        run: |
+          set -euo pipefail
+          bash -n scripts/eaw scripts/lib.sh
+
+      - name: Shellcheck
+        run: |
+          set -euo pipefail
+          shellcheck scripts/eaw scripts/lib.sh
+
+      - name: shfmt check
+        run: |
+          set -euo pipefail
+          shfmt -d scripts/eaw scripts/lib.sh
+
+      - name: Smoke: help runs
+        run: |
+          set -euo pipefail
+          chmod +x scripts/eaw
+          ./scripts/eaw --help >/dev/null
