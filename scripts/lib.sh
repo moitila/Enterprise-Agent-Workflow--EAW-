@@ -5,11 +5,33 @@ EAW_BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 log() { printf "%s\n" "$*" >&2; }
 
+die() { printf "ERROR: %s\n" "$1" >&2; exit 1; }
+
 ensure_dir() {
   mkdir -p "$1"
 }
 
 iso_date() { date -u +%Y-%m-%d; }
+
+# Resolve repository path: support absolute (/), home (~), or relative to EAW root
+# Usage: resolve_repo_path "<path>"
+# Output: canonical absolute path
+resolve_repo_path() {
+  local path="$1"
+  if [[ -z "$path" ]]; then
+    die "resolve_repo_path: empty path"
+  fi
+  if [[ "$path" == /* ]]; then
+    # Absolute path
+    printf '%s\n' "$path"
+  elif [[ "$path" == ~/* ]]; then
+    # Home-relative path
+    printf '%s\n' "${path/#\~/$HOME}"
+  else
+    # Relative to EAW root
+    printf '%s\n' "$EAW_BASE_DIR/$path"
+  fi
+}
 
 render_template() {
   local tpl=$1; shift
@@ -50,14 +72,23 @@ gather_context_for_repo() {
   local repoKey="$1"
   local repoPath="$2"
   local outdir="$3"
+  
+  # Validate repo exists and is a git repo
+  if [[ ! -d "$repoPath" ]]; then
+    log "repo path not found: $repoPath"
+    return 1
+  fi
+  if ! git -C "$repoPath" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    log "not a git repo: $repoPath"
+    return 1
+  fi
+  
   ensure_dir "$outdir"
-  pushd "$repoPath" >/dev/null || { log "cannot enter $repoPath"; return 1; }
-  git status --porcelain > "$outdir/git-status.txt" 2>&1 || true
-  git rev-parse --abbrev-ref HEAD > "$outdir/git-branch.txt" 2>&1 || true
-  git rev-parse HEAD > "$outdir/git-commit.txt" 2>&1 || true
-  git diff > "$outdir/git-diff.patch" 2>&1 || true
-  git diff --name-only > "$outdir/changed-files.txt" 2>&1 || true
-  popd >/dev/null
+  git -C "$repoPath" status --porcelain > "$outdir/git-status.txt" 2>&1 || true
+  git -C "$repoPath" rev-parse --abbrev-ref HEAD > "$outdir/git-branch.txt" 2>&1 || true
+  git -C "$repoPath" rev-parse HEAD > "$outdir/git-commit.txt" 2>&1 || true
+  git -C "$repoPath" diff > "$outdir/git-diff.patch" 2>&1 || true
+  git -C "$repoPath" diff --name-only > "$outdir/changed-files.txt" 2>&1 || true
 }
 
 collect_search_hits() {

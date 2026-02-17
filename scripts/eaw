@@ -78,8 +78,8 @@ cmd_card() {
     if [[ -z "$key" || -z "$path" ]]; then
       continue
     fi
-    # Allow relative paths
-    repoPath="$ROOT_DIR/$path"
+    # Resolve path (absolute, ~/, or relative to EAW root)
+    repoPath="$(resolve_repo_path "$path")"
     repoOutDir="$outdir/context/$key"
     ensure_dir "$repoOutDir"
     echo "Collecting context for $key -> $repoPath"
