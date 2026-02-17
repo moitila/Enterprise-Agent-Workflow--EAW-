@@ -41,6 +41,8 @@ REQUIRED_CONFIG_VERSION=1
 usage() {
 	cat <<EOF
 Usage: eaw init [--workdir <path>] [--force] [--upgrade]
+Example:
+  eaw init --workdir ./.eaw --upgrade
   eaw feature <CARD> "<TITLE>"
   eaw spike  <CARD> "<TITLE>"
   eaw bug    <CARD> "<TITLE>"
