@@ -1,0 +1,345 @@
+diff --git a/scripts/eaw b/scripts/eaw
+index 80ea187..a6ce221 100755
+--- a/scripts/eaw
++++ b/scripts/eaw
+@@ -30,13 +30,15 @@ else
+ 	exit 1
+ fi
+ 
+-CONFIG_DIR="$ROOT_DIR/config"
++resolve_workdirs "$ROOT_DIR"
++
++CONFIG_DIR="$EAW_CONFIG_DIR"
+ REPOS_CONF="$CONFIG_DIR/repos.conf"
+ SEARCH_CONF="$CONFIG_DIR/search.conf"
+ 
+ usage() {
+ 	cat <<EOF
+-Usage: eaw init
++Usage: eaw init [--workdir <path>] [--force]
+   eaw feature <CARD> "<TITLE>"
+   eaw spike  <CARD> "<TITLE>"
+   eaw bug    <CARD> "<TITLE>"
+@@ -46,6 +48,35 @@ EOF
+ }
+ 
+ cmd_init() {
++	local force="false"
++	local workdir=""
++	while [[ $# -gt 0 ]]; do
++		case "$1" in
++		--workdir)
++			shift
++			if [[ $# -lt 1 || -z "${1:-}" ]]; then
++				echo "Missing value for --workdir" >&2
++				exit 1
++			fi
++			workdir="$1"
++			;;
++		--force)
++			force="true"
++			;;
++		*)
++			echo "Unknown init option: $1" >&2
++			usage
++			exit 1
++			;;
++		esac
++		shift
++	done
++
++	if [[ -n "$workdir" ]]; then
++		init_workspace_workdir "$workdir" "$force"
++		return 0
++	fi
++
+ 	ensure_dir "$CONFIG_DIR"
+ 	if [[ -f "$SCRIPT_DIR/sync-repos-config.sh" ]]; then
+ 		bash "$SCRIPT_DIR/sync-repos-config.sh"
+@@ -65,6 +96,72 @@ cmd_init() {
+ 	fi
+ }
+ 
++write_or_skip() {
++	local target="$1"
++	local force="$2"
++	local content="$3"
++	if [[ -f "$target" && "$force" != "true" ]]; then
++		echo "$target already exists; use --force to overwrite"
++		return 0
++	fi
++	printf "%s\n" "$content" >"$target"
++	echo "Created $target"
++}
++
++init_workspace_workdir() {
++	local workdir="$1"
++	local force="$2"
++	local cfg="$workdir/config"
++	local tpl="$workdir/templates"
++	local out="$workdir/out"
++	local repos_conf="$cfg/repos.conf"
++	local search_conf="$cfg/search.conf"
++	local default_search="$EAW_ROOT_DIR/config/search.example.conf"
++	local default_tpl_dir="$EAW_ROOT_DIR/templates"
++
++	ensure_dir "$cfg"
++	ensure_dir "$tpl"
++	ensure_dir "$out"
++
++	write_or_skip "$repos_conf" "$force" "# Format: key|path
++# Example:
++# backend|/absolute/path/to/repo"
++
++	for name in feature bug spike; do
++		local src_tpl="$default_tpl_dir/$name.md"
++		local dst_tpl="$tpl/$name.md"
++		if [[ -f "$src_tpl" ]]; then
++			if [[ -f "$dst_tpl" && "$force" != "true" ]]; then
++				echo "$dst_tpl already exists; use --force to overwrite"
++			else
++				cp "$src_tpl" "$dst_tpl"
++				echo "Created $dst_tpl"
++			fi
++		fi
++	done
++
++	if [[ -f "$default_search" ]]; then
++		if [[ -f "$search_conf" && "$force" != "true" ]]; then
++			echo "$search_conf already exists; use --force to overwrite"
++		else
++			cp "$default_search" "$search_conf"
++			echo "Created $search_conf"
++		fi
++	else
++		write_or_skip "$search_conf" "$force" "# Add one search pattern per line
++# Example:
++# TODO|FIXME"
++	fi
++}
++
++validate_runtime_workdir() {
++	if [[ -n "${EAW_WORKDIR:-}" && ! -d "$EAW_CONFIG_DIR" ]]; then
++		echo "EAW_WORKDIR is set to '$EAW_WORKDIR', but '$EAW_CONFIG_DIR' was not found." >&2
++		echo "Initialize this workspace with: ./scripts/eaw init --workdir \"$EAW_WORKDIR\"" >&2
++		exit 1
++	fi
++}
++
+ # --- Execution lifecycle engine -------------------------------------------------
+ run_phase() {
+ 	# run_phase <phase-name> <fatal:true|false> <fn> [args...]
+@@ -105,7 +202,7 @@ phase_init_runtime() {
+ 	export TZ=UTC
+ 	ensure_dir "$outdir"
+ 	local tpl
+-	tpl="$ROOT_DIR/templates/$(echo "$type" | tr '[:upper:]' '[:lower:]').md"
++	tpl="$EAW_TEMPLATES_DIR/$(echo "$type" | tr '[:upper:]' '[:lower:]').md"
+ 	if [[ ! -f "$tpl" ]]; then
+ 		echo "Template not found: $tpl" >&2
+ 		return 1
+@@ -170,6 +267,9 @@ phase_search_hits() {
+ 	local outdir="$1"
+ 	for entry in "${REPO_ENTRIES[@]:-}"; do
+ 		IFS='|' read -r key path <<<"$entry"
++		if [[ -z "$key" || -z "$path" ]]; then
++			continue
++		fi
+ 		repoPath="$(resolve_repo_path "$path")"
+ 		repoOutDir="$outdir/context/$key"
+ 		if ! collect_search_hits "$key" "$repoPath" "$repoOutDir" "$SEARCH_CONF"; then
+@@ -195,7 +295,7 @@ cmd_card() {
+ 	local type="$1"
+ 	local card="$2"
+ 	local title="$3"
+-	local outdir="$ROOT_DIR/out/$card"
++	local outdir="$EAW_OUT_DIR/$card"
+ 	# expose OUTDIR for run_phase and others
+ 	OUTDIR="$outdir"
+ 	ensure_dir "$outdir"
+@@ -211,7 +311,7 @@ cmd_card() {
+ 
+ cmd_analyze() {
+ 	local card="$1"
+-	local outdir="$ROOT_DIR/out/$card"
++	local outdir="$EAW_OUT_DIR/$card"
+ 	if [[ ! -d "$outdir" ]]; then
+ 		echo "Card output not found: $outdir" >&2
+ 		exit 1
+@@ -327,7 +427,7 @@ TP
+ cmd_ingest() {
+ 	local card="$1"
+ 	local src_path="$2"
+-	local outdir="$ROOT_DIR/out/$card"
++	local outdir="$EAW_OUT_DIR/$card"
+ 	if [[ ! -f "$src_path" ]]; then
+ 		echo "Source file not found: $src_path" >&2
+ 		exit 1
+@@ -372,7 +472,7 @@ main() {
+ 	fi
+ 	case "$1" in
+ 	init)
+-		cmd_init
++		cmd_init "${@:2}"
+ 		;;
+ 	feature | spike | bug)
+ 		if [[ $# -lt 3 ]]; then
+@@ -380,6 +480,7 @@ main() {
+ 			usage
+ 			exit 1
+ 		fi
++		validate_runtime_workdir
+ 		cmd_card "${1}" "$2" "$3"
+ 		;;
+ 	analyze)
+@@ -388,6 +489,7 @@ main() {
+ 			usage
+ 			exit 1
+ 		fi
++		validate_runtime_workdir
+ 		cmd_analyze "$2"
+ 		;;
+ 	ingest)
+@@ -396,6 +498,7 @@ main() {
+ 			usage
+ 			exit 1
+ 		fi
++		validate_runtime_workdir
+ 		cmd_ingest "$2" "$3"
+ 		;;
+ 	--help | -h)
+diff --git a/scripts/lib.sh b/scripts/lib.sh
+index 6e02469..df86e98 100644
+--- a/scripts/lib.sh
++++ b/scripts/lib.sh
+@@ -16,6 +16,26 @@ ensure_dir() {
+ 
+ iso_date() { date -u +%Y-%m-%d; }
+ 
++resolve_workdirs() {
++	local root_dir="${1:-$EAW_BASE_DIR}"
++	EAW_ROOT_DIR="$root_dir"
++	EAW_WORKDIR="${EAW_WORKDIR:-}"
++
++	if [[ -n "$EAW_WORKDIR" ]]; then
++		EAW_CONFIG_DIR="$EAW_WORKDIR/config"
++		if [[ -d "$EAW_WORKDIR/templates" ]]; then
++			EAW_TEMPLATES_DIR="$EAW_WORKDIR/templates"
++		else
++			EAW_TEMPLATES_DIR="$EAW_ROOT_DIR/templates"
++		fi
++		EAW_OUT_DIR="${EAW_OUT_DIR:-$EAW_WORKDIR/out}"
++	else
++		EAW_CONFIG_DIR="$EAW_ROOT_DIR/config"
++		EAW_TEMPLATES_DIR="$EAW_ROOT_DIR/templates"
++		EAW_OUT_DIR="${EAW_OUT_DIR:-$EAW_ROOT_DIR/out}"
++	fi
++}
++
+ # Resolve repository path: support absolute (/), home (~), or relative to EAW root
+ # Usage: resolve_repo_path "<path>"
+ # Output: canonical absolute path
+@@ -31,8 +51,8 @@ resolve_repo_path() {
+ 		# Home-relative path
+ 		printf '%s\n' "${path/#\~/$HOME}"
+ 	else
+-		# Relative to EAW root
+-		printf '%s\n' "$EAW_BASE_DIR/$path"
++		# Relative to EAW root (resolved workdir keeps this stable).
++		printf '%s\n' "${EAW_ROOT_DIR:-$EAW_BASE_DIR}/$path"
+ 	fi
+ }
+ 
+diff --git a/docs/integration.md b/docs/integration.md
+new file mode 100644
+index 0000000..54cd9de
+--- /dev/null
++++ b/docs/integration.md
+@@ -0,0 +1,36 @@
++# EAW integration (workspace mode)
++
++## When to use `EAW_WORKDIR`
++
++Use `EAW_WORKDIR` when you want local workspace-specific configuration and outputs without changing the EAW core tree.
++
++- Core default (backward compatible): no `EAW_WORKDIR`; EAW uses `<repo>/config`, `<repo>/templates`, `<repo>/out`.
++- Workspace mode: set `EAW_WORKDIR`; EAW uses `<workdir>/config` and `<workdir>/out`.
++- Templates in workspace mode: EAW uses `<workdir>/templates` when this directory exists; otherwise it falls back to core `<repo>/templates`.
++
++## Recommended `.eaw/` structure
++
++```text
++.eaw/
++  config/
++    repos.conf
++    search.conf
++  templates/
++    feature.md
++    bug.md
++    spike.md
++  out/
++```
++
++Create this structure with:
++
++```bash
++./scripts/eaw init --workdir ./.eaw
++```
++
++## Shell export example
++
++```bash
++export EAW_WORKDIR="$PWD/.eaw"
++./scripts/eaw feature 1234 "Add integration docs"
++```
+diff --git a/IMPLEMENTATION_PHASE0.md b/IMPLEMENTATION_PHASE0.md
+new file mode 100644
+index 0000000..d98cae5
+--- /dev/null
++++ b/IMPLEMENTATION_PHASE0.md
+@@ -0,0 +1,45 @@
++# Implementation Phase 0 - Workspace mode
++
++## Summary of changes
++
++- Added centralized directory resolution in `scripts/lib.sh` via `resolve_workdirs()`.
++- Preserved default behavior when `EAW_WORKDIR` is unset.
++- Refactored `scripts/eaw` to consume resolved variables (`EAW_CONFIG_DIR`, `EAW_TEMPLATES_DIR`, `EAW_OUT_DIR`).
++- Added runtime validation with clear message when `EAW_WORKDIR` is set but `config/` is missing.
++- Extended `eaw init` with:
++  - `--workdir <path>`
++  - `--force`
++- Implemented workspace initialization:
++  - creates `<workdir>/config`, `<workdir>/templates`, `<workdir>/out`
++  - creates `config/repos.conf` sample
++  - creates `config/search.conf` from core default when available, or placeholder otherwise
++  - copies default core templates (`feature.md`, `bug.md`, `spike.md`) when available
++  - does not overwrite existing files unless `--force`
++- Added `docs/integration.md` with workspace usage guidance.
++
++## Files changed
++
++- `scripts/lib.sh`
++- `scripts/eaw`
++- `docs/integration.md`
++- `IMPLEMENTATION_PHASE0.md`
++
++## Manual test (3 commands)
++
++```bash
++./scripts/eaw init --workdir /tmp/eaw-phase0
++EAW_WORKDIR=/tmp/eaw-phase0 ./scripts/eaw feature 1001 "Workspace smoke"
++EAW_WORKDIR=/tmp/eaw-phase0-missing ./scripts/eaw feature 1002 "Should fail with guidance"
++```
++
++Expected:
++- command 1 creates `config/`, `templates/`, `out/` and sample config files
++- command 2 writes dossier under `/tmp/eaw-phase0/out/1001/`
++- command 3 exits with friendly message suggesting `./scripts/eaw init --workdir ...`
++
++## bash -n logs
++
++```text
++bash -n scripts/eaw: OK
++bash -n scripts/lib.sh: OK
++```
