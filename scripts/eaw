@@ -46,6 +46,7 @@ Example:
   eaw feature <CARD> "<TITLE>"
   eaw spike  <CARD> "<TITLE>"
   eaw bug    <CARD> "<TITLE>"
+  eaw prompt <CARD>
   eaw analyze <CARD>
   eaw ingest <CARD> <file-path>
   eaw validate
@@ -216,7 +217,7 @@ init_workspace_workdir() {
 # Example:
 # backend|/absolute/path/to/repo"
 
-	for name in feature bug spike; do
+	for name in feature bug spike intake_feature intake_bug intake_spike; do
 		local src_tpl="$default_tpl_dir/$name.md"
 		local dst_tpl="$tpl/$name.md"
 		if [[ -f "$src_tpl" ]]; then
@@ -335,12 +336,118 @@ cmd_validate() {
 	fi
 
 	if [[ -n "${EAW_WORKDIR:-}" && -d "$EAW_WORKDIR/templates" ]]; then
-		for tpl_name in feature.md bug.md spike.md; do
+		for tpl_name in feature.md bug.md spike.md intake_bug.md intake_feature.md intake_spike.md; do
 			if [[ ! -r "$EAW_WORKDIR/templates/$tpl_name" ]]; then
 				echo "WARNING: missing or unreadable workspace template: $EAW_WORKDIR/templates/$tpl_name"
 				warnings=$((warnings + 1))
 			fi
 		done
+	fi
+
+	local intake_bug_tpl="$EAW_TEMPLATES_DIR/intake_bug.md"
+	local intake_feature_tpl="$EAW_TEMPLATES_DIR/intake_feature.md"
+	local intake_spike_tpl="$EAW_TEMPLATES_DIR/intake_spike.md"
+
+	if [[ ! -r "$intake_bug_tpl" ]]; then
+		echo "WARNING: templates/intake_bug.md missing"
+		warnings=$((warnings + 1))
+	else
+		if ! grep_heading_match "$intake_bug_tpl" '^##[[:space:]]*(Resumo do problema|Resumo)[[:space:]]*$'; then
+			echo "WARNING: templates/intake_bug.md missing heading: Resumo do problema ou Resumo"
+			warnings=$((warnings + 1))
+		fi
+		if ! grep_heading_match "$intake_bug_tpl" '^##[[:space:]]*Comportamento esperado[[:space:]]*$'; then
+			echo "WARNING: templates/intake_bug.md missing heading: Comportamento esperado"
+			warnings=$((warnings + 1))
+		fi
+		if ! grep_heading_match "$intake_bug_tpl" '^##[[:space:]]*Comportamento atual[[:space:]]*$'; then
+			echo "WARNING: templates/intake_bug.md missing heading: Comportamento atual"
+			warnings=$((warnings + 1))
+		fi
+		if ! grep_heading_match "$intake_bug_tpl" '^##[[:space:]]*Passos para reproduzir[[:space:]]*$'; then
+			echo "WARNING: templates/intake_bug.md missing heading: Passos para reproduzir"
+			warnings=$((warnings + 1))
+		fi
+		if ! grep_heading_match "$intake_bug_tpl" '^##[[:space:]]*Evidências fornecidas[[:space:]]*$'; then
+			echo "WARNING: templates/intake_bug.md missing heading: Evidências fornecidas"
+			warnings=$((warnings + 1))
+		fi
+		if ! grep_heading_match "$intake_bug_tpl" '^##[[:space:]]*Impacto[[:space:]]*/[[:space:]]*Escopo[[:space:]]*$'; then
+			echo "WARNING: templates/intake_bug.md missing heading: Impacto / Escopo"
+			warnings=$((warnings + 1))
+		fi
+		if ! grep_heading_match "$intake_bug_tpl" '^##[[:space:]]*Perguntas em aberto[[:space:]]*$'; then
+			echo "WARNING: templates/intake_bug.md missing heading: Perguntas em aberto"
+			warnings=$((warnings + 1))
+		fi
+		if ! grep_heading_match "$intake_bug_tpl" '^##[[:space:]]*Hipóteses iniciais[[:space:]]*$'; then
+			echo "WARNING: templates/intake_bug.md missing heading: Hipóteses iniciais"
+			warnings=$((warnings + 1))
+		fi
+	fi
+
+	if [[ ! -r "$intake_feature_tpl" ]]; then
+		echo "WARNING: templates/intake_feature.md missing"
+		warnings=$((warnings + 1))
+	else
+		if ! grep_heading_match "$intake_feature_tpl" '^##[[:space:]]*Problema[[:space:]]*$'; then
+			echo "WARNING: templates/intake_feature.md missing heading: Problema"
+			warnings=$((warnings + 1))
+		fi
+		if ! grep_heading_match "$intake_feature_tpl" '^##[[:space:]]*Objetivo[[:space:]]*$'; then
+			echo "WARNING: templates/intake_feature.md missing heading: Objetivo"
+			warnings=$((warnings + 1))
+		fi
+		if ! grep_heading_match "$intake_feature_tpl" '^##[[:space:]]*Critérios de aceite[[:space:]]*$'; then
+			echo "WARNING: templates/intake_feature.md missing heading: Critérios de aceite"
+			warnings=$((warnings + 1))
+		fi
+		if ! grep_heading_match "$intake_feature_tpl" '^##[[:space:]]*Escopo[[:space:]]*\(In/Out\)[[:space:]]*$'; then
+			echo "WARNING: templates/intake_feature.md missing heading: Escopo (In/Out)"
+			warnings=$((warnings + 1))
+		fi
+		if ! grep_heading_match "$intake_feature_tpl" '^##[[:space:]]*Dependências[[:space:]]*$'; then
+			echo "WARNING: templates/intake_feature.md missing heading: Dependências"
+			warnings=$((warnings + 1))
+		fi
+		if ! grep_heading_match "$intake_feature_tpl" '^##[[:space:]]*Riscos[[:space:]]*$'; then
+			echo "WARNING: templates/intake_feature.md missing heading: Riscos"
+			warnings=$((warnings + 1))
+		fi
+		if ! grep_heading_match "$intake_feature_tpl" '^##[[:space:]]*Perguntas em aberto[[:space:]]*$'; then
+			echo "WARNING: templates/intake_feature.md missing heading: Perguntas em aberto"
+			warnings=$((warnings + 1))
+		fi
+	fi
+
+	if [[ ! -r "$intake_spike_tpl" ]]; then
+		echo "WARNING: templates/intake_spike.md missing"
+		warnings=$((warnings + 1))
+	else
+		if ! grep_heading_match "$intake_spike_tpl" '^##[[:space:]]*Pergunta[[:space:]]*/[[:space:]]*Hipótese[[:space:]]*$'; then
+			echo "WARNING: templates/intake_spike.md missing heading: Pergunta / Hipótese"
+			warnings=$((warnings + 1))
+		fi
+		if ! grep_heading_match "$intake_spike_tpl" '^##[[:space:]]*Contexto técnico[[:space:]]*$'; then
+			echo "WARNING: templates/intake_spike.md missing heading: Contexto técnico"
+			warnings=$((warnings + 1))
+		fi
+		if ! grep_heading_match "$intake_spike_tpl" '^##[[:space:]]*Opções consideradas[[:space:]]*$'; then
+			echo "WARNING: templates/intake_spike.md missing heading: Opções consideradas"
+			warnings=$((warnings + 1))
+		fi
+		if ! grep_heading_match "$intake_spike_tpl" '^##[[:space:]]*Critério de conclusão[[:space:]]*$'; then
+			echo "WARNING: templates/intake_spike.md missing heading: Critério de conclusão"
+			warnings=$((warnings + 1))
+		fi
+		if ! grep_heading_match "$intake_spike_tpl" '^##[[:space:]]*Riscos[[:space:]]*$'; then
+			echo "WARNING: templates/intake_spike.md missing heading: Riscos"
+			warnings=$((warnings + 1))
+		fi
+		if ! grep_heading_match "$intake_spike_tpl" '^##[[:space:]]*Próximos passos[[:space:]]*$'; then
+			echo "WARNING: templates/intake_spike.md missing heading: Próximos passos"
+			warnings=$((warnings + 1))
+		fi
 	fi
 
 	echo "SUMMARY: errors=$errors warnings=$warnings"
@@ -468,6 +575,29 @@ phase_init_runtime() {
 	local target_md="$outdir/${type}_${card}.md"
 	render_template "$tpl" "$target_md" "$card" "$title" "$type" "$date"
 	echo "Wrote $target_md"
+	local intake_dir="$outdir/investigations"
+	local intake_file="$intake_dir/00_intake.md"
+	local intake_tpl="$EAW_TEMPLATES_DIR/intake_${type}.md"
+	ensure_dir "$intake_dir"
+	if [[ ! -f "$intake_file" ]]; then
+		if [[ -f "$intake_tpl" ]]; then
+			cp "$intake_tpl" "$intake_file"
+		else
+			echo "WARNING: missing intake template for type '$type': $intake_tpl; using minimal fallback"
+			cat >"$intake_file" <<EOF
+# Intake ${type^^} ${card}
+
+## Resumo
+
+## Comportamento esperado
+
+## Comportamento atual
+
+## Passos para reproduzir
+EOF
+		fi
+		echo "Wrote $intake_file"
+	fi
 	# initialize execution.log
 	: >"$outdir/execution.log"
 	printf "phase|status|duration_ms|note\n" >>"$outdir/execution.log"
@@ -721,6 +851,218 @@ cmd_ingest() {
 	echo "Registered evidence in $main_md"
 }
 
+append_warn() {
+	local warn_ref="$1"
+	local msg="$2"
+	eval "$warn_ref+=(\"\$msg\")"
+}
+
+grep_heading_match() {
+	local file="$1"
+	local pattern="$2"
+	if command -v rg >/dev/null 2>&1; then
+		rg -i -q -- "$pattern" "$file"
+	else
+		grep -Eiq -- "$pattern" "$file"
+	fi
+}
+
+validate_intake_heading_group() {
+	local file="$1"
+	local warn_ref="$2"
+	local label="$3"
+	local pattern="$4"
+	if ! grep_heading_match "$file" "$pattern"; then
+		append_warn "$warn_ref" "intake missing heading for '${label}'"
+	fi
+}
+
+detect_card_type_with_warnings() {
+	local card="$1"
+	local outdir="$2"
+	local type_ref="$3"
+	local warn_ref="$4"
+	local found=()
+
+	if [[ -f "$outdir/bug_${card}.md" ]]; then
+		found+=("bug")
+	fi
+	if [[ -f "$outdir/feature_${card}.md" ]]; then
+		found+=("feature")
+	fi
+	if [[ -f "$outdir/spike_${card}.md" ]]; then
+		found+=("spike")
+	fi
+
+	if [[ "${#found[@]}" -eq 0 ]]; then
+		append_warn "$warn_ref" "no dossier file found in $outdir; defaulting type to bug"
+		eval "$type_ref='bug'"
+		return 0
+	fi
+
+	if [[ "${#found[@]}" -gt 1 ]]; then
+		append_warn "$warn_ref" "ambiguous card type (${found[*]}); applying priority bug > feature > spike"
+	fi
+
+	if [[ " ${found[*]} " == *" bug "* ]]; then
+		eval "$type_ref='bug'"
+		return 0
+	fi
+	if [[ " ${found[*]} " == *" feature "* ]]; then
+		eval "$type_ref='feature'"
+		return 0
+	fi
+	eval "$type_ref='spike'"
+}
+
+count_required_intake_headings() {
+	local type="$1"
+	local file="$2"
+	local count=0
+	case "$type" in
+	bug)
+		if grep_heading_match "$file" '^##[[:space:]]*(Resumo do problema|Resumo)[[:space:]]*$'; then count=$((count + 1)); fi
+		if grep_heading_match "$file" '^##[[:space:]]*Comportamento esperado[[:space:]]*$'; then count=$((count + 1)); fi
+		if grep_heading_match "$file" '^##[[:space:]]*Comportamento atual[[:space:]]*$'; then count=$((count + 1)); fi
+		if grep_heading_match "$file" '^##[[:space:]]*Passos para reproduzir[[:space:]]*$'; then count=$((count + 1)); fi
+		;;
+	feature)
+		if grep_heading_match "$file" '^##[[:space:]]*(Problema|Objetivo)[[:space:]]*$'; then count=$((count + 1)); fi
+		if grep_heading_match "$file" '^##[[:space:]]*Critérios de aceite[[:space:]]*$'; then count=$((count + 1)); fi
+		if grep_heading_match "$file" '^##[[:space:]]*Escopo([[:space:]]*\(In/Out\))?[[:space:]]*$'; then count=$((count + 1)); fi
+		;;
+	spike)
+		if grep_heading_match "$file" '^##[[:space:]]*(Pergunta[[:space:]]*/[[:space:]]*Hipótese|Pergunta|Hipótese)[[:space:]]*$'; then count=$((count + 1)); fi
+		if grep_heading_match "$file" '^##[[:space:]]*Critério de conclusão[[:space:]]*$'; then count=$((count + 1)); fi
+		;;
+	esac
+	echo "$count"
+}
+
+intake_is_structurally_incomplete() {
+	local type="$1"
+	local file="$2"
+	local size_bytes=0
+	local required_hits=0
+	size_bytes=$(wc -c <"$file" | tr -d '[:space:]')
+	required_hits="$(count_required_intake_headings "$type" "$file")"
+	if [[ "$size_bytes" -lt 50 || "$required_hits" -le 1 ]]; then
+		return 0
+	fi
+	return 1
+}
+
+intake_has_section_headings() {
+	local file="$1"
+	if command -v rg >/dev/null 2>&1; then
+		rg -q -- '^[[:space:]]*##[[:space:]]+\S' "$file"
+	else
+		grep -Eq -- '^[[:space:]]*##[[:space:]]+\S' "$file"
+	fi
+}
+
+cmd_prompt() {
+	local card="$1"
+	local outdir="$EAW_OUT_DIR/$card"
+	local intake_file="$outdir/investigations/00_intake.md"
+	local type=""
+	local warnings=()
+
+	detect_card_type_with_warnings "$card" "$outdir" type warnings
+
+	if [[ ! -f "$intake_file" ]]; then
+		append_warn warnings "missing intake file: $intake_file"
+	else
+		case "$type" in
+		bug)
+			validate_intake_heading_group "$intake_file" warnings "Resumo do problema ou Resumo" '^##[[:space:]]*(Resumo do problema|Resumo)[[:space:]]*$'
+			validate_intake_heading_group "$intake_file" warnings "Comportamento esperado" '^##[[:space:]]*Comportamento esperado[[:space:]]*$'
+			validate_intake_heading_group "$intake_file" warnings "Comportamento atual" '^##[[:space:]]*Comportamento atual[[:space:]]*$'
+			validate_intake_heading_group "$intake_file" warnings "Passos para reproduzir" '^##[[:space:]]*Passos para reproduzir[[:space:]]*$'
+			;;
+		feature)
+			validate_intake_heading_group "$intake_file" warnings "Problema ou Objetivo" '^##[[:space:]]*(Problema|Objetivo)[[:space:]]*$'
+			validate_intake_heading_group "$intake_file" warnings "Critérios de aceite" '^##[[:space:]]*Critérios de aceite[[:space:]]*$'
+			validate_intake_heading_group "$intake_file" warnings "Escopo" '^##[[:space:]]*Escopo([[:space:]]*\(In/Out\))?[[:space:]]*$'
+			;;
+		spike)
+			validate_intake_heading_group "$intake_file" warnings "Pergunta ou Hipótese" '^##[[:space:]]*(Pergunta[[:space:]]*/[[:space:]]*Hipótese|Pergunta|Hipótese)[[:space:]]*$'
+			validate_intake_heading_group "$intake_file" warnings "Critério de conclusão" '^##[[:space:]]*Critério de conclusão[[:space:]]*$'
+			;;
+		esac
+		if ! intake_has_section_headings "$intake_file" || intake_is_structurally_incomplete "$type" "$intake_file"; then
+			append_warn warnings "intake appears structurally incomplete."
+			append_warn warnings "DO NOT START INVESTIGATION BEFORE COMPLETING REQUIRED SECTIONS."
+		fi
+	fi
+
+	echo "=== EAW AGENT PROMPT (${type}) CARD ${card} ==="
+	echo "EAW_WORKDIR=${EAW_WORKDIR:-}"
+	echo "OUT_DIR=$outdir"
+
+	for warn in "${warnings[@]}"; do
+		if [[ "$warn" == "DO NOT START INVESTIGATION BEFORE COMPLETING REQUIRED SECTIONS." ]]; then
+			echo "WARNING: $warn"
+		else
+			echo "WARN: $warn"
+		fi
+	done
+
+	cat <<EOF
+Você é o agente do VSCode e deve investigar o card ${card} (${type}) com disciplina EAW.
+
+REGRAS OBRIGATÓRIAS:
+
+Não alterar código.
+
+Não commitar.
+
+Toda afirmação deve ter evidência (path real + comando + trecho curto).
+
+Trabalhar exclusivamente dentro de out/${card}/.
+
+Qualquer desvio deve ser registrado em investigations/_warnings.md.
+
+PASSO 1 — BASELINE
+export EAW_WORKDIR="${EAW_WORKDIR:-}"
+./scripts/eaw doctor
+./scripts/eaw validate
+
+PASSO 2 — ARTEFATOS EAW
+Confirme existência de:
+
+execution.log
+
+${type}_${card}.md
+
+investigations/00_intake.md
+out/${card}/investigations/00_intake.md
+
+PASSO 3 — INVESTIGAÇÃO CONTROLADA
+
+Use apenas contexto de out/${card}/ e código do repo.
+
+Registre comandos e outputs em:
+investigations/20_findings.md
+
+PASSO 4 — ATUALIZAR TEMPLATE DO CARD
+Atualize:
+out/${card}/${type}_${card}.md
+com evidências reais coletadas.
+
+PASSO 5 — CONCLUSÃO
+Produza:
+
+investigations/40_next_steps.md
+
+diagnóstico fundamentado
+
+riscos
+
+plano mínimo determinístico
+EOF
+}
+
 main() {
 	if [[ $# -lt 1 ]]; then
 		usage
@@ -747,6 +1089,15 @@ main() {
 		fi
 		validate_runtime_workdir
 		cmd_analyze "$2"
+		;;
+	prompt)
+		if [[ $# -lt 2 ]]; then
+			echo "Missing args" >&2
+			usage
+			exit 1
+		fi
+		validate_runtime_workdir
+		cmd_prompt "$2"
 		;;
 	ingest)
 		if [[ $# -lt 3 ]]; then

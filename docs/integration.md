@@ -20,6 +20,9 @@ Use `EAW_WORKDIR` when you want local workspace-specific configuration and outpu
     feature.md
     bug.md
     spike.md
+    intake_bug.md
+    intake_feature.md
+    intake_spike.md
   out/
 ```
 
@@ -67,8 +70,20 @@ EAW_WORKDIR="$PWD/.eaw" ./scripts/eaw doctor
 ```
 
 - `validate` checks config files, path parsing, repository path existence (warning), and workspace templates.
+- `validate` also checks existence and minimal heading integrity for intake templates (`intake_bug.md`, `intake_feature.md`, `intake_spike.md`) in `EAW_TEMPLATES_DIR`.
 - Exit code: `0` for success/warnings, `2` for validation errors.
 - `doctor` prints resolved directories, tool availability, and config status, ending with `STATUS: OK|WARN|ERROR` (always exits `0`).
+
+## EAW prompt
+
+```bash
+EAW_WORKDIR="$PWD/.eaw" ./scripts/eaw prompt 1234
+```
+
+- Prints an agent prompt to `stdout` to guide investigation of card `1234`.
+- Detects card type by `out/<CARD>/{bug,feature,spike}_<CARD>.md` with priority `bug > feature > spike`.
+- Expects intake in `out/<CARD>/investigations/00_intake.md`.
+- Emits `WARN:` lines when type is ambiguous, intake is missing, or expected headings are missing by card type.
 
 ## Upgrade instruction
 
