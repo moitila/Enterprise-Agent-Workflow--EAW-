@@ -598,6 +598,26 @@ EOF
 		fi
 		echo "Wrote $intake_file"
 	fi
+	# Create investigation scaffolds (non-breaking, idempotent)
+	for scaffold_name in 10_baseline 20_findings 30_hypotheses 40_next_steps; do
+		local scaffold_file="$intake_dir/${scaffold_name}.md"
+		local scaffold_tpl="$EAW_TEMPLATES_DIR/${scaffold_name}.md"
+		if [[ ! -f "$scaffold_file" ]]; then
+			if [[ -f "$scaffold_tpl" ]]; then
+				cp "$scaffold_tpl" "$scaffold_file"
+				echo "Wrote $scaffold_file"
+			else
+				echo "WARNING: missing scaffold template: $scaffold_tpl; using minimal fallback"
+				cat >"$scaffold_file" <<EOF
+# ${scaffold_name^^} — Card ${card}
+
+## Status
+
+Placeholder for ${scaffold_name} investigation phase.
+EOF
+			fi
+		fi
+	done
 	# initialize execution.log
 	: >"$outdir/execution.log"
 	printf "phase|status|duration_ms|note\n" >>"$outdir/execution.log"
