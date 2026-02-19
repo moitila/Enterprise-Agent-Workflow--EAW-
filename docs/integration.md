@@ -23,6 +23,10 @@ Use `EAW_WORKDIR` when you want local workspace-specific configuration and outpu
     intake_bug.md
     intake_feature.md
     intake_spike.md
+    10_baseline.md
+    20_findings.md
+    30_hypotheses.md
+    40_next_steps.md
   out/
 ```
 
