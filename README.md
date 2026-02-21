@@ -35,6 +35,11 @@ bash ./scripts/eaw bug 999999 "Smoke test"
 ## Output structure
 
 - `out/<CARD>/<TYPE>_<CARD>.md` — the generated dossier
+- `out/<CARD>/investigations/00_intake.md` — intake for investigation flow
+- `out/<CARD>/investigations/10_baseline.md` — baseline checklist and initial evidence
+- `out/<CARD>/investigations/20_findings.md` — findings and collected artifacts
+- `out/<CARD>/investigations/30_hypotheses.md` — hypotheses and validation plan
+- `out/<CARD>/investigations/40_next_steps.md` — final diagnosis, risks, and action plan
 - `out/<CARD>/context/<repoKey>/git-status.txt` — git status
 - `out/<CARD>/context/<repoKey>/git-diff.patch` — diff
 - `out/<CARD>/context/<repoKey>/changed-files.txt` — changed file list

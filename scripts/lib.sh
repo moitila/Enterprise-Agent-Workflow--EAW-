@@ -88,7 +88,7 @@ load_repos() {
 		log "repos.conf missing: $f"
 		return 1
 	fi
-	awk -F"|" '!/^\s*#/ && NF>=2 {print $1 "|" $2}' "$f"
+	awk -F"|" '!/^[[:space:]]*#/ && NF>=2 {print $1 "|" $2}' "$f"
 }
 
 # read search.conf and return non-empty non-comment lines
@@ -98,7 +98,7 @@ load_search_patterns() {
 		log "search.conf missing: $f"
 		return 1
 	fi
-	grep -E -v '^\s*#' "$f" | sed '/^\s*$/d'
+	grep -E -v '^[[:space:]]*#' "$f" | sed '/^[[:space:]]*$/d'
 }
 
 gather_context_for_repo() {

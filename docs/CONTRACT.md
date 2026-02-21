@@ -21,6 +21,11 @@ Outputs
 - Primary output directory: `out/<CARD>/`
 - Expected artifacts inside `out/<CARD>/`:
   - `<type>_<CARD>.md` — rendered dossier (main artifact)
+  - `investigations/00_intake.md` — investigation intake
+  - `investigations/10_baseline.md` — baseline stage scaffold
+  - `investigations/20_findings.md` — findings stage scaffold
+  - `investigations/30_hypotheses.md` — hypotheses stage scaffold
+  - `investigations/40_next_steps.md` — next-steps stage scaffold
   - `AI_PROMPT_<CARD>.md` — optional prompt file (when analyze runs)
   - `TEST_PLAN_<CARD>.md` — placeholder test plan
   - `context/<repoKey>/` — per-repo metadata files (git-branch.txt, git-commit.txt, changed-files.txt, git-diff.patch, git-status.txt)

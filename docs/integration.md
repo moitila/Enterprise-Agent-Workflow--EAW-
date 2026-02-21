@@ -23,6 +23,10 @@ Use `EAW_WORKDIR` when you want local workspace-specific configuration and outpu
     intake_bug.md
     intake_feature.md
     intake_spike.md
+    10_baseline.md
+    20_findings.md
+    30_hypotheses.md
+    40_next_steps.md
   out/
 ```
 
@@ -81,8 +85,13 @@ EAW_WORKDIR="$PWD/.eaw" ./scripts/eaw prompt 1234
 ```
 
 - Prints an agent prompt to `stdout` to guide investigation of card `1234`.
-- Detects card type by `out/<CARD>/{bug,feature,spike}_<CARD>.md` with priority `bug > feature > spike`.
-- Expects intake in `out/<CARD>/investigations/00_intake.md`.
+- Declares resolved prompt directories at the top of the content:
+  - `OUT_DIR=<resolved out root>`
+  - `CARD_DIR=<resolved card directory>`
+- Uses `$CARD_DIR/...` for all internal prompt references.
+- Persists the same prompt content to `<resolved card directory>/agent_prompt.md` and prints `Wrote <resolved card directory>/agent_prompt.md` to `stderr`.
+- Detects card type by `<resolved card directory>/{bug,feature,spike}_<CARD>.md` with priority `bug > feature > spike`.
+- Expects intake in `<resolved card directory>/investigations/00_intake.md`.
 - Emits `WARN:` lines when type is ambiguous, intake is missing, or expected headings are missing by card type.
 
 ## Upgrade instruction

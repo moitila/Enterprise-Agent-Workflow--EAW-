@@ -640,7 +640,7 @@ phase_resolve_repos() {
 	if [[ -f "$REPOS_CONF" ]]; then
 		while IFS= read -r line; do
 			line="${line//$'\r'/}"
-			if [[ -z "$line" || "$line" =~ ^\s*# ]]; then
+			if [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]]; then
 				continue
 			fi
 			REPO_ENTRIES+=("$line")
@@ -751,7 +751,7 @@ cmd_analyze() {
 	# collect repos list
 	local repos_list
 	if [[ -f "$REPOS_CONF" ]]; then
-		repos_list=$(awk -F"|" '!/^\s*#/ && NF>=2 {print "- " $1 " => " $2}' "$REPOS_CONF")
+		repos_list=$(awk -F"|" '!/^[[:space:]]*#/ && NF>=2 {print "- " $1 " => " $2}' "$REPOS_CONF")
 	else
 		repos_list="(no repos.conf present)"
 	fi
@@ -983,12 +983,14 @@ intake_has_section_headings() {
 
 cmd_prompt() {
 	local card="$1"
-	local outdir="$EAW_OUT_DIR/$card"
-	local intake_file="$outdir/investigations/00_intake.md"
+	local out_root="$EAW_OUT_DIR"
+	local card_dir="$out_root/$card"
+	local prompt_file="$card_dir/agent_prompt.md"
+	local intake_file="$card_dir/investigations/00_intake.md"
 	local type=""
 	local warnings=()
 
-	detect_card_type_with_warnings "$card" "$outdir" type warnings
+	detect_card_type_with_warnings "$card" "$card_dir" type warnings
 
 	if [[ ! -f "$intake_file" ]]; then
 		append_warn warnings "missing intake file: $intake_file"
@@ -1016,19 +1018,22 @@ cmd_prompt() {
 		fi
 	fi
 
-	echo "=== EAW AGENT PROMPT (${type}) CARD ${card} ==="
-	echo "EAW_WORKDIR=${EAW_WORKDIR:-}"
-	echo "OUT_DIR=$outdir"
+	ensure_dir "$card_dir"
+	{
+		echo "=== EAW AGENT PROMPT (${type}) CARD ${card} ==="
+		echo "EAW_WORKDIR=${EAW_WORKDIR:-}"
+		echo "OUT_DIR=$out_root"
+		echo "CARD_DIR=$card_dir"
 
-	for warn in "${warnings[@]}"; do
-		if [[ "$warn" == "DO NOT START INVESTIGATION BEFORE COMPLETING REQUIRED SECTIONS." ]]; then
-			echo "WARNING: $warn"
-		else
-			echo "WARN: $warn"
-		fi
-	done
+		for warn in "${warnings[@]}"; do
+			if [[ "$warn" == "DO NOT START INVESTIGATION BEFORE COMPLETING REQUIRED SECTIONS." ]]; then
+				echo "WARNING: $warn"
+			else
+				echo "WARN: $warn"
+			fi
+		done
 
-	cat <<EOF
+		cat <<EOF
 Você é o agente do VSCode e deve investigar o card ${card} (${type}) com disciplina EAW.
 
 REGRAS OBRIGATÓRIAS:
@@ -1039,9 +1044,16 @@ Não commitar.
 
 Toda afirmação deve ter evidência (path real + comando + trecho curto).
 
-Trabalhar exclusivamente dentro de out/${card}/.
+Trabalhar exclusivamente dentro de \$CARD_DIR/.
 
-Qualquer desvio deve ser registrado em investigations/_warnings.md.
+Qualquer desvio deve ser registrado em \$CARD_DIR/investigations/_warnings.md.
+
+Pré-check obrigatório de root (executar antes de qualquer passo):
+cd "\$EAW_ROOT_DIR"
+test -f ./scripts/eaw || { echo "ERROR: not in EAW-tool root"; exit 2; }
+
+Whitelist estrita com abort:
+Qualquer tentativa de alterar arquivo fora da lista permitida deve abortar imediatamente com erro.
 
 PASSO 1 — BASELINE
 export EAW_WORKDIR="${EAW_WORKDIR:-}"
@@ -1051,23 +1063,22 @@ export EAW_WORKDIR="${EAW_WORKDIR:-}"
 PASSO 2 — ARTEFATOS EAW
 Confirme existência de:
 
-execution.log
+\$CARD_DIR/execution.log
 
 ${type}_${card}.md
 
-investigations/00_intake.md
-out/${card}/investigations/00_intake.md
+\$CARD_DIR/investigations/00_intake.md
 
 PASSO 3 — INVESTIGAÇÃO CONTROLADA
 
-Use apenas contexto de out/${card}/ e código do repo.
+Use apenas contexto de \$CARD_DIR/ e código do repo.
 
 Registre comandos e outputs em:
-investigations/20_findings.md
+\$CARD_DIR/investigations/20_findings.md
 
 PASSO 4 — ATUALIZAR TEMPLATE DO CARD
 Atualize:
-out/${card}/${type}_${card}.md
+\$CARD_DIR/${type}_${card}.md
 com evidências reais coletadas.
 
 PASSO 5 — CONCLUSÃO
@@ -1080,7 +1091,27 @@ diagnóstico fundamentado
 riscos
 
 plano mínimo determinístico
+
+PASSO 6 — TESTES DETERMINÍSTICOS ROBUSTOS
+Use loop explícito para validar artefatos, sem padrões frágeis de brace expansion.
+Exemplo:
+for file in \
+  "\$CARD_DIR/execution.log" \
+  "\$CARD_DIR/investigations/00_intake.md" \
+  "\$CARD_DIR/investigations/20_findings.md" \
+  "\$CARD_DIR/investigations/40_next_steps.md"; do
+  test -f "\$file" || { echo "ERROR: missing \$file"; exit 2; }
+done
+
+RETORNO OBRIGATÓRIO (EVIDÊNCIA ESTRUTURADA)
+- lista de arquivos alterados
+- resumo por arquivo
+- saída literal dos testes executados
+- Backward compatibility preservada; sem refatorações extras.
 EOF
+	} | tee "$prompt_file"
+
+	echo "Wrote $prompt_file" >&2
 }
 
 main() {
