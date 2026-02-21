@@ -30,7 +30,8 @@ rc=$?
 printf "%s\n" "$output_happy"
 
 grep -Fq "=== EAW AGENT PROMPT (bug) CARD 999001 ===" <<<"$output_happy" || fail "missing header in happy path"
-grep -Fq "out/999001/investigations/00_intake.md" <<<"$output_happy" || fail "missing intake path reference in happy path"
+grep -Fq "OUT_DIR=$EAW_WORKDIR/out" <<<"$output_happy" || fail "missing OUT_DIR in happy path"
+grep -Fq "CARD_DIR=$EAW_WORKDIR/out/999001" <<<"$output_happy" || fail "missing CARD_DIR in happy path"
 grep -Fq "investigations/20_findings.md" <<<"$output_happy" || fail "missing findings path in happy path"
 grep -Fq "execution.log" <<<"$output_happy" || fail "missing execution.log reference in happy path"
 grep -Fq "bug_999001.md" <<<"$output_happy" || fail "missing card artifact reference in happy path"
