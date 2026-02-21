@@ -539,6 +539,8 @@ cmd_doctor() {
 
 	echo "EAW doctor"
 	echo "Resolved dirs:"
+	echo "  RUNTIME_ROOT=$EAW_ROOT_DIR"
+	echo "  CONFIG_SOURCE=$REPOS_CONF"
 	echo "  EAW_ROOT_DIR=$EAW_ROOT_DIR"
 	echo "  EAW_WORKDIR=${EAW_WORKDIR:-}"
 	echo "  EAW_CONFIG_DIR=$EAW_CONFIG_DIR"
@@ -1121,14 +1123,17 @@ cmd_prompt() {
 	repo_blocks="$(collect_repos_lists)"
 	target_repos="$(printf "%s\n" "$repo_blocks" | sed -n '1,/^$/p' | sed '/^$/d')"
 	excluded_repos="$(printf "%s\n" "$repo_blocks" | sed -n '/^$/,$p' | sed '1d;/^$/d')"
-	{
-		echo "=== EAW AGENT PROMPT (${type}) CARD ${card} ==="
-		echo "EAW_WORKDIR=${EAW_WORKDIR:-}"
-		echo "OUT_DIR=$out_root"
-		echo "CARD_DIR=$card_dir"
-		echo "TARGET_REPOS:"
-		echo "$target_repos"
-		echo "EXCLUDED_REPOS:"
+		{
+			echo "=== EAW AGENT PROMPT (${type}) CARD ${card} ==="
+			echo "EAW_WORKDIR=${EAW_WORKDIR:-}"
+			echo "RUNTIME_ROOT=$EAW_ROOT_DIR"
+			echo "CONFIG_SOURCE=$REPOS_CONF"
+			echo 'EAW_ROOT_DIR="$RUNTIME_ROOT"'
+			echo "OUT_DIR=$out_root"
+			echo "CARD_DIR=$card_dir"
+			echo "TARGET_REPOS:"
+			echo "$target_repos"
+			echo "EXCLUDED_REPOS:"
 		echo "$excluded_repos"
 
 		for warn in "${warnings[@]}"; do
@@ -1150,15 +1155,24 @@ Não commitar.
 
 Toda afirmação deve ter evidência (path real + comando + trecho curto).
 
-Trabalhar exclusivamente dentro de \$CARD_DIR/.
+Leitura permitida em \$RUNTIME_ROOT e nos TARGET_REPOS listados.
+
+Escrita permitida somente em \$CARD_DIR/.
 
 Qualquer desvio deve ser registrado em \$CARD_DIR/investigations/_warnings.md.
 
 Pré-check obrigatório de root (executar antes de qualquer passo):
-cd "\$EAW_ROOT_DIR"
+cd "\$RUNTIME_ROOT"
 test -f ./scripts/eaw || { echo "ERROR: not in EAW-tool root"; exit 2; }
+test -f "\$CONFIG_SOURCE" || { echo "ERROR: missing config source \$CONFIG_SOURCE"; exit 2; }
 
 Whitelist estrita com abort:
+Arquivos permitidos para escrita:
+- \$CARD_DIR/${type}_${card}.md
+- \$CARD_DIR/investigations/00_intake.md
+- \$CARD_DIR/investigations/20_findings.md
+- \$CARD_DIR/investigations/40_next_steps.md
+- \$CARD_DIR/investigations/_warnings.md
 Qualquer tentativa de alterar arquivo fora da lista permitida deve abortar imediatamente com erro.
 
 PASSO 1 — BASELINE
