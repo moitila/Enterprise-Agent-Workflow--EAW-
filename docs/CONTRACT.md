@@ -12,7 +12,7 @@ Inputs
 - Command: `eaw <subcommand>` (no changes to CLI).
 - Card parameters: `type` (feature|bug|spike), `card id` (string), `title` (string).
 - Configuration files (workspace `config/`):
-  - `repos.conf` — lines in format `key|path` or `key|path|role` (path may be absolute, ~/, or relative to EAW root; `role` is optional and accepts `target|infra`, default=`target`).
+  - `repos.conf` — lines in format `key|path` (legacy) or `key|path|role`, where role is `target` or `infra` (path may be absolute, ~/, or relative to EAW root). Missing role defaults to `target`.
   - `search.conf` — newline-separated search patterns (optional).
 - Templates: `templates/<type>.md` must exist for card rendering.
 
@@ -30,6 +30,7 @@ Outputs
   - `TEST_PLAN_<CARD>.md` — placeholder test plan
   - `context/<repoKey>/` — per-repo metadata files (git-branch.txt, git-commit.txt, changed-files.txt, git-diff.patch, git-status.txt)
   - `context/<repoKey>/_warnings.txt` — optional; contains best-effort collection warnings (created only on tolerated failures)
+  - Only repositories with role `target` are processed into `context/`; role `infra` is explicitly excluded from collection.
 
 Determinism
 -----------
@@ -68,10 +69,9 @@ Validation & Testing
 
 Examples
 --------
-repos.conf entries:
+repos.conf entry:
 ```
 myrepo|~/projects/foo
-platform|~/projects/platform|infra
 ```
 Invocation (unchanged):
 ```

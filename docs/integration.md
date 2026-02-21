@@ -70,18 +70,6 @@ Rules:
   - `key|path|role` with `role` in `target|infra`
   - lines with invalid role or more than 3 columns are rejected by `validate`.
 
-## Repository role in `repos.conf`
-
-`repos.conf` supports two deterministic formats:
-- `key|path`
-- `key|path|role` with `role` in `target|infra`
-
-Rules:
-- Missing `role` defaults to `target` (backward compatibility).
-- `target` repositories are included in context collection and search hits.
-- `infra` repositories are excluded from those phases and listed explicitly as excluded for observability.
-- Any role outside `target|infra` is a validation error.
-
 ## Diagnostics commands
 
 ```bash
@@ -105,9 +93,6 @@ EAW_WORKDIR="$PWD/.eaw" ./scripts/eaw prompt 1234
 - Declares resolved prompt directories at the top of the content:
   - `OUT_DIR=<resolved out root>`
   - `CARD_DIR=<resolved card directory>`
-- Declares repository selection explicitly:
-  - `TARGET_REPOS`
-  - `EXCLUDED_REPOS`
 - Uses `$CARD_DIR/...` for all internal prompt references.
 - Persists the same prompt content to `<OUT_DIR>/<CARD>/agent_prompt.md` and prints `Wrote <OUT_DIR>/<CARD>/agent_prompt.md` to `stderr`.
 - Detects card type by `<resolved card directory>/{bug,feature,spike}_<CARD>.md` with priority `bug > feature > spike`.
