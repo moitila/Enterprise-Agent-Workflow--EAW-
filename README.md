@@ -47,10 +47,13 @@ bash ./scripts/eaw bug 999999 "Smoke test"
 
 ## Config
 
-- `config/repos.conf` — map of repoKey to path (created by `eaw init` from `repos.example.conf`)
+- `config/repos.conf` — map of repoKey to path with optional role (created by `eaw init` from `repos.example.conf`)
 - `config/search.conf` — symbol search patterns (created by `eaw init`)
 
-Edit `config/repos.conf` to point to your local repositories. Format is `key|path` per line.
+Edit `config/repos.conf` to point to your local repositories.
+- Legacy format: `key|path` (defaults to role `target`)
+- New format: `key|path|role`, where `role` is `target` or `infra`
+- Only `target` repositories are processed during context and search collection.
 
 ## No proprietary code
 

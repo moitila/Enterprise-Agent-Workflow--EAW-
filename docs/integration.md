@@ -65,6 +65,10 @@ Rules:
 - Relative path in `repos.conf`:
   - with `EAW_WORKDIR` set: resolved relative to workspace root (`$EAW_WORKDIR`)
   - without `EAW_WORKDIR`: resolved relative to EAW core root.
+- `repos.conf` accepts:
+  - legacy `key|path` (role defaults to `target`)
+  - `key|path|role` with `role` in `target|infra`
+  - lines with invalid role or more than 3 columns are rejected by `validate`.
 
 ## Diagnostics commands
 
@@ -74,6 +78,7 @@ EAW_WORKDIR="$PWD/.eaw" ./scripts/eaw doctor
 ```
 
 - `validate` checks config files, path parsing, repository path existence (warning), and workspace templates.
+- `validate` accepts both `key|path` and `key|path|role`, defaults missing role to `target`, and rejects invalid roles/extra columns.
 - `validate` also checks existence and minimal heading integrity for intake templates (`intake_bug.md`, `intake_feature.md`, `intake_spike.md`) in `EAW_TEMPLATES_DIR`.
 - Exit code: `0` for success/warnings, `2` for validation errors.
 - `doctor` prints resolved directories, tool availability, and config status, ending with `STATUS: OK|WARN|ERROR` (always exits `0`).
@@ -93,6 +98,7 @@ EAW_WORKDIR="$PWD/.eaw" ./scripts/eaw prompt 1234
 - Detects card type by `<resolved card directory>/{bug,feature,spike}_<CARD>.md` with priority `bug > feature > spike`.
 - Expects intake in `<resolved card directory>/investigations/00_intake.md`.
 - Emits `WARN:` lines when type is ambiguous, intake is missing, or expected headings are missing by card type.
+- Prompt output includes explicit `TARGET_REPOS` and `EXCLUDED_REPOS` sections (stable ordering from `repos.conf`), where `EXCLUDED_REPOS` reflects role `infra`.
 
 ## Upgrade instruction
 
