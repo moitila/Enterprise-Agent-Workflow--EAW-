@@ -1128,7 +1128,7 @@ cmd_prompt() {
 			echo "EAW_WORKDIR=${EAW_WORKDIR:-}"
 			echo "RUNTIME_ROOT=$EAW_ROOT_DIR"
 			echo "CONFIG_SOURCE=$REPOS_CONF"
-			echo 'EAW_ROOT_DIR="$RUNTIME_ROOT"'
+			echo "EAW_ROOT_DIR=\"\$RUNTIME_ROOT\""
 			echo "OUT_DIR=$out_root"
 			echo "CARD_DIR=$card_dir"
 			echo "TARGET_REPOS:"
