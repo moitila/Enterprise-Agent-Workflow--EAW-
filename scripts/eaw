@@ -1048,6 +1048,13 @@ Trabalhar exclusivamente dentro de \$CARD_DIR/.
 
 Qualquer desvio deve ser registrado em \$CARD_DIR/investigations/_warnings.md.
 
+Pré-check obrigatório de root (executar antes de qualquer passo):
+cd "\$EAW_ROOT_DIR"
+test -f ./scripts/eaw || { echo "ERROR: not in EAW-tool root"; exit 2; }
+
+Whitelist estrita com abort:
+Qualquer tentativa de alterar arquivo fora da lista permitida deve abortar imediatamente com erro.
+
 PASSO 1 — BASELINE
 export EAW_WORKDIR="${EAW_WORKDIR:-}"
 ./scripts/eaw doctor
@@ -1084,6 +1091,23 @@ diagnóstico fundamentado
 riscos
 
 plano mínimo determinístico
+
+PASSO 6 — TESTES DETERMINÍSTICOS ROBUSTOS
+Use loop explícito para validar artefatos, sem padrões frágeis de brace expansion.
+Exemplo:
+for file in \
+  "\$CARD_DIR/execution.log" \
+  "\$CARD_DIR/investigations/00_intake.md" \
+  "\$CARD_DIR/investigations/20_findings.md" \
+  "\$CARD_DIR/investigations/40_next_steps.md"; do
+  test -f "\$file" || { echo "ERROR: missing \$file"; exit 2; }
+done
+
+RETORNO OBRIGATÓRIO (EVIDÊNCIA ESTRUTURADA)
+- lista de arquivos alterados
+- resumo por arquivo
+- saída literal dos testes executados
+- Backward compatibility preservada; sem refatorações extras.
 EOF
 	} | tee "$prompt_file"
 
