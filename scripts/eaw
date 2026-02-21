@@ -1123,17 +1123,17 @@ cmd_prompt() {
 	repo_blocks="$(collect_repos_lists)"
 	target_repos="$(printf "%s\n" "$repo_blocks" | sed -n '1,/^$/p' | sed '/^$/d')"
 	excluded_repos="$(printf "%s\n" "$repo_blocks" | sed -n '/^$/,$p' | sed '1d;/^$/d')"
-		{
-			echo "=== EAW AGENT PROMPT (${type}) CARD ${card} ==="
-			echo "EAW_WORKDIR=${EAW_WORKDIR:-}"
-			echo "RUNTIME_ROOT=$EAW_ROOT_DIR"
-			echo "CONFIG_SOURCE=$REPOS_CONF"
-			echo "EAW_ROOT_DIR=\"\$RUNTIME_ROOT\""
-			echo "OUT_DIR=$out_root"
-			echo "CARD_DIR=$card_dir"
-			echo "TARGET_REPOS:"
-			echo "$target_repos"
-			echo "EXCLUDED_REPOS:"
+	{
+		echo "=== EAW AGENT PROMPT (${type}) CARD ${card} ==="
+		echo "EAW_WORKDIR=${EAW_WORKDIR:-}"
+		echo "RUNTIME_ROOT=$EAW_ROOT_DIR"
+		echo "CONFIG_SOURCE=$REPOS_CONF"
+		echo "EAW_ROOT_DIR=\"\$RUNTIME_ROOT\""
+		echo "OUT_DIR=$out_root"
+		echo "CARD_DIR=$card_dir"
+		echo "TARGET_REPOS:"
+		echo "$target_repos"
+		echo "EXCLUDED_REPOS:"
 		echo "$excluded_repos"
 
 		for warn in "${warnings[@]}"; do
