@@ -12,7 +12,7 @@ Inputs
 - Command: `eaw <subcommand>` (no changes to CLI).
 - Card parameters: `type` (feature|bug|spike), `card id` (string), `title` (string).
 - Configuration files (workspace `config/`):
-  - `repos.conf` — lines in format `key|path` (path may be absolute, ~/, or relative to EAW root).
+  - `repos.conf` — lines in format `key|path` or `key|path|role` (path may be absolute, ~/, or relative to EAW root; `role` is optional and accepts `target|infra`, default=`target`).
   - `search.conf` — newline-separated search patterns (optional).
 - Templates: `templates/<type>.md` must exist for card rendering.
 
@@ -68,9 +68,10 @@ Validation & Testing
 
 Examples
 --------
-repos.conf entry:
+repos.conf entries:
 ```
 myrepo|~/projects/foo
+platform|~/projects/platform|infra
 ```
 Invocation (unchanged):
 ```

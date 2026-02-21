@@ -213,9 +213,10 @@ init_workspace_workdir() {
 	ensure_dir "$tpl"
 	ensure_dir "$out"
 
-	write_or_skip "$repos_conf" "$force" "# Format: key|path
+	write_or_skip "$repos_conf" "$force" "# Format: key|path|role (role optional: target|infra; default=target)
 # Example:
-# backend|/absolute/path/to/repo"
+# backend|/absolute/path/to/repo
+# platform|/absolute/path/to/infra|infra"
 
 	for name in feature bug spike intake_feature intake_bug intake_spike; do
 		local src_tpl="$default_tpl_dir/$name.md"
@@ -264,10 +265,58 @@ trim_spaces() {
 	printf "%s\n" "$s"
 }
 
+PARSED_REPO_KEY=""
+PARSED_REPO_PATH=""
+PARSED_REPO_ROLE=""
+PARSED_REPO_ERROR=""
+
+parse_repo_conf_line() {
+	local line="$1"
+	local lineno="$2"
+	local key path role extra
+
+	PARSED_REPO_KEY=""
+	PARSED_REPO_PATH=""
+	PARSED_REPO_ROLE=""
+	PARSED_REPO_ERROR=""
+
+	if [[ "$line" != *"|"* ]]; then
+		PARSED_REPO_ERROR="repos.conf:$lineno invalid format (expected key|path or key|path|role): $line"
+		return 1
+	fi
+
+	IFS='|' read -r key path role extra <<<"$line"
+	key="$(trim_spaces "$key")"
+	path="$(trim_spaces "$path")"
+	role="$(trim_spaces "${role:-}")"
+	extra="$(trim_spaces "${extra:-}")"
+
+	if [[ -n "$extra" ]]; then
+		PARSED_REPO_ERROR="repos.conf:$lineno invalid format (too many '|'): $line"
+		return 1
+	fi
+	if [[ -z "$key" || -z "$path" ]]; then
+		PARSED_REPO_ERROR="repos.conf:$lineno key/path cannot be empty: $line"
+		return 1
+	fi
+	if [[ -z "$role" ]]; then
+		role="target"
+	fi
+	if [[ "$role" != "target" && "$role" != "infra" ]]; then
+		PARSED_REPO_ERROR="repos.conf:$lineno invalid role '$role' (expected target|infra): $line"
+		return 1
+	fi
+
+	PARSED_REPO_KEY="$key"
+	PARSED_REPO_PATH="$path"
+	PARSED_REPO_ROLE="$role"
+	return 0
+}
+
 cmd_validate() {
 	local errors=0
 	local warnings=0
-	local line lineno key path extra resolved_path
+	local line lineno resolved_path
 
 	echo "EAW validate"
 	echo "Resolved dirs:"
@@ -298,25 +347,12 @@ cmd_validate() {
 			if [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]]; then
 				continue
 			fi
-			if [[ "$line" != *"|"* ]]; then
-				echo "ERROR: repos.conf:$lineno invalid format (expected key|path): $line"
+			if ! parse_repo_conf_line "$line" "$lineno"; then
+				echo "ERROR: $PARSED_REPO_ERROR"
 				errors=$((errors + 1))
 				continue
 			fi
-			IFS='|' read -r key path extra <<<"$line"
-			key="$(trim_spaces "$key")"
-			path="$(trim_spaces "$path")"
-			if [[ -n "${extra:-}" ]]; then
-				echo "ERROR: repos.conf:$lineno invalid format (too many '|'): $line"
-				errors=$((errors + 1))
-				continue
-			fi
-			if [[ -z "$key" || -z "$path" ]]; then
-				echo "ERROR: repos.conf:$lineno key/path cannot be empty: $line"
-				errors=$((errors + 1))
-				continue
-			fi
-			resolved_path="$(resolve_repo_path "$path")"
+			resolved_path="$(resolve_repo_path "$PARSED_REPO_PATH")"
 			if [[ ! -e "$resolved_path" ]]; then
 				echo "WARNING: repos.conf:$lineno path does not exist: $resolved_path"
 				warnings=$((warnings + 1))
@@ -455,6 +491,56 @@ cmd_validate() {
 		return 2
 	fi
 	return 0
+}
+
+collect_repo_role_lists() {
+	local target_ref="$1"
+	local excluded_ref="$2"
+	local warn_ref="${3:-}"
+	local line lineno entry
+
+	eval "$target_ref=()"
+	eval "$excluded_ref=()"
+
+	if [[ ! -f "$REPOS_CONF" ]]; then
+		return 0
+	fi
+
+	lineno=0
+	while IFS= read -r line; do
+		lineno=$((lineno + 1))
+		line="${line//$'\r'/}"
+		if [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]]; then
+			continue
+		fi
+		if ! parse_repo_conf_line "$line" "$lineno"; then
+			if [[ -n "$warn_ref" ]]; then
+				append_warn "$warn_ref" "$PARSED_REPO_ERROR"
+			fi
+			continue
+		fi
+		entry="- $PARSED_REPO_KEY => $PARSED_REPO_PATH"
+		if [[ "$PARSED_REPO_ROLE" == "target" ]]; then
+			eval "$target_ref+=(\"\$entry\")"
+		else
+			eval "$excluded_ref+=(\"\$entry\")"
+		fi
+	done <"$REPOS_CONF"
+}
+
+sorted_repo_list_or_none() {
+	local array_name="$1"
+	local fallback="${2:-(none)}"
+	local value
+	local -n rows="$array_name"
+
+	if [[ "${#rows[@]}" -eq 0 ]]; then
+		printf "%s\n" "$fallback"
+		return 0
+	fi
+
+	value="$(printf "%s\n" "${rows[@]}" | LC_ALL=C sort)"
+	printf "%s\n" "$value"
 }
 
 cmd_doctor() {
@@ -635,16 +721,36 @@ phase_load_config() {
 }
 
 phase_resolve_repos() {
-	# build list of repo entries (key|path) into REPO_ENTRIES array
+	local outdir="${1:-}"
+	local line lineno
+	# build list of repo entries (key|path|role) into REPO_ENTRIES array; REPO_ENTRIES holds only target repos
 	REPO_ENTRIES=()
+	EXCLUDED_REPO_ENTRIES=()
 	if [[ -f "$REPOS_CONF" ]]; then
+		lineno=0
 		while IFS= read -r line; do
+			lineno=$((lineno + 1))
 			line="${line//$'\r'/}"
 			if [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]]; then
 				continue
 			fi
-			REPO_ENTRIES+=("$line")
+			if ! parse_repo_conf_line "$line" "$lineno"; then
+				echo "WARN: $PARSED_REPO_ERROR (entry ignored during resolve_repos)" >&2
+				continue
+			fi
+			if [[ "$PARSED_REPO_ROLE" == "target" ]]; then
+				REPO_ENTRIES+=("$PARSED_REPO_KEY|$PARSED_REPO_PATH|$PARSED_REPO_ROLE")
+			else
+				EXCLUDED_REPO_ENTRIES+=("$PARSED_REPO_KEY|$PARSED_REPO_PATH|$PARSED_REPO_ROLE")
+			fi
 		done <"$REPOS_CONF"
+	fi
+	if [[ -n "$outdir" ]]; then
+		if [[ "${#EXCLUDED_REPO_ENTRIES[@]}" -gt 0 ]]; then
+			printf "%s\n" "${EXCLUDED_REPO_ENTRIES[@]}" | LC_ALL=C sort >"$outdir/excluded_repos.txt"
+		else
+			: >"$outdir/excluded_repos.txt"
+		fi
 	fi
 	return 0
 }
@@ -653,7 +759,7 @@ phase_collect_context() {
 	local card="$1" outdir="$2"
 	# iterate resolved repos and gather context
 	for entry in "${REPO_ENTRIES[@]:-}"; do
-		IFS='|' read -r key path <<<"$entry"
+		IFS='|' read -r key path role <<<"$entry"
 		if [[ -z "$key" || -z "$path" ]]; then
 			continue
 		fi
@@ -672,7 +778,7 @@ phase_collect_context() {
 phase_search_hits() {
 	local outdir="$1"
 	for entry in "${REPO_ENTRIES[@]:-}"; do
-		IFS='|' read -r key path <<<"$entry"
+		IFS='|' read -r key path role <<<"$entry"
 		if [[ -z "$key" || -z "$path" ]]; then
 			continue
 		fi
@@ -709,7 +815,7 @@ cmd_card() {
 	# run lifecycle phases in order; preserve original behavior and tolerances
 	run_phase "init_runtime" true phase_init_runtime "$type" "$card" "$title" "$outdir" || return 1
 	run_phase "load_config" false phase_load_config "$outdir"
-	run_phase "resolve_repos" false phase_resolve_repos
+	run_phase "resolve_repos" false phase_resolve_repos "$outdir"
 	run_phase "collect_context" false phase_collect_context "$card" "$outdir"
 	run_phase "search_hits" false phase_search_hits "$outdir"
 	run_phase "finalize" false phase_finalize "$card" "$outdir"
@@ -748,12 +854,15 @@ cmd_analyze() {
 	local date_now
 	date_now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 
-	# collect repos list
-	local repos_list
+	local target_repo_rows=()
+	local excluded_repo_rows=()
+	local target_repos_list="(no repos.conf present)"
+	local excluded_repos_list="(no repos.conf present)"
+
 	if [[ -f "$REPOS_CONF" ]]; then
-		repos_list=$(awk -F"|" '!/^[[:space:]]*#/ && NF>=2 {print "- " $1 " => " $2}' "$REPOS_CONF")
-	else
-		repos_list="(no repos.conf present)"
+		collect_repo_role_lists target_repo_rows excluded_repo_rows
+		target_repos_list="$(sorted_repo_list_or_none target_repo_rows "(none)")"
+		excluded_repos_list="$(sorted_repo_list_or_none excluded_repo_rows "(none)")"
 	fi
 
 	cat >"$prompt_file" <<EOF
@@ -772,8 +881,11 @@ INPUTS:
 - Context directory: $outdir/context/
 - Ingested files: $(ls -1 "$outdir/inputs" 2>/dev/null || echo "(none)")
 
-REPOSITORIES:
-$repos_list
+TARGET_REPOS:
+$target_repos_list
+
+EXCLUDED_REPOS:
+$excluded_repos_list
 
 PROCESS (mandatory 8 phases):
 1) Understanding: Summarize card in 2-3 sentences.
@@ -989,6 +1101,10 @@ cmd_prompt() {
 	local intake_file="$card_dir/investigations/00_intake.md"
 	local type=""
 	local warnings=()
+	local target_repo_rows=()
+	local excluded_repo_rows=()
+	local target_repos_list="(no repos.conf present)"
+	local excluded_repos_list="(no repos.conf present)"
 
 	detect_card_type_with_warnings "$card" "$card_dir" type warnings
 
@@ -1018,12 +1134,24 @@ cmd_prompt() {
 		fi
 	fi
 
+	if [[ -f "$REPOS_CONF" ]]; then
+		collect_repo_role_lists target_repo_rows excluded_repo_rows warnings
+		target_repos_list="$(sorted_repo_list_or_none target_repo_rows "(none)")"
+		excluded_repos_list="$(sorted_repo_list_or_none excluded_repo_rows "(none)")"
+	fi
+
 	ensure_dir "$card_dir"
 	{
 		echo "=== EAW AGENT PROMPT (${type}) CARD ${card} ==="
 		echo "EAW_WORKDIR=${EAW_WORKDIR:-}"
 		echo "OUT_DIR=$out_root"
 		echo "CARD_DIR=$card_dir"
+		echo
+		echo "TARGET_REPOS:"
+		echo "$target_repos_list"
+		echo
+		echo "EXCLUDED_REPOS:"
+		echo "$excluded_repos_list"
 
 		for warn in "${warnings[@]}"; do
 			if [[ "$warn" == "DO NOT START INVESTIGATION BEFORE COMPLETING REQUIRED SECTIONS." ]]; then
