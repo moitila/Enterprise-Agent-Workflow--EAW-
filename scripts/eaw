@@ -37,6 +37,12 @@ REPOS_CONF="$CONFIG_DIR/repos.conf"
 SEARCH_CONF="$CONFIG_DIR/search.conf"
 EAW_CONF="$CONFIG_DIR/eaw.conf"
 REQUIRED_CONFIG_VERSION=1
+CONTENT_CONF="$CONFIG_DIR/content.conf"
+EAW_CONTENT_ROOT_DIR="$EAW_ROOT_DIR/content"
+CONTENT_ENABLED="false"
+EAW_CONTENT_DEFAULT_LANG="pt-br"
+EAW_CONTENT_LANG=""
+EAW_CONTENT_PACK_DIR=""
 
 usage() {
 	cat <<EOF
@@ -263,6 +269,149 @@ trim_spaces() {
 	s="${s#"${s%%[![:space:]]*}"}"
 	s="${s%"${s##*[![:space:]]}"}"
 	printf "%s\n" "$s"
+}
+
+eaw_content_fail() {
+	printf "EAW_CONTENT_ERROR: %s\n" "$1" >&2
+	exit 1
+}
+
+eaw_content_parse_config() {
+	CONTENT_ENABLED="false"
+	EAW_CONTENT_DEFAULT_LANG="pt-br"
+
+	if [[ ! -f "$CONTENT_CONF" ]]; then
+		return 0
+	fi
+
+	local line key value
+	while IFS= read -r line || [[ -n "$line" ]]; do
+		line="${line//$'\r'/}"
+		if [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]]; then
+			continue
+		fi
+		if [[ "$line" != *"="* ]]; then
+			continue
+		fi
+
+		IFS='=' read -r key value <<<"$line"
+		key="$(trim_spaces "$key")"
+		value="$(trim_spaces "${value:-}")"
+		key="${key,,}"
+
+		case "$key" in
+		content_enabled)
+			value="${value,,}"
+			case "$value" in
+			true | 1 | yes | on)
+				CONTENT_ENABLED="true"
+				;;
+			false | 0 | no | off)
+				CONTENT_ENABLED="false"
+				;;
+			*)
+				eaw_content_fail "invalid content_enabled value in $CONTENT_CONF: '$value'"
+				;;
+			esac
+			;;
+		default_lang)
+			if [[ -n "$value" ]]; then
+				EAW_CONTENT_DEFAULT_LANG="$value"
+			fi
+			;;
+		esac
+	done <"$CONTENT_CONF"
+}
+
+eaw_content_validate_lang() {
+	local lang="$1"
+	if [[ -z "$lang" ]]; then
+		eaw_content_fail "resolved language is empty"
+	fi
+	if [[ "$lang" != "${lang//\//}" ]]; then
+		eaw_content_fail "invalid lang '$lang': '/' is not allowed"
+	fi
+	if [[ "$lang" == *".."* ]]; then
+		eaw_content_fail "invalid lang '$lang': '..' is not allowed"
+	fi
+}
+
+eaw_content_resolve_lang() {
+	local lang="${EAW_LANG:-}"
+	if [[ -z "$lang" ]]; then
+		lang="$EAW_CONTENT_DEFAULT_LANG"
+	fi
+	if [[ -z "$lang" ]]; then
+		lang="pt-br"
+	fi
+	eaw_content_validate_lang "$lang"
+	printf "%s\n" "$lang"
+}
+
+eaw_content_read() {
+	local relative_path="$1"
+	if [[ -z "$relative_path" ]]; then
+		eaw_content_fail "relative path is required"
+	fi
+	if [[ "$relative_path" == /* ]]; then
+		eaw_content_fail "absolute path is not allowed: $relative_path"
+	fi
+	if [[ "$relative_path" == *".."* ]]; then
+		eaw_content_fail "invalid relative path: $relative_path"
+	fi
+	if [[ -z "$EAW_CONTENT_PACK_DIR" ]]; then
+		eaw_content_fail "content pack directory is not initialized"
+	fi
+
+	local full_path="$EAW_CONTENT_PACK_DIR/$relative_path"
+	if [[ ! -f "$full_path" ]]; then
+		eaw_content_fail "required content file not found: $full_path"
+	fi
+	cat "$full_path"
+}
+
+eaw_content_validate_pack() {
+	local lang="$1"
+	local pack_dir="$EAW_CONTENT_ROOT_DIR/$lang"
+	local meta_version=""
+	local meta_lang=""
+	local line key value
+
+	if [[ ! -d "$pack_dir" ]]; then
+		eaw_content_fail "content pack not found for lang '$lang': $pack_dir"
+	fi
+
+	EAW_CONTENT_PACK_DIR="$pack_dir"
+
+	while IFS= read -r line || [[ -n "$line" ]]; do
+		line="${line//$'\r'/}"
+		if [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]]; then
+			continue
+		fi
+		if [[ "$line" != *"="* ]]; then
+			continue
+		fi
+
+		IFS='=' read -r key value <<<"$line"
+		key="$(trim_spaces "$key")"
+		value="$(trim_spaces "${value:-}")"
+
+		case "$key" in
+		content_pack_version)
+			meta_version="$value"
+			;;
+		lang)
+			meta_lang="$value"
+			;;
+		esac
+	done <<<"$(eaw_content_read "pack.meta")"
+
+	if [[ "$meta_version" != "1" ]]; then
+		eaw_content_fail "invalid content_pack_version in $pack_dir/pack.meta: expected '1'"
+	fi
+	if [[ "$meta_lang" != "$lang" ]]; then
+		eaw_content_fail "invalid lang in $pack_dir/pack.meta: expected '$lang'"
+	fi
 }
 
 parse_repos_conf_line() {
@@ -1089,6 +1238,12 @@ cmd_prompt() {
 	local intake_file="$card_dir/investigations/00_intake.md"
 	local type=""
 	local warnings=()
+
+	eaw_content_parse_config
+	if [[ "$CONTENT_ENABLED" == "true" ]]; then
+		EAW_CONTENT_LANG="$(eaw_content_resolve_lang)"
+		eaw_content_validate_pack "$EAW_CONTENT_LANG"
+	fi
 
 	detect_card_type_with_warnings "$card" "$card_dir" type warnings
 

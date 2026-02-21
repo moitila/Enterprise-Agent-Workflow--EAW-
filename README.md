@@ -49,6 +49,17 @@ bash ./scripts/eaw bug 999999 "Smoke test"
 
 - `config/repos.conf` — map of repoKey to path with optional role (created by `eaw init` from `repos.example.conf`)
 - `config/search.conf` — symbol search patterns (created by `eaw init`)
+- `config/content.conf` (optional, experimental) — content-pack gate for `eaw prompt`
+
+`config/content.conf` supports:
+- `content_enabled=true|false` (default behavior is legacy/disabled when file is missing)
+- `default_lang=<lang>` (used only when `content_enabled=true`; fallback order is `EAW_LANG -> default_lang -> pt-br`)
+
+When `content_enabled=true`, `eaw prompt` validates `content/<lang>/pack.meta` with:
+- `content_pack_version=1`
+- `lang=<lang>`
+
+If the pack is missing/invalid, the command fails with `exit != 0` and an `stderr` message prefixed with `EAW_CONTENT_ERROR:`.
 
 Edit `config/repos.conf` to point to your local repositories.
 - Legacy format: `key|path` (defaults to role `target`)
