@@ -640,7 +640,7 @@ phase_resolve_repos() {
 	if [[ -f "$REPOS_CONF" ]]; then
 		while IFS= read -r line; do
 			line="${line//$'\r'/}"
-			if [[ -z "$line" || "$line" =~ ^\s*# ]]; then
+			if [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]]; then
 				continue
 			fi
 			REPO_ENTRIES+=("$line")
@@ -751,7 +751,7 @@ cmd_analyze() {
 	# collect repos list
 	local repos_list
 	if [[ -f "$REPOS_CONF" ]]; then
-		repos_list=$(awk -F"|" '!/^\s*#/ && NF>=2 {print "- " $1 " => " $2}' "$REPOS_CONF")
+		repos_list=$(awk -F"|" '!/^[[:space:]]*#/ && NF>=2 {print "- " $1 " => " $2}' "$REPOS_CONF")
 	else
 		repos_list="(no repos.conf present)"
 	fi
@@ -984,6 +984,7 @@ intake_has_section_headings() {
 cmd_prompt() {
 	local card="$1"
 	local outdir="$EAW_OUT_DIR/$card"
+	local prompt_file="$outdir/agent_prompt.md"
 	local intake_file="$outdir/investigations/00_intake.md"
 	local type=""
 	local warnings=()
@@ -1016,19 +1017,21 @@ cmd_prompt() {
 		fi
 	fi
 
-	echo "=== EAW AGENT PROMPT (${type}) CARD ${card} ==="
-	echo "EAW_WORKDIR=${EAW_WORKDIR:-}"
-	echo "OUT_DIR=$outdir"
+	ensure_dir "$outdir"
+	{
+		echo "=== EAW AGENT PROMPT (${type}) CARD ${card} ==="
+		echo "EAW_WORKDIR=${EAW_WORKDIR:-}"
+		echo "OUT_DIR=$outdir"
 
-	for warn in "${warnings[@]}"; do
-		if [[ "$warn" == "DO NOT START INVESTIGATION BEFORE COMPLETING REQUIRED SECTIONS." ]]; then
-			echo "WARNING: $warn"
-		else
-			echo "WARN: $warn"
-		fi
-	done
+		for warn in "${warnings[@]}"; do
+			if [[ "$warn" == "DO NOT START INVESTIGATION BEFORE COMPLETING REQUIRED SECTIONS." ]]; then
+				echo "WARNING: $warn"
+			else
+				echo "WARN: $warn"
+			fi
+		done
 
-	cat <<EOF
+		cat <<EOF
 Você é o agente do VSCode e deve investigar o card ${card} (${type}) com disciplina EAW.
 
 REGRAS OBRIGATÓRIAS:
@@ -1081,6 +1084,9 @@ riscos
 
 plano mínimo determinístico
 EOF
+	} | tee "$prompt_file"
+
+	echo "Wrote $prompt_file" >&2
 }
 
 main() {

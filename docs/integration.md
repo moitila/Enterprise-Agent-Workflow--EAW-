@@ -85,6 +85,7 @@ EAW_WORKDIR="$PWD/.eaw" ./scripts/eaw prompt 1234
 ```
 
 - Prints an agent prompt to `stdout` to guide investigation of card `1234`.
+- Persists the same prompt content to `out/<CARD>/agent_prompt.md` and prints `Wrote out/<CARD>/agent_prompt.md` to `stderr`.
 - Detects card type by `out/<CARD>/{bug,feature,spike}_<CARD>.md` with priority `bug > feature > spike`.
 - Expects intake in `out/<CARD>/investigations/00_intake.md`.
 - Emits `WARN:` lines when type is ambiguous, intake is missing, or expected headings are missing by card type.
