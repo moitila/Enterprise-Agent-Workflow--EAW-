@@ -350,7 +350,7 @@ collect_repos_lists() {
 cmd_validate() {
 	local errors=0
 	local warnings=0
-	local line lineno normalized key path role resolved_path
+	local line lineno normalized key path role resolved_path card_dir impl_dir impl_name impl_path
 
 	echo "EAW validate"
 	echo "Resolved dirs:"
@@ -524,6 +524,29 @@ cmd_validate() {
 			warnings=$((warnings + 1))
 		fi
 	fi
+
+	for card_dir in "$EAW_OUT_DIR"/*; do
+		[[ -d "$card_dir" ]] || continue
+		impl_dir="$card_dir/implementation"
+		if [[ -d "$impl_dir" ]]; then
+			for impl_name in 00_scope.lock.md 10_change_plan.md 20_patch_notes.md; do
+				impl_path="$impl_dir/$impl_name"
+				if [[ ! -f "$impl_path" ]]; then
+					if [[ -e "$impl_path" ]]; then
+						echo "ERROR: implement artifact not a regular file: $impl_path" >&2
+					else
+						echo "ERROR: implement artifact missing: $impl_path" >&2
+					fi
+					errors=$((errors + 1))
+					continue
+				fi
+				if [[ ! -s "$impl_path" ]]; then
+					echo "ERROR: implement artifact empty: $impl_path" >&2
+					errors=$((errors + 1))
+				fi
+			done
+		fi
+	done
 
 	echo "SUMMARY: errors=$errors warnings=$warnings"
 	if [[ "$errors" -gt 0 ]]; then
