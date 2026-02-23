@@ -41,6 +41,14 @@ REQUIRED_CONFIG_VERSION=1
 # shellcheck disable=SC1091
 source "$SCRIPT_DIR/eaw_core.sh"
 # shellcheck disable=SC1091
+source "$SCRIPT_DIR/commands/cmd_init.sh"
+# shellcheck disable=SC1091
+source "$SCRIPT_DIR/commands/cmd_feature.sh"
+# shellcheck disable=SC1091
+source "$SCRIPT_DIR/commands/cmd_bug.sh"
+# shellcheck disable=SC1091
+source "$SCRIPT_DIR/commands/cmd_spike.sh"
+# shellcheck disable=SC1091
 source "$SCRIPT_DIR/commands/eaw_commands.sh"
 
 run_phase() {
@@ -81,14 +89,32 @@ main() {
 	init)
 		cmd_init "${@:2}"
 		;;
-	feature | spike | bug)
+	feature)
 		if [[ $# -lt 3 ]]; then
 			echo "Missing args" >&2
 			usage
 			exit 1
 		fi
 		validate_runtime_workdir
-		cmd_card "${1}" "$2" "$3"
+		cmd_feature "$2" "$3"
+		;;
+	bug)
+		if [[ $# -lt 3 ]]; then
+			echo "Missing args" >&2
+			usage
+			exit 1
+		fi
+		validate_runtime_workdir
+		cmd_bug "$2" "$3"
+		;;
+	spike)
+		if [[ $# -lt 3 ]]; then
+			echo "Missing args" >&2
+			usage
+			exit 1
+		fi
+		validate_runtime_workdir
+		cmd_spike "$2" "$3"
 		;;
 	analyze)
 		if [[ $# -lt 2 ]]; then
