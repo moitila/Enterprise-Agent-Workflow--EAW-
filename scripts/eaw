@@ -50,6 +50,18 @@ source "$SCRIPT_DIR/commands/cmd_bug.sh"
 source "$SCRIPT_DIR/commands/cmd_spike.sh"
 # shellcheck disable=SC1091
 source "$SCRIPT_DIR/commands/eaw_commands.sh"
+# shellcheck disable=SC1091
+source "$SCRIPT_DIR/commands/cmd_validate.sh"
+# shellcheck disable=SC1091
+source "$SCRIPT_DIR/commands/cmd_doctor.sh"
+# shellcheck disable=SC1091
+source "$SCRIPT_DIR/commands/cmd_implement.sh"
+# shellcheck disable=SC1091
+source "$SCRIPT_DIR/commands/cmd_analyze.sh"
+# shellcheck disable=SC1091
+source "$SCRIPT_DIR/commands/cmd_ingest.sh"
+# shellcheck disable=SC1091
+source "$SCRIPT_DIR/commands/cmd_prompt.sh"
 
 run_phase() {
 	# run_phase <phase-name> <fatal:true|false> <fn> [args...]
