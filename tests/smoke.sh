@@ -15,6 +15,14 @@ export TZ=UTC
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT"
 
+for conf in "$REPO_ROOT"/config/search.conf "$REPO_ROOT"/config/search.example.conf; do
+	[[ -f "$conf" ]] || continue
+	if LC_ALL=C grep -n $'\r' "$conf" >/dev/null; then
+		printf "Smoke failed: CRLF detected in config file %s\n" "$conf" >&2
+		exit 10
+	fi
+done
+
 TMPDIR="$(mktemp -d)"
 if [[ ! -d "$TMPDIR" ]]; then
 	echo "failed to create tempdir" >&2

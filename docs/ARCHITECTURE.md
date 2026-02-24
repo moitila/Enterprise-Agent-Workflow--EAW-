@@ -1,5 +1,7 @@
 # EAW Architecture (v0.6.0)
 
+Canonical architecture document for EAW.
+
 ## Overview
 
 EAW v0.6.0 uses a modular shell architecture that keeps CLI behavior stable while separating internal responsibilities.
