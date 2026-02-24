@@ -16,6 +16,7 @@ This strategy documents deterministic validation for the public EAW contract wit
 - `tests/smoke_prompt.sh`: validates prompt generation (happy + structurally incomplete intake paths)
 - `tests/run_phase_smoke.sh`: validates `run_phase` and `execution.log` line format
 - `tests/golden_structure_check.sh`: validates deterministic output structure
+- `tests/scaffold_parity_smoke.sh`: validates normal vs workspace scaffold parity and asserts `intake/` exists empty
 
 ## Minimal Deterministic Examples
 
