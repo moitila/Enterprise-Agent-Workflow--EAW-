@@ -26,6 +26,7 @@ Outputs
   - `investigations/20_findings.md` — findings stage scaffold
   - `investigations/30_hypotheses.md` — hypotheses stage scaffold
   - `investigations/40_next_steps.md` — next-steps stage scaffold
+  - `execution.log` — phase execution log with format `phase|status|duration_ms|note`
   - `AI_PROMPT_<CARD>.md` — optional prompt file (when analyze runs)
   - `TEST_PLAN_<CARD>.md` — placeholder test plan
   - `context/<repoKey>/` — per-repo metadata files (git-branch.txt, git-commit.txt, changed-files.txt, git-diff.patch, git-status.txt)
@@ -65,7 +66,12 @@ Tolerances & Observability
 Validation & Testing
 --------------------
 - Implementations must pass: `bash -n`, `shellcheck`, `shfmt -d`, and `./scripts/eaw --help`.
-- A minimal smoke harness (`tests/smoke.sh`) verifies a full card creation flow against a temporary git repository.
+- Smoke suite:
+  - `tests/smoke.sh` — end-to-end card creation smoke
+  - `tests/smoke_prompt.sh` — prompt generation and structural warning behavior
+  - `tests/run_phase_smoke.sh` — execution log/run_phase behavior validation
+  - `tests/golden_structure_check.sh` — deterministic structure assertions
+- Test harnesses rely on `mktemp` for isolated temporary directories.
 
 Examples
 --------

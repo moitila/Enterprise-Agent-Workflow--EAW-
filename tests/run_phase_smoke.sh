@@ -2,33 +2,11 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-EAW_FILE="$REPO_ROOT/scripts/eaw"
 
 fail() { printf "run_phase smoke failed: %s\n" "$1" >&2; exit 1; }
 
-extract_function() {
-  local fn_name="$1"
-  awk -v fn="${fn_name}" '
-    $0 ~ "^" fn "\\(\\)[[:space:]]*\\{" {in_fn=1; depth=0}
-    in_fn {
-      print
-      # crude brace depth tracking; works for typical bash style
-      for (i=1; i<=length($0); i++) {
-        c=substr($0,i,1)
-        if (c=="{") depth++
-        else if (c=="}") depth--
-      }
-      if (in_fn && depth==0) exit
-    }
-  ' "$EAW_FILE"
-}
-
-RUN_PHASE_DEF="$(extract_function "run_phase")"
-[[ -n "$RUN_PHASE_DEF" ]] || fail "could not extract run_phase() from scripts/eaw"
-
-# shellcheck disable=SC1090
-source "$REPO_ROOT/scripts/lib.sh"
-eval "$RUN_PHASE_DEF"
+# shellcheck disable=SC1091
+source "$REPO_ROOT/scripts/eaw_core.sh"
 
 tmpdir="$(mktemp -d)"
 trap 'rm -rf "$tmpdir"' EXIT
