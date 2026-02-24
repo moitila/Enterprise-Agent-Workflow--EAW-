@@ -2,99 +2,160 @@
 
 cmd_analyze() {
 	local card="$1"
-	local outdir="$EAW_OUT_DIR/$card"
-	if [[ ! -d "$outdir" ]]; then
-		echo "Card output not found: $outdir" >&2
-		exit 1
-	fi
-	# detect type
+	local out_root="$EAW_OUT_DIR"
+	local card_dir="$out_root/$card"
+	local prompt_file="$card_dir/investigations/agent_prompt.md"
+	local intake_file="$card_dir/investigations/00_intake.md"
 	local type=""
-	for t in feature spike bug; do
-		if [[ -f "$outdir/${t}_${card}.md" ]]; then
-			type="$t"
-			break
+	local warnings=()
+
+	detect_card_type_with_warnings "$card" "$card_dir" type warnings
+
+	if [[ ! -f "$intake_file" ]]; then
+		append_warn warnings "missing intake file: $intake_file"
+	else
+		case "$type" in
+		bug)
+			validate_intake_heading_group "$intake_file" warnings "Resumo do problema ou Resumo" '^##[[:space:]]*(Resumo do problema|Resumo)[[:space:]]*$'
+			validate_intake_heading_group "$intake_file" warnings "Comportamento esperado" '^##[[:space:]]*Comportamento esperado[[:space:]]*$'
+			validate_intake_heading_group "$intake_file" warnings "Comportamento atual" '^##[[:space:]]*Comportamento atual[[:space:]]*$'
+			validate_intake_heading_group "$intake_file" warnings "Passos para reproduzir" '^##[[:space:]]*Passos para reproduzir[[:space:]]*$'
+			;;
+		feature)
+			validate_intake_heading_group "$intake_file" warnings "Problema ou Objetivo" '^##[[:space:]]*(Problema|Objetivo)[[:space:]]*$'
+			validate_intake_heading_group "$intake_file" warnings "Critérios de aceite" '^##[[:space:]]*Critérios de aceite[[:space:]]*$'
+			validate_intake_heading_group "$intake_file" warnings "Escopo" '^##[[:space:]]*Escopo([[:space:]]*\(In/Out\))?[[:space:]]*$'
+			;;
+		spike)
+			validate_intake_heading_group "$intake_file" warnings "Pergunta ou Hipótese" '^##[[:space:]]*(Pergunta[[:space:]]*/[[:space:]]*Hipótese|Pergunta|Hipótese)[[:space:]]*$'
+			validate_intake_heading_group "$intake_file" warnings "Critério de conclusão" '^##[[:space:]]*Critério de conclusão[[:space:]]*$'
+			;;
+		esac
+		if ! intake_has_section_headings "$intake_file" || intake_is_structurally_incomplete "$type" "$intake_file"; then
+			append_warn warnings "intake appears structurally incomplete."
+			append_warn warnings "DO NOT START INVESTIGATION BEFORE COMPLETING REQUIRED SECTIONS."
 		fi
-	done
-	if [[ -z "$type" ]]; then
-		echo "Could not detect card type for $card. Expected feature/spike/bug file in $outdir" >&2
-		exit 1
 	fi
 
-	local main_md="$outdir/${type}_${card}.md"
-	if [[ ! -f "$main_md" ]]; then
-		echo "Main dossier not found: $main_md" >&2
-		exit 1
-	fi
-
-	ensure_dir "$outdir/inputs"
-
-	# Build AI prompt
-	local prompt_file="$outdir/AI_PROMPT_${card}.md"
-	local date_now
-	date_now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-
-	# collect repository lists (stable ordering)
+	ensure_dir "$card_dir"
+	ensure_dir "$card_dir/investigations"
+	ensure_dir "$card_dir/inputs"
 	local repo_blocks target_repos excluded_repos
 	repo_blocks="$(collect_repos_lists)"
 	target_repos="$(printf "%s\n" "$repo_blocks" | sed -n '1,/^$/p' | sed '/^$/d')"
 	excluded_repos="$(printf "%s\n" "$repo_blocks" | sed -n '/^$/,$p' | sed '1d;/^$/d')"
+	{
+		echo "=== EAW AGENT PROMPT (${type}) CARD ${card} ==="
+		echo "EAW_WORKDIR=${EAW_WORKDIR:-}"
+		echo "RUNTIME_ROOT=$EAW_ROOT_DIR"
+		echo "CONFIG_SOURCE=$REPOS_CONF"
+		echo "EAW_ROOT_DIR=\"\$RUNTIME_ROOT\""
+		echo "OUT_DIR=$out_root"
+		echo "CARD_DIR=$card_dir"
+		echo "TARGET_REPOS:"
+		echo "$target_repos"
+		echo "EXCLUDED_REPOS:"
+		echo "$excluded_repos"
 
-	cat >"$prompt_file" <<EOF
-# AI_PROMPT for card ${card}
+		for warn in "${warnings[@]}"; do
+			if [[ "$warn" == "DO NOT START INVESTIGATION BEFORE COMPLETING REQUIRED SECTIONS." ]]; then
+				echo "WARNING: $warn"
+			else
+				echo "WARN: $warn"
+			fi
+		done
 
-ROLE:
-You are a senior engineering analyst assisting with a structured review and mitigation plan for an engineering card. Provide concise, actionable analysis, tests, and a minimal change plan.
+		cat <<EOF
+Você é o agente do VSCode e deve investigar o card ${card} (${type}) com disciplina EAW.
 
-GUARDRAILS:
-- Do not invent facts. Use only provided inputs and repository context.
-- Mark assumptions explicitly.
-- Prioritize minimal, safe fixes and clear test plans.
+REGRAS OBRIGATÓRIAS:
 
-INPUTS:
-- Dossier: $main_md
-- Context directory: $outdir/context/
-- Ingested files: $(ls -1 "$outdir/inputs" 2>/dev/null || echo "(none)")
+Não alterar código.
 
-TARGET_REPOS:
-$target_repos
+Não commitar.
 
-EXCLUDED_REPOS:
-$excluded_repos
+Toda afirmação deve ter evidência (path real + comando + trecho curto).
 
-PROCESS (mandatory 8 phases):
-1) Understanding: Summarize card in 2-3 sentences.
-2) Scoping: List affected modules and blast radius.
-3) Evidence collection: Enumerate relevant files and diff snippets from context/.
-4) Risk mapping: Map hotspots, regression risk, and critical paths.
-5) Hypothesis & Proposed Fix: Describe minimal fix or experiment.
-6) Test Plan: Provide deterministic tests and validation steps; produce TEST_PLAN file in dev/ (see Outputs).
-7) Implementation steps: Minimal, atomic changes with rollbacks and feature flags where applicable.
-8) Validation & Monitoring: Post-deploy checks, metrics to watch, and rollback criteria.
+Leitura permitida em \$RUNTIME_ROOT e nos TARGET_REPOS listados.
 
-OUTPUTS (write to dev/ within the dossier output):
-- TEST_PLAN_${card}.md - deterministic test plan (unit/integration/smoke)
-- PATCH/PR summary (one paragraph)
-- RISK_SUMMARY (one paragraph)
+Escrita permitida somente em \$CARD_DIR/.
 
-ALLOWED QUESTIONS (ask only when missing info):
-- Are there existing failing tests related to this area?
-- Is there any sensitive data or compliance constraint for changes?
-- Any required stakeholders to involve?
+Qualquer desvio deve ser registrado em \$CARD_DIR/investigations/_warnings.md.
 
-Date generated: $date_now
+Pré-check obrigatório de root (executar antes de qualquer passo):
+cd "\$EAW_ROOT_DIR"
+test -f ./scripts/eaw || { echo "ERROR: not in EAW-tool root"; exit 2; }
+test -f "\$CONFIG_SOURCE" || { echo "ERROR: missing config source \$CONFIG_SOURCE"; exit 2; }
 
--- Dossier content (begin) --
+Whitelist estrita com abort:
+Arquivos permitidos para escrita:
+- \$CARD_DIR/${type}_${card}.md
+- \$CARD_DIR/investigations/00_intake.md
+- \$CARD_DIR/investigations/20_findings.md
+- \$CARD_DIR/investigations/40_next_steps.md
+- \$CARD_DIR/investigations/_warnings.md
+Qualquer tentativa de alterar arquivo fora da lista permitida deve abortar imediatamente com erro.
 
-$(sed -n '1,400p' "$main_md")
+PASSO 1 — BASELINE
+export EAW_WORKDIR="${EAW_WORKDIR:-}"
+./scripts/eaw doctor
+./scripts/eaw validate
 
--- Dossier content (end) --
+PASSO 2 — ARTEFATOS EAW
+Confirme existência de:
 
+\$CARD_DIR/execution.log
+
+${type}_${card}.md
+
+\$CARD_DIR/investigations/00_intake.md
+
+PASSO 3 — INVESTIGAÇÃO CONTROLADA
+
+Use apenas contexto de \$CARD_DIR/ e código do repo.
+
+Registre comandos e outputs em:
+\$CARD_DIR/investigations/20_findings.md
+
+PASSO 4 — ATUALIZAR TEMPLATE DO CARD
+Atualize:
+\$CARD_DIR/${type}_${card}.md
+com evidências reais coletadas.
+
+PASSO 5 — CONCLUSÃO
+Produza:
+
+investigations/40_next_steps.md
+
+diagnóstico fundamentado
+
+riscos
+
+plano mínimo determinístico
+
+PASSO 6 — TESTES DETERMINÍSTICOS ROBUSTOS
+Use loop explícito para validar artefatos, sem padrões frágeis de brace expansion.
+Exemplo:
+for file in \
+  "\$CARD_DIR/execution.log" \
+  "\$CARD_DIR/investigations/00_intake.md" \
+  "\$CARD_DIR/investigations/20_findings.md" \
+  "\$CARD_DIR/investigations/40_next_steps.md"; do
+  test -f "\$file" || { echo "ERROR: missing \$file"; exit 2; }
+done
+
+RETORNO OBRIGATÓRIO (EVIDÊNCIA ESTRUTURADA)
+- lista de arquivos alterados
+- resumo por arquivo
+- saída literal dos testes executados
+- Backward compatibility preservada; sem refatorações extras.
 EOF
+	} | tee "$prompt_file"
 
-	echo "Wrote $prompt_file"
+	echo "Wrote $prompt_file" >&2
 
 	# create TEST_PLAN placeholder in outdir
-	local test_plan="$outdir/TEST_PLAN_${card}.md"
+	local test_plan="$card_dir/TEST_PLAN_${card}.md"
 	if [[ ! -f "$test_plan" ]]; then
 		cat >"$test_plan" <<TP
 # Test Plan for ${type}_${card}

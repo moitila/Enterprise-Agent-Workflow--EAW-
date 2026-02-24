@@ -89,16 +89,9 @@ EAW_WORKDIR="$PWD/.eaw" ./scripts/eaw doctor
 EAW_WORKDIR="$PWD/.eaw" ./scripts/eaw prompt 1234
 ```
 
-- Prints an agent prompt to `stdout` to guide investigation of card `1234`.
-- Declares resolved prompt directories at the top of the content:
-  - `OUT_DIR=<resolved out root>`
-  - `CARD_DIR=<resolved card directory>`
-- Uses `$CARD_DIR/...` for all internal prompt references.
-- Persists the same prompt content to `<OUT_DIR>/<CARD>/agent_prompt.md` and prints `Wrote <OUT_DIR>/<CARD>/agent_prompt.md` to `stderr`.
-- Detects card type by `<resolved card directory>/{bug,feature,spike}_<CARD>.md` with priority `bug > feature > spike`.
-- Expects intake in `<resolved card directory>/investigations/00_intake.md`.
-- Emits `WARN:` lines when type is ambiguous, intake is missing, or expected headings are missing by card type.
-- Prompt output includes explicit `TARGET_REPOS` and `EXCLUDED_REPOS` sections (stable ordering from `repos.conf`), where `EXCLUDED_REPOS` reflects role `infra`.
+- `prompt` is a deprecated alias for `analyze`.
+- Prints a deprecation warning to `stderr`.
+- Generates prompt artifact at `<OUT_DIR>/<CARD>/investigations/agent_prompt.md`.
 
 ## Upgrade instruction
 
