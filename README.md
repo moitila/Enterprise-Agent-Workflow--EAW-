@@ -6,6 +6,10 @@ EAW is a lightweight, deterministic workflow for generating engineering dossiers
 
 EAW helps engineers collect repository context and produce structured Markdown artifacts for traceability and safer engineering in complex systems.
 
+## Architecture
+
+Canonical architecture document: `docs/ARCHITECTURE.md`.
+
 ## Installation (bash)
 
 Ensure you have `bash`, `git`, `mktemp`, and optionally `rg` (ripgrep) installed.

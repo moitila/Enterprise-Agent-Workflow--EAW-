@@ -98,7 +98,7 @@ load_search_patterns() {
 		log "search.conf missing: $f"
 		return 1
 	fi
-	grep -E -v '^[[:space:]]*#' "$f" | sed '/^[[:space:]]*$/d'
+	grep -E -v '^[[:space:]]*#' "$f" | sed -e 's/\r$//' -e '/^[[:space:]]*$/d'
 }
 
 gather_context_for_repo() {
