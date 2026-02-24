@@ -71,6 +71,7 @@ Validation & Testing
   - `tests/smoke_prompt.sh` — prompt generation and structural warning behavior
   - `tests/run_phase_smoke.sh` — execution log/run_phase behavior validation
   - `tests/golden_structure_check.sh` — deterministic structure assertions
+  - `tests/scaffold_parity_smoke.sh` — normal vs workspace scaffold parity and empty `intake/` assertions
 - Test harnesses rely on `mktemp` for isolated temporary directories.
 
 Examples

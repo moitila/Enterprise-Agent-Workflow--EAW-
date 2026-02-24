@@ -17,6 +17,25 @@ Example:
 EOF
 }
 
+scaffold_template_names() {
+	printf '%s\n' \
+		10_baseline \
+		20_findings \
+		30_hypotheses \
+		40_next_steps
+}
+
+workspace_template_names() {
+	printf '%s\n' \
+		feature \
+		bug \
+		spike \
+		intake_feature \
+		intake_bug \
+		intake_spike
+	scaffold_template_names
+}
+
 read_config_version() {
 	local conf="$1"
 	if [[ ! -f "$conf" ]]; then
@@ -123,7 +142,7 @@ init_workspace_workdir() {
 # backend|/absolute/path/to/repo|target
 # shared-infra|/absolute/path/to/infra|infra"
 
-	for name in feature bug spike intake_feature intake_bug intake_spike; do
+	while IFS= read -r name; do
 		local src_tpl="$default_tpl_dir/$name.md"
 		local dst_tpl="$tpl/$name.md"
 		if [[ -f "$src_tpl" ]]; then
@@ -134,7 +153,7 @@ init_workspace_workdir() {
 				echo "Created $dst_tpl"
 			fi
 		fi
-	done
+	done < <(workspace_template_names)
 
 	if [[ -f "$default_search" ]]; then
 		if [[ -f "$search_conf" && "$force" != "true" ]]; then
@@ -300,9 +319,11 @@ phase_init_runtime() {
 	local target_md="$outdir/${type}_${card}.md"
 	render_template "$tpl" "$target_md" "$card" "$title" "$type" "$date"
 	echo "Wrote $target_md"
+	local intake_runtime_dir="$outdir/intake"
 	local intake_dir="$outdir/investigations"
 	local intake_file="$intake_dir/00_intake.md"
 	local intake_tpl="$EAW_TEMPLATES_DIR/intake_${type}.md"
+	ensure_dir "$intake_runtime_dir"
 	ensure_dir "$intake_dir"
 	if [[ ! -f "$intake_file" ]]; then
 		if [[ -f "$intake_tpl" ]]; then
@@ -324,7 +345,7 @@ EOF
 		echo "Wrote $intake_file"
 	fi
 	# Create investigation scaffolds (non-breaking, idempotent)
-	for scaffold_name in 10_baseline 20_findings 30_hypotheses 40_next_steps; do
+	while IFS= read -r scaffold_name; do
 		local scaffold_file="$intake_dir/${scaffold_name}.md"
 		local scaffold_tpl="$EAW_TEMPLATES_DIR/${scaffold_name}.md"
 		if [[ ! -f "$scaffold_file" ]]; then
@@ -342,7 +363,7 @@ Placeholder for ${scaffold_name} investigation phase.
 EOF
 			fi
 		fi
-	done
+	done < <(scaffold_template_names)
 	# initialize execution.log
 	: >"$outdir/execution.log"
 	printf "phase|status|duration_ms|note\n" >>"$outdir/execution.log"

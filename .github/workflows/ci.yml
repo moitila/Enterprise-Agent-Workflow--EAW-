@@ -66,3 +66,8 @@ jobs:
           set -euo pipefail
           chmod +x tests/smoke.sh
           ./tests/smoke.sh
+
+      - name: Smoke - scaffold parity test
+        run: |
+          set -euo pipefail
+          bash tests/scaffold_parity_smoke.sh
