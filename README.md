@@ -8,7 +8,7 @@ EAW helps engineers collect repository context and produce structured Markdown a
 
 ## Installation (bash)
 
-Ensure you have `bash`, `git`, and optionally `rg` (ripgrep) installed.
+Ensure you have `bash`, `git`, `mktemp`, and optionally `rg` (ripgrep) installed.
 
 ```bash
 # make scripts executable (on Unix)
@@ -40,6 +40,7 @@ bash ./scripts/eaw bug 999999 "Smoke test"
 - `out/<CARD>/investigations/20_findings.md` — findings and collected artifacts
 - `out/<CARD>/investigations/30_hypotheses.md` — hypotheses and validation plan
 - `out/<CARD>/investigations/40_next_steps.md` — final diagnosis, risks, and action plan
+- `out/<CARD>/execution.log` — deterministic phase execution log (`phase|status|duration_ms|note`)
 - `out/<CARD>/context/<repoKey>/git-status.txt` — git status
 - `out/<CARD>/context/<repoKey>/git-diff.patch` — diff
 - `out/<CARD>/context/<repoKey>/changed-files.txt` — changed file list
@@ -61,8 +62,11 @@ This repository contains no proprietary code or internal names. It is intentiona
 
 ## Roadmap
 
-- v0.1: Basic scaffolding, deterministic output, context capture (this release)
-- v0.2: Plugin architecture, richer collectors, JSON output contract, CI validation
+- Next: expand CI-oriented validation orchestration for deterministic checks.
+- Next: evolve contract documentation coverage for new execution phases without CLI breakage.
+- Next: incrementally expand automated smoke coverage while preserving deterministic output.
+
+Released versions and historical changes are tracked in `CHANGELOG.md`.
 
 ## PT-BR
 

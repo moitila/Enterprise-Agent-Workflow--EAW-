@@ -5,7 +5,11 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT"
 
 CARD="930005"
-CARD_DIR="out/$CARD"
+tmpdir="$(mktemp -d)"
+trap 'rm -rf "$tmpdir"' EXIT
+
+export EAW_WORKDIR="$tmpdir/.eaw"
+CARD_DIR="$EAW_WORKDIR/out/$CARD"
 IMPL_DIR="$CARD_DIR/implementation"
 
 if [[ ! -f "./scripts/eaw" ]]; then
@@ -13,13 +17,9 @@ if [[ ! -f "./scripts/eaw" ]]; then
 	exit 1
 fi
 
-if [[ -d "$CARD_DIR" ]]; then
-	echo "ERROR: smoke card already exists: $CARD_DIR" >&2
-	exit 1
-fi
-
 echo "SMOKE: card=$CARD"
 
+bash ./scripts/eaw init --workdir "$EAW_WORKDIR" --upgrade >/dev/null 2>&1
 bash ./scripts/eaw feature "$CARD" "smoke implement" >/dev/null 2>&1
 bash ./scripts/eaw implement "$CARD" >/dev/null 2>&1
 echo "SMOKE: implement OK"
