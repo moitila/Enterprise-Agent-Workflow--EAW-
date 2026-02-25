@@ -7,7 +7,9 @@ cmd_intake() {
 	local out_root="$EAW_OUT_DIR"
 	local card_dir="$out_root/$card"
 	local investigations_dir="$card_dir/investigations"
-	local template="$EAW_TEMPLATES_DIR/intake/pt-br/intake_prompt_v2.md"
+	local template_rel="intake/pt-br/intake_prompt_v2.md"
+	local template="$EAW_TEMPLATES_DIR/$template_rel"
+	local fallback_template="$EAW_ROOT_DIR/templates/$template_rel"
 	local prompt_file="$investigations_dir/intake_agent_prompt.round_${round}.md"
 	local eaw_workdir_value="${EAW_WORKDIR:-<resolved>}"
 
@@ -20,7 +22,11 @@ cmd_intake() {
 	fi
 
 	if [[ ! -f "$template" ]]; then
-		die "template not found: $template"
+		if [[ -f "$fallback_template" ]]; then
+			template="$fallback_template"
+		else
+			die "template not found: $template"
+		fi
 	fi
 
 	prompt_file="$investigations_dir/intake_agent_prompt.round_${round}.md"

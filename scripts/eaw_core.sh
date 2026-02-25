@@ -37,6 +37,29 @@ workspace_template_names() {
 	scaffold_template_names
 }
 
+copy_workspace_nested_templates() {
+	local default_tpl_dir="$1"
+	local tpl_dir="$2"
+	local force="$3"
+	local rel="intake/pt-br/intake_prompt_v2.md"
+	local src="$default_tpl_dir/$rel"
+	local dst="$tpl_dir/$rel"
+	local dst_parent
+
+	if [[ ! -f "$src" ]]; then
+		return 0
+	fi
+
+	dst_parent="$(dirname "$dst")"
+	ensure_dir "$dst_parent"
+	if [[ -f "$dst" && "$force" != "true" ]]; then
+		echo "$dst already exists; use --force to overwrite"
+	else
+		cp "$src" "$dst"
+		echo "Created $dst"
+	fi
+}
+
 read_config_version() {
 	local conf="$1"
 	if [[ ! -f "$conf" ]]; then
@@ -155,6 +178,8 @@ init_workspace_workdir() {
 			fi
 		fi
 	done < <(workspace_template_names)
+
+	copy_workspace_nested_templates "$default_tpl_dir" "$tpl" "$force"
 
 	if [[ -f "$default_search" ]]; then
 		if [[ -f "$search_conf" && "$force" != "true" ]]; then
