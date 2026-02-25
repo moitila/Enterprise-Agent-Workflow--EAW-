@@ -62,6 +62,8 @@ source "$SCRIPT_DIR/commands/cmd_analyze.sh"
 source "$SCRIPT_DIR/commands/cmd_ingest.sh"
 # shellcheck disable=SC1091
 source "$SCRIPT_DIR/commands/cmd_prompt.sh"
+# shellcheck disable=SC1091
+source "$SCRIPT_DIR/commands/cmd_intake.sh"
 
 main() {
 	if [[ $# -lt 1 ]]; then
@@ -117,6 +119,18 @@ main() {
 		else
 			echo "ERROR: invalid prompt arguments" >&2
 			echo "usage: eaw prompt <CARD> [--phase=implement]" >&2
+			exit 1
+		fi
+		;;
+	intake)
+		validate_runtime_workdir
+		if [[ "$#" -eq 2 ]]; then
+			cmd_intake "$2"
+		elif [[ "$#" -eq 3 && "$3" == --round=* ]]; then
+			cmd_intake "$2" "$3"
+		else
+			echo "ERROR: invalid intake arguments" >&2
+			echo "usage: eaw intake <CARD> [--round=N]" >&2
 			exit 1
 		fi
 		;;

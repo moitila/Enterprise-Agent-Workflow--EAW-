@@ -9,6 +9,7 @@ Example:
   eaw spike  <CARD> "<TITLE>"
   eaw bug    <CARD> "<TITLE>"
   eaw prompt <CARD> [--phase=implement]
+  eaw intake <CARD> [--round=N]
   eaw analyze <CARD>
   eaw ingest <CARD> <file-path>
   eaw implement <CARD>
