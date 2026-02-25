@@ -29,6 +29,17 @@ Behavior:
 - Does not modify source code repositories.
 - The generated prompt constrains evidence reading to `out/<CARD>/intake/**`.
 
+### `eaw analyze`
+
+Syntax:
+`eaw analyze <CARD>`
+
+Behavior:
+- Generates the investigation prompt artifact at `out/<CARD>/investigations/agent_prompt.md`.
+- Validates intake structure heuristically by card type and emits warnings in the generated prompt when intake is incomplete.
+- Ensures deterministic auxiliary artifacts for analysis flow, including `TEST_PLAN_<CARD>.md` when absent.
+- Does not modify source code repositories.
+
 Outputs
 -------
 - Primary output directory: `out/<CARD>/`
