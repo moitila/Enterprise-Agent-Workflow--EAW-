@@ -23,6 +23,7 @@ Use `EAW_WORKDIR` when you want local workspace-specific configuration and outpu
     intake_bug.md
     intake_feature.md
     intake_spike.md
+    intake/pt-br/intake_prompt_v2.md
     10_baseline.md
     20_findings.md
     30_hypotheses.md
@@ -30,10 +31,17 @@ Use `EAW_WORKDIR` when you want local workspace-specific configuration and outpu
   out/
 ```
 
-Create this structure with:
+Create the base workspace structure with:
 
 ```bash
 ./scripts/eaw init --workdir ./.eaw
+```
+
+For `eaw intake`, ensure this template also exists in workspace templates:
+
+```bash
+mkdir -p ./.eaw/templates/intake/pt-br
+cp ./templates/intake/pt-br/intake_prompt_v2.md ./.eaw/templates/intake/pt-br/intake_prompt_v2.md
 ```
 
 ## Shell export example
@@ -41,7 +49,17 @@ Create this structure with:
 ```bash
 export EAW_WORKDIR="$PWD/.eaw"
 ./scripts/eaw feature 1234 "Add integration docs"
+./scripts/eaw intake 1234
+./scripts/eaw analyze 1234
 ```
+
+## Official flow
+
+`intake -> analyze -> planning -> implementation`
+
+- `intake`: generates `intake_agent_prompt.round_<N>.md` in `<OUT_DIR>/<CARD>/investigations/`.
+- `analyze`: generates `agent_prompt.md` in `<OUT_DIR>/<CARD>/investigations/`.
+- `planning` and `implementation`: follow artifacts under `<OUT_DIR>/<CARD>/investigations/` and `<OUT_DIR>/<CARD>/implementation/`.
 
 ## Config version
 
@@ -92,6 +110,7 @@ EAW_WORKDIR="$PWD/.eaw" ./scripts/eaw prompt 1234
 - `prompt` is a deprecated alias for `analyze`.
 - Prints a deprecation warning to `stderr`.
 - Generates prompt artifact at `<OUT_DIR>/<CARD>/investigations/agent_prompt.md`.
+- Exception: `./scripts/eaw prompt <CARD> --phase=implement` runs the implementation-phase prompt flow and writes `<OUT_DIR>/<CARD>/agent_prompt.md`.
 
 ## Upgrade instruction
 
