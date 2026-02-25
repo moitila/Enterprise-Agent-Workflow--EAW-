@@ -122,4 +122,6 @@ if [[ -f "$CTX_DIR/_warnings.txt" ]]; then
 	sed -n '1,20p' "$CTX_DIR/_warnings.txt" || true
 fi
 
+bash "$REPO_ROOT/tests/smoke_intake_negative.sh"
+
 printf "Smoke OK: artifacts present in %s\n" "$OUTDIR"

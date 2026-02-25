@@ -13,7 +13,6 @@ This strategy documents deterministic validation for the public EAW contract wit
 
 2. Contract smoke tests
 - `tests/smoke.sh`: validates card creation and required artifacts
-- `tests/smoke_prompt.sh`: validates prompt generation (happy + structurally incomplete intake paths)
 - `tests/run_phase_smoke.sh`: validates `run_phase` and `execution.log` line format
 - `tests/golden_structure_check.sh`: validates deterministic output structure
 - `tests/scaffold_parity_smoke.sh`: validates normal vs workspace scaffold parity and asserts `intake/` exists empty
@@ -29,16 +28,7 @@ Expected:
 - `out/<CARD>/` created
 - expected contract artifacts present
 
-Example B (prompt smoke):
-```bash
-./tests/smoke_prompt.sh
-```
-Expected:
-- exit code `0`
-- prompt artifact written
-- structural warning only when intake is intentionally incomplete
-
-Example C (phase log smoke):
+Example B (phase log smoke):
 ```bash
 ./tests/run_phase_smoke.sh
 ```

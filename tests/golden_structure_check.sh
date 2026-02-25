@@ -54,7 +54,6 @@ CFG
   local actual_bug="$tmp_root/bug.paths.txt"
   local actual_spike="$tmp_root/spike.paths.txt"
   local actual_ingest="$tmp_root/ingest.paths.txt"
-  local actual_prompt="$tmp_root/prompt.paths.txt"
   local actual_analyze="$tmp_root/analyze.paths.txt"
 
   ./scripts/eaw feature "$card_feature" "Golden feature" >/dev/null
@@ -82,11 +81,6 @@ CFG
     echo "ERROR: missing ingest output file: $workdir/out/$card_pipeline/inputs/evidence.txt" >&2
     return 1
   fi
-
-  ./scripts/eaw prompt "$card_pipeline" >/dev/null
-  capture_paths "$workdir" "$card_pipeline" "$actual_prompt"
-  compare_fixture "$actual_prompt" "$FIXTURES_DIR/prompt.paths.txt"
-  assert_file_contains "$workdir/out/$card_pipeline/investigations/agent_prompt.md" "=== EAW AGENT PROMPT (feature) CARD $card_pipeline ==="
 
   ./scripts/eaw analyze "$card_pipeline" >/dev/null
   capture_paths "$workdir" "$card_pipeline" "$actual_analyze"

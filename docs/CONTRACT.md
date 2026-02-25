@@ -29,13 +29,6 @@ Behavior:
 - Does not modify source code repositories.
 - The generated prompt constrains evidence reading to `out/<CARD>/intake/**`.
 
-### `eaw prompt`
-
-Behavior:
-- Deprecated alias for `eaw analyze`.
-- Exception: when called as `eaw prompt <CARD> --phase=implement`, it runs the implementation-phase prompt flow.
-- Continues generating `agent_prompt.md` artifacts for prompt generation flows.
-
 Outputs
 -------
 - Primary output directory: `out/<CARD>/`
@@ -89,7 +82,6 @@ Validation & Testing
 - Implementations must pass: `bash -n`, `shellcheck`, `shfmt -d`, and `./scripts/eaw --help`.
 - Smoke suite:
   - `tests/smoke.sh` — end-to-end card creation smoke
-  - `tests/smoke_prompt.sh` — prompt generation and structural warning behavior
   - `tests/run_phase_smoke.sh` — execution log/run_phase behavior validation
   - `tests/golden_structure_check.sh` — deterministic structure assertions
   - `tests/scaffold_parity_smoke.sh` — normal vs workspace scaffold parity and empty `intake/` assertions

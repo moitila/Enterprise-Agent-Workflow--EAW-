@@ -101,17 +101,6 @@ EAW_WORKDIR="$PWD/.eaw" ./scripts/eaw doctor
 - Exit code: `0` for success/warnings, `2` for validation errors.
 - `doctor` prints resolved directories, tool availability, and config status, ending with `STATUS: OK|WARN|ERROR` (always exits `0`).
 
-## EAW prompt
-
-```bash
-EAW_WORKDIR="$PWD/.eaw" ./scripts/eaw prompt 1234
-```
-
-- `prompt` is a deprecated alias for `analyze`.
-- Prints a deprecation warning to `stderr`.
-- Generates prompt artifact at `<OUT_DIR>/<CARD>/investigations/agent_prompt.md`.
-- Exception: `./scripts/eaw prompt <CARD> --phase=implement` runs the implementation-phase prompt flow and writes `<OUT_DIR>/<CARD>/agent_prompt.md`.
-
 ## Upgrade instruction
 
 ```bash
