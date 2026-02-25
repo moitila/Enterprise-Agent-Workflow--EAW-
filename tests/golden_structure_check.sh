@@ -86,7 +86,7 @@ CFG
   ./scripts/eaw prompt "$card_pipeline" >/dev/null
   capture_paths "$workdir" "$card_pipeline" "$actual_prompt"
   compare_fixture "$actual_prompt" "$FIXTURES_DIR/prompt.paths.txt"
-  assert_file_contains "$workdir/out/$card_pipeline/agent_prompt.md" "=== EAW AGENT PROMPT (feature) CARD $card_pipeline ==="
+  assert_file_contains "$workdir/out/$card_pipeline/investigations/agent_prompt.md" "=== EAW AGENT PROMPT (feature) CARD $card_pipeline ==="
 
   ./scripts/eaw analyze "$card_pipeline" >/dev/null
   capture_paths "$workdir" "$card_pipeline" "$actual_analyze"

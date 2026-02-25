@@ -18,7 +18,7 @@ export EAW_WORKDIR="$tmpdir/.eaw"
 ./scripts/eaw bug 999001 "prompt smoke"
 
 intake="$EAW_WORKDIR/out/999001/investigations/00_intake.md"
-prompt_file="$EAW_WORKDIR/out/999001/agent_prompt.md"
+prompt_file="$EAW_WORKDIR/out/999001/investigations/agent_prompt.md"
 grep -Fq "Comportamento esperado" "$intake" || fail "intake was not created from template content"
 
 # Happy path: template intake should not trigger structural warning
