@@ -48,6 +48,8 @@ copy_workspace_nested_templates() {
 		"prompts/pt-br/analyze/Findings.txt"
 		"prompts/pt-br/analyze/Hipoteses.txt"
 		"prompts/pt-br/analyze/Planing.txt"
+		"prompts/pt-br/implementation/Implementation_Planing.txt"
+		"prompts/pt-br/implementation/Implementation Executor.txt"
 	)
 
 	for rel in "${nested_templates[@]}"; do

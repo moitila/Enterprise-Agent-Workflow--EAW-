@@ -29,10 +29,12 @@ if [[ ! -d "$IMPL_DIR" ]]; then
 	exit 1
 fi
 
-for path in \
-	"$IMPL_DIR/00_scope.lock.md" \
-	"$IMPL_DIR/10_change_plan.md" \
-	"$IMPL_DIR/20_patch_notes.md"; do
+	for path in \
+		"$IMPL_DIR/00_scope.lock.md" \
+		"$IMPL_DIR/10_change_plan.md" \
+		"$IMPL_DIR/20_patch_notes.md" \
+		"$IMPL_DIR/implementation_planning_agent_prompt.md" \
+		"$IMPL_DIR/implementation_executor_agent_prompt.md"; do
 	if [[ ! -e "$path" ]]; then
 		echo "ERROR: missing implement artifact: $path" >&2
 		exit 1
@@ -45,8 +47,10 @@ for path in \
 		echo "ERROR: empty implement artifact: $path" >&2
 		exit 1
 	fi
-done
-echo "SMOKE: artifacts OK"
+	done
+	grep -Fq "=== EAW IMPLEMENTATION PLANNING PROMPT" "$IMPL_DIR/implementation_planning_agent_prompt.md" || fail "missing planning prompt header"
+	grep -Fq "=== EAW IMPLEMENTATION EXECUTOR PROMPT" "$IMPL_DIR/implementation_executor_agent_prompt.md" || fail "missing executor prompt header"
+	echo "SMOKE: artifacts OK"
 
 set +e
 bash ./scripts/eaw validate >/dev/null 2>&1

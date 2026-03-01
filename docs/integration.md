@@ -28,6 +28,8 @@ Use `EAW_WORKDIR` when you want local workspace-specific configuration and outpu
     prompts/pt-br/analyze/Findings.txt
     prompts/pt-br/analyze/Hipoteses.txt
     prompts/pt-br/analyze/Planing.txt
+    prompts/pt-br/implementation/Implementation_Planing.txt
+    prompts/pt-br/implementation/Implementation Executor.txt
     prompts/pt-br/intake/INTAKE_PROMPT_V2.txt
     10_baseline.md
     20_findings.md
@@ -42,17 +44,20 @@ Create the base workspace structure with:
 ./scripts/eaw init --workdir ./.eaw
 ```
 
-For `eaw intake` and `eaw analyze`, ensure these prompt templates also exist in workspace templates:
+For `eaw intake`, `eaw analyze`, and `eaw implement`, ensure these prompt templates also exist in workspace templates:
 
 ```bash
 mkdir -p ./.eaw/templates/prompts/pt-br/headers
 mkdir -p ./.eaw/templates/prompts/pt-br/analyze
+mkdir -p ./.eaw/templates/prompts/pt-br/implementation
 mkdir -p ./.eaw/templates/prompts/pt-br/intake
 cp ./templates/prompts/pt-br/headers/headerIntake.txt ./.eaw/templates/prompts/pt-br/headers/headerIntake.txt
 cp ./templates/prompts/pt-br/headers/HEADER.txt ./.eaw/templates/prompts/pt-br/headers/HEADER.txt
 cp ./templates/prompts/pt-br/analyze/Findings.txt ./.eaw/templates/prompts/pt-br/analyze/Findings.txt
 cp ./templates/prompts/pt-br/analyze/Hipoteses.txt ./.eaw/templates/prompts/pt-br/analyze/Hipoteses.txt
 cp ./templates/prompts/pt-br/analyze/Planing.txt ./.eaw/templates/prompts/pt-br/analyze/Planing.txt
+cp ./templates/prompts/pt-br/implementation/Implementation_Planing.txt ./.eaw/templates/prompts/pt-br/implementation/Implementation_Planing.txt
+cp "./templates/prompts/pt-br/implementation/Implementation Executor.txt" "./.eaw/templates/prompts/pt-br/implementation/Implementation Executor.txt"
 cp ./templates/prompts/pt-br/intake/INTAKE_PROMPT_V2.txt ./.eaw/templates/prompts/pt-br/intake/INTAKE_PROMPT_V2.txt
 ```
 
@@ -71,7 +76,7 @@ export EAW_WORKDIR="$PWD/.eaw"
 
 - `intake`: generates `intake_agent_prompt.round_<N>.md` in `<OUT_DIR>/<CARD>/investigations/`.
 - `analyze`: generates `findings_agent_prompt.md`, `hypotheses_agent_prompt.md`, and `planning_agent_prompt.md` in `<OUT_DIR>/<CARD>/investigations/`.
-- `planning` and `implementation`: follow artifacts under `<OUT_DIR>/<CARD>/investigations/` and `<OUT_DIR>/<CARD>/implementation/`.
+- `implement`: creates implementation scaffolds and generates `implementation_planning_agent_prompt.md` and `implementation_executor_agent_prompt.md` in `<OUT_DIR>/<CARD>/implementation/`.
 
 ## Config version
 
