@@ -4,10 +4,75 @@ cmd_analyze() {
 	local card="$1"
 	local out_root="$EAW_OUT_DIR"
 	local card_dir="$out_root/$card"
-	local prompt_file="$card_dir/investigations/agent_prompt.md"
+	local header_rel="prompts/pt-br/headers/HEADER.txt"
+	local findings_rel="prompts/pt-br/analyze/Findings.txt"
+	local hypotheses_rel="prompts/pt-br/analyze/Hipoteses.txt"
+	local planning_rel="prompts/pt-br/analyze/Planing.txt"
+	local header_template="$EAW_TEMPLATES_DIR/$header_rel"
+	local findings_template="$EAW_TEMPLATES_DIR/$findings_rel"
+	local hypotheses_template="$EAW_TEMPLATES_DIR/$hypotheses_rel"
+	local planning_template="$EAW_TEMPLATES_DIR/$planning_rel"
+	local fallback_header="$EAW_ROOT_DIR/templates/$header_rel"
+	local fallback_findings="$EAW_ROOT_DIR/templates/$findings_rel"
+	local fallback_hypotheses="$EAW_ROOT_DIR/templates/$hypotheses_rel"
+	local fallback_planning="$EAW_ROOT_DIR/templates/$planning_rel"
+	local findings_prompt_file="$card_dir/investigations/findings_agent_prompt.md"
+	local hypotheses_prompt_file="$card_dir/investigations/hypotheses_agent_prompt.md"
+	local planning_prompt_file="$card_dir/investigations/planning_agent_prompt.md"
 	local intake_file="$card_dir/investigations/00_intake.md"
 	local type=""
 	local warnings=()
+	local repo_blocks target_repos excluded_repos warnings_block eaw_workdir_value
+
+	render_analyze_prompt() {
+		local phase_header="$1"
+		local body_template="$2"
+		local output_file="$3"
+
+		{
+			cat "$header_template"
+			printf '\n\n'
+			cat "$body_template"
+			} | awk \
+				-v phase_header="$phase_header" \
+				-v card="$card" \
+				-v type="$type" \
+			-v eaw_workdir="$eaw_workdir_value" \
+			-v runtime_root="$EAW_ROOT_DIR" \
+			-v config_source="$REPOS_CONF" \
+				-v out_dir="$out_root" \
+				-v card_dir="$card_dir" \
+				-v target_repos="$target_repos" \
+				-v excluded_repos="$excluded_repos" \
+				-v warnings_block="$warnings_block" \
+				'
+				{
+				if ($0 == "{{TARGET_REPOS}}") {
+					print target_repos
+					next
+				}
+				if ($0 == "{{EXCLUDED_REPOS}}") {
+					print excluded_repos
+					next
+				}
+				if ($0 == "{{WARNINGS_BLOCK}}") {
+					print warnings_block
+					next
+				}
+				gsub(/\{\{PHASE_HEADER\}\}/, phase_header)
+				gsub(/\{\{CARD\}\}/, card)
+				gsub(/\{\{TYPE\}\}/, type)
+				gsub(/\{\{EAW_WORKDIR\}\}/, eaw_workdir)
+				gsub(/\{\{RUNTIME_ROOT\}\}/, runtime_root)
+				gsub(/\{\{CONFIG_SOURCE\}\}/, config_source)
+				gsub(/\{\{OUT_DIR\}\}/, out_dir)
+				gsub(/\{\{CARD_DIR\}\}/, card_dir)
+				print
+			}
+			' | tee "$output_file"
+
+		echo "Wrote $output_file" >&2
+	}
 
 	detect_card_type_with_warnings "$card" "$card_dir" type warnings
 
@@ -40,119 +105,59 @@ cmd_analyze() {
 	ensure_dir "$card_dir"
 	ensure_dir "$card_dir/investigations"
 	ensure_dir "$card_dir/inputs"
-	local repo_blocks target_repos excluded_repos
+	eaw_workdir_value="${EAW_WORKDIR:-}"
+
+	if [[ ! -f "$header_template" ]]; then
+		if [[ -f "$fallback_header" ]]; then
+			header_template="$fallback_header"
+		else
+			die "template not found: $header_template"
+		fi
+	fi
+	if [[ ! -f "$findings_template" ]]; then
+		if [[ -f "$fallback_findings" ]]; then
+			findings_template="$fallback_findings"
+		else
+			die "template not found: $findings_template"
+		fi
+	fi
+	if [[ ! -f "$hypotheses_template" ]]; then
+		if [[ -f "$fallback_hypotheses" ]]; then
+			hypotheses_template="$fallback_hypotheses"
+		else
+			die "template not found: $hypotheses_template"
+		fi
+	fi
+	if [[ ! -f "$planning_template" ]]; then
+		if [[ -f "$fallback_planning" ]]; then
+			planning_template="$fallback_planning"
+		else
+			die "template not found: $planning_template"
+		fi
+	fi
+
 	repo_blocks="$(collect_repos_lists)"
 	target_repos="$(printf "%s\n" "$repo_blocks" | sed -n '1,/^$/p' | sed '/^$/d')"
 	excluded_repos="$(printf "%s\n" "$repo_blocks" | sed -n '/^$/,$p' | sed '1d;/^$/d')"
-	{
-		echo "=== EAW AGENT PROMPT (${type}) CARD ${card} ==="
-		echo "EAW_WORKDIR=${EAW_WORKDIR:-}"
-		echo "RUNTIME_ROOT=$EAW_ROOT_DIR"
-		echo "CONFIG_SOURCE=$REPOS_CONF"
-		echo "EAW_ROOT_DIR=\"\$RUNTIME_ROOT\""
-		echo "OUT_DIR=$out_root"
-		echo "CARD_DIR=$card_dir"
-		echo "TARGET_REPOS:"
-		echo "$target_repos"
-		echo "EXCLUDED_REPOS:"
-		echo "$excluded_repos"
-
+	if [[ ${#warnings[@]} -eq 0 ]]; then
+		warnings_block="- none"
+	else
+		warnings_block=""
 		for warn in "${warnings[@]}"; do
+			if [[ -n "$warnings_block" ]]; then
+				warnings_block+=$'\n'
+			fi
 			if [[ "$warn" == "DO NOT START INVESTIGATION BEFORE COMPLETING REQUIRED SECTIONS." ]]; then
-				echo "WARNING: $warn"
+				warnings_block+="WARNING: $warn"
 			else
-				echo "WARN: $warn"
+				warnings_block+="WARN: $warn"
 			fi
 		done
+	fi
 
-		cat <<EOF
-Você é o agente do VSCode e deve investigar o card ${card} (${type}) com disciplina EAW.
-
-REGRAS OBRIGATÓRIAS:
-
-Não alterar código.
-
-Não commitar.
-
-Toda afirmação deve ter evidência (path real + comando + trecho curto).
-
-Leitura permitida em \$RUNTIME_ROOT e nos TARGET_REPOS listados.
-
-Escrita permitida somente em \$CARD_DIR/.
-
-Qualquer desvio deve ser registrado em \$CARD_DIR/investigations/_warnings.md.
-
-Pré-check obrigatório de root (executar antes de qualquer passo):
-cd "\$EAW_ROOT_DIR"
-test -f ./scripts/eaw || { echo "ERROR: not in EAW-tool root"; exit 2; }
-test -f "\$CONFIG_SOURCE" || { echo "ERROR: missing config source \$CONFIG_SOURCE"; exit 2; }
-
-Whitelist estrita com abort:
-Arquivos permitidos para escrita:
-- \$CARD_DIR/${type}_${card}.md
-- \$CARD_DIR/investigations/00_intake.md
-- \$CARD_DIR/investigations/20_findings.md
-- \$CARD_DIR/investigations/40_next_steps.md
-- \$CARD_DIR/investigations/_warnings.md
-Qualquer tentativa de alterar arquivo fora da lista permitida deve abortar imediatamente com erro.
-
-PASSO 1 — BASELINE
-export EAW_WORKDIR="${EAW_WORKDIR:-}"
-./scripts/eaw doctor
-./scripts/eaw validate
-
-PASSO 2 — ARTEFATOS EAW
-Confirme existência de:
-
-\$CARD_DIR/execution.log
-
-${type}_${card}.md
-
-\$CARD_DIR/investigations/00_intake.md
-
-PASSO 3 — INVESTIGAÇÃO CONTROLADA
-
-Use apenas contexto de \$CARD_DIR/ e código do repo.
-
-Registre comandos e outputs em:
-\$CARD_DIR/investigations/20_findings.md
-
-PASSO 4 — ATUALIZAR TEMPLATE DO CARD
-Atualize:
-\$CARD_DIR/${type}_${card}.md
-com evidências reais coletadas.
-
-PASSO 5 — CONCLUSÃO
-Produza:
-
-investigations/40_next_steps.md
-
-diagnóstico fundamentado
-
-riscos
-
-plano mínimo determinístico
-
-PASSO 6 — TESTES DETERMINÍSTICOS ROBUSTOS
-Use loop explícito para validar artefatos, sem padrões frágeis de brace expansion.
-Exemplo:
-for file in \
-  "\$CARD_DIR/execution.log" \
-  "\$CARD_DIR/investigations/00_intake.md" \
-  "\$CARD_DIR/investigations/20_findings.md" \
-  "\$CARD_DIR/investigations/40_next_steps.md"; do
-  test -f "\$file" || { echo "ERROR: missing \$file"; exit 2; }
-done
-
-RETORNO OBRIGATÓRIO (EVIDÊNCIA ESTRUTURADA)
-- lista de arquivos alterados
-- resumo por arquivo
-- saída literal dos testes executados
-- Backward compatibility preservada; sem refatorações extras.
-EOF
-	} | tee "$prompt_file"
-
-	echo "Wrote $prompt_file" >&2
+	render_analyze_prompt "FINDINGS" "$findings_template" "$findings_prompt_file"
+	render_analyze_prompt "HYPOTHESES" "$hypotheses_template" "$hypotheses_prompt_file"
+	render_analyze_prompt "PLANNING" "$planning_template" "$planning_prompt_file"
 
 	# create TEST_PLAN placeholder in outdir
 	local test_plan="$card_dir/TEST_PLAN_${card}.md"

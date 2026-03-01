@@ -43,7 +43,11 @@ copy_workspace_nested_templates() {
 	local rel src dst dst_parent
 	local nested_templates=(
 		"prompts/pt-br/headers/headerIntake.txt"
+		"prompts/pt-br/headers/HEADER.txt"
 		"prompts/pt-br/intake/INTAKE_PROMPT_V2.txt"
+		"prompts/pt-br/analyze/Findings.txt"
+		"prompts/pt-br/analyze/Hipoteses.txt"
+		"prompts/pt-br/analyze/Planing.txt"
 	)
 
 	for rel in "${nested_templates[@]}"; do

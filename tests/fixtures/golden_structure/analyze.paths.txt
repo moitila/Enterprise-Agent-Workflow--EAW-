@@ -14,4 +14,6 @@ out/940104/investigations/10_baseline.md
 out/940104/investigations/20_findings.md
 out/940104/investigations/30_hypotheses.md
 out/940104/investigations/40_next_steps.md
-out/940104/investigations/agent_prompt.md
+out/940104/investigations/findings_agent_prompt.md
+out/940104/investigations/hypotheses_agent_prompt.md
+out/940104/investigations/planning_agent_prompt.md

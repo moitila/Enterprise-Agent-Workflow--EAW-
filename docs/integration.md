@@ -24,6 +24,10 @@ Use `EAW_WORKDIR` when you want local workspace-specific configuration and outpu
     intake_feature.md
     intake_spike.md
     prompts/pt-br/headers/headerIntake.txt
+    prompts/pt-br/headers/HEADER.txt
+    prompts/pt-br/analyze/Findings.txt
+    prompts/pt-br/analyze/Hipoteses.txt
+    prompts/pt-br/analyze/Planing.txt
     prompts/pt-br/intake/INTAKE_PROMPT_V2.txt
     10_baseline.md
     20_findings.md
@@ -38,12 +42,17 @@ Create the base workspace structure with:
 ./scripts/eaw init --workdir ./.eaw
 ```
 
-For `eaw intake`, ensure these prompt templates also exist in workspace templates:
+For `eaw intake` and `eaw analyze`, ensure these prompt templates also exist in workspace templates:
 
 ```bash
 mkdir -p ./.eaw/templates/prompts/pt-br/headers
+mkdir -p ./.eaw/templates/prompts/pt-br/analyze
 mkdir -p ./.eaw/templates/prompts/pt-br/intake
 cp ./templates/prompts/pt-br/headers/headerIntake.txt ./.eaw/templates/prompts/pt-br/headers/headerIntake.txt
+cp ./templates/prompts/pt-br/headers/HEADER.txt ./.eaw/templates/prompts/pt-br/headers/HEADER.txt
+cp ./templates/prompts/pt-br/analyze/Findings.txt ./.eaw/templates/prompts/pt-br/analyze/Findings.txt
+cp ./templates/prompts/pt-br/analyze/Hipoteses.txt ./.eaw/templates/prompts/pt-br/analyze/Hipoteses.txt
+cp ./templates/prompts/pt-br/analyze/Planing.txt ./.eaw/templates/prompts/pt-br/analyze/Planing.txt
 cp ./templates/prompts/pt-br/intake/INTAKE_PROMPT_V2.txt ./.eaw/templates/prompts/pt-br/intake/INTAKE_PROMPT_V2.txt
 ```
 
@@ -61,7 +70,7 @@ export EAW_WORKDIR="$PWD/.eaw"
 `intake -> analyze -> planning -> implementation`
 
 - `intake`: generates `intake_agent_prompt.round_<N>.md` in `<OUT_DIR>/<CARD>/investigations/`.
-- `analyze`: generates `agent_prompt.md` in `<OUT_DIR>/<CARD>/investigations/`.
+- `analyze`: generates `findings_agent_prompt.md`, `hypotheses_agent_prompt.md`, and `planning_agent_prompt.md` in `<OUT_DIR>/<CARD>/investigations/`.
 - `planning` and `implementation`: follow artifacts under `<OUT_DIR>/<CARD>/investigations/` and `<OUT_DIR>/<CARD>/implementation/`.
 
 ## Config version

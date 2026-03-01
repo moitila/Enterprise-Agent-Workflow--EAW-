@@ -86,6 +86,10 @@ CFG
   capture_paths "$workdir" "$card_pipeline" "$actual_analyze"
   compare_fixture "$actual_analyze" "$FIXTURES_DIR/analyze.paths.txt"
 
+  assert_file_contains "$workdir/out/$card_pipeline/investigations/findings_agent_prompt.md" "=== EAW FINDINGS PROMPT"
+  assert_file_contains "$workdir/out/$card_pipeline/investigations/hypotheses_agent_prompt.md" "=== EAW HYPOTHESES PROMPT"
+  assert_file_contains "$workdir/out/$card_pipeline/investigations/planning_agent_prompt.md" "=== EAW PLANNING PROMPT"
+
   if [[ ! -f "$workdir/out/$card_feature/context/local-main/git-commit.txt" ]]; then
     echo "ERROR: missing context signature file: $workdir/out/$card_feature/context/local-main/git-commit.txt" >&2
     return 1
