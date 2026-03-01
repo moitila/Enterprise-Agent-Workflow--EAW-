@@ -23,7 +23,8 @@ Use `EAW_WORKDIR` when you want local workspace-specific configuration and outpu
     intake_bug.md
     intake_feature.md
     intake_spike.md
-    intake/pt-br/intake_prompt_v2.md
+    prompts/pt-br/headers/headerIntake.txt
+    prompts/pt-br/intake/INTAKE_PROMPT_V2.txt
     10_baseline.md
     20_findings.md
     30_hypotheses.md
@@ -37,11 +38,13 @@ Create the base workspace structure with:
 ./scripts/eaw init --workdir ./.eaw
 ```
 
-For `eaw intake`, ensure this template also exists in workspace templates:
+For `eaw intake`, ensure these prompt templates also exist in workspace templates:
 
 ```bash
-mkdir -p ./.eaw/templates/intake/pt-br
-cp ./templates/intake/pt-br/intake_prompt_v2.md ./.eaw/templates/intake/pt-br/intake_prompt_v2.md
+mkdir -p ./.eaw/templates/prompts/pt-br/headers
+mkdir -p ./.eaw/templates/prompts/pt-br/intake
+cp ./templates/prompts/pt-br/headers/headerIntake.txt ./.eaw/templates/prompts/pt-br/headers/headerIntake.txt
+cp ./templates/prompts/pt-br/intake/INTAKE_PROMPT_V2.txt ./.eaw/templates/prompts/pt-br/intake/INTAKE_PROMPT_V2.txt
 ```
 
 ## Shell export example

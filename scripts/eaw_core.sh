@@ -40,23 +40,28 @@ copy_workspace_nested_templates() {
 	local default_tpl_dir="$1"
 	local tpl_dir="$2"
 	local force="$3"
-	local rel="intake/pt-br/intake_prompt_v2.md"
-	local src="$default_tpl_dir/$rel"
-	local dst="$tpl_dir/$rel"
-	local dst_parent
+	local rel src dst dst_parent
+	local nested_templates=(
+		"prompts/pt-br/headers/headerIntake.txt"
+		"prompts/pt-br/intake/INTAKE_PROMPT_V2.txt"
+	)
 
-	if [[ ! -f "$src" ]]; then
-		return 0
-	fi
+	for rel in "${nested_templates[@]}"; do
+		src="$default_tpl_dir/$rel"
+		dst="$tpl_dir/$rel"
+		if [[ ! -f "$src" ]]; then
+			continue
+		fi
 
-	dst_parent="$(dirname "$dst")"
-	ensure_dir "$dst_parent"
-	if [[ -f "$dst" && "$force" != "true" ]]; then
-		echo "$dst already exists; use --force to overwrite"
-	else
-		cp "$src" "$dst"
-		echo "Created $dst"
-	fi
+		dst_parent="$(dirname "$dst")"
+		ensure_dir "$dst_parent"
+		if [[ -f "$dst" && "$force" != "true" ]]; then
+			echo "$dst already exists; use --force to overwrite"
+		else
+			cp "$src" "$dst"
+			echo "Created $dst"
+		fi
+	done
 }
 
 read_config_version() {
