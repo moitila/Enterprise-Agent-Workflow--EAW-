@@ -48,3 +48,17 @@ Expected:
 
 - Tests assert contract behavior, not implementation details of module layout.
 - New tests must preserve determinism and avoid non-reproducible dependencies.
+
+## Prompt Evolution v0
+
+- Prompt lifecycle validation should cover the canonical `default` phases:
+  - `default/intake`
+  - `default/analyze_findings`
+  - `default/analyze_hypotheses`
+  - `default/analyze_planning`
+  - `default/implementation_planning`
+  - `default/implementation_executor`
+- Each phase must provide `prompt_v1.md`, `prompt_v1.meta`, and `ACTIVE` under `templates/prompts/default/<phase>/`.
+- Minimal command coverage is:
+  - `./scripts/eaw validate-prompt default <phase> v1`
+  - `./scripts/eaw apply-prompt default <phase> v1`

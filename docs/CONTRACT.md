@@ -102,6 +102,20 @@ Validation & Testing
   - `tests/scaffold_parity_smoke.sh` — normal vs workspace scaffold parity and empty `intake/` assertions
 - Test harnesses rely on `mktemp` for isolated temporary directories.
 
+Prompt Evolution v0
+-------------------
+- Versioned prompt candidates live under `templates/prompts/<track>/<phase>/` with `prompt_vN.md`, `prompt_vN.meta`, and `ACTIVE`.
+- The canonical seeded `default` phases are:
+  - `default/intake`
+  - `default/analyze_findings`
+  - `default/analyze_hypotheses`
+  - `default/analyze_planning`
+  - `default/implementation_planning`
+  - `default/implementation_executor`
+- Validation and activation commands are:
+  - `./scripts/eaw validate-prompt default <phase> v1`
+  - `./scripts/eaw apply-prompt default <phase> v1`
+
 Examples
 --------
 repos.conf entry:
