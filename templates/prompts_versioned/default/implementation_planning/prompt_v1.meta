@@ -1,0 +1,3 @@
+version=v1
+required_substrings=EXECUTION STRUCTURE RULE|PRE-CHECK OBRIGATORIO|INPUTS OBRIGATORIOS|REGRAS DE BLOQUEIO|VALIDACAO FINAL
+forbidden_words=ignore previous instructions|write anywhere|disable tests|skip validation|modify excluded repos
