@@ -38,6 +38,32 @@ EOF
 printf "v0\n" >"$PROMPT_DIR/ACTIVE"
 
 before_non_active="$(cksum "$PROMPT_DIR/prompt_v1.md" "$PROMPT_DIR/prompt_v1.meta" "$PROMPT_DIR/prompt_v2.md" "$PROMPT_DIR/prompt_v2.meta")"
+before_active="$(cat "$PROMPT_DIR/ACTIVE")"
+before_templates="$(cksum "$PROMPT_DIR/prompt_v1.md" "$PROMPT_DIR/prompt_v1.meta" "$PROMPT_DIR/prompt_v2.md" "$PROMPT_DIR/prompt_v2.meta" "$PROMPT_DIR/ACTIVE")"
+
+EAW_WORKDIR="$WORK_ROOT/.eaw" "$ROOT_DIR/scripts/eaw" propose-prompt 501 pt-br intake v1 v2 >/dev/null
+
+PROPOSAL_DIR="$EAW_WORKDIR/out/501/proposals"
+test -f "$PROPOSAL_DIR/10_prompt_proposal.md"
+test -f "$PROPOSAL_DIR/20_prompt_diff.txt"
+test -f "$PROPOSAL_DIR/30_prompt_candidate.meta"
+test -f "$PROPOSAL_DIR/31_prompt_candidate.md"
+test -f "$PROPOSAL_DIR/40_proposal_result.md"
+grep -F "candidate generated; not applied" "$PROPOSAL_DIR/40_proposal_result.md" >/dev/null
+grep -F "timestamp:" "$PROPOSAL_DIR/40_proposal_result.md" >/dev/null
+grep -F "exit_code: 0" "$PROPOSAL_DIR/40_proposal_result.md" >/dev/null
+grep -F "@@" "$PROPOSAL_DIR/20_prompt_diff.txt" >/dev/null
+
+if [[ "$(cat "$PROMPT_DIR/ACTIVE")" != "$before_active" ]]; then
+	echo "ACTIVE changed during propose-prompt" >&2
+	exit 1
+fi
+
+after_proposal_templates="$(cksum "$PROMPT_DIR/prompt_v1.md" "$PROMPT_DIR/prompt_v1.meta" "$PROMPT_DIR/prompt_v2.md" "$PROMPT_DIR/prompt_v2.meta" "$PROMPT_DIR/ACTIVE")"
+if [[ "$before_templates" != "$after_proposal_templates" ]]; then
+	echo "templates changed during propose-prompt" >&2
+	exit 1
+fi
 
 set +e
 "$ROOT_DIR/scripts/eaw" apply-prompt pt-br missing-phase v1 >/dev/null 2>&1
@@ -52,7 +78,7 @@ if [[ -e "$EAW_WORKDIR/templates/prompts/pt-br/missing-phase/ACTIVE" ]]; then
 	exit 1
 fi
 
-"$ROOT_DIR/scripts/eaw" validate-prompt pt-br intake v1 >/dev/null
+EAW_WORKDIR="$WORK_ROOT/.eaw" "$ROOT_DIR/scripts/eaw" validate-prompt pt-br intake v1 >/dev/null
 
 set +e
 "$ROOT_DIR/scripts/eaw" validate-prompt pt-br intake v2 >/dev/null 2>&1

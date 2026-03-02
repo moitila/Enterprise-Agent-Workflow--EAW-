@@ -66,6 +66,8 @@ source "$SCRIPT_DIR/commands/cmd_intake.sh"
 source "$SCRIPT_DIR/commands/cmd_validate_prompt.sh"
 # shellcheck disable=SC1091
 source "$SCRIPT_DIR/commands/cmd_apply_prompt.sh"
+# shellcheck disable=SC1091
+source "$SCRIPT_DIR/commands/cmd_propose_prompt.sh"
 
 main() {
 	if [[ $# -lt 1 ]]; then
@@ -147,6 +149,14 @@ main() {
 		fi
 		validate_runtime_workdir
 		cmd_validate_prompt "$2" "$3" "$4"
+		;;
+	propose-prompt)
+		if [[ $# -ne 6 ]]; then
+			echo "usage: eaw propose-prompt <CARD> <TRACK> <PHASE> <BASE_CANDIDATE> <NEW_CANDIDATE>" >&2
+			exit 2
+		fi
+		validate_runtime_workdir
+		cmd_propose_prompt "$2" "$3" "$4" "$5" "$6"
 		;;
 	apply-prompt)
 		if [[ $# -ne 4 ]]; then

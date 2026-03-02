@@ -13,6 +13,7 @@ Example:
   eaw ingest <CARD> <file-path>
   eaw implement <CARD>
   eaw validate-prompt <TRACK> <PHASE> <CANDIDATE>
+  eaw propose-prompt <CARD> <TRACK> <PHASE> <BASE_CANDIDATE> <NEW_CANDIDATE>
   eaw apply-prompt <TRACK> <PHASE> <CANDIDATE>
   eaw validate
   eaw doctor
