@@ -73,11 +73,27 @@ render_template() {
 	shift
 	local date=$1
 	shift
+	local sed_delim='|'
+	local escaped_card escaped_title escaped_type escaped_date
+
+	escape_sed_replacement() {
+		local value="$1"
+		local delimiter="$2"
+		value="${value//\\/\\\\}"
+		value="${value//&/\\&}"
+		value="${value//"$delimiter"/\\$delimiter}"
+		printf '%s' "$value"
+	}
+
+	escaped_card="$(escape_sed_replacement "$card" "$sed_delim")"
+	escaped_title="$(escape_sed_replacement "$title" "$sed_delim")"
+	escaped_type="$(escape_sed_replacement "$type" "$sed_delim")"
+	escaped_date="$(escape_sed_replacement "$date" "$sed_delim")"
 	sed \
-		-e "s/{{CARD}}/${card}/g" \
-		-e "s/{{TITLE}}/${title}/g" \
-		-e "s/{{TYPE}}/${type}/g" \
-		-e "s/{{DATE}}/${date}/g" \
+		-e "s${sed_delim}{{CARD}}${sed_delim}${escaped_card}${sed_delim}g" \
+		-e "s${sed_delim}{{TITLE}}${sed_delim}${escaped_title}${sed_delim}g" \
+		-e "s${sed_delim}{{TYPE}}${sed_delim}${escaped_type}${sed_delim}g" \
+		-e "s${sed_delim}{{DATE}}${sed_delim}${escaped_date}${sed_delim}g" \
 		"$tpl" >"$out"
 }
 
