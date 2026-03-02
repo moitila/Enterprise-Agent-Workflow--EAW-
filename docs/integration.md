@@ -31,6 +31,10 @@ Use `EAW_WORKDIR` when you want local workspace-specific configuration and outpu
     prompts/pt-br/implementation/Implementation_Planing.txt
     prompts/pt-br/implementation/Implementation Executor.txt
     prompts/pt-br/intake/INTAKE_PROMPT_V2.txt
+    prompts/<track>/<phase>/
+      prompt_vN.md
+      prompt_vN.meta
+      ACTIVE
     10_baseline.md
     20_findings.md
     30_hypotheses.md
@@ -77,6 +81,39 @@ export EAW_WORKDIR="$PWD/.eaw"
 - `intake`: generates `intake_agent_prompt.round_<N>.md` in `<OUT_DIR>/<CARD>/investigations/`.
 - `analyze`: generates `findings_agent_prompt.md`, `hypotheses_agent_prompt.md`, and `planning_agent_prompt.md` in `<OUT_DIR>/<CARD>/investigations/`.
 - `implement`: creates implementation scaffolds and generates `implementation_planning_agent_prompt.md` and `implementation_executor_agent_prompt.md` in `<OUT_DIR>/<CARD>/implementation/`.
+
+## Prompt lifecycle commands
+
+Versioned prompt candidates live under:
+
+```text
+templates/prompts/<track>/<phase>/
+  prompt_vN.md
+  prompt_vN.meta
+  ACTIVE
+```
+
+Metadata format:
+
+```text
+version=v1
+required_substrings=TOKEN_A|TOKEN_B
+forbidden_words=TOKEN_X|TOKEN_Y
+```
+
+- `version` must match the candidate passed to the CLI.
+- `required_substrings` uses `|` as token delimiter, trims whitespace around each token, and every token must be present in `prompt_vN.md`.
+- `forbidden_words` uses `|` as token delimiter, trims whitespace around each token, and every listed token must be absent from `prompt_vN.md`.
+
+Commands:
+
+```bash
+EAW_WORKDIR="$PWD/.eaw" ./scripts/eaw validate-prompt <track> <phase> <candidate>
+EAW_WORKDIR="$PWD/.eaw" ./scripts/eaw apply-prompt <track> <phase> <candidate>
+```
+
+- `validate-prompt` returns exit code `0` on PASS and non-zero on FAIL.
+- `apply-prompt` fails when `templates/prompts/<track>/<phase>/` does not exist, does not create the directory automatically, runs only after a PASS validation, and updates only `ACTIVE`.
 
 ## Config version
 
