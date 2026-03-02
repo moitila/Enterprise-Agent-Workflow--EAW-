@@ -72,8 +72,8 @@ cmd_implement() {
 	if [[ -z "$card" ]]; then
 		die "missing <CARD> argument"
 	fi
-	if [[ ! "$card" =~ ^[0-9]+$ ]]; then
-		die "invalid <CARD> '$card' (expected digits only)"
+	if [[ ! "$card" =~ ^[A-Za-z0-9_-]+$ ]]; then
+		die "invalid <CARD> '$card' (expected [A-Za-z0-9_-]+)"
 	fi
 
 	card_dir="$EAW_OUT_DIR/$card"
