@@ -12,6 +12,8 @@ Example:
   eaw analyze <CARD>
   eaw ingest <CARD> <file-path>
   eaw implement <CARD>
+  eaw validate-prompt <TRACK> <PHASE> <CANDIDATE>
+  eaw apply-prompt <TRACK> <PHASE> <CANDIDATE>
   eaw validate
   eaw doctor
 EOF
@@ -216,6 +218,54 @@ validate_runtime_workdir() {
 			exit 1
 		fi
 	fi
+}
+
+normalize_prompt_candidate() {
+	local candidate="$1"
+	if [[ "$candidate" =~ ^v[0-9]+$ ]]; then
+		printf "%s\n" "$candidate"
+		return 0
+	fi
+	if [[ "$candidate" =~ ^[0-9]+$ ]]; then
+		printf "v%s\n" "$candidate"
+		return 0
+	fi
+	return 1
+}
+
+prompt_phase_dir() {
+	local track="$1"
+	local phase="$2"
+	printf "%s/prompts/%s/%s\n" "$EAW_TEMPLATES_DIR" "$track" "$phase"
+}
+
+prompt_candidate_base() {
+	local candidate="$1"
+	local version
+	if ! version="$(normalize_prompt_candidate "$candidate")"; then
+		return 1
+	fi
+	printf "prompt_%s\n" "$version"
+}
+
+prompt_meta_value() {
+	local file="$1"
+	local key="$2"
+	awk -F'=' -v want="$key" '
+		/^[[:space:]]*#/ { next }
+		/^[[:space:]]*$/ { next }
+		{
+			k=$1
+			gsub(/^[[:space:]]+|[[:space:]]+$/, "", k)
+			if (k != want) {
+				next
+			}
+			sub(/^[^=]*=/, "", $0)
+			gsub(/^[[:space:]]+|[[:space:]]+$/, "", $0)
+			print $0
+			exit
+		}
+	' "$file"
 }
 
 trim_spaces() {
