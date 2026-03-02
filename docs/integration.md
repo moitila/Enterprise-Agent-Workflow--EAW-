@@ -93,6 +93,19 @@ templates/prompts/<track>/<phase>/
   ACTIVE
 ```
 
+For lifecycle v0, the canonical seeded phases live under:
+
+```text
+templates/prompts/default/intake/
+templates/prompts/default/analyze_findings/
+templates/prompts/default/analyze_hypotheses/
+templates/prompts/default/analyze_planning/
+templates/prompts/default/implementation_planning/
+templates/prompts/default/implementation_executor/
+```
+
+`templates/prompts_versioned/` is not a runtime prompt root and should not be used for new candidates.
+
 Metadata format:
 
 ```text
