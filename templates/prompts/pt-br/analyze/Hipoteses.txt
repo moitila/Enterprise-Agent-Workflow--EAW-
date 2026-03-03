@@ -1,166 +1,62 @@
-Voce e Engenheiro do EAW responsavel por produzir hipoteses formais e testaveis para o card {{CARD}} ({{TYPE}}).
+ROLE
+- Engenheiro do EAW responsavel por produzir hipoteses formais e testaveis para o card {{CARD}} ({{TYPE}}).
 
-Esta fase e OBRIGATORIA antes do Planning.
+OBJECTIVE
+- Gerar `30_hypotheses.md` antes do planning com Coverage Map explicito, 5 a 10 hipoteses testaveis, ranking formal e provenance.
 
-────────────────────────────────────
-REGRAS OBRIGATÓRIAS
-────────────────────────────────────
+INPUT
+- CARD={{CARD}}
+- TYPE={{TYPE}}
+- EAW_WORKDIR={{EAW_WORKDIR}}
+- RUNTIME_ROOT={{RUNTIME_ROOT}}
+- CONFIG_SOURCE={{CONFIG_SOURCE}}
+- OUT_DIR={{OUT_DIR}}
+- CARD_DIR={{CARD_DIR}}
+- TARGET_REPOS:
+{{TARGET_REPOS}}
+- EXCLUDED_REPOS:
+{{EXCLUDED_REPOS}}
+- WARNINGS:
+{{WARNINGS_BLOCK}}
+- REQUIRED_ARTIFACTS:
+  - `{{CARD_DIR}}/investigations/00_intake.md`
+  - `{{CARD_DIR}}/investigations/20_findings.md`
 
-- Não alterar código.
-- Não criar arquivos adicionais.
-- Não remover headings do template.
-- Cada hipótese deve ser testável.
+OUTPUT
+- Escrever somente `{{CARD_DIR}}/investigations/30_hypotheses.md`.
+- Incluir Coverage Map, hipoteses H#, testes deterministicos, ranking formal, risco residual e provenance.
 
+READ_SCOPE
+- Ler `{{CARD_DIR}}`.
+- Ler TARGET_REPOS apenas em modo read-only quando necessario para evidencias complementares.
 
-────────────────────────────────────
-PRÉ-CHECK OBRIGATÓRIO
-────────────────────────────────────
+WRITE_SCOPE
+- Escrever somente `{{CARD_DIR}}/investigations/30_hypotheses.md`.
 
-cd "$EAW_ROOT_DIR"
-test -f ./scripts/eaw || { echo "ERROR: not in EAW-tool root"; exit 2; }
-test -f "$CONFIG_SOURCE" || { echo "ERROR: missing config source"; exit 2; }
+RULES
+- Executar o pre-check: `cd "{{RUNTIME_ROOT}}"`, `test -f ./scripts/eaw` e `test -f "{{CONFIG_SOURCE}}"`.
+- Confirmar existencia de `{{CARD_DIR}}/investigations/00_intake.md` e `{{CARD_DIR}}/investigations/20_findings.md`; se faltar qualquer um, abortar.
+- Extrair criterios de aceite, regras deterministicas, comportamentos esperados, comportamentos observados divergentes e contratos de erro.
+- Criar secao `## Coverage Map` listando cada criterio identificado.
+- Criar entre 5 e 10 hipoteses H#; para cada uma registrar tipo de risco, descricao objetiva, causa raiz provavel, criterio(s) coberto(s), impacto e sinais observaveis.
+- Para cada H#, definir comando ou cenario controlado e resultado esperado com exit code, prefixo textual, presenca ou ausencia de arquivo ou comportamento verificavel.
+- Criar ranking ordenado `H# - probabilidade x impacto - justificativa objetiva`.
+- Adicionar secao `## Risco Residual Apos Mitigacao`.
+- Adicionar provenance com arquivos lidos, arquivos ignorados com motivo e limitacoes.
+- Considerar concluido apenas se `30_hypotheses.md` existir, tiver Coverage Map, ranking, provenance e apenas esse arquivo tiver sido alterado.
+- Confirmar explicitamente que nenhuma decisao de implementacao foi tomada.
 
-────────────────────────────────────
-PRÉ-CONDIÇÕES HARD
-────────────────────────────────────
+FORBIDDEN
+- Nao alterar codigo.
+- Nao criar arquivos adicionais.
+- Nao remover headings do template.
+- Nao produzir menos de 5 ou mais de 10 hipoteses.
+- Nao usar testes subjetivos.
+- Nao tomar decisoes de solucao nesta fase.
 
-Confirmar existência de:
-
-- $CARD_DIR/investigations/00_intake.md
-- $CARD_DIR/investigations/20_findings.md
-
-Se faltar qualquer um -> abortar.
-
-────────────────────────────────────
-OBJETIVO ESTRUTURAL
-────────────────────────────────────
-
-Gerar 30_hypotheses.md contendo:
-
-- Coverage Map explícito
-- 5 a 10 hipóteses
-- Classificação de risco
-- Teste determinístico por hipótese
-- Ranking formal
-- Provenance
-
-────────────────────────────────────
-PASSO 1 — EXTRAÇÃO FORMAL
-────────────────────────────────────
-
-Extrair dos artefatos:
-
-- Critérios de aceite
-- Regras determinísticas
-- Comportamentos esperados
-- Comportamentos observados divergentes
-- Contratos de erro
-
-Criar seção obrigatória:
-
-## Coverage Map
-
-Listar cada critério identificado.
-
-────────────────────────────────────
-PASSO 2 — GERAÇÃO DE HIPÓTESES
-────────────────────────────────────
-
-Criar entre 5 e 10 hipóteses.
-
-Estrutura obrigatória para cada H#:
-
-### H#
-
-Tipo de risco:
-- funcional
-- estrutural
-- contrato
-- testabilidade
-
-Descrição objetiva
-
-Causa raiz provável
-
-Critério(s) coberto(s) (referência explícita ao Coverage Map)
-
-Impacto:
-(alto/médio/baixo + justificativa objetiva)
-
-Sinais observáveis
-
-────────────────────────────────────
-PASSO 3 — TESTE DETERMINÍSTICO
-────────────────────────────────────
-
-Para cada H# definir:
-
-- Comando ou cenário controlado
-- Resultado esperado:
-  - exit code
-  - prefixo textual
-  - presença/ausência de arquivo
-  - comportamento verificável
-
-Sem testes subjetivos.
-
-────────────────────────────────────
-PASSO 4 — RANKING FORMAL
-────────────────────────────────────
-
-Criar ranking ordenado:
-
-H# — probabilidade × impacto — justificativa objetiva
-
-────────────────────────────────────
-PASSO 5 — RISCO RESIDUAL
-────────────────────────────────────
-
-Adicionar seção:
-
-## Risco Residual Após Mitigação
-
-Analisar:
-
-- O que pode permanecer mesmo após correção?
-- Existe risco estrutural não eliminável?
-
-────────────────────────────────────
-PASSO 6 — PROVENANCE
-────────────────────────────────────
-
-Adicionar:
-
-Arquivos lidos  
-Arquivos ignorados + motivo  
-Limitações  
-
-────────────────────────────────────
-DEFINITION OF DONE
-────────────────────────────────────
-
-Arquivo válido se:
-
-- Coverage Map presente
-- Todos critérios cobertos
-- 5–10 hipóteses
-- Todas com teste determinístico
-- Ranking presente
-- Provenance presente
-- Nenhum arquivo além de 30_hypotheses.md alterado
-
-────────────────────────────────────
-TESTE FINAL
-────────────────────────────────────
-
-test -f "$CARD_DIR/investigations/30_hypotheses.md" || { echo "ERROR: missing hypotheses"; exit 2; }
-
-RETORNO OBRIGATÓRIO:
-
-- Lista de arquivos lidos
-- Confirmação de que apenas 30_hypotheses.md foi alterado
-- Saída literal dos testes executados
-- Confirmação de que nenhuma decisão de implementação foi tomada
-
-Backward compatibility preservada.
-Sem decisoes de solucao nesta fase.
+FAIL_CONDITIONS
+- Falhar se `./scripts/eaw` nao existir em `{{RUNTIME_ROOT}}`.
+- Falhar se `{{CONFIG_SOURCE}}` nao existir.
+- Falhar se qualquer artefato obrigatorio estiver ausente.
+- Falhar se `{{CARD_DIR}}/investigations/30_hypotheses.md` nao existir ao final.
+- Falhar se qualquer arquivo alem de `30_hypotheses.md` for alterado.
