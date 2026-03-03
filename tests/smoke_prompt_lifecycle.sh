@@ -10,6 +10,19 @@ export EAW_WORKDIR="$WORK_ROOT/.eaw"
 
 "$ROOT_DIR/scripts/eaw" init --workdir "$EAW_WORKDIR" >/dev/null
 
+header_template="$EAW_WORKDIR/templates/prompts/pt-br/headers/headerIntake.txt"
+intake_feature_template="$EAW_WORKDIR/templates/intake_feature.md"
+repo_header_template="$ROOT_DIR/templates/prompts/pt-br/headers/headerIntake.txt"
+repo_intake_feature_template="$ROOT_DIR/templates/intake_feature.md"
+
+printf "STALE HEADER\n" >"$header_template"
+printf "STALE FEATURE TEMPLATE\n" >"$intake_feature_template"
+
+"$ROOT_DIR/scripts/eaw" init --workdir "$EAW_WORKDIR" --upgrade >/dev/null
+
+cmp -s "$header_template" "$repo_header_template"
+cmp -s "$intake_feature_template" "$repo_intake_feature_template"
+
 repo_default_dir="$ROOT_DIR/templates/prompts/default"
 work_default_dir="$EAW_WORKDIR/templates/prompts/default"
 phases=(

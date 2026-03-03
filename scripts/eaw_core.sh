@@ -42,7 +42,7 @@ workspace_template_names() {
 copy_workspace_nested_templates() {
 	local default_tpl_dir="$1"
 	local tpl_dir="$2"
-	local force="$3"
+	local overwrite="$3"
 	local rel src dst dst_parent
 	local nested_templates=(
 		"prompts/pt-br/headers/headerIntake.txt"
@@ -64,7 +64,7 @@ copy_workspace_nested_templates() {
 
 		dst_parent="$(dirname "$dst")"
 		ensure_dir "$dst_parent"
-		if [[ -f "$dst" && "$force" != "true" ]]; then
+		if [[ -f "$dst" && "$overwrite" != "true" ]]; then
 			echo "$dst already exists; use --force to overwrite"
 		else
 			cp "$src" "$dst"
@@ -162,6 +162,7 @@ init_workspace_workdir() {
 	local workdir="$1"
 	local force="$2"
 	local upgrade="$3"
+	local overwrite_templates="false"
 	local cfg="$workdir/config"
 	local tpl="$workdir/templates"
 	local out="$workdir/out"
@@ -174,6 +175,10 @@ init_workspace_workdir() {
 	ensure_dir "$tpl"
 	ensure_dir "$out"
 
+	if [[ "$force" == "true" || "$upgrade" == "true" ]]; then
+		overwrite_templates="true"
+	fi
+
 	write_or_skip "$repos_conf" "$force" "# Format: key|path|role(optional)
 # Example:
 # backend|/absolute/path/to/repo|target
@@ -183,7 +188,7 @@ init_workspace_workdir() {
 		local src_tpl="$default_tpl_dir/$name.md"
 		local dst_tpl="$tpl/$name.md"
 		if [[ -f "$src_tpl" ]]; then
-			if [[ -f "$dst_tpl" && "$force" != "true" ]]; then
+			if [[ -f "$dst_tpl" && "$overwrite_templates" != "true" ]]; then
 				echo "$dst_tpl already exists; use --force to overwrite"
 			else
 				cp "$src_tpl" "$dst_tpl"
@@ -192,7 +197,7 @@ init_workspace_workdir() {
 		fi
 	done < <(workspace_template_names)
 
-	copy_workspace_nested_templates "$default_tpl_dir" "$tpl" "$force"
+	copy_workspace_nested_templates "$default_tpl_dir" "$tpl" "$overwrite_templates"
 
 	if [[ -f "$default_search" ]]; then
 		if [[ -f "$search_conf" && "$force" != "true" ]]; then
