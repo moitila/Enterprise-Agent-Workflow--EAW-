@@ -12,6 +12,7 @@ Example:
   eaw analyze <CARD>
   eaw ingest <CARD> <file-path>
   eaw implement <CARD>
+  eaw suggest-prompt <CARD> --track <TRACK> --phase <PHASE>
   eaw validate-prompt <TRACK> <PHASE> <CANDIDATE>
   eaw propose-prompt <CARD> <TRACK> <PHASE> <BASE_CANDIDATE> <NEW_CANDIDATE>
   eaw apply-prompt <TRACK> <PHASE> <CANDIDATE>
@@ -236,6 +237,21 @@ normalize_prompt_candidate() {
 		printf "v%s\n" "$candidate"
 		return 0
 	fi
+	return 1
+}
+
+is_safe_prompt_slug() {
+	local value="$1"
+	[[ "$value" =~ ^[a-z0-9][a-z0-9_-]*$ ]]
+}
+
+validate_prompt_slug() {
+	local kind="$1"
+	local value="$2"
+	if is_safe_prompt_slug "$value"; then
+		return 0
+	fi
+	echo "FAIL: invalid $kind '$value' (expected safe slug [a-z0-9_-])" >&2
 	return 1
 }
 

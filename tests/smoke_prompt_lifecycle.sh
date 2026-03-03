@@ -87,6 +87,43 @@ grep -F "timestamp:" "$PROPOSAL_DIR/40_proposal_result.md" >/dev/null
 grep -F "exit_code: 0" "$PROPOSAL_DIR/40_proposal_result.md" >/dev/null
 grep -F "@@" "$PROPOSAL_DIR/20_prompt_diff.txt" >/dev/null
 
+EAW_WORKDIR="$WORK_ROOT/.eaw" "$ROOT_DIR/scripts/eaw" suggest-prompt 505 --track default --phase intake >/dev/null
+
+SUGGEST_DIR="$EAW_WORKDIR/out/505/proposals"
+test -f "$SUGGEST_DIR/prompt_patch_001.md"
+test -f "$SUGGEST_DIR/prompt_patch_001.diff"
+test -f "$SUGGEST_DIR/prompt_patch_001.result.md"
+grep -F "status: PASS" "$SUGGEST_DIR/prompt_patch_001.result.md" >/dev/null
+grep -F "exit_code: 0" "$SUGGEST_DIR/prompt_patch_001.result.md" >/dev/null
+grep -F "safe_track: PASS" "$SUGGEST_DIR/prompt_patch_001.result.md" >/dev/null
+grep -F "proposal_diff: PASS" "$SUGGEST_DIR/prompt_patch_001.result.md" >/dev/null
+grep -F "ROLE:" "$SUGGEST_DIR/prompt_patch_001.md" >/dev/null
+grep -F "@@" "$SUGGEST_DIR/prompt_patch_001.diff" >/dev/null
+
+set +e
+EAW_WORKDIR="$WORK_ROOT/.eaw" "$ROOT_DIR/scripts/eaw" suggest-prompt 505 --track '../x' --phase intake >/dev/null 2>&1
+rc=$?
+set -e
+if [[ "$rc" -eq 0 ]]; then
+	echo "expected suggest-prompt invalid track to fail" >&2
+	exit 1
+fi
+grep -F "status: FAIL" "$SUGGEST_DIR/prompt_patch_001.result.md" >/dev/null
+grep -F "safe_track: FAIL" "$SUGGEST_DIR/prompt_patch_001.result.md" >/dev/null
+
+set +e
+EAW_WORKDIR="$WORK_ROOT/.eaw" "$ROOT_DIR/scripts/eaw" suggest-prompt 505 --track default --phase missing_phase >/dev/null 2>&1
+rc=$?
+set -e
+if [[ "$rc" -eq 0 ]]; then
+	echo "expected suggest-prompt missing_phase to fail" >&2
+	exit 1
+fi
+grep -F "status: FAIL" "$SUGGEST_DIR/prompt_patch_001.result.md" >/dev/null
+grep -F "exit_code: 1" "$SUGGEST_DIR/prompt_patch_001.result.md" >/dev/null
+grep -F "phase_directory: FAIL" "$SUGGEST_DIR/prompt_patch_001.result.md" >/dev/null
+test ! -e "$EAW_WORKDIR/templates/prompts/default/missing_phase/ACTIVE"
+
 if [[ "$(cat "$PROMPT_DIR/ACTIVE")" != "$before_active" ]]; then
 	echo "ACTIVE changed during propose-prompt" >&2
 	exit 1

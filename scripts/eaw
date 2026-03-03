@@ -67,6 +67,8 @@ source "$SCRIPT_DIR/commands/cmd_validate_prompt.sh"
 # shellcheck disable=SC1091
 source "$SCRIPT_DIR/commands/cmd_apply_prompt.sh"
 # shellcheck disable=SC1091
+source "$SCRIPT_DIR/commands/cmd_suggest_prompt.sh"
+# shellcheck disable=SC1091
 source "$SCRIPT_DIR/commands/cmd_propose_prompt.sh"
 
 main() {
@@ -149,6 +151,10 @@ main() {
 		fi
 		validate_runtime_workdir
 		cmd_validate_prompt "$2" "$3" "$4"
+		;;
+	suggest-prompt)
+		validate_runtime_workdir
+		cmd_suggest_prompt "${@:2}"
 		;;
 	propose-prompt)
 		if [[ $# -ne 6 ]]; then
