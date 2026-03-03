@@ -4,6 +4,11 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT"
 
+fail() {
+	printf "smoke_implement failed: %s\n" "$1" >&2
+	exit 1
+}
+
 CARD="abc-501"
 tmpdir="$(mktemp -d)"
 trap 'rm -rf "$tmpdir"' EXIT
