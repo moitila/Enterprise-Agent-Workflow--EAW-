@@ -174,6 +174,7 @@ EAW_WORKDIR="$PWD/.eaw" ./scripts/eaw doctor
 ./scripts/eaw init --workdir "$PWD/.eaw" --upgrade
 ```
 
+- Refreshes workspace templates in `"$PWD/.eaw/templates"` from core templates.
 - Does not overwrite `repos.conf` or `search.conf` unless `--force`.
 - For `eaw.conf`, creates it when missing.
 - If `eaw.conf` is outdated or missing `config_version`, writes `eaw.conf.new` with the required version example.
