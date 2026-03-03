@@ -37,7 +37,7 @@ Seu proposito e:
 ## 4. WRITE_SCOPE
 
 - Escrever somente `investigations/20_findings.md`.
-- Escrever somente `investigations/_warnings.md` se necessario.
+- `investigations/_warnings.md` e opcional, condicionado ao prompt gerado e ao comportamento observado do runtime quando houver necessidade de registrar warnings.
 - Qualquer tentativa de escrita fora dessa whitelist deve falhar.
 
 ## 5. Regras Obrigatorias
@@ -45,7 +45,7 @@ Seu proposito e:
 - Executar o pre-check com `cd "$EAW_ROOT_DIR"`, `test -f ./scripts/eaw` e `test -f "$CONFIG_SOURCE"`.
 - Confirmar a existencia de `investigations/00_intake.md`; se faltar, bloquear a subfase.
 - Executar baseline com `EAW_WORKDIR` apontando para o workspace ativo, seguido de `./scripts/eaw doctor` e `./scripts/eaw validate`.
-- Produzir `20_findings.md` com as secoes `# 20_findings`, `## 1. Contexto Confirmado`, `## 2. Evidencias Coletadas`, `## 3. Criterios de Aceite Identificados`, `## 4. Comportamentos Observados`, `## 5. Divergencias Identificadas` e `## 6. Lacunas de Informacao`.
+- Produzir `20_findings.md` com estrutura equivalente ao template e ao prompt ativos, preservando as secoes observadas para contexto confirmado, evidencias coletadas, criterios de aceite identificados, comportamentos observados, divergencias identificadas e lacunas de informacao.
 - Em cada evidencia, registrar arquivo, comando executado, trecho relevante e interpretacao objetiva.
 - Retornar rastreabilidade de execucao com arquivos lidos, arquivos alterados, saida literal dos testes e confirmacao de que nenhuma hipotese ou plano foi criado.
 

@@ -43,7 +43,7 @@ Seu proposito e:
 - Executar o pre-check com `cd "$EAW_ROOT_DIR"`, `test -f ./scripts/eaw` e `test -f "$CONFIG_SOURCE"`.
 - Confirmar a existencia de `investigations/00_intake.md` e `investigations/20_findings.md`; se faltar qualquer um, abortar.
 - Criar a secao `## Coverage Map` listando os criterios identificados.
-- Produzir entre 5 e 10 hipoteses H#.
+- Recomenda-se produzir entre 5 e 10 hipoteses H#, mantendo aderencia ao prompt e ao comportamento observado do runtime.
 - Em cada H#, registrar tipo de risco, descricao objetiva, causa raiz provavel, criterio(s) coberto(s), impacto e sinais observaveis.
 - Para cada H#, definir comando ou cenario controlado e resultado esperado com exit code, prefixo textual, presenca ou ausencia de arquivo e comportamento verificavel.
 - Produzir ranking formal ordenado e secao `## Risco Residual Apos Mitigacao`.
@@ -57,7 +57,7 @@ Seu proposito e:
 - Ausencia de qualquer artefato obrigatorio de entrada.
 - Falha em produzir `investigations/30_hypotheses.md` ao final.
 - Alteracao de qualquer arquivo alem de `30_hypotheses.md`.
-- Quantidade de hipoteses fora do intervalo de 5 a 10.
+- Quantidade de hipoteses incompatível com o prompt ativo a ponto de descaracterizar a estrutura esperada da subfase.
 - Ausencia de Coverage Map, ranking ou provenance.
 
 ## 7. Dependencias de Runtime

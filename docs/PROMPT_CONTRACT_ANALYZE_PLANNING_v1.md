@@ -58,7 +58,7 @@ Seu proposito e:
 - Ausencia de qualquer artefato obrigatorio de entrada.
 - Ausencia da secao `Hipotese(s) Selecionada(s)` em `40_next_steps.md`.
 - Ausencia de pelo menos uma H# explicita.
-- Ausencia de plano numerado.
+- Ausencia de plano estruturado com passos identificaveis.
 - Falha em produzir `investigations/40_next_steps.md` ao final.
 - Qualquer tentativa de escrita fora do WRITE_SCOPE.
 
@@ -74,7 +74,7 @@ Seu proposito e:
 
 - A subfase Planning nao altera codigo.
 - A subfase Planning nao cria hipotese nova.
-- A subfase Planning nao propoe arquitetura nova.
+- A subfase Planning deve permanecer aderente ao escopo e as evidencias do intake, sem expandir arquitetura alem do que estiver sustentado pelo fluxo observado.
 - A subfase Planning depende da rastreabilidade H# definida em `30_hypotheses.md`.
 
 ## 9. Relacao com o Contrato Consolidado
