@@ -67,6 +67,11 @@ jobs:
           chmod +x tests/smoke.sh
           ./tests/smoke.sh
 
+      - name: Smoke - prompt lifecycle test
+        run: |
+          set -euo pipefail
+          bash tests/smoke_prompt_lifecycle.sh
+
       - name: Smoke - implement test
         run: |
           set -euo pipefail
