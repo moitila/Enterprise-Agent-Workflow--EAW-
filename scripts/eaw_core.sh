@@ -258,7 +258,67 @@ validate_prompt_slug() {
 prompt_phase_dir() {
 	local track="$1"
 	local phase="$2"
-	printf "%s/prompts/%s/%s\n" "$EAW_TEMPLATES_DIR" "$track" "$phase"
+	local by_phase by_track
+	by_phase="$EAW_TEMPLATES_DIR/prompts/$phase"
+	by_track="$EAW_TEMPLATES_DIR/prompts/$track/$phase"
+	if [[ -d "$by_phase" ]]; then
+		printf "%s\n" "$by_phase"
+		return 0
+	fi
+	if [[ -d "$by_track" ]]; then
+		printf "%s\n" "$by_track"
+		return 0
+	fi
+	printf "%s\n" "$by_phase"
+}
+
+prompt_highest_candidate_base() {
+	local dir="$1"
+	local path name version max=-1
+	for path in "$dir"/prompt_v*.md; do
+		if [[ ! -f "$path" ]]; then
+			continue
+		fi
+		name="${path##*/}"
+		if [[ "$name" =~ ^prompt_v([0-9]+)\.md$ ]]; then
+			version="${BASH_REMATCH[1]}"
+			if ((version > max)); then
+				max="$version"
+			fi
+		fi
+	done
+	if ((max < 0)); then
+		return 1
+	fi
+	printf "prompt_v%s\n" "$max"
+}
+
+prompt_resolve_md_file() {
+	local track="$1"
+	local phase="$2"
+	local candidate="${3:-}"
+	local dir base md_file
+	dir="$(prompt_phase_dir "$track" "$phase")"
+	if [[ ! -d "$dir" ]]; then
+		echo "ERROR: prompt directory not found for phase '$phase': $dir" >&2
+		return 1
+	fi
+	if [[ -n "$candidate" && "$candidate" != "latest" ]]; then
+		if ! base="$(prompt_candidate_base "$candidate")"; then
+			echo "ERROR: invalid candidate '$candidate' (expected vN or N)" >&2
+			return 1
+		fi
+		md_file="$dir/${base}.md"
+		if [[ -f "$md_file" ]]; then
+			printf "%s\n" "$md_file"
+			return 0
+		fi
+	fi
+	if ! base="$(prompt_highest_candidate_base "$dir")"; then
+		echo "ERROR: no prompt candidate found in $dir" >&2
+		return 1
+	fi
+	printf "%s/%s.md\n" "$dir" "$base"
 }
 
 prompt_candidate_base() {

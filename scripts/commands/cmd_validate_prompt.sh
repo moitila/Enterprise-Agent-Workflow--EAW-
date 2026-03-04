@@ -11,26 +11,38 @@ cmd_validate_prompt() {
 	local candidate="$3"
 	local version base dir md_file meta_file required forbidden meta_version item
 
-	if ! version="$(normalize_prompt_candidate "$candidate")"; then
-		echo "FAIL: invalid candidate '$candidate' (expected vN or N)" >&2
-		return 1
-	fi
-
-	if ! base="$(prompt_candidate_base "$candidate")"; then
-		echo "FAIL: invalid candidate '$candidate'" >&2
-		return 1
-	fi
-
 	dir="$(prompt_phase_dir "$track" "$phase")"
+	if [[ ! -d "$dir" ]]; then
+		echo "ERROR: prompt directory not found for phase '$phase': $dir" >&2
+		return 1
+	fi
+
+	if [[ "$candidate" == "latest" ]]; then
+		if ! base="$(prompt_highest_candidate_base "$dir")"; then
+			echo "ERROR: no prompt candidate found in $dir" >&2
+			return 1
+		fi
+		version="${base#prompt_}"
+	else
+		if ! version="$(normalize_prompt_candidate "$candidate")"; then
+			echo "FAIL: invalid candidate '$candidate' (expected vN, N or latest)" >&2
+			return 1
+		fi
+		if ! base="$(prompt_candidate_base "$candidate")"; then
+			echo "FAIL: invalid candidate '$candidate'" >&2
+			return 1
+		fi
+	fi
+
 	md_file="$dir/${base}.md"
 	meta_file="$dir/${base}.meta"
 
 	if [[ ! -f "$md_file" ]]; then
-		echo "FAIL: missing markdown candidate: $md_file" >&2
+		echo "ERROR: missing markdown candidate: $md_file" >&2
 		return 1
 	fi
 	if [[ ! -f "$meta_file" ]]; then
-		echo "FAIL: missing metadata candidate: $meta_file" >&2
+		echo "ERROR: missing metadata candidate: $meta_file" >&2
 		return 1
 	fi
 
