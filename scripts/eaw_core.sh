@@ -283,6 +283,69 @@ prompt_phase_dir() {
 	printf "%s\n" "$by_phase"
 }
 
+prompt_phase_dir_from_root() {
+	local templates_root="$1"
+	local track="$2"
+	local phase="$3"
+	local by_phase by_track
+	by_phase="$templates_root/prompts/$phase"
+	by_track="$templates_root/prompts/$track/$phase"
+	if [[ -d "$by_phase" ]]; then
+		printf "%s\n" "$by_phase"
+		return 0
+	fi
+	if [[ -d "$by_track" ]]; then
+		printf "%s\n" "$by_track"
+		return 0
+	fi
+	printf "%s\n" "$by_phase"
+}
+
+prompt_resolve_active_md_file() {
+	local track="$1"
+	local phase="$2"
+	local workspace_dir root_templates_root root_dir dir
+	local active_file raw_active active_value normalized_active md_file
+
+	workspace_dir="$(prompt_phase_dir "$track" "$phase")"
+	root_templates_root="$EAW_ROOT_DIR/templates"
+	root_dir="$(prompt_phase_dir_from_root "$root_templates_root" "$track" "$phase")"
+
+	if [[ -d "$workspace_dir" ]]; then
+		dir="$workspace_dir"
+	elif [[ -d "$root_dir" ]]; then
+		dir="$root_dir"
+	else
+		echo "ERROR: prompt directory not found for track '$track' phase '$phase': $workspace_dir" >&2
+		return 1
+	fi
+
+	active_file="$dir/ACTIVE"
+	if [[ ! -f "$active_file" ]]; then
+		echo "ERROR: ACTIVE file not found for track '$track' phase '$phase': $active_file" >&2
+		return 1
+	fi
+
+	raw_active="$(tr -d '\r' <"$active_file")"
+	active_value="$(trim_spaces "$raw_active")"
+	if [[ -z "$active_value" ]]; then
+		echo "ERROR: ACTIVE is empty for track '$track' phase '$phase': $active_file" >&2
+		return 1
+	fi
+	if ! normalized_active="$(normalize_prompt_candidate "$active_value")"; then
+		echo "ERROR: ACTIVE has invalid version '$active_value' for track '$track' phase '$phase': $active_file" >&2
+		return 1
+	fi
+
+	md_file="$dir/prompt_${normalized_active}.md"
+	if [[ ! -f "$md_file" ]]; then
+		echo "ERROR: ACTIVE points to missing prompt file for track '$track' phase '$phase': $md_file" >&2
+		return 1
+	fi
+
+	printf "%s\n" "$md_file"
+}
+
 prompt_list_markdown_candidates() {
 	local root="$EAW_TEMPLATES_DIR/prompts"
 	if [[ ! -d "$root" ]]; then

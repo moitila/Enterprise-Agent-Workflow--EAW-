@@ -244,8 +244,29 @@ grep -Fq "default/implementation_executor" "$ROOT_DIR/docs/integration.md"
 "$ROOT_DIR/scripts/eaw" feature 500 "Prompt lifecycle smoke" >/dev/null
 "$ROOT_DIR/scripts/eaw" doctor >/dev/null
 "$ROOT_DIR/scripts/eaw" validate >/dev/null
+
+for phase in "${phases[@]}"; do
+	phase_dir="$EAW_WORKDIR/templates/prompts/default/$phase"
+	cp "$phase_dir/prompt_v1.md" "$phase_dir/prompt_v2.md"
+	printf "\nACTIVE_BINDING_OK default/%s v2\n" "$phase" >>"$phase_dir/prompt_v2.md"
+	printf "v2\n" >"$phase_dir/ACTIVE"
+done
+
 "$ROOT_DIR/scripts/eaw" intake 500 --round=1 >/dev/null
 "$ROOT_DIR/scripts/eaw" analyze 500 >/dev/null
+"$ROOT_DIR/scripts/eaw" implement 500 >/dev/null
 
 test -f "$EAW_WORKDIR/out/500/investigations/intake_agent_prompt.round_1.md"
 test -f "$EAW_WORKDIR/out/500/investigations/findings_agent_prompt.md"
+test -f "$EAW_WORKDIR/out/500/investigations/hypotheses_agent_prompt.md"
+test -f "$EAW_WORKDIR/out/500/investigations/planning_agent_prompt.md"
+test -f "$EAW_WORKDIR/out/500/implementation/implementation_planning_agent_prompt.md"
+test -f "$EAW_WORKDIR/out/500/implementation/implementation_executor_agent_prompt.md"
+
+grep -F "ACTIVE_BINDING_OK default/intake v2" "$EAW_WORKDIR/out/500/investigations/intake_agent_prompt.round_1.md" >/dev/null
+grep -F "ACTIVE_BINDING_OK default/analyze_findings v2" "$EAW_WORKDIR/out/500/investigations/findings_agent_prompt.md" >/dev/null
+grep -F "ACTIVE_BINDING_OK default/analyze_hypotheses v2" "$EAW_WORKDIR/out/500/investigations/hypotheses_agent_prompt.md" >/dev/null
+grep -F "ACTIVE_BINDING_OK default/analyze_planning v2" "$EAW_WORKDIR/out/500/investigations/planning_agent_prompt.md" >/dev/null
+grep -F "ACTIVE_BINDING_OK default/implementation_planning v2" "$EAW_WORKDIR/out/500/implementation/implementation_planning_agent_prompt.md" >/dev/null
+grep -F "ACTIVE_BINDING_OK default/implementation_executor v2" "$EAW_WORKDIR/out/500/implementation/implementation_executor_agent_prompt.md" >/dev/null
+echo "ACTIVE_BINDING_OK"

@@ -64,7 +64,7 @@ Seu proposito e:
 
 - Runtime root: `EAW-tool/scripts/eaw`
 - Implementacao observada da fase: `scripts/commands/cmd_analyze.sh`
-- Template versionado da subfase: `templates/prompts/default/analyze_hypotheses/prompt_v1.md`
+- Template efetivo da subfase: `templates/prompts/default/analyze_hypotheses/prompt_v{ACTIVE}.md` (resolvido via `ACTIVE`)
 - Contrato consolidado complementar: `docs/PROMPT_CONTRACT_ANALYZE_v1.md`
 
 ## 8. Limitacoes Conhecidas

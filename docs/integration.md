@@ -65,6 +65,8 @@ mkdir -p ./.eaw/templates/prompts/default
 cp -R ./templates/prompts/default/. ./.eaw/templates/prompts/default/
 ```
 
+The seeded tree starts at `prompt_v1.*`, but runtime selection for `intake`, `analyze`, and `implement` is resolved by `ACTIVE` in each phase directory.
+
 ## Shell export example
 
 ```bash

@@ -58,7 +58,7 @@ Expected:
   - `default/analyze_planning`
   - `default/implementation_planning`
   - `default/implementation_executor`
-- Each phase must provide `prompt_v1.md`, `prompt_v1.meta`, and `ACTIVE` under `templates/prompts/default/<phase>/`.
+- Each phase must provide versioned candidates `prompt_vN.md`, `prompt_vN.meta`, and `ACTIVE` under `templates/prompts/default/<phase>/` (`v1` is the seeded baseline in init scaffolding).
 - Minimal command coverage is:
   - `./scripts/eaw validate-prompt default <phase> v1`
   - `./scripts/eaw apply-prompt default <phase> v1`

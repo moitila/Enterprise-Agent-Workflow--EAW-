@@ -5,12 +5,7 @@ cmd_implement() {
 	local card_dir impl_dir type
 	local created=0
 	local preserved=0
-	local planning_rel="prompts/default/implementation_planning/prompt_v1.md"
-	local executor_rel="prompts/default/implementation_executor/prompt_v1.md"
-	local planning_template="$EAW_TEMPLATES_DIR/$planning_rel"
-	local executor_template="$EAW_TEMPLATES_DIR/$executor_rel"
-	local fallback_planning="$EAW_ROOT_DIR/templates/$planning_rel"
-	local fallback_executor="$EAW_ROOT_DIR/templates/$executor_rel"
+	local planning_template executor_template
 	local planning_prompt executor_prompt
 	local repo_blocks target_repos excluded_repos
 	local eaw_workdir_value warnings_block
@@ -126,19 +121,11 @@ EOF
 		created=$((created + 1))
 	done
 
-	if [[ ! -f "$planning_template" ]]; then
-		if [[ -f "$fallback_planning" ]]; then
-			planning_template="$fallback_planning"
-		else
-			die "template not found: $planning_template"
-		fi
+	if ! planning_template="$(prompt_resolve_active_md_file "default" "implementation_planning")"; then
+		die "failed to resolve implementation_planning prompt via ACTIVE"
 	fi
-	if [[ ! -f "$executor_template" ]]; then
-		if [[ -f "$fallback_executor" ]]; then
-			executor_template="$fallback_executor"
-		else
-			die "template not found: $executor_template"
-		fi
+	if ! executor_template="$(prompt_resolve_active_md_file "default" "implementation_executor")"; then
+		die "failed to resolve implementation_executor prompt via ACTIVE"
 	fi
 
 	planning_prompt="$impl_dir/implementation_planning_agent_prompt.md"

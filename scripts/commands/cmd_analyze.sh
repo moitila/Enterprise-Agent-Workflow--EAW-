@@ -4,15 +4,7 @@ cmd_analyze() {
 	local card="$1"
 	local out_root="$EAW_OUT_DIR"
 	local card_dir="$out_root/$card"
-	local findings_rel="prompts/default/analyze_findings/prompt_v1.md"
-	local hypotheses_rel="prompts/default/analyze_hypotheses/prompt_v1.md"
-	local planning_rel="prompts/default/analyze_planning/prompt_v1.md"
-	local findings_template="$EAW_TEMPLATES_DIR/$findings_rel"
-	local hypotheses_template="$EAW_TEMPLATES_DIR/$hypotheses_rel"
-	local planning_template="$EAW_TEMPLATES_DIR/$planning_rel"
-	local fallback_findings="$EAW_ROOT_DIR/templates/$findings_rel"
-	local fallback_hypotheses="$EAW_ROOT_DIR/templates/$hypotheses_rel"
-	local fallback_planning="$EAW_ROOT_DIR/templates/$planning_rel"
+	local findings_template hypotheses_template planning_template
 	local findings_prompt_file="$card_dir/investigations/findings_agent_prompt.md"
 	local hypotheses_prompt_file="$card_dir/investigations/hypotheses_agent_prompt.md"
 	local planning_prompt_file="$card_dir/investigations/planning_agent_prompt.md"
@@ -100,26 +92,14 @@ cmd_analyze() {
 	ensure_dir "$card_dir/inputs"
 	eaw_workdir_value="${EAW_WORKDIR:-}"
 
-	if [[ ! -f "$findings_template" ]]; then
-		if [[ -f "$fallback_findings" ]]; then
-			findings_template="$fallback_findings"
-		else
-			die "template not found: $findings_template"
-		fi
+	if ! findings_template="$(prompt_resolve_active_md_file "default" "analyze_findings")"; then
+		die "failed to resolve analyze_findings prompt via ACTIVE"
 	fi
-	if [[ ! -f "$hypotheses_template" ]]; then
-		if [[ -f "$fallback_hypotheses" ]]; then
-			hypotheses_template="$fallback_hypotheses"
-		else
-			die "template not found: $hypotheses_template"
-		fi
+	if ! hypotheses_template="$(prompt_resolve_active_md_file "default" "analyze_hypotheses")"; then
+		die "failed to resolve analyze_hypotheses prompt via ACTIVE"
 	fi
-	if [[ ! -f "$planning_template" ]]; then
-		if [[ -f "$fallback_planning" ]]; then
-			planning_template="$fallback_planning"
-		else
-			die "template not found: $planning_template"
-		fi
+	if ! planning_template="$(prompt_resolve_active_md_file "default" "analyze_planning")"; then
+		die "failed to resolve analyze_planning prompt via ACTIVE"
 	fi
 
 	repo_blocks="$(collect_repos_lists)"
