@@ -13,6 +13,7 @@ Example:
   eaw ingest <CARD> <file-path>
   eaw implement <CARD>
   eaw suggest-prompt <CARD> --track <TRACK> --phase <PHASE>
+  eaw prompt validate
   eaw validate-prompt <TRACK> <PHASE> <CANDIDATE>
   eaw propose-prompt <CARD> <TRACK> <PHASE> <BASE_CANDIDATE> <NEW_CANDIDATE>
   eaw apply-prompt <TRACK> <PHASE> <CANDIDATE>
@@ -270,6 +271,14 @@ prompt_phase_dir() {
 		return 0
 	fi
 	printf "%s\n" "$by_phase"
+}
+
+prompt_list_markdown_candidates() {
+	local root="$EAW_TEMPLATES_DIR/prompts"
+	if [[ ! -d "$root" ]]; then
+		return 0
+	fi
+	find "$root" -type f -name 'prompt_v*.md' | LC_ALL=C sort
 }
 
 prompt_highest_candidate_base() {
