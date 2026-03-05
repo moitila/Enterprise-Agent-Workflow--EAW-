@@ -125,10 +125,10 @@ EOF
 		created=$((created + 1))
 	done
 
-	if ! planning_template="$(prompt_resolve_active_md_file "default" "implementation_planning")"; then
+	if ! planning_template="$(load_prompt "default" "implementation_planning" "$card" "$EAW_OUT_DIR")"; then
 		die "failed to resolve implementation_planning prompt via ACTIVE"
 	fi
-	if ! executor_template="$(prompt_resolve_active_md_file "default" "implementation_executor")"; then
+	if ! executor_template="$(load_prompt "default" "implementation_executor" "$card" "$EAW_OUT_DIR")"; then
 		die "failed to resolve implementation_executor prompt via ACTIVE"
 	fi
 

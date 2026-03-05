@@ -263,10 +263,29 @@ test -f "$EAW_WORKDIR/out/500/investigations/planning_agent_prompt.md"
 test -f "$EAW_WORKDIR/out/500/implementation/implementation_planning_agent_prompt.md"
 test -f "$EAW_WORKDIR/out/500/implementation/implementation_executor_agent_prompt.md"
 
+provenance_file="$EAW_WORKDIR/out/500/provenance/prompts_used.yaml"
+test -f "$provenance_file"
+
 grep -F "ACTIVE_BINDING_OK default/intake v2" "$EAW_WORKDIR/out/500/investigations/intake_agent_prompt.round_1.md" >/dev/null
 grep -F "ACTIVE_BINDING_OK default/analyze_findings v2" "$EAW_WORKDIR/out/500/investigations/findings_agent_prompt.md" >/dev/null
 grep -F "ACTIVE_BINDING_OK default/analyze_hypotheses v2" "$EAW_WORKDIR/out/500/investigations/hypotheses_agent_prompt.md" >/dev/null
 grep -F "ACTIVE_BINDING_OK default/analyze_planning v2" "$EAW_WORKDIR/out/500/investigations/planning_agent_prompt.md" >/dev/null
 grep -F "ACTIVE_BINDING_OK default/implementation_planning v2" "$EAW_WORKDIR/out/500/implementation/implementation_planning_agent_prompt.md" >/dev/null
 grep -F "ACTIVE_BINDING_OK default/implementation_executor v2" "$EAW_WORKDIR/out/500/implementation/implementation_executor_agent_prompt.md" >/dev/null
+grep -F "phase: intake" "$provenance_file" >/dev/null
+grep -F "phase: analyze_findings" "$provenance_file" >/dev/null
+grep -F "phase: analyze_hypotheses" "$provenance_file" >/dev/null
+grep -F "phase: analyze_planning" "$provenance_file" >/dev/null
+grep -F "phase: implementation_planning" "$provenance_file" >/dev/null
+grep -F "phase: implementation_executor" "$provenance_file" >/dev/null
+grep -Eq "prompt_used: intake_v[0-9]+" "$provenance_file"
+grep -Eq "prompt_used: analyze_findings_v[0-9]+" "$provenance_file"
+grep -Eq "prompt_used: analyze_hypotheses_v[0-9]+" "$provenance_file"
+grep -Eq "prompt_used: analyze_planning_v[0-9]+" "$provenance_file"
+grep -Eq "prompt_used: implementation_planning_v[0-9]+" "$provenance_file"
+grep -Eq "prompt_used: implementation_executor_v[0-9]+" "$provenance_file"
+grep -F "source_root:" "$provenance_file" >/dev/null
+grep -F "phase_dir:" "$provenance_file" >/dev/null
+grep -F "active:" "$provenance_file" >/dev/null
+grep -F "file:" "$provenance_file" >/dev/null
 echo "ACTIVE_BINDING_OK"

@@ -17,3 +17,4 @@ out/940104/investigations/40_next_steps.md
 out/940104/investigations/findings_agent_prompt.md
 out/940104/investigations/hypotheses_agent_prompt.md
 out/940104/investigations/planning_agent_prompt.md
+out/940104/provenance/prompts_used.yaml

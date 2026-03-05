@@ -103,13 +103,13 @@ cmd_analyze() {
 	ensure_dir "$card_dir/inputs"
 	eaw_workdir_value="${EAW_WORKDIR:-}"
 
-	if ! findings_template="$(prompt_resolve_active_md_file "default" "analyze_findings")"; then
+	if ! findings_template="$(load_prompt "default" "analyze_findings" "$card" "$out_root")"; then
 		die "failed to resolve analyze_findings prompt via ACTIVE"
 	fi
-	if ! hypotheses_template="$(prompt_resolve_active_md_file "default" "analyze_hypotheses")"; then
+	if ! hypotheses_template="$(load_prompt "default" "analyze_hypotheses" "$card" "$out_root")"; then
 		die "failed to resolve analyze_hypotheses prompt via ACTIVE"
 	fi
-	if ! planning_template="$(prompt_resolve_active_md_file "default" "analyze_planning")"; then
+	if ! planning_template="$(load_prompt "default" "analyze_planning" "$card" "$out_root")"; then
 		die "failed to resolve analyze_planning prompt via ACTIVE"
 	fi
 

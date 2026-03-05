@@ -301,11 +301,11 @@ prompt_phase_dir_from_root() {
 	printf "%s\n" "$by_phase"
 }
 
-prompt_resolve_active_md_file() {
+prompt_resolve_active_metadata() {
 	local track="$1"
 	local phase="$2"
-	local workspace_dir root_templates_root root_dir dir
-	local active_file raw_active active_value normalized_active md_file
+	local workspace_dir root_templates_root root_dir dir source_root
+	local active_file raw_active active_value normalized_active md_file file_name prompt_used
 
 	workspace_dir="$(prompt_phase_dir "$track" "$phase")"
 	root_templates_root="$EAW_ROOT_DIR/templates"
@@ -313,8 +313,10 @@ prompt_resolve_active_md_file() {
 
 	if [[ -d "$workspace_dir" ]]; then
 		dir="$workspace_dir"
+		source_root="$EAW_TEMPLATES_DIR"
 	elif [[ -d "$root_dir" ]]; then
 		dir="$root_dir"
+		source_root="$root_templates_root"
 	else
 		echo "ERROR: prompt directory not found for track '$track' phase '$phase': $workspace_dir" >&2
 		return 1
@@ -343,6 +345,92 @@ prompt_resolve_active_md_file() {
 		return 1
 	fi
 
+	file_name="${md_file##*/}"
+	prompt_used="${phase}_${normalized_active}"
+	printf "phase=%s\n" "$phase"
+	printf "track=%s\n" "$track"
+	printf "source_root=%s\n" "$source_root"
+	printf "phase_dir=%s\n" "$dir"
+	printf "active=%s\n" "$normalized_active"
+	printf "file=%s\n" "$file_name"
+	printf "md_file=%s\n" "$md_file"
+	printf "prompt_used=%s\n" "$prompt_used"
+}
+
+prompt_provenance_append() {
+	local card="$1"
+	local out_root="$2"
+	local phase="$3"
+	local track="$4"
+	local source_root="$5"
+	local phase_dir="$6"
+	local active="$7"
+	local file_name="$8"
+	local prompt_used="$9"
+	local provenance_dir provenance_file
+
+	provenance_dir="$out_root/$card/provenance"
+	provenance_file="$provenance_dir/prompts_used.yaml"
+	ensure_dir "$provenance_dir"
+
+	if [[ ! -f "$provenance_file" ]]; then
+		printf "prompts:\n" >"$provenance_file"
+	fi
+
+	{
+		printf "  - phase: %s\n" "$phase"
+		printf "    track: %s\n" "$track"
+		printf "    source_root: %s\n" "$source_root"
+		printf "    phase_dir: %s\n" "$phase_dir"
+		printf "    active: %s\n" "$active"
+		printf "    file: %s\n" "$file_name"
+		printf "    prompt_used: %s\n" "$prompt_used"
+	} >>"$provenance_file"
+}
+
+load_prompt() {
+	local track="$1"
+	local phase="$2"
+	local card="$3"
+	local out_root="$4"
+	local resolution key value
+	local source_root phase_dir active file_name md_file prompt_used
+
+	if ! resolution="$(prompt_resolve_active_metadata "$track" "$phase")"; then
+		return 1
+	fi
+
+	while IFS='=' read -r key value; do
+		case "$key" in
+		source_root) source_root="$value" ;;
+		phase_dir) phase_dir="$value" ;;
+		active) active="$value" ;;
+		file) file_name="$value" ;;
+		md_file) md_file="$value" ;;
+		prompt_used) prompt_used="$value" ;;
+		esac
+	done <<<"$resolution"
+
+	if [[ -n "$card" && -n "$out_root" ]]; then
+		prompt_provenance_append "$card" "$out_root" "$phase" "$track" "$source_root" "$phase_dir" "$active" "$file_name" "$prompt_used"
+	fi
+
+	printf "%s\n" "$md_file"
+}
+
+prompt_resolve_active_md_file() {
+	local track="$1"
+	local phase="$2"
+	local resolution key value md_file=""
+	if ! resolution="$(prompt_resolve_active_metadata "$track" "$phase")"; then
+		return 1
+	fi
+	while IFS='=' read -r key value; do
+		if [[ "$key" == "md_file" ]]; then
+			md_file="$value"
+			break
+		fi
+	done <<<"$resolution"
 	printf "%s\n" "$md_file"
 }
 

@@ -25,7 +25,7 @@ cmd_intake() {
 		fi
 	fi
 
-	if ! body_template="$(prompt_resolve_active_md_file "default" "intake")"; then
+	if ! body_template="$(load_prompt "default" "intake" "$card" "$out_root")"; then
 		die "failed to resolve intake prompt via ACTIVE"
 	fi
 
