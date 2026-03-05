@@ -31,7 +31,7 @@ Seu proposito e:
 
 - Runtime root: `EAW-tool/scripts/eaw`
 - Implementacao observada da fase: `scripts/commands/cmd_intake.sh`
-- Template versionado observado: `templates/prompts/pt-br/intake/INTAKE_PROMPT_V2.txt`
+- Template versionado observado: `templates/prompts/default/intake/prompt_v1.md`
 - Contrato estrutural complementar do prompt: `docs/PROMPT_CONTRACT_v1.md`
 - Configuracao obrigatoria: `config/repos.conf`
 - Diretorio de entrada obrigatorio por card: `out/<CARD>/intake/`

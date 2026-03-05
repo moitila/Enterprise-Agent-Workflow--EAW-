@@ -66,7 +66,7 @@ Seu proposito e:
 
 - Runtime root: `EAW-tool/scripts/eaw`
 - Implementacao observada da fase: `scripts/commands/cmd_analyze.sh`
-- Template versionado da subfase: `templates/prompts/pt-br/analyze/Planing.txt`
+- Template versionado da subfase: `templates/prompts/default/analyze_planning/prompt_v1.md`
 - Contrato consolidado complementar: `docs/PROMPT_CONTRACT_ANALYZE_v1.md`
 - Dependencia de saida para a proxima fase: `investigations/40_next_steps.md` como entrada obrigatoria de Implementation
 

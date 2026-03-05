@@ -43,12 +43,26 @@ done
 mkdir -p "$work_default_dir"
 cp -R "$repo_default_dir/." "$work_default_dir/"
 
-PROMPT_DIR="$EAW_WORKDIR/templates/prompts/default/intake"
+PROMPT_DIR="$EAW_WORKDIR/templates/prompts/lifecycle_test/intake"
 mkdir -p "$PROMPT_DIR"
 
 cat >"$PROMPT_DIR/prompt_v1.md" <<'EOF'
+ROLE
 PROMPT HEADER
+OBJECTIVE
 MANDATORY CHECK
+INPUT
+fixture
+OUTPUT
+fixture
+READ_SCOPE
+fixture
+WRITE_SCOPE
+fixture
+FORBIDDEN
+none
+FAIL_CONDITIONS
+fixture
 EOF
 
 cat >"$PROMPT_DIR/prompt_v1.meta" <<'EOF'
@@ -58,8 +72,22 @@ forbidden_words=BLOCKED TOKEN
 EOF
 
 cat >"$PROMPT_DIR/prompt_v2.md" <<'EOF'
+ROLE
 PROMPT HEADER
+OBJECTIVE
+MANDATORY CHECK
+INPUT
+fixture
+OUTPUT
+fixture
+READ_SCOPE
+fixture
+WRITE_SCOPE
+fixture
+FORBIDDEN
 BLOCKED TOKEN
+FAIL_CONDITIONS
+fixture
 EOF
 
 cat >"$PROMPT_DIR/prompt_v2.meta" <<'EOF'
@@ -74,7 +102,7 @@ before_non_active="$(cksum "$PROMPT_DIR/prompt_v1.md" "$PROMPT_DIR/prompt_v1.met
 before_active="$(cat "$PROMPT_DIR/ACTIVE")"
 before_templates="$(cksum "$PROMPT_DIR/prompt_v1.md" "$PROMPT_DIR/prompt_v1.meta" "$PROMPT_DIR/prompt_v2.md" "$PROMPT_DIR/prompt_v2.meta" "$PROMPT_DIR/ACTIVE")"
 
-EAW_WORKDIR="$WORK_ROOT/.eaw" "$ROOT_DIR/scripts/eaw" propose-prompt 501 default intake v1 v2 >/dev/null
+EAW_WORKDIR="$WORK_ROOT/.eaw" "$ROOT_DIR/scripts/eaw" propose-prompt 501 lifecycle_test intake v1 v2 >/dev/null
 
 PROPOSAL_DIR="$EAW_WORKDIR/out/501/proposals"
 test -f "$PROPOSAL_DIR/10_prompt_proposal.md"
@@ -136,22 +164,22 @@ if [[ "$before_templates" != "$after_proposal_templates" ]]; then
 fi
 
 set +e
-"$ROOT_DIR/scripts/eaw" apply-prompt default missing-phase v1 >/dev/null 2>&1
+"$ROOT_DIR/scripts/eaw" apply-prompt lifecycle_test missing-phase v1 >/dev/null 2>&1
 rc=$?
 set -e
 if [[ "$rc" -eq 0 ]]; then
 	echo "expected apply-prompt missing-phase to fail" >&2
 	exit 1
 fi
-if [[ -e "$EAW_WORKDIR/templates/prompts/default/missing-phase/ACTIVE" ]]; then
+if [[ -e "$EAW_WORKDIR/templates/prompts/lifecycle_test/missing-phase/ACTIVE" ]]; then
 	echo "ACTIVE should not be created for missing prompt phase directory" >&2
 	exit 1
 fi
 
-EAW_WORKDIR="$WORK_ROOT/.eaw" "$ROOT_DIR/scripts/eaw" validate-prompt default intake v1 >/dev/null
+EAW_WORKDIR="$WORK_ROOT/.eaw" "$ROOT_DIR/scripts/eaw" validate-prompt lifecycle_test intake v1 >/dev/null
 
 set +e
-"$ROOT_DIR/scripts/eaw" validate-prompt default intake v2 >/dev/null 2>&1
+"$ROOT_DIR/scripts/eaw" validate-prompt lifecycle_test intake v2 >/dev/null 2>&1
 rc=$?
 set -e
 if [[ "$rc" -eq 0 ]]; then
@@ -159,7 +187,7 @@ if [[ "$rc" -eq 0 ]]; then
 	exit 1
 fi
 
-"$ROOT_DIR/scripts/eaw" apply-prompt default intake v1 >/dev/null
+"$ROOT_DIR/scripts/eaw" apply-prompt lifecycle_test intake v1 >/dev/null
 
 if [[ "$(cat "$PROMPT_DIR/ACTIVE")" != "v1" ]]; then
 	echo "ACTIVE was not updated to v1" >&2
