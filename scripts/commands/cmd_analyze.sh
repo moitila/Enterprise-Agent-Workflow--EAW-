@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 
 cmd_analyze() {
-	local card="$1"
+	local card="${1:-}"
 	local out_root="$EAW_OUT_DIR"
-	local card_dir="$out_root/$card"
+	local card_dir
 	local findings_template hypotheses_template planning_template
-	local findings_prompt_file="$card_dir/investigations/findings_agent_prompt.md"
-	local hypotheses_prompt_file="$card_dir/investigations/hypotheses_agent_prompt.md"
-	local planning_prompt_file="$card_dir/investigations/planning_agent_prompt.md"
-	local intake_file="$card_dir/investigations/00_intake.md"
+	local findings_prompt_file
+	local hypotheses_prompt_file
+	local planning_prompt_file
+	local intake_file
 	local type=""
 	local warnings=()
 	local repo_blocks target_repos excluded_repos warnings_block eaw_workdir_value
@@ -58,6 +58,17 @@ cmd_analyze() {
 
 		echo "Wrote $output_file" >&2
 	}
+
+	if [[ "$card" == "--help" || "$card" == "-h" ]]; then
+		usage
+		return 0
+	fi
+
+	card_dir="$out_root/$card"
+	findings_prompt_file="$card_dir/investigations/findings_agent_prompt.md"
+	hypotheses_prompt_file="$card_dir/investigations/hypotheses_agent_prompt.md"
+	planning_prompt_file="$card_dir/investigations/planning_agent_prompt.md"
+	intake_file="$card_dir/investigations/00_intake.md"
 
 	detect_card_type_with_warnings "$card" "$card_dir" type warnings
 

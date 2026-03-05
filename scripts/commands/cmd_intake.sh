@@ -1,16 +1,21 @@
 #!/usr/bin/env bash
 
 cmd_intake() {
-	local card="$1"
+	local card="${1:-}"
 	local round_arg="${2:-}"
 	local round="1"
 	local out_root="$EAW_OUT_DIR"
-	local card_dir="$out_root/$card"
-	local investigations_dir="$card_dir/investigations"
+	local card_dir
+	local investigations_dir
 	local body_template
-	local prompt_file="$investigations_dir/intake_agent_prompt.round_${round}.md"
+	local prompt_file
 	local eaw_workdir_value="${EAW_WORKDIR:-<resolved>}"
 	local config_source="$REPOS_CONF"
+
+	if [[ "$card" == "--help" || "$card" == "-h" ]]; then
+		usage
+		return 0
+	fi
 
 	if [[ -n "$round_arg" ]]; then
 		if [[ "$round_arg" =~ ^--round=([0-9]+)$ ]]; then
@@ -24,6 +29,8 @@ cmd_intake() {
 		die "failed to resolve intake prompt via ACTIVE"
 	fi
 
+	card_dir="$out_root/$card"
+	investigations_dir="$card_dir/investigations"
 	prompt_file="$investigations_dir/intake_agent_prompt.round_${round}.md"
 	ensure_dir "$card_dir"
 	ensure_dir "$investigations_dir"

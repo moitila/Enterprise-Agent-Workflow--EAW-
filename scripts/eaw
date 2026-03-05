@@ -76,6 +76,15 @@ main() {
 		usage
 		exit 1
 	fi
+
+	# Normalize help for subcommands before positional routing.
+	case "$1:${2:-}" in
+	analyze:--help | analyze:-h | intake:--help | intake:-h | implement:--help | implement:-h)
+		usage
+		exit 0
+		;;
+	esac
+
 	case "$1" in
 	init)
 		cmd_init "${@:2}"

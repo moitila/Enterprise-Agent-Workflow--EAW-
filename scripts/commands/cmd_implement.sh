@@ -60,6 +60,10 @@ cmd_implement() {
 	if [[ -z "$card" ]]; then
 		die "missing <CARD> argument"
 	fi
+	if [[ "$card" == "--help" || "$card" == "-h" ]]; then
+		usage
+		return 0
+	fi
 	if [[ ! "$card" =~ ^[A-Za-z0-9_-]+$ ]]; then
 		die "invalid <CARD> '$card' (expected [A-Za-z0-9_-]+)"
 	fi
