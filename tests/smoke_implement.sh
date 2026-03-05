@@ -53,8 +53,10 @@ fi
 		exit 1
 	fi
 	done
-	grep -Fq "=== EAW IMPLEMENTATION PLANNING PROMPT" "$IMPL_DIR/implementation_planning_agent_prompt.md" || fail "missing planning prompt header"
-	grep -Fq "=== EAW IMPLEMENTATION EXECUTOR PROMPT" "$IMPL_DIR/implementation_executor_agent_prompt.md" || fail "missing executor prompt header"
+	grep -Fq "ROLE" "$IMPL_DIR/implementation_planning_agent_prompt.md" || fail "missing planning prompt ROLE section"
+	grep -Fq "OBJECTIVE" "$IMPL_DIR/implementation_planning_agent_prompt.md" || fail "missing planning prompt OBJECTIVE section"
+	grep -Fq "ROLE" "$IMPL_DIR/implementation_executor_agent_prompt.md" || fail "missing executor prompt ROLE section"
+	grep -Fq "OBJECTIVE" "$IMPL_DIR/implementation_executor_agent_prompt.md" || fail "missing executor prompt OBJECTIVE section"
 	echo "SMOKE: artifacts OK"
 
 set +e

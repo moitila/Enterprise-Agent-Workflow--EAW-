@@ -253,7 +253,10 @@ for phase in "${phases[@]}"; do
 done
 
 "$ROOT_DIR/scripts/eaw" intake 500 --round=1 >/dev/null
+"$ROOT_DIR/scripts/eaw" intake 500 --round=1 >/dev/null
 "$ROOT_DIR/scripts/eaw" analyze 500 >/dev/null
+"$ROOT_DIR/scripts/eaw" analyze 500 >/dev/null
+"$ROOT_DIR/scripts/eaw" implement 500 >/dev/null
 "$ROOT_DIR/scripts/eaw" implement 500 >/dev/null
 
 test -f "$EAW_WORKDIR/out/500/investigations/intake_agent_prompt.round_1.md"
@@ -278,6 +281,12 @@ grep -F "phase: analyze_hypotheses" "$provenance_file" >/dev/null
 grep -F "phase: analyze_planning" "$provenance_file" >/dev/null
 grep -F "phase: implementation_planning" "$provenance_file" >/dev/null
 grep -F "phase: implementation_executor" "$provenance_file" >/dev/null
+[[ "$(grep -c "phase: intake" "$provenance_file")" -eq 1 ]]
+[[ "$(grep -c "phase: analyze_findings" "$provenance_file")" -eq 1 ]]
+[[ "$(grep -c "phase: analyze_hypotheses" "$provenance_file")" -eq 1 ]]
+[[ "$(grep -c "phase: analyze_planning" "$provenance_file")" -eq 1 ]]
+[[ "$(grep -c "phase: implementation_planning" "$provenance_file")" -eq 1 ]]
+[[ "$(grep -c "phase: implementation_executor" "$provenance_file")" -eq 1 ]]
 grep -Eq "prompt_used: intake_v[0-9]+" "$provenance_file"
 grep -Eq "prompt_used: analyze_findings_v[0-9]+" "$provenance_file"
 grep -Eq "prompt_used: analyze_hypotheses_v[0-9]+" "$provenance_file"
@@ -288,4 +297,39 @@ grep -F "source_root:" "$provenance_file" >/dev/null
 grep -F "phase_dir:" "$provenance_file" >/dev/null
 grep -F "active:" "$provenance_file" >/dev/null
 grep -F "file:" "$provenance_file" >/dev/null
+grep -F "prompts:" "$provenance_file" >/dev/null
+
+phase_list_a="$WORK_ROOT/phases.order.a.txt"
+phase_list_b="$WORK_ROOT/phases.order.b.txt"
+grep "phase:" "$provenance_file" | sed 's/^[[:space:]]*//' >"$phase_list_a"
+
+"$ROOT_DIR/scripts/eaw" implement 500 >/dev/null
+"$ROOT_DIR/scripts/eaw" analyze 500 >/dev/null
+"$ROOT_DIR/scripts/eaw" intake 500 --round=1 >/dev/null
+grep "phase:" "$provenance_file" | sed 's/^[[:space:]]*//' >"$phase_list_b"
+diff -u "$phase_list_a" "$phase_list_b" >/dev/null
+
+default_intake_dir="$EAW_WORKDIR/templates/prompts/default/intake"
+printf "\n" >"$default_intake_dir/ACTIVE"
+set +e
+active_err="$WORK_ROOT/active_error.log"
+"$ROOT_DIR/scripts/eaw" intake 500 --round=1 >/dev/null 2>"$active_err"
+rc=$?
+set -e
+if [[ "$rc" -eq 0 ]]; then
+	echo "expected intake with invalid ACTIVE to fail" >&2
+	exit 1
+fi
+grep -Eq '^ERROR: ACTIVE' "$active_err"
+
+set +e
+dir_err="$WORK_ROOT/dir_error.log"
+"$ROOT_DIR/scripts/eaw" validate-prompt default missing_phase v1 >/dev/null 2>"$dir_err"
+rc=$?
+set -e
+if [[ "$rc" -eq 0 ]]; then
+	echo "expected validate-prompt with missing prompt directory to fail" >&2
+	exit 1
+fi
+grep -Eq '^ERROR: prompt directory' "$dir_err"
 echo "ACTIVE_BINDING_OK"

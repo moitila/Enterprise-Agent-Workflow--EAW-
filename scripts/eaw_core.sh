@@ -367,25 +367,65 @@ prompt_provenance_append() {
 	local active="$7"
 	local file_name="$8"
 	local prompt_used="$9"
-	local provenance_dir provenance_file
+	local provenance_dir provenance_file tmp_entries tmp_dedup tmp_yaml
 
 	provenance_dir="$out_root/$card/provenance"
 	provenance_file="$provenance_dir/prompts_used.yaml"
 	ensure_dir "$provenance_dir"
 
-	if [[ ! -f "$provenance_file" ]]; then
-		printf "prompts:\n" >"$provenance_file"
+	tmp_entries="$(mktemp "$provenance_dir/prompts_used.entries.XXXXXX")"
+	tmp_dedup="$(mktemp "$provenance_dir/prompts_used.dedup.XXXXXX")"
+	tmp_yaml="$(mktemp "$provenance_dir/prompts_used.yaml.XXXXXX")"
+
+	if [[ -f "$provenance_file" ]]; then
+		awk '
+			function flush() {
+				if (phase != "") {
+					printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\n", phase, track, source_root, phase_dir, active, file, prompt_used
+				}
+			}
+			/^  - phase: / {
+				flush()
+				phase=$0
+				sub(/^  - phase: /, "", phase)
+				track=""
+				source_root=""
+				phase_dir=""
+				active=""
+				file=""
+				prompt_used=""
+				next
+			}
+			/^    track: / { track=$0; sub(/^    track: /, "", track); next }
+			/^    source_root: / { source_root=$0; sub(/^    source_root: /, "", source_root); next }
+			/^    phase_dir: / { phase_dir=$0; sub(/^    phase_dir: /, "", phase_dir); next }
+			/^    active: / { active=$0; sub(/^    active: /, "", active); next }
+			/^    file: / { file=$0; sub(/^    file: /, "", file); next }
+			/^    prompt_used: / { prompt_used=$0; sub(/^    prompt_used: /, "", prompt_used); next }
+			END { flush() }
+		' "$provenance_file" >>"$tmp_entries"
 	fi
 
+	printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\n" "$phase" "$track" "$source_root" "$phase_dir" "$active" "$file_name" "$prompt_used" >>"$tmp_entries"
+
+	awk -F'\t' 'NF >= 7 { rec[$1]=$0 } END { for (k in rec) print rec[k] }' "$tmp_entries" | LC_ALL=C sort -t$'\t' -k1,1 >"$tmp_dedup"
+
 	{
-		printf "  - phase: %s\n" "$phase"
-		printf "    track: %s\n" "$track"
-		printf "    source_root: %s\n" "$source_root"
-		printf "    phase_dir: %s\n" "$phase_dir"
-		printf "    active: %s\n" "$active"
-		printf "    file: %s\n" "$file_name"
-		printf "    prompt_used: %s\n" "$prompt_used"
-	} >>"$provenance_file"
+		printf "prompts:\n"
+		while IFS=$'\t' read -r entry_phase entry_track entry_source_root entry_phase_dir entry_active entry_file entry_prompt_used; do
+			[[ -n "$entry_phase" ]] || continue
+			printf "  - phase: %s\n" "$entry_phase"
+			printf "    track: %s\n" "$entry_track"
+			printf "    source_root: %s\n" "$entry_source_root"
+			printf "    phase_dir: %s\n" "$entry_phase_dir"
+			printf "    active: %s\n" "$entry_active"
+			printf "    file: %s\n" "$entry_file"
+			printf "    prompt_used: %s\n" "$entry_prompt_used"
+		done <"$tmp_dedup"
+	} >"$tmp_yaml"
+
+	mv "$tmp_yaml" "$provenance_file"
+	rm -f "$tmp_entries" "$tmp_dedup"
 }
 
 load_prompt() {
