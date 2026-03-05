@@ -5,13 +5,10 @@ cmd_implement() {
 	local card_dir impl_dir type
 	local created=0
 	local preserved=0
-	local header_rel="prompts/pt-br/headers/HEADER.txt"
-	local planning_rel="prompts/pt-br/implementation/Implementation_Planing.txt"
-	local executor_rel="prompts/pt-br/implementation/Implementation Executor.txt"
-	local header_template="$EAW_TEMPLATES_DIR/$header_rel"
+	local planning_rel="prompts/default/implementation_planning/prompt_v1.md"
+	local executor_rel="prompts/default/implementation_executor/prompt_v1.md"
 	local planning_template="$EAW_TEMPLATES_DIR/$planning_rel"
 	local executor_template="$EAW_TEMPLATES_DIR/$executor_rel"
-	local fallback_header="$EAW_ROOT_DIR/templates/$header_rel"
 	local fallback_planning="$EAW_ROOT_DIR/templates/$planning_rel"
 	local fallback_executor="$EAW_ROOT_DIR/templates/$executor_rel"
 	local planning_prompt executor_prompt
@@ -24,11 +21,7 @@ cmd_implement() {
 		local body_template="$2"
 		local output_file="$3"
 
-		{
-			cat "$header_template"
-			printf '\n\n'
-			cat "$body_template"
-		} | awk \
+		cat "$body_template" | awk \
 			-v phase_header="$phase_header" \
 			-v card="$card" \
 			-v type="$type" \
@@ -133,13 +126,6 @@ EOF
 		created=$((created + 1))
 	done
 
-	if [[ ! -f "$header_template" ]]; then
-		if [[ -f "$fallback_header" ]]; then
-			header_template="$fallback_header"
-		else
-			die "template not found: $header_template"
-		fi
-	fi
 	if [[ ! -f "$planning_template" ]]; then
 		if [[ -f "$fallback_planning" ]]; then
 			planning_template="$fallback_planning"

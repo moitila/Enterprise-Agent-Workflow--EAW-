@@ -23,14 +23,24 @@ Use `EAW_WORKDIR` when you want local workspace-specific configuration and outpu
     intake_bug.md
     intake_feature.md
     intake_spike.md
-    prompts/pt-br/headers/headerIntake.txt
-    prompts/pt-br/headers/HEADER.txt
-    prompts/pt-br/analyze/Findings.txt
-    prompts/pt-br/analyze/Hipoteses.txt
-    prompts/pt-br/analyze/Planing.txt
-    prompts/pt-br/implementation/Implementation_Planing.txt
-    prompts/pt-br/implementation/Implementation Executor.txt
-    prompts/pt-br/intake/INTAKE_PROMPT_V2.txt
+    prompts/default/intake/prompt_v1.md
+    prompts/default/intake/prompt_v1.meta
+    prompts/default/intake/ACTIVE
+    prompts/default/analyze_findings/prompt_v1.md
+    prompts/default/analyze_findings/prompt_v1.meta
+    prompts/default/analyze_findings/ACTIVE
+    prompts/default/analyze_hypotheses/prompt_v1.md
+    prompts/default/analyze_hypotheses/prompt_v1.meta
+    prompts/default/analyze_hypotheses/ACTIVE
+    prompts/default/analyze_planning/prompt_v1.md
+    prompts/default/analyze_planning/prompt_v1.meta
+    prompts/default/analyze_planning/ACTIVE
+    prompts/default/implementation_planning/prompt_v1.md
+    prompts/default/implementation_planning/prompt_v1.meta
+    prompts/default/implementation_planning/ACTIVE
+    prompts/default/implementation_executor/prompt_v1.md
+    prompts/default/implementation_executor/prompt_v1.meta
+    prompts/default/implementation_executor/ACTIVE
     prompts/<track>/<phase>/
       prompt_vN.md
       prompt_vN.meta
@@ -48,21 +58,11 @@ Create the base workspace structure with:
 ./scripts/eaw init --workdir ./.eaw
 ```
 
-For `eaw intake`, `eaw analyze`, and `eaw implement`, ensure these prompt templates also exist in workspace templates:
+For `eaw intake`, `eaw analyze`, and `eaw implement`, ensure the default prompt tree exists in workspace templates:
 
 ```bash
-mkdir -p ./.eaw/templates/prompts/pt-br/headers
-mkdir -p ./.eaw/templates/prompts/pt-br/analyze
-mkdir -p ./.eaw/templates/prompts/pt-br/implementation
-mkdir -p ./.eaw/templates/prompts/pt-br/intake
-cp ./templates/prompts/pt-br/headers/headerIntake.txt ./.eaw/templates/prompts/pt-br/headers/headerIntake.txt
-cp ./templates/prompts/pt-br/headers/HEADER.txt ./.eaw/templates/prompts/pt-br/headers/HEADER.txt
-cp ./templates/prompts/pt-br/analyze/Findings.txt ./.eaw/templates/prompts/pt-br/analyze/Findings.txt
-cp ./templates/prompts/pt-br/analyze/Hipoteses.txt ./.eaw/templates/prompts/pt-br/analyze/Hipoteses.txt
-cp ./templates/prompts/pt-br/analyze/Planing.txt ./.eaw/templates/prompts/pt-br/analyze/Planing.txt
-cp ./templates/prompts/pt-br/implementation/Implementation_Planing.txt ./.eaw/templates/prompts/pt-br/implementation/Implementation_Planing.txt
-cp "./templates/prompts/pt-br/implementation/Implementation Executor.txt" "./.eaw/templates/prompts/pt-br/implementation/Implementation Executor.txt"
-cp ./templates/prompts/pt-br/intake/INTAKE_PROMPT_V2.txt ./.eaw/templates/prompts/pt-br/intake/INTAKE_PROMPT_V2.txt
+mkdir -p ./.eaw/templates/prompts/default
+cp -R ./templates/prompts/default/. ./.eaw/templates/prompts/default/
 ```
 
 ## Shell export example

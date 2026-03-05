@@ -4,15 +4,12 @@ cmd_analyze() {
 	local card="$1"
 	local out_root="$EAW_OUT_DIR"
 	local card_dir="$out_root/$card"
-	local header_rel="prompts/pt-br/headers/HEADER.txt"
-	local findings_rel="prompts/pt-br/analyze/Findings.txt"
-	local hypotheses_rel="prompts/pt-br/analyze/Hipoteses.txt"
-	local planning_rel="prompts/pt-br/analyze/Planing.txt"
-	local header_template="$EAW_TEMPLATES_DIR/$header_rel"
+	local findings_rel="prompts/default/analyze_findings/prompt_v1.md"
+	local hypotheses_rel="prompts/default/analyze_hypotheses/prompt_v1.md"
+	local planning_rel="prompts/default/analyze_planning/prompt_v1.md"
 	local findings_template="$EAW_TEMPLATES_DIR/$findings_rel"
 	local hypotheses_template="$EAW_TEMPLATES_DIR/$hypotheses_rel"
 	local planning_template="$EAW_TEMPLATES_DIR/$planning_rel"
-	local fallback_header="$EAW_ROOT_DIR/templates/$header_rel"
 	local fallback_findings="$EAW_ROOT_DIR/templates/$findings_rel"
 	local fallback_hypotheses="$EAW_ROOT_DIR/templates/$hypotheses_rel"
 	local fallback_planning="$EAW_ROOT_DIR/templates/$planning_rel"
@@ -29,11 +26,7 @@ cmd_analyze() {
 		local body_template="$2"
 		local output_file="$3"
 
-		{
-			cat "$header_template"
-			printf '\n\n'
-			cat "$body_template"
-			} | awk \
+		cat "$body_template" | awk \
 				-v phase_header="$phase_header" \
 				-v card="$card" \
 				-v type="$type" \
@@ -107,13 +100,6 @@ cmd_analyze() {
 	ensure_dir "$card_dir/inputs"
 	eaw_workdir_value="${EAW_WORKDIR:-}"
 
-	if [[ ! -f "$header_template" ]]; then
-		if [[ -f "$fallback_header" ]]; then
-			header_template="$fallback_header"
-		else
-			die "template not found: $header_template"
-		fi
-	fi
 	if [[ ! -f "$findings_template" ]]; then
 		if [[ -f "$fallback_findings" ]]; then
 			findings_template="$fallback_findings"

@@ -47,14 +47,24 @@ copy_workspace_nested_templates() {
 	local overwrite="$3"
 	local rel src dst dst_parent
 	local nested_templates=(
-		"prompts/pt-br/headers/headerIntake.txt"
-		"prompts/pt-br/headers/HEADER.txt"
-		"prompts/pt-br/intake/INTAKE_PROMPT_V2.txt"
-		"prompts/pt-br/analyze/Findings.txt"
-		"prompts/pt-br/analyze/Hipoteses.txt"
-		"prompts/pt-br/analyze/Planing.txt"
-		"prompts/pt-br/implementation/Implementation_Planing.txt"
-		"prompts/pt-br/implementation/Implementation Executor.txt"
+		"prompts/default/intake/prompt_v1.md"
+		"prompts/default/intake/prompt_v1.meta"
+		"prompts/default/intake/ACTIVE"
+		"prompts/default/analyze_findings/prompt_v1.md"
+		"prompts/default/analyze_findings/prompt_v1.meta"
+		"prompts/default/analyze_findings/ACTIVE"
+		"prompts/default/analyze_hypotheses/prompt_v1.md"
+		"prompts/default/analyze_hypotheses/prompt_v1.meta"
+		"prompts/default/analyze_hypotheses/ACTIVE"
+		"prompts/default/analyze_planning/prompt_v1.md"
+		"prompts/default/analyze_planning/prompt_v1.meta"
+		"prompts/default/analyze_planning/ACTIVE"
+		"prompts/default/implementation_planning/prompt_v1.md"
+		"prompts/default/implementation_planning/prompt_v1.meta"
+		"prompts/default/implementation_planning/ACTIVE"
+		"prompts/default/implementation_executor/prompt_v1.md"
+		"prompts/default/implementation_executor/prompt_v1.meta"
+		"prompts/default/implementation_executor/ACTIVE"
 	)
 
 	for rel in "${nested_templates[@]}"; do
