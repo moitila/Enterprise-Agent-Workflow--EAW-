@@ -28,7 +28,7 @@ INPUT
   - `out/{{CARD}}/implementation/10_change_plan.md`
   - `out/{{CARD}}/context/**`
 - MODE: quando `EAW_WORKDIR` estiver vazio, saida em `OUT_DIR`; quando definido, saida isolada em `EAW_WORKDIR`.
-- EXECUTION_STRUCTURE: `RUNTIME_ROOT` nunca deve ser modificado; codigo apenas em TARGET_REPOS; artefatos apenas dentro de `CARD_DIR`; allowlist do `00_scope.lock.md` e soberana.
+- EXECUTION_STRUCTURE: `RUNTIME_ROOT` nunca deve ser modificado; codigo apenas em TARGET_REPOS; artefatos apenas dentro de `CARD_DIR`; allowlist do `00_scope.lock.md` e soberana para implementacao real nos TARGET_REPOS.
 
 OUTPUT
 - Alterar somente codigo nos TARGET_REPOS e artefatos dentro de `CARD_DIR`, respeitando a allowlist soberana.
@@ -51,6 +51,7 @@ RULES
   - `test -f "{{CONFIG_SOURCE}}"`
 - PASSO 1 - VALIDACAO ESTRUTURAL PRE-EXECUCAO:
   - Validar que `00_scope.lock.md` contem `Base Obrigatoria`, `In Scope`, `Out of Scope`, `Hipotese(s) Base`, `Allowlist de Escrita` e `Regra de Escrita`.
+  - Tratar `Allowlist de Escrita` do scope lock como contrato soberano de implementacao real (arquivos de TARGET_REPOS), independente da whitelist de escrita da fase planning.
   - Validar que a allowlist de escrita esta fechada (sem glob aberto).
   - Validar que `10_change_plan.md` contem `Objetivo de Execucao`, `Hipotese(s) Selecionada(s)`, Steps numerados, justificativas referenciando `40_next_steps.md` e secao `Rollback`.
   - Validar rastreabilidade minima: `40_next_steps.md` com H#, `10_change_plan.md` com H# selecionadas e referencia explicita a `40_next_steps.md`.

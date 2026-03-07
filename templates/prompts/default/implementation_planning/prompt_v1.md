@@ -40,6 +40,7 @@ READ_SCOPE
 WRITE_SCOPE
 - Escrever somente `out/{{CARD}}/implementation/00_scope.lock.md`.
 - Escrever somente `out/{{CARD}}/implementation/10_change_plan.md`.
+- A whitelist de escrita desta fase limita somente este agente de planning e nao define a allowlist soberana de implementacao.
 
 RULES
 - Executar pre-check em fail-fast:
@@ -53,15 +54,19 @@ RULES
   - Bloquear se `40_next_steps.md` estiver ausente ou vazio.
   - Bloquear se `40_next_steps.md` nao contiver referencia explicita a H# ou nao indicar hipotese(s) selecionada(s).
   - Bloquear se houver inconsistencia entre hipoteses listadas e plano descrito.
-- PASSO 2 - GERAR 00_scope.lock.md:
-  - Incluir `# Scope Lock - Card {{CARD}}`, `## Base Obrigatoria`, `## Hipotese(s) Base`, `## Contexto`, `## In Scope`, `## Out of Scope`, `## Allowlist de Escrita` e `## Regra de Escrita`.
-- PASSO 3 - GERAR 10_change_plan.md:
+- PASSO 2 - GERAR 10_change_plan.md:
   - Incluir `# Change Plan - Card {{CARD}}`, `## Objetivo de Execucao`, `## Hipotese(s) Selecionada(s)`, `## Assuncoes Explicitas`, `## Steps`, `## Validacao Tecnica Obrigatoria` e `## Rollback`.
   - Em cada Step numerado, incluir objetivo, tipo, arquivos envolvidos, justificativa referenciando `40_next_steps.md` e H#, e validacao tecnica obrigatoria.
+- PASSO 3 - GERAR 00_scope.lock.md:
+  - Incluir `# Scope Lock - Card {{CARD}}`, `## Base Obrigatoria`, `## Hipotese(s) Base`, `## Contexto`, `## In Scope`, `## Out of Scope`, `## Allowlist de Escrita` e `## Regra de Escrita`.
+  - Preencher `## Allowlist de Escrita` com paths explicitos, fechados e sem glob dos arquivos reais em TARGET_REPOS autorizados para a implementacao.
+  - Derivar a allowlist soberana exclusivamente de `40_next_steps.md` e dos `arquivos envolvidos` definidos no `10_change_plan.md`.
+  - Nao incluir arquivos de `out/{{CARD}}/**` na allowlist soberana; estes artefatos pertencem apenas a fase planning.
 - VALIDACOES FINAIS:
   - Confirmar que `00_scope.lock.md` contem `Hipotese(s) Base`.
   - Confirmar que `10_change_plan.md` contem `Hipotese(s) Selecionada(s)`.
   - Confirmar que a allowlist e fechada sem glob.
+  - Confirmar que cada item da allowlist esta refletido nos `arquivos envolvidos` do `10_change_plan.md` e pertence a TARGET_REPOS.
   - Confirmar que rollback esta presente.
   - Validar `test -f "out/{{CARD}}/implementation/00_scope.lock.md"`.
   - Validar `test -f "out/{{CARD}}/implementation/10_change_plan.md"`.
