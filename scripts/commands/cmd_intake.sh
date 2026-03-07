@@ -33,6 +33,9 @@ cmd_intake() {
 	card_dir="$out_root/$card"
 	investigations_dir="$card_dir/investigations"
 	prompt_file="$investigations_dir/intake_agent_prompt.round_${round}.md"
+	assert_write_scope "intake" "ensure_dir card_dir" "$card_dir" "$out_root/$card"
+	assert_write_scope "intake" "ensure_dir investigations" "$investigations_dir" "$out_root/$card"
+	assert_write_scope "intake" "write intake prompt" "$prompt_file" "$investigations_dir"
 	ensure_dir "$card_dir"
 	ensure_dir "$investigations_dir"
 

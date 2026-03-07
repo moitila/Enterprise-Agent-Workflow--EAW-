@@ -60,6 +60,44 @@ resolve_repo_path() {
 	fi
 }
 
+canonicalize_scope_path() {
+	local path="$1"
+	if command -v realpath >/dev/null 2>&1; then
+		realpath -m -- "$path"
+		return 0
+	fi
+	if [[ "$path" != /* ]]; then
+		path="$PWD/$path"
+	fi
+	local dir
+	local base
+	dir="$(dirname "$path")"
+	base="$(basename "$path")"
+	if [[ -d "$dir" ]]; then
+		dir="$(cd "$dir" && pwd -P)"
+	fi
+	printf '%s/%s\n' "$dir" "$base"
+}
+
+assert_write_scope() {
+	local phase="$1"
+	local command_name="$2"
+	local target_path="$3"
+	shift 3
+	local target_abs
+	target_abs="$(canonicalize_scope_path "$target_path")"
+	local allowed_raw allowed_abs
+	for allowed_raw in "$@"; do
+		allowed_abs="$(canonicalize_scope_path "$allowed_raw")"
+		if [[ "$target_abs" == "$allowed_abs" || "$target_abs" == "$allowed_abs/"* ]]; then
+			return 0
+		fi
+	done
+	printf 'WRITE_SCOPE_VIOLATION: phase=%s command=%s blocked_path=%s\n' \
+		"$phase" "$command_name" "$target_abs" >&2
+	return 97
+}
+
 render_template() {
 	local tpl=$1
 	shift

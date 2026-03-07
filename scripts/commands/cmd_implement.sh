@@ -15,6 +15,7 @@ cmd_implement() {
 		local phase_header="$1"
 		local body_template="$2"
 		local output_file="$3"
+		assert_write_scope "implement" "write ${phase_header} prompt" "$output_file" "$impl_dir"
 
 		cat "$body_template" | awk \
 			-v phase_header="$phase_header" \
@@ -76,6 +77,7 @@ cmd_implement() {
 	detect_card_type_with_warnings "$card" "$card_dir" type type_warnings
 
 	impl_dir="$card_dir/implementation"
+	assert_write_scope "implement" "ensure_dir implementation" "$impl_dir" "$card_dir/implementation"
 	if [[ -d "$impl_dir" ]]; then
 		echo "PRESERVED: $impl_dir"
 		preserved=$((preserved + 1))
@@ -87,6 +89,7 @@ cmd_implement() {
 
 	for name in 00_scope.lock.md 10_change_plan.md 20_patch_notes.md; do
 		local target="$impl_dir/$name"
+		assert_write_scope "implement" "write implementation artifact" "$target" "$impl_dir"
 		if [[ -f "$target" ]]; then
 			echo "PRESERVED: $target"
 			preserved=$((preserved + 1))

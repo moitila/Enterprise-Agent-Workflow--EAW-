@@ -17,6 +17,7 @@ cmd_analyze() {
 		local phase_header="$1"
 		local body_template="$2"
 		local output_file="$3"
+		assert_write_scope "analyze" "write ${phase_header} prompt" "$output_file" "$card_dir/investigations"
 
 		cat "$body_template" | awk \
 				-v phase_header="$phase_header" \
@@ -98,6 +99,9 @@ cmd_analyze() {
 		fi
 	fi
 
+	assert_write_scope "analyze" "ensure_dir card_dir" "$card_dir" "$out_root/$card"
+	assert_write_scope "analyze" "ensure_dir investigations" "$card_dir/investigations" "$out_root/$card"
+	assert_write_scope "analyze" "ensure_dir inputs" "$card_dir/inputs" "$out_root/$card"
 	ensure_dir "$card_dir"
 	ensure_dir "$card_dir/investigations"
 	ensure_dir "$card_dir/inputs"
@@ -139,6 +143,7 @@ cmd_analyze() {
 	# create TEST_PLAN placeholder in outdir
 	local test_plan="$card_dir/TEST_PLAN_${card}.md"
 	if [[ ! -f "$test_plan" ]]; then
+		assert_write_scope "analyze" "write test plan" "$test_plan" "$card_dir"
 		cat >"$test_plan" <<TP
 # Test Plan for ${type}_${card}
 
