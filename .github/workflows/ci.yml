@@ -67,10 +67,22 @@ jobs:
           chmod +x tests/smoke.sh
           ./tests/smoke.sh
 
-      - name: Smoke - prompt lifecycle test
+      - name: Smoke - prompt core test (with budget)
         run: |
           set -euo pipefail
-          bash tests/smoke_prompt_lifecycle.sh
+          start="$(date +%s)"
+          bash tests/smoke_prompt_core.sh
+          elapsed="$(( $(date +%s) - start ))"
+          echo "smoke_prompt_core duration=${elapsed}s"
+          if [[ "$elapsed" -gt 20 ]]; then
+            echo "Smoke budget exceeded: ${elapsed}s > 20s"
+            exit 1
+          fi
+
+      - name: Integration - prompt lifecycle test
+        run: |
+          set -euo pipefail
+          bash tests/integration/integration_prompt_lifecycle.sh
 
       - name: Smoke - implement test
         run: |

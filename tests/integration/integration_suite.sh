@@ -8,3 +8,6 @@ bash "$REPO_ROOT/tests/smoke_intake.sh"
 
 printf "[integration] running implement flow checks\n"
 bash "$REPO_ROOT/tests/smoke_implement.sh"
+
+printf "[integration] running prompt lifecycle integration checks\n"
+bash "$REPO_ROOT/tests/integration/integration_prompt_lifecycle.sh"

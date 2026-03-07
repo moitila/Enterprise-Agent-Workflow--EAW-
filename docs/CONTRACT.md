@@ -98,8 +98,11 @@ Validation & Testing
 - Smoke suite:
   - `tests/smoke.sh` — end-to-end card creation smoke
   - `tests/run_phase_smoke.sh` — execution log/run_phase behavior validation
+  - `tests/smoke_prompt_core.sh` — prompt governance minimal smoke contract
   - `tests/golden_structure_check.sh` — deterministic structure assertions
   - `tests/scaffold_parity_smoke.sh` — normal vs workspace scaffold parity and empty `intake/` assertions
+- Integration suite additions:
+  - `tests/integration/integration_prompt_lifecycle.sh` — full prompt lifecycle integration checks
 - Test harnesses rely on `mktemp` for isolated temporary directories.
 
 Prompt Evolution v0

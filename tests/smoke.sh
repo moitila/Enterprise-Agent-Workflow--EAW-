@@ -123,5 +123,6 @@ if [[ -f "$CTX_DIR/_warnings.txt" ]]; then
 fi
 
 bash "$REPO_ROOT/tests/smoke_intake_negative.sh"
+bash "$REPO_ROOT/tests/smoke_prompt_core.sh"
 
 printf "Smoke OK: artifacts present in %s\n" "$OUTDIR"

@@ -130,6 +130,16 @@ EAW_WORKDIR="$PWD/.eaw" ./scripts/eaw apply-prompt <track> <phase> <candidate>
 - `validate-prompt` returns exit code `0` on PASS and non-zero on FAIL.
 - `apply-prompt` fails when `templates/prompts/<track>/<phase>/` does not exist, does not create the directory automatically, runs only after a PASS validation, and updates only `ACTIVE`.
 
+## Prompt test split (smoke vs integration)
+
+- Smoke contract entrypoint: `tests/smoke_prompt_core.sh`
+  - scope: minimal prompt governance contract only
+  - must not include full lifecycle flow (`propose-prompt`, `suggest-prompt`)
+  - CI budget target: <= `20s`
+- Integration lifecycle entrypoint: `tests/integration/integration_prompt_lifecycle.sh`
+  - scope: full lifecycle flow (`propose-prompt`, `suggest-prompt`, `validate-prompt`, `apply-prompt`) and provenance/binding checks
+- Legacy wrapper `tests/smoke_prompt_lifecycle.sh` was removed and should not be used.
+
 ## Config version
 
 `config/eaw.conf` is optional and uses `key=value` format.
