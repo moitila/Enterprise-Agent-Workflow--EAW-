@@ -25,6 +25,8 @@ INPUT
   - `out/{{CARD}}/investigations/30_hypotheses.md`
   - `out/{{CARD}}/investigations/40_next_steps.md`
   - `out/{{CARD}}/context/**`
+- MODE: quando `EAW_WORKDIR` estiver vazio, saida em `OUT_DIR`; quando definido, saida isolada em `EAW_WORKDIR`.
+- EXECUTION_STRUCTURE: `RUNTIME_ROOT` nunca deve ser modificado; `TARGET_REPOS` somente leitura; `CARD_DIR` e o limite unico de escrita da fase.
 
 OUTPUT
 - Escrever somente `out/{{CARD}}/implementation/00_scope.lock.md`.
@@ -40,28 +42,44 @@ WRITE_SCOPE
 - Escrever somente `out/{{CARD}}/implementation/10_change_plan.md`.
 
 RULES
-- Executar o pre-check: `cd "{{RUNTIME_ROOT}}"`, `test -f ./scripts/eaw` e `test -f "{{CONFIG_SOURCE}}"`.
-- Confirmar existencia dos artefatos obrigatorios; se qualquer um estiver ausente, bloquear.
-- Bloquear se `30_hypotheses.md` estiver ausente ou vazio.
-- Bloquear se `40_next_steps.md` estiver ausente ou vazio.
-- Bloquear se `40_next_steps.md` nao contiver referencia explicita a H# ou nao indicar hipotese(s) selecionada(s).
-- Bloquear se houver inconsistencia entre hipoteses listadas e plano descrito.
-- Em `00_scope.lock.md`, incluir `# Scope Lock - Card {{CARD}}`, `## Base Obrigatoria`, `## Hipotese(s) Base`, `## Contexto`, `## In Scope`, `## Out of Scope`, `## Allowlist de Escrita` e `## Regra de Escrita`.
-- Em `10_change_plan.md`, incluir `# Change Plan - Card {{CARD}}`, `## Objetivo de Execucao`, `## Hipotese(s) Selecionada(s)`, `## Assuncoes Explicitas`, `## Steps`, `## Validacao Tecnica Obrigatoria` e `## Rollback`.
-- Em cada Step numerado, incluir objetivo, tipo, arquivos envolvidos, justificativa referenciando `40_next_steps.md` e H#, e validacao tecnica obrigatoria.
-- Validar ao final que `00_scope.lock.md` contem `Hipotese(s) Base`, que `10_change_plan.md` contem `Hipotese(s) Selecionada(s)`, que a allowlist e fechada sem glob e que rollback esta presente.
+- Executar pre-check em fail-fast:
+  - `set -euo pipefail`
+  - `cd "{{RUNTIME_ROOT}}"`
+  - `test -f ./scripts/eaw`
+  - `test -f "{{CONFIG_SOURCE}}"`
+- PASSO 1 - VALIDACAO DE ENTRADA:
+  - Confirmar existencia dos artefatos obrigatorios; se qualquer um estiver ausente, bloquear.
+  - Bloquear se `30_hypotheses.md` estiver ausente ou vazio.
+  - Bloquear se `40_next_steps.md` estiver ausente ou vazio.
+  - Bloquear se `40_next_steps.md` nao contiver referencia explicita a H# ou nao indicar hipotese(s) selecionada(s).
+  - Bloquear se houver inconsistencia entre hipoteses listadas e plano descrito.
+- PASSO 2 - GERAR 00_scope.lock.md:
+  - Incluir `# Scope Lock - Card {{CARD}}`, `## Base Obrigatoria`, `## Hipotese(s) Base`, `## Contexto`, `## In Scope`, `## Out of Scope`, `## Allowlist de Escrita` e `## Regra de Escrita`.
+- PASSO 3 - GERAR 10_change_plan.md:
+  - Incluir `# Change Plan - Card {{CARD}}`, `## Objetivo de Execucao`, `## Hipotese(s) Selecionada(s)`, `## Assuncoes Explicitas`, `## Steps`, `## Validacao Tecnica Obrigatoria` e `## Rollback`.
+  - Em cada Step numerado, incluir objetivo, tipo, arquivos envolvidos, justificativa referenciando `40_next_steps.md` e H#, e validacao tecnica obrigatoria.
+- VALIDACOES FINAIS:
+  - Confirmar que `00_scope.lock.md` contem `Hipotese(s) Base`.
+  - Confirmar que `10_change_plan.md` contem `Hipotese(s) Selecionada(s)`.
+  - Confirmar que a allowlist e fechada sem glob.
+  - Confirmar que rollback esta presente.
+  - Validar `test -f "out/{{CARD}}/implementation/00_scope.lock.md"`.
+  - Validar `test -f "out/{{CARD}}/implementation/10_change_plan.md"`.
 
 FORBIDDEN
 - Nao alterar codigo.
 - Nao expandir escopo.
 - Nao propor nova solucao.
-- Nao escrever fora de `out/{{CARD}}/implementation/00_scope.lock.md` e `out/{{CARD}}/implementation/10_change_plan.md`.
+- Nao violar a fronteira operacional da fase (detalhada em FAIL_CONDITIONS).
 - Nao produzir patch ou codigo nesta fase.
 
 FAIL_CONDITIONS
+- Falhar em qualquer erro de pre-check ou comando critico (fail-fast).
 - Falhar se `./scripts/eaw` nao existir em `{{RUNTIME_ROOT}}`.
 - Falhar se `{{CONFIG_SOURCE}}` nao existir.
 - Falhar se qualquer artefato obrigatorio estiver ausente.
 - Falhar se `40_next_steps.md` nao referenciar H#.
+- Falhar em qualquer tentativa de leitura fora de `{{CARD_DIR}}`, `{{CARD_DIR}}/investigations` e `{{CARD_DIR}}/context`.
+- Falhar em qualquer tentativa de escrita fora de `out/{{CARD}}/implementation/00_scope.lock.md` e `out/{{CARD}}/implementation/10_change_plan.md`.
 - Falhar se `out/{{CARD}}/implementation/00_scope.lock.md` nao existir ao final.
 - Falhar se `out/{{CARD}}/implementation/10_change_plan.md` nao existir ao final.

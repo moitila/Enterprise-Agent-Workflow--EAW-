@@ -27,6 +27,8 @@ INPUT
   - `out/{{CARD}}/implementation/00_scope.lock.md`
   - `out/{{CARD}}/implementation/10_change_plan.md`
   - `out/{{CARD}}/context/**`
+- MODE: quando `EAW_WORKDIR` estiver vazio, saida em `OUT_DIR`; quando definido, saida isolada em `EAW_WORKDIR`.
+- EXECUTION_STRUCTURE: `RUNTIME_ROOT` nunca deve ser modificado; codigo apenas em TARGET_REPOS; artefatos apenas dentro de `CARD_DIR`; allowlist do `00_scope.lock.md` e soberana.
 
 OUTPUT
 - Alterar somente codigo nos TARGET_REPOS e artefatos dentro de `CARD_DIR`, respeitando a allowlist soberana.
@@ -42,33 +44,48 @@ WRITE_SCOPE
 - Escrever somente nos artefatos do `CARD_DIR` previstos pelo plano.
 
 RULES
-- Executar o pre-check: `cd "{{RUNTIME_ROOT}}"`, `test -f ./scripts/eaw` e `test -f "{{CONFIG_SOURCE}}"`.
-- Validar antes da execucao que `00_scope.lock.md` contem `Base Obrigatoria`, `In Scope`, `Out of Scope`, `Hipotese(s) Base`, `Allowlist de Escrita` e `Regra de Escrita`.
-- Validar antes da execucao que `10_change_plan.md` contem `Objetivo de Execucao`, `Hipotese(s) Selecionada(s)`, Steps numerados, justificativas referenciando `40_next_steps.md` e secao `Rollback`.
-- Validar rastreabilidade minima: `40_next_steps.md` com H#, `10_change_plan.md` com H# selecionadas e referencia explicita a `40_next_steps.md`.
-- Resumir o objetivo do card em ate 3 linhas, confirmar In Scope, allowlist e H# selecionadas.
-- Executar os Steps do `10_change_plan.md` em micro-passos, sem desvio.
-- Executar `bash -n` apenas para arquivos `.sh` alterados, quando aplicavel.
-- Executar exatamente os comandos listados em `out/{{CARD}}/implementation/10_change_plan.md -> Validacao Tecnica Obrigatoria`.
-- Se `EAW_SMOKE_SH` estiver definida e executavel, executa-la; caso contrario registrar `SKIP: EAW_SMOKE_SH not set`.
+- Executar pre-check em fail-fast:
+  - `set -euo pipefail`
+  - `cd "{{RUNTIME_ROOT}}"`
+  - `test -f ./scripts/eaw`
+  - `test -f "{{CONFIG_SOURCE}}"`
+- PASSO 1 - VALIDACAO ESTRUTURAL PRE-EXECUCAO:
+  - Validar que `00_scope.lock.md` contem `Base Obrigatoria`, `In Scope`, `Out of Scope`, `Hipotese(s) Base`, `Allowlist de Escrita` e `Regra de Escrita`.
+  - Validar que a allowlist de escrita esta fechada (sem glob aberto).
+  - Validar que `10_change_plan.md` contem `Objetivo de Execucao`, `Hipotese(s) Selecionada(s)`, Steps numerados, justificativas referenciando `40_next_steps.md` e secao `Rollback`.
+  - Validar rastreabilidade minima: `40_next_steps.md` com H#, `10_change_plan.md` com H# selecionadas e referencia explicita a `40_next_steps.md`.
+- PASSO 2 - CONTEXTO E HIPOTESE DE EXECUCAO:
+  - Resumir o objetivo do card em ate 3 linhas.
+  - Confirmar In Scope, allowlist e H# selecionadas.
+  - Registrar hipotese de execucao sem adicionar estrategia nova.
+- PASSO 3 - EXECUCAO EM MICRO-PASSOS:
+  - Executar os Steps do `10_change_plan.md` em micro-passos, sem desvio.
+  - Executar `bash -n` apenas para arquivos `.sh` alterados, quando aplicavel.
+  - Executar exatamente os comandos listados em `out/{{CARD}}/implementation/10_change_plan.md -> Validacao Tecnica Obrigatoria`.
+- VALIDACOES FINAIS:
+  - Se `EAW_SMOKE_SH` estiver definida e executavel, executa-la; caso contrario registrar `SKIP: EAW_SMOKE_SH not set`.
+  - Confirmar diff completo (patch), lista de arquivos alterados, criterios de aceite e outputs relevantes dos testes.
+  - Confirmar saida no formato obrigatorio (`Contexto entendido`, `Hipotese`, `Plano executado`, `Validacao`, `Evidencias`, `Riscos`, `Status final`).
 - Se houver ambiguidade, registrar como assuncao e pausar antes de alterar comportamento.
 
 FORBIDDEN
 - Nao inventar requisitos.
 - Nao expandir escopo.
 - Nao alterar comportamento fora do plano.
-- Nao alterar arquivos fora da allowlist.
+- Nao violar a fronteira operacional da fase (detalhada em FAIL_CONDITIONS).
 - Nao refatorar alem do escopo.
 - Nao otimizar.
 - Nao alterar contratos publicos.
 - Nao alterar layout de saida.
 - Nao executar automacoes destrutivas.
-- Nao escrever `20_patch_notes.md`.
+- Nao criar ou alterar `20_patch_notes.md` fora do fluxo aprovado da fase; preservar quando ja existir.
 - Nao tentar solucao alternativa em caso de falha.
 
 FAIL_CONDITIONS
+- Falhar em qualquer erro de pre-check ou comando critico (fail-fast).
 - Falhar se qualquer arquivo obrigatorio estiver ausente.
 - Falhar se a validacao estrutural pre-execucao falhar.
+- Falhar em qualquer tentativa de leitura fora de `{{CARD_DIR}}` e TARGET_REPOS necessarios para os Steps.
 - Falhar se qualquer escrita ocorrer fora da allowlist.
 - Falhar se `bash -n` ou qualquer comando de validacao obrigatoria falhar.
 - Falhar interrompendo a execucao e reportando o erro literal em caso de problema.
