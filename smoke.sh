@@ -48,9 +48,13 @@ if [[ -d "$HELP_WORKDIR/out/--help" || -d "$HELP_WORKDIR/out/-h" ]]; then
 	exit 1
 fi
 
+if [[ ! -f "$CANONICAL_SMOKE" ]]; then
+	echo "tests/smoke.sh not found" >&2
+	exit 1
+fi
+
 if [[ -x "$CANONICAL_SMOKE" ]]; then
 	env -u EAW_WORKDIR "$CANONICAL_SMOKE" "$@"
 else
-	echo "tests/smoke.sh not found or not executable" >&2
-	exit 1
+	env -u EAW_WORKDIR bash "$CANONICAL_SMOKE" "$@"
 fi
