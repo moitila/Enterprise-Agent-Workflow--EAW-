@@ -76,6 +76,18 @@ SUGGEST_DIR="$EAW_WORKDIR/out/505/proposals"
 test -f "$SUGGEST_DIR/prompt_patch_001.result.md"
 grep -F "status: PASS" "$SUGGEST_DIR/prompt_patch_001.result.md" >/dev/null
 
+set +e
+"$REPO_ROOT/scripts/eaw" suggest-prompt 506 --track invalid_track --phase intake >/dev/null 2>&1
+rc=$?
+set -e
+[[ "$rc" -ne 0 ]]
+
+set +e
+"$REPO_ROOT/scripts/eaw" suggest-prompt 507 --track default --phase phase_inexistente >/dev/null 2>&1
+rc=$?
+set -e
+[[ "$rc" -ne 0 ]]
+
 "$REPO_ROOT/scripts/eaw" validate-prompt lifecycle_test intake v1 >/dev/null
 set +e
 "$REPO_ROOT/scripts/eaw" validate-prompt lifecycle_test intake v2 >/dev/null 2>&1
@@ -85,6 +97,12 @@ set -e
 
 "$REPO_ROOT/scripts/eaw" apply-prompt lifecycle_test intake v1 >/dev/null
 [[ "$(cat "$PROMPT_DIR/ACTIVE")" == "v1" ]]
+
+set +e
+"$REPO_ROOT/scripts/eaw" apply-prompt lifecycle_test phase_inexistente v1 >/dev/null 2>&1
+rc=$?
+set -e
+[[ "$rc" -ne 0 ]]
 
 phases=(
 	"intake"
@@ -100,6 +118,17 @@ for phase in "${phases[@]}"; do
 	printf "\nACTIVE_BINDING_OK default/%s v2\n" "$phase" >>"$phase_dir/prompt_v2.md"
 	printf "v2\n" >"$phase_dir/ACTIVE"
 done
+
+default_intake_dir="$EAW_WORKDIR/templates/prompts/default/intake"
+printf "v999\n" >"$default_intake_dir/ACTIVE"
+"$REPO_ROOT/scripts/eaw" feature 499 "Invalid active prompt guardrail" >/dev/null
+set +e
+"$REPO_ROOT/scripts/eaw" intake 499 --round=1 >/dev/null 2>&1
+rc=$?
+set -e
+[[ "$rc" -ne 0 ]]
+test ! -f "$EAW_WORKDIR/out/499/investigations/intake_agent_prompt.round_1.md"
+printf "v2\n" >"$default_intake_dir/ACTIVE"
 
 "$REPO_ROOT/scripts/eaw" feature 500 "Prompt lifecycle integration" >/dev/null
 "$REPO_ROOT/scripts/eaw" intake 500 --round=1 >/dev/null
@@ -128,5 +157,7 @@ grep -F "phase: analyze_hypotheses" "$provenance_file" >/dev/null
 grep -F "phase: analyze_planning" "$provenance_file" >/dev/null
 grep -F "phase: implementation_planning" "$provenance_file" >/dev/null
 grep -F "phase: implementation_executor" "$provenance_file" >/dev/null
+dups="$(awk '/phase:/{print $3}' "$provenance_file" | sort | uniq -d)"
+[[ -z "$dups" ]]
 
 printf "integration prompt lifecycle OK\n"
