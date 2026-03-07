@@ -69,14 +69,31 @@ canonicalize_scope_path() {
 	if [[ "$path" != /* ]]; then
 		path="$PWD/$path"
 	fi
-	local dir
-	local base
-	dir="$(dirname "$path")"
-	base="$(basename "$path")"
-	if [[ -d "$dir" ]]; then
-		dir="$(cd "$dir" && pwd -P)"
+	local IFS='/'
+	local -a parts
+	local -a stack=()
+	local part
+	read -r -a parts <<<"$path"
+	for part in "${parts[@]}"; do
+		case "$part" in
+		"" | ".")
+			continue
+			;;
+		"..")
+			if [[ ${#stack[@]} -gt 0 ]]; then
+				unset 'stack[${#stack[@]}-1]'
+			fi
+			;;
+		*)
+			stack+=("$part")
+			;;
+		esac
+	done
+	if [[ ${#stack[@]} -eq 0 ]]; then
+		printf '/\n'
+		return 0
 	fi
-	printf '%s/%s\n' "$dir" "$base"
+	printf '/%s\n' "$(IFS=/; echo "${stack[*]}")"
 }
 
 assert_write_scope() {
