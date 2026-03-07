@@ -68,6 +68,8 @@ source "$SCRIPT_DIR/commands/cmd_apply_prompt.sh"
 source "$SCRIPT_DIR/commands/cmd_suggest_prompt.sh"
 # shellcheck disable=SC1091
 source "$SCRIPT_DIR/commands/cmd_propose_prompt.sh"
+# shellcheck disable=SC1091
+source "$SCRIPT_DIR/commands/cmd_test_suites.sh"
 
 main() {
 	if [[ $# -lt 1 ]]; then
@@ -141,6 +143,14 @@ main() {
 		fi
 		validate_runtime_workdir
 		cmd_implement "$2"
+		;;
+	smoke)
+		validate_runtime_workdir
+		cmd_smoke "${@:2}"
+		;;
+	test)
+		validate_runtime_workdir
+		cmd_test "${@:2}"
 		;;
 	prompt)
 		if [[ "$#" -eq 2 && "$2" == "validate" ]]; then

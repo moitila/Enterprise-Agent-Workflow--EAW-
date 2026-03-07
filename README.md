@@ -29,7 +29,19 @@ chmod +x scripts/eaw scripts/lib.sh
 ./scripts/eaw bug 99999 "Short bug title"
 ./scripts/eaw intake 12345
 ./scripts/eaw analyze 12345
+./scripts/eaw smoke
+./scripts/eaw test
 ```
+
+## Test Scopes
+
+- `./scripts/eaw smoke` executes the baseline smoke suite only (`tests/smoke/smoke_baseline.sh`).
+- `./scripts/eaw test` executes a broader deterministic scope (`smoke + integration + lifecycle + golden`).
+- Category wrappers are organized under:
+  - `tests/smoke/`
+  - `tests/integration/`
+  - `tests/lifecycle/`
+  - `tests/golden/`
 
 If you are on Windows and using PowerShell, run via `bash`:
 
@@ -82,7 +94,7 @@ Released versions and historical changes are tracked in `CHANGELOG.md`.
 
 ## PT-BR
 
-EAW é um fluxo de trabalho leve para gerar dossiês determinísticos (features, spikes, bugs). Use `./scripts/eaw init`, depois `./scripts/eaw feature|spike|bug`, `./scripts/eaw intake <CARD>` e `./scripts/eaw analyze <CARD>`.
+EAW é um fluxo de trabalho leve para gerar dossiês determinísticos (features, spikes, bugs). Use `./scripts/eaw init`, depois `./scripts/eaw feature|spike|bug`, `./scripts/eaw intake <CARD>`, `./scripts/eaw analyze <CARD>`, `./scripts/eaw smoke` e `./scripts/eaw test`.
 
 ## Commit Governance (ECS)
 
