@@ -47,4 +47,4 @@ References to context files in `context/`.
 - Screenshots:
 
 ## Attached Evidence
-(auto populated by `eaw ingest`)
+(optional)

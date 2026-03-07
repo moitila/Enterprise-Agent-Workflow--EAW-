@@ -60,6 +60,61 @@ resolve_repo_path() {
 	fi
 }
 
+canonicalize_scope_path() {
+	local path="$1"
+	if command -v realpath >/dev/null 2>&1; then
+		realpath -m -- "$path"
+		return 0
+	fi
+	if [[ "$path" != /* ]]; then
+		path="$PWD/$path"
+	fi
+	local IFS='/'
+	local -a parts
+	local -a stack=()
+	local part
+	read -r -a parts <<<"$path"
+	for part in "${parts[@]}"; do
+		case "$part" in
+		"" | ".")
+			continue
+			;;
+		"..")
+			if [[ ${#stack[@]} -gt 0 ]]; then
+				unset 'stack[${#stack[@]}-1]'
+			fi
+			;;
+		*)
+			stack+=("$part")
+			;;
+		esac
+	done
+	if [[ ${#stack[@]} -eq 0 ]]; then
+		printf '/\n'
+		return 0
+	fi
+	printf '/%s\n' "$(IFS=/; echo "${stack[*]}")"
+}
+
+assert_write_scope() {
+	local phase="$1"
+	local command_name="$2"
+	local target_path="$3"
+	shift 3
+	local target_abs
+	target_abs="$(canonicalize_scope_path "$target_path")"
+	local allowed_raw allowed_abs
+	for allowed_raw in "$@"; do
+		allowed_abs="$(canonicalize_scope_path "$allowed_raw")"
+		if [[ "$target_abs" == "$allowed_abs" || "$target_abs" == "$allowed_abs/"* ]]; then
+			return 0
+		fi
+	done
+	printf 'WRITE_SCOPE_VIOLATION: phase=%s command=%s blocked_path=%s\n' \
+		"$phase" "$command_name" "$target_abs" >&2
+	return 97
+}
+
 render_template() {
 	local tpl=$1
 	shift
@@ -73,11 +128,27 @@ render_template() {
 	shift
 	local date=$1
 	shift
+	local sed_delim='|'
+	local escaped_card escaped_title escaped_type escaped_date
+
+	escape_sed_replacement() {
+		local value="$1"
+		local delimiter="$2"
+		value="${value//\\/\\\\}"
+		value="${value//&/\\&}"
+		value="${value//"$delimiter"/\\$delimiter}"
+		printf '%s' "$value"
+	}
+
+	escaped_card="$(escape_sed_replacement "$card" "$sed_delim")"
+	escaped_title="$(escape_sed_replacement "$title" "$sed_delim")"
+	escaped_type="$(escape_sed_replacement "$type" "$sed_delim")"
+	escaped_date="$(escape_sed_replacement "$date" "$sed_delim")"
 	sed \
-		-e "s/{{CARD}}/${card}/g" \
-		-e "s/{{TITLE}}/${title}/g" \
-		-e "s/{{TYPE}}/${type}/g" \
-		-e "s/{{DATE}}/${date}/g" \
+		-e "s${sed_delim}{{CARD}}${sed_delim}${escaped_card}${sed_delim}g" \
+		-e "s${sed_delim}{{TITLE}}${sed_delim}${escaped_title}${sed_delim}g" \
+		-e "s${sed_delim}{{TYPE}}${sed_delim}${escaped_type}${sed_delim}g" \
+		-e "s${sed_delim}{{DATE}}${sed_delim}${escaped_date}${sed_delim}g" \
 		"$tpl" >"$out"
 }
 

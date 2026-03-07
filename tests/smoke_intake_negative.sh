@@ -36,7 +36,7 @@ scenario_a_rc=$?
 set -e
 
 [[ $scenario_a_rc -ne 0 ]] || fail "scenario A expected non-zero exit code"
-grep -Fq "template not found" <<<"$scenario_a_output" || fail "scenario A missing substring: template not found"
+grep -Fq "failed to resolve intake prompt via ACTIVE" <<<"$scenario_a_output" || fail "scenario A missing substring: failed to resolve intake prompt via ACTIVE"
 assert_no_repo_residue "$card_template_missing"
 
 # Scenario B: invalid --round argument

@@ -5,15 +5,7 @@ cmd_implement() {
 	local card_dir impl_dir type
 	local created=0
 	local preserved=0
-	local header_rel="prompts/pt-br/headers/HEADER.txt"
-	local planning_rel="prompts/pt-br/implementation/Implementation_Planing.txt"
-	local executor_rel="prompts/pt-br/implementation/Implementation Executor.txt"
-	local header_template="$EAW_TEMPLATES_DIR/$header_rel"
-	local planning_template="$EAW_TEMPLATES_DIR/$planning_rel"
-	local executor_template="$EAW_TEMPLATES_DIR/$executor_rel"
-	local fallback_header="$EAW_ROOT_DIR/templates/$header_rel"
-	local fallback_planning="$EAW_ROOT_DIR/templates/$planning_rel"
-	local fallback_executor="$EAW_ROOT_DIR/templates/$executor_rel"
+	local planning_template executor_template
 	local planning_prompt executor_prompt
 	local repo_blocks target_repos excluded_repos
 	local eaw_workdir_value warnings_block
@@ -23,12 +15,9 @@ cmd_implement() {
 		local phase_header="$1"
 		local body_template="$2"
 		local output_file="$3"
+		assert_write_scope "implement" "write ${phase_header} prompt" "$output_file" "$EAW_OUT_DIR"
 
-		{
-			cat "$header_template"
-			printf '\n\n'
-			cat "$body_template"
-		} | awk \
+		cat "$body_template" | awk \
 			-v phase_header="$phase_header" \
 			-v card="$card" \
 			-v type="$type" \
@@ -72,8 +61,12 @@ cmd_implement() {
 	if [[ -z "$card" ]]; then
 		die "missing <CARD> argument"
 	fi
-	if [[ ! "$card" =~ ^[0-9]+$ ]]; then
-		die "invalid <CARD> '$card' (expected digits only)"
+	if [[ "$card" == "--help" || "$card" == "-h" ]]; then
+		usage
+		return 0
+	fi
+	if [[ ! "$card" =~ ^[A-Za-z0-9_-]+$ ]]; then
+		die "invalid <CARD> '$card' (expected [A-Za-z0-9_-]+)"
 	fi
 
 	card_dir="$EAW_OUT_DIR/$card"
@@ -84,6 +77,7 @@ cmd_implement() {
 	detect_card_type_with_warnings "$card" "$card_dir" type type_warnings
 
 	impl_dir="$card_dir/implementation"
+	assert_write_scope "implement" "ensure_dir implementation" "$impl_dir" "$EAW_OUT_DIR"
 	if [[ -d "$impl_dir" ]]; then
 		echo "PRESERVED: $impl_dir"
 		preserved=$((preserved + 1))
@@ -95,6 +89,7 @@ cmd_implement() {
 
 	for name in 00_scope.lock.md 10_change_plan.md 20_patch_notes.md; do
 		local target="$impl_dir/$name"
+		assert_write_scope "implement" "write implementation artifact" "$target" "$EAW_OUT_DIR"
 		if [[ -f "$target" ]]; then
 			echo "PRESERVED: $target"
 			preserved=$((preserved + 1))
@@ -133,26 +128,11 @@ EOF
 		created=$((created + 1))
 	done
 
-	if [[ ! -f "$header_template" ]]; then
-		if [[ -f "$fallback_header" ]]; then
-			header_template="$fallback_header"
-		else
-			die "template not found: $header_template"
-		fi
+	if ! planning_template="$(load_prompt "default" "implementation_planning" "$card" "$EAW_OUT_DIR")"; then
+		die "failed to resolve implementation_planning prompt via ACTIVE"
 	fi
-	if [[ ! -f "$planning_template" ]]; then
-		if [[ -f "$fallback_planning" ]]; then
-			planning_template="$fallback_planning"
-		else
-			die "template not found: $planning_template"
-		fi
-	fi
-	if [[ ! -f "$executor_template" ]]; then
-		if [[ -f "$fallback_executor" ]]; then
-			executor_template="$fallback_executor"
-		else
-			die "template not found: $executor_template"
-		fi
+	if ! executor_template="$(load_prompt "default" "implementation_executor" "$card" "$EAW_OUT_DIR")"; then
+		die "failed to resolve implementation_executor prompt via ACTIVE"
 	fi
 
 	planning_prompt="$impl_dir/implementation_planning_agent_prompt.md"

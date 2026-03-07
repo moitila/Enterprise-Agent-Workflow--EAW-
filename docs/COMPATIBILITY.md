@@ -40,7 +40,7 @@ When `EAW_WORKDIR` is defined:
 
 ### 5) Upgrade Policy
 
-- `init --upgrade` is assisted and non-destructive.
+- `init --upgrade` refreshes workspace templates from core templates.
 - `.new` files are generated when needed.
 - Config files are never overwritten without `--force`.
 

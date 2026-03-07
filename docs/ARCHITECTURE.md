@@ -9,7 +9,7 @@ EAW v0.6.0 uses a modular shell architecture that keeps CLI behavior stable whil
 Main modules:
 - `scripts/eaw`: CLI entrypoint and command dispatcher
 - `scripts/eaw_core.sh`: shared execution primitives (including phase execution/logging)
-- `scripts/commands/*.sh`: command handlers (`init`, `feature|bug|spike`, `ingest`, `doctor`, `validate`, `analyze`)
+- `scripts/commands/*.sh`: command handlers (`init`, `feature|bug|spike`, `doctor`, `validate`, `intake`, `analyze`, `implement`)
 - `scripts/lib.sh`: shared utility functions
 
 The architecture is intentionally contract-first: internal modularization must not change public CLI, artifact names, or output layout.

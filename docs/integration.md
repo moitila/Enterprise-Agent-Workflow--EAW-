@@ -23,14 +23,28 @@ Use `EAW_WORKDIR` when you want local workspace-specific configuration and outpu
     intake_bug.md
     intake_feature.md
     intake_spike.md
-    prompts/pt-br/headers/headerIntake.txt
-    prompts/pt-br/headers/HEADER.txt
-    prompts/pt-br/analyze/Findings.txt
-    prompts/pt-br/analyze/Hipoteses.txt
-    prompts/pt-br/analyze/Planing.txt
-    prompts/pt-br/implementation/Implementation_Planing.txt
-    prompts/pt-br/implementation/Implementation Executor.txt
-    prompts/pt-br/intake/INTAKE_PROMPT_V2.txt
+    prompts/default/intake/prompt_v1.md
+    prompts/default/intake/prompt_v1.meta
+    prompts/default/intake/ACTIVE
+    prompts/default/analyze_findings/prompt_v1.md
+    prompts/default/analyze_findings/prompt_v1.meta
+    prompts/default/analyze_findings/ACTIVE
+    prompts/default/analyze_hypotheses/prompt_v1.md
+    prompts/default/analyze_hypotheses/prompt_v1.meta
+    prompts/default/analyze_hypotheses/ACTIVE
+    prompts/default/analyze_planning/prompt_v1.md
+    prompts/default/analyze_planning/prompt_v1.meta
+    prompts/default/analyze_planning/ACTIVE
+    prompts/default/implementation_planning/prompt_v1.md
+    prompts/default/implementation_planning/prompt_v1.meta
+    prompts/default/implementation_planning/ACTIVE
+    prompts/default/implementation_executor/prompt_v1.md
+    prompts/default/implementation_executor/prompt_v1.meta
+    prompts/default/implementation_executor/ACTIVE
+    prompts/<track>/<phase>/
+      prompt_vN.md
+      prompt_vN.meta
+      ACTIVE
     10_baseline.md
     20_findings.md
     30_hypotheses.md
@@ -44,22 +58,14 @@ Create the base workspace structure with:
 ./scripts/eaw init --workdir ./.eaw
 ```
 
-For `eaw intake`, `eaw analyze`, and `eaw implement`, ensure these prompt templates also exist in workspace templates:
+For `eaw intake`, `eaw analyze`, and `eaw implement`, ensure the default prompt tree exists in workspace templates:
 
 ```bash
-mkdir -p ./.eaw/templates/prompts/pt-br/headers
-mkdir -p ./.eaw/templates/prompts/pt-br/analyze
-mkdir -p ./.eaw/templates/prompts/pt-br/implementation
-mkdir -p ./.eaw/templates/prompts/pt-br/intake
-cp ./templates/prompts/pt-br/headers/headerIntake.txt ./.eaw/templates/prompts/pt-br/headers/headerIntake.txt
-cp ./templates/prompts/pt-br/headers/HEADER.txt ./.eaw/templates/prompts/pt-br/headers/HEADER.txt
-cp ./templates/prompts/pt-br/analyze/Findings.txt ./.eaw/templates/prompts/pt-br/analyze/Findings.txt
-cp ./templates/prompts/pt-br/analyze/Hipoteses.txt ./.eaw/templates/prompts/pt-br/analyze/Hipoteses.txt
-cp ./templates/prompts/pt-br/analyze/Planing.txt ./.eaw/templates/prompts/pt-br/analyze/Planing.txt
-cp ./templates/prompts/pt-br/implementation/Implementation_Planing.txt ./.eaw/templates/prompts/pt-br/implementation/Implementation_Planing.txt
-cp "./templates/prompts/pt-br/implementation/Implementation Executor.txt" "./.eaw/templates/prompts/pt-br/implementation/Implementation Executor.txt"
-cp ./templates/prompts/pt-br/intake/INTAKE_PROMPT_V2.txt ./.eaw/templates/prompts/pt-br/intake/INTAKE_PROMPT_V2.txt
+mkdir -p ./.eaw/templates/prompts/default
+cp -R ./templates/prompts/default/. ./.eaw/templates/prompts/default/
 ```
+
+The seeded tree starts at `prompt_v1.*`, but runtime selection for `intake`, `analyze`, and `implement` is resolved by `ACTIVE` in each phase directory.
 
 ## Shell export example
 
@@ -77,6 +83,62 @@ export EAW_WORKDIR="$PWD/.eaw"
 - `intake`: generates `intake_agent_prompt.round_<N>.md` in `<OUT_DIR>/<CARD>/investigations/`.
 - `analyze`: generates `findings_agent_prompt.md`, `hypotheses_agent_prompt.md`, and `planning_agent_prompt.md` in `<OUT_DIR>/<CARD>/investigations/`.
 - `implement`: creates implementation scaffolds and generates `implementation_planning_agent_prompt.md` and `implementation_executor_agent_prompt.md` in `<OUT_DIR>/<CARD>/implementation/`.
+
+## Prompt lifecycle commands
+
+Versioned prompt candidates live under:
+
+```text
+templates/prompts/<track>/<phase>/
+  prompt_vN.md
+  prompt_vN.meta
+  ACTIVE
+```
+
+For lifecycle v0, the canonical seeded phases live under:
+
+```text
+templates/prompts/default/intake/
+templates/prompts/default/analyze_findings/
+templates/prompts/default/analyze_hypotheses/
+templates/prompts/default/analyze_planning/
+templates/prompts/default/implementation_planning/
+templates/prompts/default/implementation_executor/
+```
+
+`templates/prompts_versioned/` is not a runtime prompt root and should not be used for new candidates.
+
+Metadata format:
+
+```text
+version=v1
+required_substrings=TOKEN_A|TOKEN_B
+forbidden_words=TOKEN_X|TOKEN_Y
+```
+
+- `version` must match the candidate passed to the CLI.
+- `required_substrings` uses `|` as token delimiter, trims whitespace around each token, and every token must be present in `prompt_vN.md`.
+- `forbidden_words` uses `|` as token delimiter, trims whitespace around each token, and every listed token must be absent from `prompt_vN.md`.
+
+Commands:
+
+```bash
+EAW_WORKDIR="$PWD/.eaw" ./scripts/eaw validate-prompt <track> <phase> <candidate>
+EAW_WORKDIR="$PWD/.eaw" ./scripts/eaw apply-prompt <track> <phase> <candidate>
+```
+
+- `validate-prompt` returns exit code `0` on PASS and non-zero on FAIL.
+- `apply-prompt` fails when `templates/prompts/<track>/<phase>/` does not exist, does not create the directory automatically, runs only after a PASS validation, and updates only `ACTIVE`.
+
+## Prompt test split (smoke vs integration)
+
+- Smoke contract entrypoint: `tests/smoke_prompt_core.sh`
+  - scope: minimal prompt governance contract only
+  - must not include full lifecycle flow (`propose-prompt`, `suggest-prompt`)
+  - CI budget target: <= `20s`
+- Integration lifecycle entrypoint: `tests/integration/integration_prompt_lifecycle.sh`
+  - scope: full lifecycle flow (`propose-prompt`, `suggest-prompt`, `validate-prompt`, `apply-prompt`) and provenance/binding checks
+- Legacy wrapper `tests/smoke_prompt_lifecycle.sh` was removed and should not be used.
 
 ## Config version
 
@@ -124,6 +186,7 @@ EAW_WORKDIR="$PWD/.eaw" ./scripts/eaw doctor
 ./scripts/eaw init --workdir "$PWD/.eaw" --upgrade
 ```
 
+- Refreshes workspace templates in `"$PWD/.eaw/templates"` from core templates.
 - Does not overwrite `repos.conf` or `search.conf` unless `--force`.
 - For `eaw.conf`, creates it when missing.
 - If `eaw.conf` is outdated or missing `config_version`, writes `eaw.conf.new` with the required version example.

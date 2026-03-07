@@ -10,8 +10,12 @@ Example:
   eaw bug    <CARD> "<TITLE>"
   eaw intake <CARD> [--round=N]
   eaw analyze <CARD>
-  eaw ingest <CARD> <file-path>
   eaw implement <CARD>
+  eaw suggest-prompt <CARD> --track <TRACK> --phase <PHASE>
+  eaw prompt validate
+  eaw validate-prompt <TRACK> <PHASE> <CANDIDATE>
+  eaw propose-prompt <CARD> <TRACK> <PHASE> <BASE_CANDIDATE> <NEW_CANDIDATE>
+  eaw apply-prompt <TRACK> <PHASE> <CANDIDATE>
   eaw validate
   eaw doctor
 EOF
@@ -39,17 +43,27 @@ workspace_template_names() {
 copy_workspace_nested_templates() {
 	local default_tpl_dir="$1"
 	local tpl_dir="$2"
-	local force="$3"
+	local overwrite="$3"
 	local rel src dst dst_parent
 	local nested_templates=(
-		"prompts/pt-br/headers/headerIntake.txt"
-		"prompts/pt-br/headers/HEADER.txt"
-		"prompts/pt-br/intake/INTAKE_PROMPT_V2.txt"
-		"prompts/pt-br/analyze/Findings.txt"
-		"prompts/pt-br/analyze/Hipoteses.txt"
-		"prompts/pt-br/analyze/Planing.txt"
-		"prompts/pt-br/implementation/Implementation_Planing.txt"
-		"prompts/pt-br/implementation/Implementation Executor.txt"
+		"prompts/default/intake/prompt_v1.md"
+		"prompts/default/intake/prompt_v1.meta"
+		"prompts/default/intake/ACTIVE"
+		"prompts/default/analyze_findings/prompt_v1.md"
+		"prompts/default/analyze_findings/prompt_v1.meta"
+		"prompts/default/analyze_findings/ACTIVE"
+		"prompts/default/analyze_hypotheses/prompt_v1.md"
+		"prompts/default/analyze_hypotheses/prompt_v1.meta"
+		"prompts/default/analyze_hypotheses/ACTIVE"
+		"prompts/default/analyze_planning/prompt_v1.md"
+		"prompts/default/analyze_planning/prompt_v1.meta"
+		"prompts/default/analyze_planning/ACTIVE"
+		"prompts/default/implementation_planning/prompt_v1.md"
+		"prompts/default/implementation_planning/prompt_v1.meta"
+		"prompts/default/implementation_planning/ACTIVE"
+		"prompts/default/implementation_executor/prompt_v1.md"
+		"prompts/default/implementation_executor/prompt_v1.meta"
+		"prompts/default/implementation_executor/ACTIVE"
 	)
 
 	for rel in "${nested_templates[@]}"; do
@@ -61,7 +75,7 @@ copy_workspace_nested_templates() {
 
 		dst_parent="$(dirname "$dst")"
 		ensure_dir "$dst_parent"
-		if [[ -f "$dst" && "$force" != "true" ]]; then
+		if [[ -f "$dst" && "$overwrite" != "true" ]]; then
 			echo "$dst already exists; use --force to overwrite"
 		else
 			cp "$src" "$dst"
@@ -159,6 +173,7 @@ init_workspace_workdir() {
 	local workdir="$1"
 	local force="$2"
 	local upgrade="$3"
+	local overwrite_templates="false"
 	local cfg="$workdir/config"
 	local tpl="$workdir/templates"
 	local out="$workdir/out"
@@ -171,6 +186,10 @@ init_workspace_workdir() {
 	ensure_dir "$tpl"
 	ensure_dir "$out"
 
+	if [[ "$force" == "true" || "$upgrade" == "true" ]]; then
+		overwrite_templates="true"
+	fi
+
 	write_or_skip "$repos_conf" "$force" "# Format: key|path|role(optional)
 # Example:
 # backend|/absolute/path/to/repo|target
@@ -180,7 +199,7 @@ init_workspace_workdir() {
 		local src_tpl="$default_tpl_dir/$name.md"
 		local dst_tpl="$tpl/$name.md"
 		if [[ -f "$src_tpl" ]]; then
-			if [[ -f "$dst_tpl" && "$force" != "true" ]]; then
+			if [[ -f "$dst_tpl" && "$overwrite_templates" != "true" ]]; then
 				echo "$dst_tpl already exists; use --force to overwrite"
 			else
 				cp "$src_tpl" "$dst_tpl"
@@ -189,7 +208,7 @@ init_workspace_workdir() {
 		fi
 	done < <(workspace_template_names)
 
-	copy_workspace_nested_templates "$default_tpl_dir" "$tpl" "$force"
+	copy_workspace_nested_templates "$default_tpl_dir" "$tpl" "$overwrite_templates"
 
 	if [[ -f "$default_search" ]]; then
 		if [[ -f "$search_conf" && "$force" != "true" ]]; then
@@ -216,6 +235,328 @@ validate_runtime_workdir() {
 			exit 1
 		fi
 	fi
+}
+
+normalize_prompt_candidate() {
+	local candidate="$1"
+	if [[ "$candidate" =~ ^v[0-9]+$ ]]; then
+		printf "%s\n" "$candidate"
+		return 0
+	fi
+	if [[ "$candidate" =~ ^[0-9]+$ ]]; then
+		printf "v%s\n" "$candidate"
+		return 0
+	fi
+	return 1
+}
+
+is_safe_prompt_slug() {
+	local value="$1"
+	[[ "$value" =~ ^[a-z0-9][a-z0-9_-]*$ ]]
+}
+
+validate_prompt_slug() {
+	local kind="$1"
+	local value="$2"
+	if is_safe_prompt_slug "$value"; then
+		return 0
+	fi
+	echo "FAIL: invalid $kind '$value' (expected safe slug [a-z0-9_-])" >&2
+	return 1
+}
+
+prompt_phase_dir() {
+	local track="$1"
+	local phase="$2"
+	local by_phase by_track
+	by_phase="$EAW_TEMPLATES_DIR/prompts/$phase"
+	by_track="$EAW_TEMPLATES_DIR/prompts/$track/$phase"
+	if [[ -d "$by_phase" ]]; then
+		printf "%s\n" "$by_phase"
+		return 0
+	fi
+	if [[ -d "$by_track" ]]; then
+		printf "%s\n" "$by_track"
+		return 0
+	fi
+	printf "%s\n" "$by_phase"
+}
+
+prompt_phase_dir_from_root() {
+	local templates_root="$1"
+	local track="$2"
+	local phase="$3"
+	local by_phase by_track
+	by_phase="$templates_root/prompts/$phase"
+	by_track="$templates_root/prompts/$track/$phase"
+	if [[ -d "$by_phase" ]]; then
+		printf "%s\n" "$by_phase"
+		return 0
+	fi
+	if [[ -d "$by_track" ]]; then
+		printf "%s\n" "$by_track"
+		return 0
+	fi
+	printf "%s\n" "$by_phase"
+}
+
+prompt_resolve_active_metadata() {
+	local track="$1"
+	local phase="$2"
+	local workspace_dir root_templates_root root_dir dir source_root
+	local active_file raw_active active_value normalized_active md_file file_name prompt_used
+
+	workspace_dir="$(prompt_phase_dir "$track" "$phase")"
+	root_templates_root="$EAW_ROOT_DIR/templates"
+	root_dir="$(prompt_phase_dir_from_root "$root_templates_root" "$track" "$phase")"
+
+	if [[ -d "$workspace_dir" ]]; then
+		dir="$workspace_dir"
+		source_root="$EAW_TEMPLATES_DIR"
+	elif [[ -d "$root_dir" ]]; then
+		dir="$root_dir"
+		source_root="$root_templates_root"
+	else
+		echo "ERROR: prompt directory not found for track '$track' phase '$phase': $workspace_dir" >&2
+		return 1
+	fi
+
+	active_file="$dir/ACTIVE"
+	if [[ ! -f "$active_file" ]]; then
+		echo "ERROR: ACTIVE file not found for track '$track' phase '$phase': $active_file" >&2
+		return 1
+	fi
+
+	raw_active="$(tr -d '\r' <"$active_file")"
+	active_value="$(trim_spaces "$raw_active")"
+	if [[ -z "$active_value" ]]; then
+		echo "ERROR: ACTIVE is empty for track '$track' phase '$phase': $active_file" >&2
+		return 1
+	fi
+	if ! normalized_active="$(normalize_prompt_candidate "$active_value")"; then
+		echo "ERROR: ACTIVE has invalid version '$active_value' for track '$track' phase '$phase': $active_file" >&2
+		return 1
+	fi
+
+	md_file="$dir/prompt_${normalized_active}.md"
+	if [[ ! -f "$md_file" ]]; then
+		echo "ERROR: ACTIVE points to missing prompt file for track '$track' phase '$phase': $md_file" >&2
+		return 1
+	fi
+
+	file_name="${md_file##*/}"
+	prompt_used="${phase}_${normalized_active}"
+	printf "phase=%s\n" "$phase"
+	printf "track=%s\n" "$track"
+	printf "source_root=%s\n" "$source_root"
+	printf "phase_dir=%s\n" "$dir"
+	printf "active=%s\n" "$normalized_active"
+	printf "file=%s\n" "$file_name"
+	printf "md_file=%s\n" "$md_file"
+	printf "prompt_used=%s\n" "$prompt_used"
+}
+
+prompt_provenance_append() {
+	local card="$1"
+	local out_root="$2"
+	local phase="$3"
+	local track="$4"
+	local source_root="$5"
+	local phase_dir="$6"
+	local active="$7"
+	local file_name="$8"
+	local prompt_used="$9"
+	local provenance_dir provenance_file tmp_entries tmp_dedup tmp_yaml
+
+	provenance_dir="$out_root/$card/provenance"
+	provenance_file="$provenance_dir/prompts_used.yaml"
+	ensure_dir "$provenance_dir"
+
+	tmp_entries="$(mktemp "$provenance_dir/prompts_used.entries.XXXXXX")"
+	tmp_dedup="$(mktemp "$provenance_dir/prompts_used.dedup.XXXXXX")"
+	tmp_yaml="$(mktemp "$provenance_dir/prompts_used.yaml.XXXXXX")"
+
+	if [[ -f "$provenance_file" ]]; then
+		awk '
+			function flush() {
+				if (phase != "") {
+					printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\n", phase, track, source_root, phase_dir, active, file, prompt_used
+				}
+			}
+			/^  - phase: / {
+				flush()
+				phase=$0
+				sub(/^  - phase: /, "", phase)
+				track=""
+				source_root=""
+				phase_dir=""
+				active=""
+				file=""
+				prompt_used=""
+				next
+			}
+			/^    track: / { track=$0; sub(/^    track: /, "", track); next }
+			/^    source_root: / { source_root=$0; sub(/^    source_root: /, "", source_root); next }
+			/^    phase_dir: / { phase_dir=$0; sub(/^    phase_dir: /, "", phase_dir); next }
+			/^    active: / { active=$0; sub(/^    active: /, "", active); next }
+			/^    file: / { file=$0; sub(/^    file: /, "", file); next }
+			/^    prompt_used: / { prompt_used=$0; sub(/^    prompt_used: /, "", prompt_used); next }
+			END { flush() }
+		' "$provenance_file" >>"$tmp_entries"
+	fi
+
+	printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\n" "$phase" "$track" "$source_root" "$phase_dir" "$active" "$file_name" "$prompt_used" >>"$tmp_entries"
+
+	awk -F'\t' 'NF >= 7 { rec[$1]=$0 } END { for (k in rec) print rec[k] }' "$tmp_entries" | LC_ALL=C sort -t$'\t' -k1,1 >"$tmp_dedup"
+
+	{
+		printf "prompts:\n"
+		while IFS=$'\t' read -r entry_phase entry_track entry_source_root entry_phase_dir entry_active entry_file entry_prompt_used; do
+			[[ -n "$entry_phase" ]] || continue
+			printf "  - phase: %s\n" "$entry_phase"
+			printf "    track: %s\n" "$entry_track"
+			printf "    source_root: %s\n" "$entry_source_root"
+			printf "    phase_dir: %s\n" "$entry_phase_dir"
+			printf "    active: %s\n" "$entry_active"
+			printf "    file: %s\n" "$entry_file"
+			printf "    prompt_used: %s\n" "$entry_prompt_used"
+		done <"$tmp_dedup"
+	} >"$tmp_yaml"
+
+	mv "$tmp_yaml" "$provenance_file"
+	rm -f "$tmp_entries" "$tmp_dedup"
+}
+
+load_prompt() {
+	local track="$1"
+	local phase="$2"
+	local card="$3"
+	local out_root="$4"
+	local resolution key value
+	local source_root phase_dir active file_name md_file prompt_used
+
+	if ! resolution="$(prompt_resolve_active_metadata "$track" "$phase")"; then
+		return 1
+	fi
+
+	while IFS='=' read -r key value; do
+		case "$key" in
+		source_root) source_root="$value" ;;
+		phase_dir) phase_dir="$value" ;;
+		active) active="$value" ;;
+		file) file_name="$value" ;;
+		md_file) md_file="$value" ;;
+		prompt_used) prompt_used="$value" ;;
+		esac
+	done <<<"$resolution"
+
+	if [[ -n "$card" && -n "$out_root" ]]; then
+		prompt_provenance_append "$card" "$out_root" "$phase" "$track" "$source_root" "$phase_dir" "$active" "$file_name" "$prompt_used"
+	fi
+
+	printf "%s\n" "$md_file"
+}
+
+prompt_resolve_active_md_file() {
+	local track="$1"
+	local phase="$2"
+	local resolution key value md_file=""
+	if ! resolution="$(prompt_resolve_active_metadata "$track" "$phase")"; then
+		return 1
+	fi
+	while IFS='=' read -r key value; do
+		if [[ "$key" == "md_file" ]]; then
+			md_file="$value"
+			break
+		fi
+	done <<<"$resolution"
+	printf "%s\n" "$md_file"
+}
+
+prompt_list_markdown_candidates() {
+	local root="$EAW_TEMPLATES_DIR/prompts"
+	if [[ ! -d "$root" ]]; then
+		return 0
+	fi
+	find "$root" -type f -name 'prompt_v*.md' | LC_ALL=C sort
+}
+
+prompt_highest_candidate_base() {
+	local dir="$1"
+	local path name version max=-1
+	for path in "$dir"/prompt_v*.md; do
+		if [[ ! -f "$path" ]]; then
+			continue
+		fi
+		name="${path##*/}"
+		if [[ "$name" =~ ^prompt_v([0-9]+)\.md$ ]]; then
+			version="${BASH_REMATCH[1]}"
+			if ((version > max)); then
+				max="$version"
+			fi
+		fi
+	done
+	if ((max < 0)); then
+		return 1
+	fi
+	printf "prompt_v%s\n" "$max"
+}
+
+prompt_resolve_md_file() {
+	local track="$1"
+	local phase="$2"
+	local candidate="${3:-}"
+	local dir base md_file
+	dir="$(prompt_phase_dir "$track" "$phase")"
+	if [[ ! -d "$dir" ]]; then
+		echo "ERROR: prompt directory not found for phase '$phase': $dir" >&2
+		return 1
+	fi
+	if [[ -n "$candidate" && "$candidate" != "latest" ]]; then
+		if ! base="$(prompt_candidate_base "$candidate")"; then
+			echo "ERROR: invalid candidate '$candidate' (expected vN or N)" >&2
+			return 1
+		fi
+		md_file="$dir/${base}.md"
+		if [[ -f "$md_file" ]]; then
+			printf "%s\n" "$md_file"
+			return 0
+		fi
+	fi
+	if ! base="$(prompt_highest_candidate_base "$dir")"; then
+		echo "ERROR: no prompt candidate found in $dir" >&2
+		return 1
+	fi
+	printf "%s/%s.md\n" "$dir" "$base"
+}
+
+prompt_candidate_base() {
+	local candidate="$1"
+	local version
+	if ! version="$(normalize_prompt_candidate "$candidate")"; then
+		return 1
+	fi
+	printf "prompt_%s\n" "$version"
+}
+
+prompt_meta_value() {
+	local file="$1"
+	local key="$2"
+	awk -F'=' -v want="$key" '
+		/^[[:space:]]*#/ { next }
+		/^[[:space:]]*$/ { next }
+		{
+			k=$1
+			gsub(/^[[:space:]]+|[[:space:]]+$/, "", k)
+			if (k != want) {
+				next
+			}
+			sub(/^[^=]*=/, "", $0)
+			gsub(/^[[:space:]]+|[[:space:]]+$/, "", $0)
+			print $0
+			exit
+		}
+	' "$file"
 }
 
 trim_spaces() {
