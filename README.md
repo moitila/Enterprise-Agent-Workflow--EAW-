@@ -132,19 +132,19 @@ Why this matters: making risk and scope explicit at commit time enables determin
 
 ## AI Integration Mode (EAW Mode D)
 
-EAW Mode D provides a deterministic path to integrate an external AI/assistant into the engineering workflow by generating a complete, structured prompt, ingesting evidence, and producing a test plan and action plan in a reproducible output folder.
+EAW Mode D provides a deterministic path to integrate an external AI/assistant into the engineering workflow by generating complete, structured prompts and producing a test plan and action plan in a reproducible output folder.
 
 Workflow (example):
 
 1. Create a card: `./scripts/eaw feature 12345 "Short title"`
 2. Fill the dossier following the template sections.
-3. Ingest evidence (logs, screenshots, traces):
+3. Populate `out/12345/intake/` with evidence files (logs, screenshots, traces).
 
 ```bash
-./scripts/eaw ingest 12345 path/to/smoke-log.txt
+./scripts/eaw intake 12345
 ```
 
-4. Generate the AI prompt and analysis artifacts:
+4. Generate the analysis prompt artifacts:
 
 ```bash
 ./scripts/eaw analyze 12345
@@ -158,7 +158,6 @@ This produces deterministic files under `out/12345/`:
 - `investigations/planning_agent_prompt.md` — planning prompt to feed to an assistant
 - `TEST_PLAN_12345.md` — deterministic test plan produced by the analysis
 - `context/` — repository context captured earlier
-- `inputs/` — ingested evidence files
 
 5. Copy the generated prompts under `out/12345/investigations/`, run each phase with your chosen agent, and capture outputs back into `out/12345/dev/` as needed (manual step). The generated artifacts are deterministic and versionable.
 

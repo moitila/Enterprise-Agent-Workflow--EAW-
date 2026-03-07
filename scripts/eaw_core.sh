@@ -10,7 +10,6 @@ Example:
   eaw bug    <CARD> "<TITLE>"
   eaw intake <CARD> [--round=N]
   eaw analyze <CARD>
-  eaw ingest <CARD> <file-path>
   eaw implement <CARD>
   eaw suggest-prompt <CARD> --track <TRACK> --phase <PHASE>
   eaw prompt validate

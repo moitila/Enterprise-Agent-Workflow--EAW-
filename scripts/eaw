@@ -59,8 +59,6 @@ source "$SCRIPT_DIR/commands/cmd_implement.sh"
 # shellcheck disable=SC1091
 source "$SCRIPT_DIR/commands/cmd_analyze.sh"
 # shellcheck disable=SC1091
-source "$SCRIPT_DIR/commands/cmd_ingest.sh"
-# shellcheck disable=SC1091
 source "$SCRIPT_DIR/commands/cmd_intake.sh"
 # shellcheck disable=SC1091
 source "$SCRIPT_DIR/commands/cmd_validate_prompt.sh"
@@ -136,15 +134,6 @@ main() {
 			echo "usage: eaw intake <CARD> [--round=N]" >&2
 			exit 1
 		fi
-		;;
-	ingest)
-		if [[ $# -lt 3 ]]; then
-			echo "Missing args" >&2
-			usage
-			exit 1
-		fi
-		validate_runtime_workdir
-		cmd_ingest "$2" "$3"
 		;;
 	implement)
 		if [[ $# -ne 2 ]]; then

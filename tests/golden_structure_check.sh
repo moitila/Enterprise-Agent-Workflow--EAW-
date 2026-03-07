@@ -53,7 +53,6 @@ CFG
   local actual_feature="$tmp_root/feature.paths.txt"
   local actual_bug="$tmp_root/bug.paths.txt"
   local actual_spike="$tmp_root/spike.paths.txt"
-  local actual_ingest="$tmp_root/ingest.paths.txt"
   local actual_analyze="$tmp_root/analyze.paths.txt"
 
   ./scripts/eaw feature "$card_feature" "Golden feature" >/dev/null
@@ -69,18 +68,6 @@ CFG
   compare_fixture "$actual_spike" "$FIXTURES_DIR/spike.paths.txt"
 
   ./scripts/eaw feature "$card_pipeline" "Golden pipeline" >/dev/null
-  # Keep ingest deterministic despite the existing printf issue when the heading already exists.
-  sed -i 's/\r$//' "$workdir/out/$card_pipeline/feature_${card_pipeline}.md"
-  sed -i '/^## Attached Evidence$/d' "$workdir/out/$card_pipeline/feature_${card_pipeline}.md"
-  printf 'golden-evidence\n' >"$tmp_root/evidence.txt"
-  ./scripts/eaw ingest "$card_pipeline" "$tmp_root/evidence.txt" >/dev/null
-  capture_paths "$workdir" "$card_pipeline" "$actual_ingest"
-  compare_fixture "$actual_ingest" "$FIXTURES_DIR/ingest.paths.txt"
-
-  if [[ ! -f "$workdir/out/$card_pipeline/inputs/evidence.txt" ]]; then
-    echo "ERROR: missing ingest output file: $workdir/out/$card_pipeline/inputs/evidence.txt" >&2
-    return 1
-  fi
 
   ./scripts/eaw analyze "$card_pipeline" >/dev/null
   capture_paths "$workdir" "$card_pipeline" "$actual_analyze"
