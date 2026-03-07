@@ -4,6 +4,7 @@ cmd_validate() {
 	local errors=0
 	local warnings=0
 	local line lineno normalized key path role resolved_path card_dir impl_dir impl_name impl_path
+	local prompt_phase
 
 	echo "EAW validate"
 	echo "Resolved dirs:"
@@ -62,6 +63,18 @@ cmd_validate() {
 		echo "WARNING: search.conf missing: $SEARCH_CONF"
 		warnings=$((warnings + 1))
 	fi
+
+	for prompt_phase in \
+		intake \
+		analyze_findings \
+		analyze_hypotheses \
+		analyze_planning \
+		implementation_planning \
+		implementation_executor; do
+		if ! prompt_resolve_active_metadata "default" "$prompt_phase" >/dev/null; then
+			errors=$((errors + 1))
+		fi
+	done
 
 	if [[ -n "${EAW_WORKDIR:-}" && -d "$EAW_WORKDIR/templates" ]]; then
 		for tpl_name in feature.md bug.md spike.md intake_bug.md intake_feature.md intake_spike.md; do

@@ -304,7 +304,7 @@ prompt_resolve_active_metadata() {
 	local track="$1"
 	local phase="$2"
 	local workspace_dir root_templates_root root_dir dir source_root
-	local active_file raw_active active_value normalized_active md_file file_name prompt_used
+	local active_file raw_active active_value normalized_active md_file meta_file file_name prompt_used
 
 	workspace_dir="$(prompt_phase_dir "$track" "$phase")"
 	root_templates_root="$EAW_ROOT_DIR/templates"
@@ -340,7 +340,13 @@ prompt_resolve_active_metadata() {
 
 	md_file="$dir/prompt_${normalized_active}.md"
 	if [[ ! -f "$md_file" ]]; then
-		echo "ERROR: ACTIVE points to missing prompt file for track '$track' phase '$phase': $md_file" >&2
+		echo "ERROR: ACTIVE points to missing prompt file for track '$track' phase '$phase' version '$normalized_active': $md_file" >&2
+		return 1
+	fi
+
+	meta_file="$dir/prompt_${normalized_active}.meta"
+	if [[ ! -f "$meta_file" ]]; then
+		echo "ERROR: ACTIVE points to missing prompt metadata for track '$track' phase '$phase' version '$normalized_active': $meta_file" >&2
 		return 1
 	fi
 
@@ -353,6 +359,7 @@ prompt_resolve_active_metadata() {
 	printf "active=%s\n" "$normalized_active"
 	printf "file=%s\n" "$file_name"
 	printf "md_file=%s\n" "$md_file"
+	printf "meta_file=%s\n" "$meta_file"
 	printf "prompt_used=%s\n" "$prompt_used"
 }
 
