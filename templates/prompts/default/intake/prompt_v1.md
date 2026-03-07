@@ -14,7 +14,7 @@ INPUT
 - OUT_DIR={{OUT_DIR}}
 - CARD_DIR={{CARD_DIR}}
 - TEMPLATE=`00_intake.md`
-- EVIDENCIAS=`$CARD_DIR/intake/**`
+- EVIDENCIAS=`out/<CARD>/intake/**`
 
 OUTPUT
 - Escrever somente `{{CARD_DIR}}/investigations/00_intake.md`.

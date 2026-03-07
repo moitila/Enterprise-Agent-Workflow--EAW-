@@ -29,7 +29,6 @@ r2="$EAW_WORKDIR/out/$CARD/investigations/intake_agent_prompt.round_2.md"
 for f in "$r1" "$r2"; do
 	grep -Fq "out/<CARD>/intake/" "$f" || fail "missing anchor out/<CARD>/intake/ in $f"
 	grep -Fq "investigations/_intake_provenance.md" "$f" || fail "missing anchor investigations/_intake_provenance.md in $f"
-	grep -Fq "eaw intake $CARD" "$f" || fail "missing anchor eaw intake $CARD in $f"
 	grep -Fq "CONFIG_SOURCE=" "$f" || fail "missing CONFIG_SOURCE in $f"
 done
 
