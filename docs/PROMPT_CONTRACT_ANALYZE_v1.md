@@ -116,7 +116,7 @@ Nenhuma etapa fora desta sequencia pode ser adicionada pelo prompt.
 | Artefato runtime | `investigations/planning_agent_prompt.md` | Prompt auxiliar gerado pelo runtime |
 | Artefato runtime | `TEST_PLAN_<CARD>.md` | Placeholder auxiliar criado na raiz do card quando ausente |
 | Saida obrigatoria | `investigations/20_findings.md` | Consolida evidencias observadas |
-| Saida obrigatoria | `investigations/30_hypotheses.md` | Formaliza hipoteses rastreaveis via H# |
+| Saida obrigatoria | `investigations/30_hypotheses.md` | Formaliza hipoteses rastreaveis via `H[0-9]+` |
 | Saida obrigatoria | `investigations/40_next_steps.md` | Define proximo passo deterministico para Implementation |
 | Dependencia de baseline | `docs/PROMPT_CONTRACT_v1.md` | Define o nivel minimo de rigor estrutural |
 | Dependencia runtime | `/home/user/dev/EAW-tool/scripts/commands/cmd_analyze.sh` | Fonte de verdade de execucao no runtime |
@@ -132,7 +132,7 @@ O prompt de Analyze deve:
 - Tratar `investigations/00_intake.md` como unica entrada obrigatoria da fase
 - Permitir os artefatos auxiliares `findings_agent_prompt.md`, `hypotheses_agent_prompt.md`, `planning_agent_prompt.md` e `TEST_PLAN_<CARD>.md` quando emitidos pelo runtime
 - Preservar a relacao causal entre findings, hypotheses e next steps
-- Referenciar explicitamente H# quando uma hipotese for promovida para plano
+- Referenciar explicitamente identificadores `H[0-9]+` quando uma hipotese for promovida para plano
 - Manter rastreabilidade suficiente para a fase Implementation operar sobre `investigations/40_next_steps.md`
 
 ## 7. Principios Obrigatorios

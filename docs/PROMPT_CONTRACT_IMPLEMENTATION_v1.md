@@ -105,7 +105,7 @@ Nenhuma etapa fora desta sequencia pode ser adicionada pelo prompt.
 | Artefato runtime | `implementation/implementation_planning_agent_prompt.md` | Prompt auxiliar gerado pelo runtime |
 | Artefato runtime | `implementation/implementation_executor_agent_prompt.md` | Prompt auxiliar gerado pelo runtime |
 | Artefato obrigatorio | `implementation/00_scope.lock.md` | Define in scope, out of scope e allowlist soberana |
-| Artefato obrigatorio | `implementation/10_change_plan.md` | Define steps numerados, H# selecionadas e validacao obrigatoria |
+| Artefato obrigatorio | `implementation/10_change_plan.md` | Define steps numerados, hipoteses `H[0-9]+` selecionadas e validacao obrigatoria |
 | Artefato obrigatorio | `implementation/20_patch_notes.md` | Permanece parte do layout oficial da fase |
 | Boundary de escrita | `implementation/` | Artefatos da fase ficam confinados a este diretorio |
 | Dependencia runtime | `/home/user/dev/EAW-tool/scripts/commands/cmd_implement.sh` | Fonte de verdade de execucao no runtime |
@@ -120,7 +120,7 @@ O prompt de Implementation deve:
 - Declarar `EAW_WORKDIR`, `RUNTIME_ROOT`, `CONFIG_SOURCE`, `OUT_DIR` e `CARD_DIR` no header
 - Tratar `investigations/40_next_steps.md` como base unica do planejamento
 - Permitir os artefatos auxiliares `implementation/implementation_planning_agent_prompt.md` e `implementation/implementation_executor_agent_prompt.md` quando emitidos pelo runtime
-- Exigir rastreabilidade explicita entre H# selecionadas, `40_next_steps.md` e `implementation/10_change_plan.md`
+- Exigir rastreabilidade explicita entre hipoteses `H[0-9]+` selecionadas, `40_next_steps.md` e `implementation/10_change_plan.md`
 - Exigir que `implementation/00_scope.lock.md` contenha allowlist de escrita e regra de escrita
 - Preservar a existencia de `implementation/20_patch_notes.md` no layout oficial da fase
 

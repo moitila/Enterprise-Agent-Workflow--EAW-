@@ -14,7 +14,7 @@ Este documento define o contrato estrutural obrigatorio da subfase Planning dent
 Seu proposito e:
 
 - Transformar hipoteses formais em um plano executavel minimo em `investigations/40_next_steps.md`
-- Preservar rastreabilidade entre H# selecionadas, criterios verificaveis e a fase Implementation
+- Preservar rastreabilidade entre hipoteses `H[0-9]+` selecionadas, criterios verificaveis e a fase Implementation
 - Impedir que a subfase crie hipoteses novas ou altere findings anteriores
 - Registrar as regras de bloqueio, whitelist de escrita e rollback minimo observados na subfase
 
@@ -26,7 +26,7 @@ Seu proposito e:
 | Entrada obrigatoria | `investigations/20_findings.md` | Deve existir antes do inicio da subfase |
 | Entrada obrigatoria | `investigations/30_hypotheses.md` | Deve existir antes do inicio da subfase |
 | Artefato runtime | `investigations/planning_agent_prompt.md` | Prompt auxiliar emitido por `eaw analyze` |
-| Saida obrigatoria | `investigations/40_next_steps.md` | Registra H# selecionadas, objetivo, estrategia, plano atomico, criterios de aceite, riscos e rollback |
+| Saida obrigatoria | `investigations/40_next_steps.md` | Registra hipoteses `H[0-9]+` selecionadas, objetivo, estrategia, plano atomico, criterios de aceite, riscos e rollback |
 | Saida opcional | `investigations/_warnings.md` | Permitida somente se necessario |
 
 ## 3. READ_SCOPE
@@ -46,10 +46,10 @@ Seu proposito e:
 - Executar o pre-check com `cd "$EAW_ROOT_DIR"`, `test -f ./scripts/eaw` e `test -f "$CONFIG_SOURCE"`.
 - Confirmar a existencia de `00_intake.md`, `20_findings.md` e `30_hypotheses.md`; se qualquer um estiver ausente, bloquear.
 - Produzir `40_next_steps.md` com as secoes `# 40_next_steps`, `## Hipotese(s) Selecionada(s)`, `## Objetivo da Iteracao`, `## Estrategia`, `## Plano Atomico`, `## Criterios de Aceite`, `## Riscos e Mitigacao` e `## Rollback`.
-- Em `Hipotese(s) Selecionada(s)`, listar explicitamente H# extraidas de `30_hypotheses.md`.
+- Em `Hipotese(s) Selecionada(s)`, listar explicitamente identificadores `H[0-9]+` extraidos de `30_hypotheses.md`.
 - Garantir que cada passo do plano atomico seja deterministico, executavel e reversivel quando aplicavel.
 - Garantir que os criterios de aceite tenham comandos verificaveis, exit codes esperados, artefatos esperados e prefixos textuais quando aplicavel.
-- Retornar lista de H# selecionadas, confirmacao de escrita unica e saida literal dos testes.
+- Retornar lista de hipoteses `H[0-9]+` selecionadas, confirmacao de escrita unica e saida literal dos testes.
 
 ## 6. Condicoes de Falha
 
@@ -57,7 +57,7 @@ Seu proposito e:
 - Ausencia de `CONFIG_SOURCE`.
 - Ausencia de qualquer artefato obrigatorio de entrada.
 - Ausencia da secao `Hipotese(s) Selecionada(s)` em `40_next_steps.md`.
-- Ausencia de pelo menos uma H# explicita.
+- Ausencia de pelo menos uma hipotese explicita no formato `H[0-9]+`.
 - Ausencia de plano estruturado com passos identificaveis.
 - Falha em produzir `investigations/40_next_steps.md` ao final.
 - Qualquer tentativa de escrita fora do WRITE_SCOPE.
@@ -75,7 +75,7 @@ Seu proposito e:
 - A subfase Planning nao altera codigo.
 - A subfase Planning nao cria hipotese nova.
 - A subfase Planning deve permanecer aderente ao escopo e as evidencias do intake, sem expandir arquitetura alem do que estiver sustentado pelo fluxo observado.
-- A subfase Planning depende da rastreabilidade H# definida em `30_hypotheses.md`.
+- A subfase Planning depende da rastreabilidade definida por hipoteses `H[0-9]+` em `30_hypotheses.md`.
 
 ## 9. Relacao com o Contrato Consolidado
 

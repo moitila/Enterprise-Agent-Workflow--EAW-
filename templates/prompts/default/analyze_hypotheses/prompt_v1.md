@@ -26,7 +26,7 @@ INPUT
 
 OUTPUT
 - Escrever somente `{{CARD_DIR}}/investigations/30_hypotheses.md`.
-- Incluir Coverage Map, hipoteses H#, testes deterministicos, ranking formal, risco residual e provenance.
+- Incluir Coverage Map, hipoteses `H[0-9]+`, testes deterministicos, ranking formal, risco residual e provenance.
 
 READ_SCOPE
 - Ler `{{CARD_DIR}}`.
@@ -46,13 +46,13 @@ RULES
   - Extrair criterios de aceite, regras deterministicas, comportamentos esperados, comportamentos observados divergentes e contratos de erro.
   - Criar secao `## Coverage Map` listando cada criterio identificado.
 - PASSO 2 - GERACAO DE HIPOTESES:
-  - Criar entre 5 e 10 hipoteses H#.
-  - Para cada H#, registrar tipo de risco, descricao objetiva, causa raiz provavel, criterio(s) coberto(s), impacto e sinais observaveis.
+  - Criar entre 5 e 10 hipoteses no formato `H[0-9]+` (ex.: H1, H2, H3).
+  - Para cada hipotese `H[0-9]+`, registrar tipo de risco, descricao objetiva, causa raiz provavel, criterio(s) coberto(s), impacto e sinais observaveis.
 - PASSO 3 - TESTE DETERMINISTICO:
-  - Para cada H#, definir comando ou cenario controlado.
-  - Para cada H#, definir resultado esperado com exit code, prefixo textual, presenca ou ausencia de arquivo ou comportamento verificavel.
+  - Para cada hipotese `H[0-9]+`, definir comando ou cenario controlado.
+  - Para cada hipotese `H[0-9]+`, definir resultado esperado com exit code, prefixo textual, presenca ou ausencia de arquivo ou comportamento verificavel.
 - PASSO 4 - RANKING FORMAL:
-  - Criar ranking ordenado `H# - probabilidade x impacto - justificativa objetiva`.
+  - Criar ranking ordenado `H[0-9]+ - probabilidade x impacto - justificativa objetiva`.
 - PASSO 5 - RISCO RESIDUAL:
   - Adicionar secao `## Risco Residual Apos Mitigacao`.
 - PASSO 6 - PROVENANCE:

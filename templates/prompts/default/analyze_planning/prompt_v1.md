@@ -29,7 +29,7 @@ INPUT
 OUTPUT
 - Escrever somente `{{CARD_DIR}}/investigations/40_next_steps.md`.
 - Escrever `{{CARD_DIR}}/investigations/_warnings.md` somente se necessario.
-- Incluir hipoteses selecionadas H#, objetivo da iteracao, estrategia, plano atomico, criterios de aceite, riscos e mitigacao e rollback.
+- Incluir hipoteses selecionadas no formato `H[0-9]+`, objetivo da iteracao, estrategia, plano atomico, criterios de aceite, riscos e mitigacao e rollback.
 
 READ_SCOPE
 - Ler `{{CARD_DIR}}`.
@@ -49,18 +49,18 @@ RULES
 - PASSO 1 - ESTRUTURAR 40_next_steps.md:
   - Produzir `40_next_steps.md` com as secoes `# 40_next_steps`, `## Hipotese(s) Selecionada(s)`, `## Objetivo da Iteracao`, `## Estrategia`, `## Plano Atomico`, `## Criterios de Aceite`, `## Riscos e Mitigacao` e `## Rollback`.
 - PASSO 2 - SELECIONAR HIPOTESES:
-  - Em `Hipotese(s) Selecionada(s)`, listar explicitamente H# extraidas de `30_hypotheses.md`.
+  - Em `Hipotese(s) Selecionada(s)`, listar explicitamente identificadores `H[0-9]+` extraidos de `30_hypotheses.md`.
 - PASSO 3 - DEFINIR PLANO E ACEITE:
   - Garantir que cada passo do plano atomico seja deterministico, executavel e reversivel quando aplicavel.
   - Garantir que os criterios de aceite tenham comandos verificaveis, exit codes esperados, artefatos esperados e prefixos textuais quando aplicavel.
 - VALIDACOES FINAIS:
   - Confirmar secao `Hipotese(s) Selecionada(s)`.
-  - Confirmar pelo menos uma H# explicita.
+  - Confirmar pelo menos uma hipotese explicita no formato `H[0-9]+`.
   - Confirmar plano numerado.
   - Confirmar criterios verificaveis.
   - Validar `test -f "{{CARD_DIR}}/investigations/40_next_steps.md"`.
   - Confirmar escrita apenas na whitelist da fase.
-- Retornar lista de H# selecionadas, confirmacao de escrita unica e saida literal dos testes.
+- Retornar lista de hipoteses `H[0-9]+` selecionadas, confirmacao de escrita unica e saida literal dos testes.
 
 FORBIDDEN
 - Nao alterar codigo.
@@ -76,7 +76,7 @@ FAIL_CONDITIONS
 - Falhar se `{{CONFIG_SOURCE}}` nao existir.
 - Falhar se qualquer artefato obrigatorio estiver ausente.
 - Falhar se `40_next_steps.md` nao contiver secao `Hipotese(s) Selecionada(s)`.
-- Falhar se nao houver pelo menos uma H# explicita.
+- Falhar se nao houver pelo menos uma hipotese explicita no formato `H[0-9]+`.
 - Falhar se o plano nao estiver numerado.
 - Falhar em qualquer tentativa de leitura fora de `{{CARD_DIR}}` e TARGET_REPOS.
 - Falhar em qualquer tentativa de escrita fora da whitelist (`{{CARD_DIR}}/investigations/40_next_steps.md` e `{{CARD_DIR}}/investigations/_warnings.md`).

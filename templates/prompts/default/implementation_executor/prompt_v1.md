@@ -37,11 +37,12 @@ OUTPUT
 
 READ_SCOPE
 - Ler exclusivamente os artefatos do card e os TARGET_REPOS em modo necessario para os Steps do change plan.
-- Tratar `Planning v4`, H# selecionadas e allowlist como fonte de verdade.
+- Tratar `Planning v4`, hipoteses selecionadas no formato `H[0-9]+` e allowlist como fonte de verdade.
 
 WRITE_SCOPE
-- Escrever somente nos TARGET_REPOS autorizados por `00_scope.lock.md`.
-- Escrever somente nos artefatos do `CARD_DIR` previstos pelo plano.
+- Codigo: escrever somente nos TARGET_REPOS autorizados por `00_scope.lock.md`.
+- Artefatos: escrever somente em `CARD_DIR` para arquivos previstos pelo plano (`10_change_plan.md`).
+- A allowlist soberana governa apenas alteracoes de codigo nos TARGET_REPOS.
 
 RULES
 - Executar pre-check em fail-fast:
@@ -54,10 +55,10 @@ RULES
   - Tratar `Allowlist de Escrita` do scope lock como contrato soberano de implementacao real (arquivos de TARGET_REPOS), independente da whitelist de escrita da fase planning.
   - Validar que a allowlist de escrita esta fechada (sem glob aberto).
   - Validar que `10_change_plan.md` contem `Objetivo de Execucao`, `Hipotese(s) Selecionada(s)`, Steps numerados, justificativas referenciando `40_next_steps.md` e secao `Rollback`.
-  - Validar rastreabilidade minima: `40_next_steps.md` com H#, `10_change_plan.md` com H# selecionadas e referencia explicita a `40_next_steps.md`.
+  - Validar rastreabilidade minima: `40_next_steps.md` com hipoteses `H[0-9]+`, `10_change_plan.md` com hipoteses `H[0-9]+` selecionadas e referencia explicita a `40_next_steps.md`.
 - PASSO 2 - CONTEXTO E HIPOTESE DE EXECUCAO:
   - Resumir o objetivo do card em ate 3 linhas.
-  - Confirmar In Scope, allowlist e H# selecionadas.
+  - Confirmar In Scope, allowlist e hipoteses `H[0-9]+` selecionadas.
   - Registrar hipotese de execucao sem adicionar estrategia nova.
 - PASSO 3 - EXECUCAO EM MICRO-PASSOS:
   - Executar os Steps do `10_change_plan.md` em micro-passos, sem desvio.

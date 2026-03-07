@@ -52,21 +52,28 @@ RULES
   - Confirmar existencia dos artefatos obrigatorios; se qualquer um estiver ausente, bloquear.
   - Bloquear se `30_hypotheses.md` estiver ausente ou vazio.
   - Bloquear se `40_next_steps.md` estiver ausente ou vazio.
-  - Bloquear se `40_next_steps.md` nao contiver referencia explicita a H# ou nao indicar hipotese(s) selecionada(s).
+  - Bloquear se `40_next_steps.md` nao contiver referencia explicita a `H[0-9]+` ou nao indicar hipotese(s) selecionada(s).
   - Bloquear se houver inconsistencia entre hipoteses listadas e plano descrito.
 - PASSO 2 - GERAR 10_change_plan.md:
   - Incluir `# Change Plan - Card {{CARD}}`, `## Objetivo de Execucao`, `## Hipotese(s) Selecionada(s)`, `## Assuncoes Explicitas`, `## Steps`, `## Validacao Tecnica Obrigatoria` e `## Rollback`.
-  - Em cada Step numerado, incluir objetivo, tipo, arquivos envolvidos, justificativa referenciando `40_next_steps.md` e H#, e validacao tecnica obrigatoria.
+  - Em cada Step numerado, incluir objetivo, tipo, arquivos envolvidos, justificativa referenciando `40_next_steps.md` e hipoteses `H[0-9]+`, e validacao tecnica obrigatoria.
 - PASSO 3 - GERAR 00_scope.lock.md:
   - Incluir `# Scope Lock - Card {{CARD}}`, `## Base Obrigatoria`, `## Hipotese(s) Base`, `## Contexto`, `## In Scope`, `## Out of Scope`, `## Allowlist de Escrita` e `## Regra de Escrita`.
   - Preencher `## Allowlist de Escrita` com paths explicitos, fechados e sem glob dos arquivos reais em TARGET_REPOS autorizados para a implementacao.
   - Derivar a allowlist soberana exclusivamente de `40_next_steps.md` e dos `arquivos envolvidos` definidos no `10_change_plan.md`.
+  - A allowlist deve conter apenas o subconjunto minimo necessario de arquivos.
+  - Nenhum path pode ser incluido na allowlist se nao estiver listado em `arquivos envolvidos` no `10_change_plan.md`.
+  - Cada path da allowlist deve aparecer explicitamente em pelo menos um Step do `10_change_plan.md`.
+  - Paths devem ser absolutos ou resolvidos dentro de TARGET_REPOS.
+  - Nao permitir glob (`*`, `**`) na allowlist.
   - Nao incluir arquivos de `out/{{CARD}}/**` na allowlist soberana; estes artefatos pertencem apenas a fase planning.
 - VALIDACOES FINAIS:
   - Confirmar que `00_scope.lock.md` contem `Hipotese(s) Base`.
   - Confirmar que `10_change_plan.md` contem `Hipotese(s) Selecionada(s)`.
   - Confirmar que a allowlist e fechada sem glob.
-  - Confirmar que cada item da allowlist esta refletido nos `arquivos envolvidos` do `10_change_plan.md` e pertence a TARGET_REPOS.
+  - Confirmar que cada item da allowlist aparece em `arquivos envolvidos` do `10_change_plan.md`.
+  - Confirmar que nenhum arquivo listado em `arquivos envolvidos` do `10_change_plan.md` ficou fora da allowlist.
+  - Confirmar que todos os arquivos da allowlist pertencem a TARGET_REPOS.
   - Confirmar que rollback esta presente.
   - Validar `test -f "out/{{CARD}}/implementation/00_scope.lock.md"`.
   - Validar `test -f "out/{{CARD}}/implementation/10_change_plan.md"`.
@@ -83,7 +90,8 @@ FAIL_CONDITIONS
 - Falhar se `./scripts/eaw` nao existir em `{{RUNTIME_ROOT}}`.
 - Falhar se `{{CONFIG_SOURCE}}` nao existir.
 - Falhar se qualquer artefato obrigatorio estiver ausente.
-- Falhar se `40_next_steps.md` nao referenciar H#.
+- Falhar se `40_next_steps.md` nao referenciar hipoteses no formato `H[0-9]+`.
+- Falhar se qualquer verificacao de consistencia entre allowlist e `arquivos envolvidos` falhar.
 - Falhar em qualquer tentativa de leitura fora de `{{CARD_DIR}}`, `{{CARD_DIR}}/investigations` e `{{CARD_DIR}}/context`.
 - Falhar em qualquer tentativa de escrita fora de `out/{{CARD}}/implementation/00_scope.lock.md` e `out/{{CARD}}/implementation/10_change_plan.md`.
 - Falhar se `out/{{CARD}}/implementation/00_scope.lock.md` nao existir ao final.

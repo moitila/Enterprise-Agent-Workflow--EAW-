@@ -13,7 +13,7 @@ Este documento define o contrato estrutural obrigatorio da subfase Hypotheses de
 
 Seu proposito e:
 
-- Formalizar a geracao de `investigations/30_hypotheses.md` com coverage map, hipoteses H#, ranking e provenance
+- Formalizar a geracao de `investigations/30_hypotheses.md` com coverage map, hipoteses `H[0-9]+`, ranking e provenance
 - Garantir que a subfase trabalhe apenas sobre intake e findings ja concluidos
 - Preservar rastreabilidade entre criterios, riscos, testes deterministicos e hipoteses
 - Impedir que a subfase tome decisoes de implementacao
@@ -25,7 +25,7 @@ Seu proposito e:
 | Entrada obrigatoria | `investigations/00_intake.md` | Deve existir antes do inicio da subfase |
 | Entrada obrigatoria | `investigations/20_findings.md` | Deve existir antes do inicio da subfase |
 | Artefato runtime | `investigations/hypotheses_agent_prompt.md` | Prompt auxiliar emitido por `eaw analyze` |
-| Saida obrigatoria | `investigations/30_hypotheses.md` | Registra coverage map, hipoteses H#, ranking, risco residual e provenance |
+| Saida obrigatoria | `investigations/30_hypotheses.md` | Registra coverage map, hipoteses `H[0-9]+`, ranking, risco residual e provenance |
 
 ## 3. READ_SCOPE
 
@@ -43,9 +43,9 @@ Seu proposito e:
 - Executar o pre-check com `cd "$EAW_ROOT_DIR"`, `test -f ./scripts/eaw` e `test -f "$CONFIG_SOURCE"`.
 - Confirmar a existencia de `investigations/00_intake.md` e `investigations/20_findings.md`; se faltar qualquer um, abortar.
 - Criar a secao `## Coverage Map` listando os criterios identificados.
-- Recomenda-se produzir entre 5 e 10 hipoteses H#, mantendo aderencia ao prompt e ao comportamento observado do runtime.
-- Em cada H#, registrar tipo de risco, descricao objetiva, causa raiz provavel, criterio(s) coberto(s), impacto e sinais observaveis.
-- Para cada H#, definir comando ou cenario controlado e resultado esperado com exit code, prefixo textual, presenca ou ausencia de arquivo e comportamento verificavel.
+- Recomenda-se produzir entre 5 e 10 hipoteses no formato `H[0-9]+` (ex.: H1, H2, H3), mantendo aderencia ao prompt e ao comportamento observado do runtime.
+- Em cada hipotese `H[0-9]+`, registrar tipo de risco, descricao objetiva, causa raiz provavel, criterio(s) coberto(s), impacto e sinais observaveis.
+- Para cada hipotese `H[0-9]+`, definir comando ou cenario controlado e resultado esperado com exit code, prefixo textual, presenca ou ausencia de arquivo e comportamento verificavel.
 - Produzir ranking formal ordenado e secao `## Risco Residual Apos Mitigacao`.
 - Adicionar provenance com arquivos lidos, arquivos ignorados com motivo e limitacoes.
 - Confirmar explicitamente que nenhuma decisao de implementacao foi tomada.
