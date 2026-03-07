@@ -101,8 +101,7 @@ read_config_version() {
 check_config_version_validate() {
 	local warnings_ref="$1"
 	if [[ ! -f "$EAW_CONF" ]]; then
-		echo "WARNING: $EAW_CONF missing, assuming v1 defaults"
-		eval "$warnings_ref=\$(( $warnings_ref + 1 ))"
+		echo "INFO: $EAW_CONF missing; contrato opcional formal ativo (defaults v1)"
 		return 0
 	fi
 
