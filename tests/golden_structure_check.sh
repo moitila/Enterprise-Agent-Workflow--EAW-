@@ -4,6 +4,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 FIXTURES_DIR="$ROOT_DIR/tests/fixtures/golden_structure"
+TARGET_FIXTURE_DIR="$ROOT_DIR/tests/fixtures/golden_repo_target"
 
 capture_paths() {
   local workdir="$1"
@@ -30,19 +31,49 @@ assert_file_contains() {
   fi
 }
 
+assert_prompt_contract() {
+  local file="$1"
+  local required_sections=(
+    "ROLE"
+    "OBJECTIVE"
+    "INPUT"
+    "OUTPUT"
+    "READ_SCOPE"
+    "WRITE_SCOPE"
+    "FORBIDDEN"
+    "FAIL_CONDITIONS"
+  )
+  local section
+  for section in "${required_sections[@]}"; do
+    assert_file_contains "$file" "$section"
+  done
+}
+
 main() {
   cd "$ROOT_DIR"
 
-  local tmp_root workdir
+  local tmp_root workdir target_repo
   tmp_root="$(mktemp -d)"
   trap 'rm -rf "${tmp_root:-}"' EXIT
   workdir="$tmp_root/workdir"
+  target_repo="$tmp_root/target_repo"
+
+  mkdir -p "$target_repo"
+  cp -R "$TARGET_FIXTURE_DIR/." "$target_repo/"
+  (
+    cd "$target_repo"
+    git init -q
+    git config user.name "golden-test"
+    git config user.email "golden-test@example.com"
+    git add .
+    git commit -q -m "seed fixture"
+  )
 
   export EAW_WORKDIR="$workdir"
 
   ./scripts/eaw init --workdir "$workdir" --force >/dev/null
   cat >"$workdir/config/repos.conf" <<CFG
-local-main|$ROOT_DIR|target
+local-main|$target_repo|target
 CFG
 
   local card_feature="940101"
@@ -73,9 +104,9 @@ CFG
   capture_paths "$workdir" "$card_pipeline" "$actual_analyze"
   compare_fixture "$actual_analyze" "$FIXTURES_DIR/analyze.paths.txt"
 
-  assert_file_contains "$workdir/out/$card_pipeline/investigations/findings_agent_prompt.md" "=== EAW FINDINGS PROMPT"
-  assert_file_contains "$workdir/out/$card_pipeline/investigations/hypotheses_agent_prompt.md" "=== EAW HYPOTHESES PROMPT"
-  assert_file_contains "$workdir/out/$card_pipeline/investigations/planning_agent_prompt.md" "=== EAW PLANNING PROMPT"
+  assert_prompt_contract "$workdir/out/$card_pipeline/investigations/findings_agent_prompt.md"
+  assert_prompt_contract "$workdir/out/$card_pipeline/investigations/hypotheses_agent_prompt.md"
+  assert_prompt_contract "$workdir/out/$card_pipeline/investigations/planning_agent_prompt.md"
 
   if [[ ! -f "$workdir/out/$card_feature/context/local-main/git-commit.txt" ]]; then
     echo "ERROR: missing context signature file: $workdir/out/$card_feature/context/local-main/git-commit.txt" >&2
