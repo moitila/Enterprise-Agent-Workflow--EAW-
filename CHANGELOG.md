@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+- Formalized missing `config/eaw.conf` as an optional formal contract in diagnostics:
+  - `doctor` now reports `eaw.conf: OPTIONAL_FORMAL (...)` with no warning increment.
+  - `validate` now emits an `INFO` line for missing `eaw.conf` and keeps `warnings=0`.
+- Added smoke coverage for config contract scenarios:
+  - missing `eaw.conf`
+  - existing `eaw.conf` without `config_version`
+  - outdated `config_version`
+
 ## v0.6.0 — Internal Modularization & Structural Stabilization
 
 ### Highlights

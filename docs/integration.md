@@ -151,7 +151,7 @@ config_version=1
 ```
 
 Rules:
-- If `eaw.conf` is missing, EAW keeps working and `validate` warns that v1 defaults are assumed.
+- If `eaw.conf` is missing, EAW keeps working, `validate` emits an informational line, and warnings remain `0`.
 - If `eaw.conf` exists without `config_version`, `validate` prints an upgrade instruction.
 - If `config_version` is older than required, `validate` warns and suggests `init --upgrade`.
 
@@ -179,6 +179,7 @@ EAW_WORKDIR="$PWD/.eaw" ./scripts/eaw doctor
 - `validate` also checks existence and minimal heading integrity for intake templates (`intake_bug.md`, `intake_feature.md`, `intake_spike.md`) in `EAW_TEMPLATES_DIR`.
 - Exit code: `0` for success/warnings, `2` for validation errors.
 - `doctor` prints resolved directories, tool availability, and config status, ending with `STATUS: OK|WARN|ERROR` (always exits `0`).
+- With `eaw.conf` missing, `doctor` reports `eaw.conf: OPTIONAL_FORMAL (...)` and does not increment warnings.
 
 ## Upgrade instruction
 

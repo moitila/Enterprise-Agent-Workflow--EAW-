@@ -15,6 +15,7 @@ This strategy documents deterministic validation for the public EAW contract wit
 - `tests/smoke.sh`: validates card creation and required artifacts
 - `tests/run_phase_smoke.sh`: validates `run_phase` and `execution.log` line format
 - `tests/smoke_prompt_core.sh`: validates minimal prompt governance contract for smoke
+- `tests/smoke_config_contract.sh`: validates `eaw.conf` contract scenarios (missing file, missing `config_version`, outdated version)
 - `tests/golden_structure_check.sh`: validates deterministic output structure
 - `tests/scaffold_parity_smoke.sh`: validates normal vs workspace scaffold parity and asserts `intake/` exists empty
 

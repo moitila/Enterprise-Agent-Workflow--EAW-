@@ -98,10 +98,18 @@ read_config_version() {
 	return 1
 }
 
+eaw_conf_optional_formal_label() {
+	printf "OPTIONAL_FORMAL"
+}
+
+eaw_conf_optional_formal_contract_note() {
+	printf "contrato opcional formal ativo (defaults v1)"
+}
+
 check_config_version_validate() {
 	local warnings_ref="$1"
 	if [[ ! -f "$EAW_CONF" ]]; then
-		echo "INFO: $EAW_CONF missing; contrato opcional formal ativo (defaults v1)"
+		echo "INFO: $EAW_CONF missing; $(eaw_conf_optional_formal_contract_note)"
 		return 0
 	fi
 
