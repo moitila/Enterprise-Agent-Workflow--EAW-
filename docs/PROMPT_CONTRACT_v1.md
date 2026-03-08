@@ -37,7 +37,7 @@ OUT_DIR={{OUT_DIR}}
 CARD_DIR={{CARD_DIR}}
 INTAKE_DIR=out/<CARD>/intake/**
 PROVENANCE_FILE=investigations/_intake_provenance.md
-EXECUTION_COMMAND=eaw intake <CARD>
+EXECUTION_COMMAND=eaw intake {{CARD}}
 
 MODE:
 - When EAW_WORKDIR is empty -> outputs under OUT_DIR.

@@ -21,6 +21,7 @@ assert_no_repo_residue() {
 
 card_template_missing="4013A"
 card_round_invalid="4013B"
+card_workdir_invalid="4013C"
 
 # Scenario A: missing template
 isolated_root="$tmpdir/isolated_root"
@@ -36,7 +37,7 @@ scenario_a_rc=$?
 set -e
 
 [[ $scenario_a_rc -ne 0 ]] || fail "scenario A expected non-zero exit code"
-grep -Fq "template not found" <<<"$scenario_a_output" || fail "scenario A missing substring: template not found"
+grep -Fq "failed to resolve intake prompt via ACTIVE" <<<"$scenario_a_output" || fail "scenario A missing substring: failed to resolve intake prompt via ACTIVE"
 assert_no_repo_residue "$card_template_missing"
 
 # Scenario B: invalid --round argument
@@ -51,5 +52,19 @@ set -e
 [[ $scenario_b_rc -ne 0 ]] || fail "scenario B expected non-zero exit code"
 grep -Fq "usage: eaw intake <CARD> [--round=N]" <<<"$scenario_b_output" || fail "scenario B missing usage substring"
 assert_no_repo_residue "$card_round_invalid"
+
+# Scenario C: invalid EAW_WORKDIR/card workspace precondition
+invalid_workdir="$tmpdir/eaw-workdir-inexistente-$$"
+set +e
+scenario_c_output="$(EAW_WORKDIR="$invalid_workdir" ./scripts/eaw intake "$card_workdir_invalid" --round=1 2>&1)"
+scenario_c_rc=$?
+set -e
+
+[[ $scenario_c_rc -ne 0 ]] || fail "scenario C expected non-zero exit code"
+if ! grep -Fq "ERROR:" <<<"$scenario_c_output"; then
+	grep -Fq "EAW_WORKDIR is set but workspace config is incomplete." <<<"$scenario_c_output" || fail "scenario C missing runtime pre-check context"
+fi
+grep -Fq "./scripts/eaw init --workdir \"$invalid_workdir\"" <<<"$scenario_c_output" || fail "scenario C missing recommended action"
+assert_no_repo_residue "$card_workdir_invalid"
 
 printf "OK\n"

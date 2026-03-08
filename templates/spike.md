@@ -37,4 +37,4 @@ Implementation or follow-up experiments.
 - Screenshots:
 
 ## Attached Evidence
-(auto populated by `eaw ingest`)
+(optional)

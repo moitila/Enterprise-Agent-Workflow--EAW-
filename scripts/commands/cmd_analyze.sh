@@ -1,25 +1,14 @@
 #!/usr/bin/env bash
 
 cmd_analyze() {
-	local card="$1"
+	local card="${1:-}"
 	local out_root="$EAW_OUT_DIR"
-	local card_dir="$out_root/$card"
-	local header_rel="prompts/pt-br/headers/HEADER.txt"
-	local findings_rel="prompts/pt-br/analyze/Findings.txt"
-	local hypotheses_rel="prompts/pt-br/analyze/Hipoteses.txt"
-	local planning_rel="prompts/pt-br/analyze/Planing.txt"
-	local header_template="$EAW_TEMPLATES_DIR/$header_rel"
-	local findings_template="$EAW_TEMPLATES_DIR/$findings_rel"
-	local hypotheses_template="$EAW_TEMPLATES_DIR/$hypotheses_rel"
-	local planning_template="$EAW_TEMPLATES_DIR/$planning_rel"
-	local fallback_header="$EAW_ROOT_DIR/templates/$header_rel"
-	local fallback_findings="$EAW_ROOT_DIR/templates/$findings_rel"
-	local fallback_hypotheses="$EAW_ROOT_DIR/templates/$hypotheses_rel"
-	local fallback_planning="$EAW_ROOT_DIR/templates/$planning_rel"
-	local findings_prompt_file="$card_dir/investigations/findings_agent_prompt.md"
-	local hypotheses_prompt_file="$card_dir/investigations/hypotheses_agent_prompt.md"
-	local planning_prompt_file="$card_dir/investigations/planning_agent_prompt.md"
-	local intake_file="$card_dir/investigations/00_intake.md"
+	local card_dir
+	local findings_template hypotheses_template planning_template
+	local findings_prompt_file
+	local hypotheses_prompt_file
+	local planning_prompt_file
+	local intake_file
 	local type=""
 	local warnings=()
 	local repo_blocks target_repos excluded_repos warnings_block eaw_workdir_value
@@ -28,12 +17,9 @@ cmd_analyze() {
 		local phase_header="$1"
 		local body_template="$2"
 		local output_file="$3"
+		assert_write_scope "analyze" "write ${phase_header} prompt" "$output_file" "$out_root"
 
-		{
-			cat "$header_template"
-			printf '\n\n'
-			cat "$body_template"
-			} | awk \
+		cat "$body_template" | awk \
 				-v phase_header="$phase_header" \
 				-v card="$card" \
 				-v type="$type" \
@@ -74,6 +60,17 @@ cmd_analyze() {
 		echo "Wrote $output_file" >&2
 	}
 
+	if [[ "$card" == "--help" || "$card" == "-h" ]]; then
+		usage
+		return 0
+	fi
+
+	card_dir="$out_root/$card"
+	findings_prompt_file="$card_dir/investigations/findings_agent_prompt.md"
+	hypotheses_prompt_file="$card_dir/investigations/hypotheses_agent_prompt.md"
+	planning_prompt_file="$card_dir/investigations/planning_agent_prompt.md"
+	intake_file="$card_dir/investigations/00_intake.md"
+
 	detect_card_type_with_warnings "$card" "$card_dir" type warnings
 
 	if [[ ! -f "$intake_file" ]]; then
@@ -102,38 +99,22 @@ cmd_analyze() {
 		fi
 	fi
 
+	assert_write_scope "analyze" "ensure_dir card_dir" "$card_dir" "$out_root"
+	assert_write_scope "analyze" "ensure_dir investigations" "$card_dir/investigations" "$out_root"
+	assert_write_scope "analyze" "ensure_dir inputs" "$card_dir/inputs" "$out_root"
 	ensure_dir "$card_dir"
 	ensure_dir "$card_dir/investigations"
 	ensure_dir "$card_dir/inputs"
 	eaw_workdir_value="${EAW_WORKDIR:-}"
 
-	if [[ ! -f "$header_template" ]]; then
-		if [[ -f "$fallback_header" ]]; then
-			header_template="$fallback_header"
-		else
-			die "template not found: $header_template"
-		fi
+	if ! findings_template="$(load_prompt "default" "analyze_findings" "$card" "$out_root")"; then
+		die "failed to resolve analyze_findings prompt via ACTIVE"
 	fi
-	if [[ ! -f "$findings_template" ]]; then
-		if [[ -f "$fallback_findings" ]]; then
-			findings_template="$fallback_findings"
-		else
-			die "template not found: $findings_template"
-		fi
+	if ! hypotheses_template="$(load_prompt "default" "analyze_hypotheses" "$card" "$out_root")"; then
+		die "failed to resolve analyze_hypotheses prompt via ACTIVE"
 	fi
-	if [[ ! -f "$hypotheses_template" ]]; then
-		if [[ -f "$fallback_hypotheses" ]]; then
-			hypotheses_template="$fallback_hypotheses"
-		else
-			die "template not found: $hypotheses_template"
-		fi
-	fi
-	if [[ ! -f "$planning_template" ]]; then
-		if [[ -f "$fallback_planning" ]]; then
-			planning_template="$fallback_planning"
-		else
-			die "template not found: $planning_template"
-		fi
+	if ! planning_template="$(load_prompt "default" "analyze_planning" "$card" "$out_root")"; then
+		die "failed to resolve analyze_planning prompt via ACTIVE"
 	fi
 
 	repo_blocks="$(collect_repos_lists)"
@@ -162,6 +143,7 @@ cmd_analyze() {
 	# create TEST_PLAN placeholder in outdir
 	local test_plan="$card_dir/TEST_PLAN_${card}.md"
 	if [[ ! -f "$test_plan" ]]; then
+		assert_write_scope "analyze" "write test plan" "$test_plan" "$out_root"
 		cat >"$test_plan" <<TP
 # Test Plan for ${type}_${card}
 

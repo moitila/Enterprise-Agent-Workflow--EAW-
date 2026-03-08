@@ -4,6 +4,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 FIXTURES_DIR="$ROOT_DIR/tests/fixtures/golden_structure"
+TARGET_FIXTURE_DIR="$ROOT_DIR/tests/fixtures/golden_repo_target"
 
 capture_paths() {
   local workdir="$1"
@@ -30,19 +31,49 @@ assert_file_contains() {
   fi
 }
 
+assert_prompt_contract() {
+  local file="$1"
+  local required_sections=(
+    "ROLE"
+    "OBJECTIVE"
+    "INPUT"
+    "OUTPUT"
+    "READ_SCOPE"
+    "WRITE_SCOPE"
+    "FORBIDDEN"
+    "FAIL_CONDITIONS"
+  )
+  local section
+  for section in "${required_sections[@]}"; do
+    assert_file_contains "$file" "$section"
+  done
+}
+
 main() {
   cd "$ROOT_DIR"
 
-  local tmp_root workdir
+  local tmp_root workdir target_repo
   tmp_root="$(mktemp -d)"
   trap 'rm -rf "${tmp_root:-}"' EXIT
   workdir="$tmp_root/workdir"
+  target_repo="$tmp_root/target_repo"
+
+  mkdir -p "$target_repo"
+  cp -R "$TARGET_FIXTURE_DIR/." "$target_repo/"
+  (
+    cd "$target_repo"
+    git init -q
+    git config user.name "golden-test"
+    git config user.email "golden-test@example.com"
+    git add .
+    git commit -q -m "seed fixture"
+  )
 
   export EAW_WORKDIR="$workdir"
 
   ./scripts/eaw init --workdir "$workdir" --force >/dev/null
   cat >"$workdir/config/repos.conf" <<CFG
-local-main|$ROOT_DIR|target
+local-main|$target_repo|target
 CFG
 
   local card_feature="940101"
@@ -53,7 +84,6 @@ CFG
   local actual_feature="$tmp_root/feature.paths.txt"
   local actual_bug="$tmp_root/bug.paths.txt"
   local actual_spike="$tmp_root/spike.paths.txt"
-  local actual_ingest="$tmp_root/ingest.paths.txt"
   local actual_analyze="$tmp_root/analyze.paths.txt"
 
   ./scripts/eaw feature "$card_feature" "Golden feature" >/dev/null
@@ -69,26 +99,14 @@ CFG
   compare_fixture "$actual_spike" "$FIXTURES_DIR/spike.paths.txt"
 
   ./scripts/eaw feature "$card_pipeline" "Golden pipeline" >/dev/null
-  # Keep ingest deterministic despite the existing printf issue when the heading already exists.
-  sed -i 's/\r$//' "$workdir/out/$card_pipeline/feature_${card_pipeline}.md"
-  sed -i '/^## Attached Evidence$/d' "$workdir/out/$card_pipeline/feature_${card_pipeline}.md"
-  printf 'golden-evidence\n' >"$tmp_root/evidence.txt"
-  ./scripts/eaw ingest "$card_pipeline" "$tmp_root/evidence.txt" >/dev/null
-  capture_paths "$workdir" "$card_pipeline" "$actual_ingest"
-  compare_fixture "$actual_ingest" "$FIXTURES_DIR/ingest.paths.txt"
-
-  if [[ ! -f "$workdir/out/$card_pipeline/inputs/evidence.txt" ]]; then
-    echo "ERROR: missing ingest output file: $workdir/out/$card_pipeline/inputs/evidence.txt" >&2
-    return 1
-  fi
 
   ./scripts/eaw analyze "$card_pipeline" >/dev/null
   capture_paths "$workdir" "$card_pipeline" "$actual_analyze"
   compare_fixture "$actual_analyze" "$FIXTURES_DIR/analyze.paths.txt"
 
-  assert_file_contains "$workdir/out/$card_pipeline/investigations/findings_agent_prompt.md" "=== EAW FINDINGS PROMPT"
-  assert_file_contains "$workdir/out/$card_pipeline/investigations/hypotheses_agent_prompt.md" "=== EAW HYPOTHESES PROMPT"
-  assert_file_contains "$workdir/out/$card_pipeline/investigations/planning_agent_prompt.md" "=== EAW PLANNING PROMPT"
+  assert_prompt_contract "$workdir/out/$card_pipeline/investigations/findings_agent_prompt.md"
+  assert_prompt_contract "$workdir/out/$card_pipeline/investigations/hypotheses_agent_prompt.md"
+  assert_prompt_contract "$workdir/out/$card_pipeline/investigations/planning_agent_prompt.md"
 
   if [[ ! -f "$workdir/out/$card_feature/context/local-main/git-commit.txt" ]]; then
     echo "ERROR: missing context signature file: $workdir/out/$card_feature/context/local-main/git-commit.txt" >&2
