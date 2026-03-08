@@ -82,7 +82,7 @@ export EAW_WORKDIR="$PWD/.eaw"
 
 - `intake`: generates `intake_agent_prompt.round_<N>.md` in `<OUT_DIR>/<CARD>/investigations/`.
 - `analyze`: generates `findings_agent_prompt.md`, `hypotheses_agent_prompt.md`, and `planning_agent_prompt.md` in `<OUT_DIR>/<CARD>/investigations/`.
-- `implement`: creates implementation scaffolds and generates `implementation_planning_agent_prompt.md` and `implementation_executor_agent_prompt.md` in `<OUT_DIR>/<CARD>/implementation/`.
+- `implement`: creates implementation scaffolds in `<OUT_DIR>/<CARD>/implementation/` and generates canonical prompt artifacts (`implementation_planning_agent_prompt.md`, `implementation_executor_agent_prompt.md`) in `<OUT_DIR>/<CARD>/investigations/` with compatibility mirrors in `<OUT_DIR>/<CARD>/implementation/`.
 
 ## Prompt lifecycle commands
 

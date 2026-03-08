@@ -7,6 +7,8 @@ cmd_implement() {
 	local preserved=0
 	local planning_template executor_template
 	local planning_prompt executor_prompt
+	local planning_prompt_legacy executor_prompt_legacy
+	local investigations_dir
 	local repo_blocks target_repos excluded_repos
 	local eaw_workdir_value warnings_block
 	local type_warnings=()
@@ -77,13 +79,23 @@ cmd_implement() {
 	detect_card_type_with_warnings "$card" "$card_dir" type type_warnings
 
 	impl_dir="$card_dir/implementation"
+	investigations_dir="$card_dir/investigations"
 	assert_write_scope "implement" "ensure_dir implementation" "$impl_dir" "$EAW_OUT_DIR"
+	assert_write_scope "implement" "ensure_dir investigations" "$investigations_dir" "$EAW_OUT_DIR"
 	if [[ -d "$impl_dir" ]]; then
 		echo "PRESERVED: $impl_dir"
 		preserved=$((preserved + 1))
 	else
 		ensure_dir "$impl_dir"
 		echo "CREATED: $impl_dir"
+		created=$((created + 1))
+	fi
+	if [[ -d "$investigations_dir" ]]; then
+		echo "PRESERVED: $investigations_dir"
+		preserved=$((preserved + 1))
+	else
+		ensure_dir "$investigations_dir"
+		echo "CREATED: $investigations_dir"
 		created=$((created + 1))
 	fi
 
@@ -135,8 +147,10 @@ EOF
 		die "failed to resolve implementation_executor prompt via ACTIVE"
 	fi
 
-	planning_prompt="$impl_dir/implementation_planning_agent_prompt.md"
-	executor_prompt="$impl_dir/implementation_executor_agent_prompt.md"
+	planning_prompt="$investigations_dir/implementation_planning_agent_prompt.md"
+	executor_prompt="$investigations_dir/implementation_executor_agent_prompt.md"
+	planning_prompt_legacy="$impl_dir/implementation_planning_agent_prompt.md"
+	executor_prompt_legacy="$impl_dir/implementation_executor_agent_prompt.md"
 	repo_blocks="$(collect_repos_lists)"
 	target_repos="$(printf "%s\n" "$repo_blocks" | sed -n '1,/^$/p' | sed '/^$/d')"
 	excluded_repos="$(printf "%s\n" "$repo_blocks" | sed -n '/^$/,$p' | sed '1d;/^$/d')"
@@ -145,6 +159,12 @@ EOF
 
 	render_implement_prompt "IMPLEMENTATION PLANNING" "$planning_template" "$planning_prompt"
 	render_implement_prompt "IMPLEMENTATION EXECUTOR" "$executor_template" "$executor_prompt"
+	assert_write_scope "implement" "write compatibility prompt mirror" "$planning_prompt_legacy" "$EAW_OUT_DIR"
+	assert_write_scope "implement" "write compatibility prompt mirror" "$executor_prompt_legacy" "$EAW_OUT_DIR"
+	cp "$planning_prompt" "$planning_prompt_legacy"
+	cp "$executor_prompt" "$executor_prompt_legacy"
+	echo "Wrote $planning_prompt_legacy (compatibility mirror)"
+	echo "Wrote $executor_prompt_legacy (compatibility mirror)"
 
 	echo "SUMMARY: created=$created preserved=$preserved"
 }

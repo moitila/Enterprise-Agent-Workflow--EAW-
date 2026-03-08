@@ -140,15 +140,15 @@ test -f "$EAW_WORKDIR/out/500/investigations/intake_agent_prompt.round_1.md"
 test -f "$EAW_WORKDIR/out/500/investigations/findings_agent_prompt.md"
 test -f "$EAW_WORKDIR/out/500/investigations/hypotheses_agent_prompt.md"
 test -f "$EAW_WORKDIR/out/500/investigations/planning_agent_prompt.md"
-test -f "$EAW_WORKDIR/out/500/implementation/implementation_planning_agent_prompt.md"
-test -f "$EAW_WORKDIR/out/500/implementation/implementation_executor_agent_prompt.md"
+test -f "$EAW_WORKDIR/out/500/investigations/implementation_planning_agent_prompt.md"
+test -f "$EAW_WORKDIR/out/500/investigations/implementation_executor_agent_prompt.md"
 
 grep -F "ACTIVE_BINDING_OK default/intake v2" "$EAW_WORKDIR/out/500/investigations/intake_agent_prompt.round_1.md" >/dev/null
 grep -F "ACTIVE_BINDING_OK default/analyze_findings v2" "$EAW_WORKDIR/out/500/investigations/findings_agent_prompt.md" >/dev/null
 grep -F "ACTIVE_BINDING_OK default/analyze_hypotheses v2" "$EAW_WORKDIR/out/500/investigations/hypotheses_agent_prompt.md" >/dev/null
 grep -F "ACTIVE_BINDING_OK default/analyze_planning v2" "$EAW_WORKDIR/out/500/investigations/planning_agent_prompt.md" >/dev/null
-grep -F "ACTIVE_BINDING_OK default/implementation_planning v2" "$EAW_WORKDIR/out/500/implementation/implementation_planning_agent_prompt.md" >/dev/null
-grep -F "ACTIVE_BINDING_OK default/implementation_executor v2" "$EAW_WORKDIR/out/500/implementation/implementation_executor_agent_prompt.md" >/dev/null
+grep -F "ACTIVE_BINDING_OK default/implementation_planning v2" "$EAW_WORKDIR/out/500/investigations/implementation_planning_agent_prompt.md" >/dev/null
+grep -F "ACTIVE_BINDING_OK default/implementation_executor v2" "$EAW_WORKDIR/out/500/investigations/implementation_executor_agent_prompt.md" >/dev/null
 
 provenance_file="$EAW_WORKDIR/out/500/provenance/prompts_used.yaml"
 test -f "$provenance_file"
