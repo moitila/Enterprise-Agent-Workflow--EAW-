@@ -55,6 +55,8 @@ source "$SCRIPT_DIR/commands/cmd_validate.sh"
 # shellcheck disable=SC1091
 source "$SCRIPT_DIR/commands/cmd_doctor.sh"
 # shellcheck disable=SC1091
+source "$SCRIPT_DIR/commands/cmd_doctor_hardening.sh"
+# shellcheck disable=SC1091
 source "$SCRIPT_DIR/commands/cmd_implement.sh"
 # shellcheck disable=SC1091
 source "$SCRIPT_DIR/commands/cmd_analyze.sh"
@@ -198,6 +200,9 @@ main() {
 		;;
 	doctor)
 		cmd_doctor
+		;;
+	doctor-hardening)
+		cmd_doctor_hardening
 		;;
 	--help | -h)
 		usage

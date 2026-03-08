@@ -23,7 +23,7 @@ jobs:
       - name: Install tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y shellcheck shfmt
+          sudo apt-get install -y shellcheck shfmt ripgrep
 
       - name: Guard - no CRLF in scripts
         run: |
@@ -37,12 +37,12 @@ jobs:
       - name: Bash syntax check
         run: |
           set -euo pipefail
-          bash -n scripts/eaw scripts/lib.sh
+          bash -n scripts/eaw scripts/lib.sh scripts/commands/cmd_doctor_hardening.sh
 
       - name: Shellcheck
         run: |
           set -euo pipefail
-          shellcheck scripts/eaw scripts/lib.sh
+          shellcheck scripts/eaw scripts/lib.sh scripts/commands/cmd_doctor_hardening.sh
 
       - name: Run - run_phase smoke test
         run: |
@@ -93,3 +93,8 @@ jobs:
         run: |
           set -euo pipefail
           bash tests/scaffold_parity_smoke.sh
+
+      - name: Test - full suite
+        run: |
+          set -euo pipefail
+          bash tests/test.sh
