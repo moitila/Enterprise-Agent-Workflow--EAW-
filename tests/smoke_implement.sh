@@ -4,13 +4,19 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT"
 
-CARD="930005"
+fail() {
+	printf "smoke_implement failed: %s\n" "$1" >&2
+	exit 1
+}
+
+CARD="abc-501"
 tmpdir="$(mktemp -d)"
 trap 'rm -rf "$tmpdir"' EXIT
 
 export EAW_WORKDIR="$tmpdir/.eaw"
 CARD_DIR="$EAW_WORKDIR/out/$CARD"
 IMPL_DIR="$CARD_DIR/implementation"
+INVESTIGATIONS_DIR="$CARD_DIR/investigations"
 
 if [[ ! -f "./scripts/eaw" ]]; then
 	echo "ERROR: must run from repo root containing scripts/eaw" >&2
@@ -29,10 +35,12 @@ if [[ ! -d "$IMPL_DIR" ]]; then
 	exit 1
 fi
 
-for path in \
-	"$IMPL_DIR/00_scope.lock.md" \
-	"$IMPL_DIR/10_change_plan.md" \
-	"$IMPL_DIR/20_patch_notes.md"; do
+	for path in \
+		"$IMPL_DIR/00_scope.lock.md" \
+		"$IMPL_DIR/10_change_plan.md" \
+		"$IMPL_DIR/20_patch_notes.md" \
+		"$INVESTIGATIONS_DIR/implementation_planning_agent_prompt.md" \
+		"$INVESTIGATIONS_DIR/implementation_executor_agent_prompt.md"; do
 	if [[ ! -e "$path" ]]; then
 		echo "ERROR: missing implement artifact: $path" >&2
 		exit 1
@@ -45,8 +53,27 @@ for path in \
 		echo "ERROR: empty implement artifact: $path" >&2
 		exit 1
 	fi
-done
-echo "SMOKE: artifacts OK"
+	done
+	grep -Fq "ROLE" "$INVESTIGATIONS_DIR/implementation_planning_agent_prompt.md" || fail "missing planning prompt ROLE section"
+	grep -Fq "OBJECTIVE" "$INVESTIGATIONS_DIR/implementation_planning_agent_prompt.md" || fail "missing planning prompt OBJECTIVE section"
+	grep -Fq "ROLE" "$INVESTIGATIONS_DIR/implementation_executor_agent_prompt.md" || fail "missing executor prompt ROLE section"
+	grep -Fq "OBJECTIVE" "$INVESTIGATIONS_DIR/implementation_executor_agent_prompt.md" || fail "missing executor prompt OBJECTIVE section"
+
+	for mirror in \
+		"$IMPL_DIR/implementation_planning_agent_prompt.md" \
+		"$IMPL_DIR/implementation_executor_agent_prompt.md"; do
+	if [[ ! -f "$mirror" ]]; then
+		echo "ERROR: missing implement compatibility mirror: $mirror" >&2
+		exit 1
+	fi
+	if [[ ! -s "$mirror" ]]; then
+		echo "ERROR: empty implement compatibility mirror: $mirror" >&2
+		exit 1
+	fi
+	done
+	cmp -s "$INVESTIGATIONS_DIR/implementation_planning_agent_prompt.md" "$IMPL_DIR/implementation_planning_agent_prompt.md" || fail "planning mirror mismatch"
+	cmp -s "$INVESTIGATIONS_DIR/implementation_executor_agent_prompt.md" "$IMPL_DIR/implementation_executor_agent_prompt.md" || fail "executor mirror mismatch"
+	echo "SMOKE: artifacts OK"
 
 set +e
 bash ./scripts/eaw validate >/dev/null 2>&1

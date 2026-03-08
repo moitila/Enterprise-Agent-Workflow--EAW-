@@ -57,8 +57,7 @@ cmd_doctor() {
 			warnings=$((warnings + 1))
 		fi
 	else
-		echo "  eaw.conf: MISSING ($EAW_CONF)"
-		warnings=$((warnings + 1))
+		echo "  eaw.conf: $(eaw_conf_optional_formal_label) ($EAW_CONF missing; $(eaw_conf_optional_formal_contract_note))"
 	fi
 
 	if [[ "$errors" -gt 0 ]]; then

@@ -33,4 +33,4 @@ How to validate the fix and prevent regressions.
 - Screenshots:
 
 ## Attached Evidence
-(auto populated by `eaw ingest`)
+(optional)

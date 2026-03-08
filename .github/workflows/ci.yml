@@ -23,7 +23,7 @@ jobs:
       - name: Install tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y shellcheck shfmt
+          sudo apt-get install -y shellcheck shfmt ripgrep
 
       - name: Guard - no CRLF in scripts
         run: |
@@ -37,12 +37,12 @@ jobs:
       - name: Bash syntax check
         run: |
           set -euo pipefail
-          bash -n scripts/eaw scripts/lib.sh
+          bash -n scripts/eaw scripts/lib.sh scripts/commands/cmd_doctor_hardening.sh
 
       - name: Shellcheck
         run: |
           set -euo pipefail
-          shellcheck scripts/eaw scripts/lib.sh
+          shellcheck scripts/eaw scripts/lib.sh scripts/commands/cmd_doctor_hardening.sh
 
       - name: Run - run_phase smoke test
         run: |
@@ -67,7 +67,34 @@ jobs:
           chmod +x tests/smoke.sh
           ./tests/smoke.sh
 
+      - name: Smoke - prompt core test (with budget)
+        run: |
+          set -euo pipefail
+          start="$(date +%s)"
+          bash tests/smoke_prompt_core.sh
+          elapsed="$(( $(date +%s) - start ))"
+          echo "smoke_prompt_core duration=${elapsed}s"
+          if [[ "$elapsed" -gt 20 ]]; then
+            echo "Smoke budget exceeded: ${elapsed}s > 20s"
+            exit 1
+          fi
+
+      - name: Integration - prompt lifecycle test
+        run: |
+          set -euo pipefail
+          bash tests/integration/integration_prompt_lifecycle.sh
+
+      - name: Smoke - implement test
+        run: |
+          set -euo pipefail
+          bash tests/smoke_implement.sh
+
       - name: Smoke - scaffold parity test
         run: |
           set -euo pipefail
           bash tests/scaffold_parity_smoke.sh
+
+      - name: Test - full suite
+        run: |
+          set -euo pipefail
+          bash tests/test.sh

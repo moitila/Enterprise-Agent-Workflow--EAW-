@@ -1,0 +1,26 @@
+registry_version: 1
+default:
+  analyze_findings:
+    active: v1
+    file: prompt_v1.md
+    content_sha256: e33738f4e5c9cd0bc100c2db8aebe6f0ffb93d5fb28bcfadcb0b1ab57035b58c
+  analyze_hypotheses:
+    active: v1
+    file: prompt_v1.md
+    content_sha256: 1b8e466ae3356ad3e9bdd360724dd5f29e23a6c4b1188ddd51676b1e23eae4a3
+  analyze_planning:
+    active: v1
+    file: prompt_v1.md
+    content_sha256: a34e5299f6f08c0624fb5d78630e936a828e76ee7bc52bf7fb541cef4bfb3500
+  implementation_executor:
+    active: v1
+    file: prompt_v1.md
+    content_sha256: 6609e0a842dd39858fe485fff87bffb2eb34435ee017cb3d952b74887b4cbdc1
+  implementation_planning:
+    active: v1
+    file: prompt_v1.md
+    content_sha256: 833e4495af152849e93885120af0536e4f6d77ff93ce5f639bd119151efed847
+  intake:
+    active: v1
+    file: prompt_v1.md
+    content_sha256: 38e9d07eacdbc115f6c8c559232820cf42f7a544ce6c01f46dfb3ace3a8cf701
