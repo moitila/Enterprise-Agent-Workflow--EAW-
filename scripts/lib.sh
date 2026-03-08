@@ -38,7 +38,7 @@ resolve_workdirs() {
 
 # Resolve repository path: support absolute (/), home (~), or relative to EAW root
 # Usage: resolve_repo_path "<path>"
-# Output: canonical absolute path
+# Output: absolute resolved path (non-canonical)
 resolve_repo_path() {
 	local path="$1"
 	if [[ -z "$path" ]]; then
