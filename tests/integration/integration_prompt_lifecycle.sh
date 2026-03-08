@@ -115,6 +115,7 @@ phases=(
 for phase in "${phases[@]}"; do
 	phase_dir="$EAW_WORKDIR/templates/prompts/default/$phase"
 	cp "$phase_dir/prompt_v1.md" "$phase_dir/prompt_v2.md"
+	cp "$phase_dir/prompt_v1.meta" "$phase_dir/prompt_v2.meta"
 	printf "\nACTIVE_BINDING_OK default/%s v2\n" "$phase" >>"$phase_dir/prompt_v2.md"
 	printf "v2\n" >"$phase_dir/ACTIVE"
 done
