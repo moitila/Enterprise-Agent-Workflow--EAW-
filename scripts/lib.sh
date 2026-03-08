@@ -93,7 +93,10 @@ canonicalize_scope_path() {
 		printf '/\n'
 		return 0
 	fi
-	printf '/%s\n' "$(IFS=/; echo "${stack[*]}")"
+	printf '/%s\n' "$(
+		IFS=/
+		echo "${stack[*]}"
+	)"
 }
 
 assert_write_scope() {
