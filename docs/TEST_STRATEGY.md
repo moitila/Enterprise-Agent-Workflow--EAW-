@@ -23,6 +23,12 @@ This strategy documents deterministic validation for the public EAW contract wit
 - `tests/integration/integration_prompt_lifecycle.sh`: validates full prompt lifecycle (`propose/suggest/validate/apply`) and provenance/binding
 - `tests/integration/integration_suite.sh`: orchestrates integration entrypoints
 
+4. Category split (deterministic wrappers)
+- `tests/smoke/`: baseline smoke checks.
+- `tests/integration/`: integration entrypoints and orchestration.
+- `tests/lifecycle/`: lifecycle-focused deterministic assertions.
+- `tests/golden/`: structure and golden output assertions.
+
 ## Minimal Deterministic Examples
 
 Example A (end-to-end smoke):

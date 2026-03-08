@@ -50,6 +50,16 @@ Behavior:
 - Generates implementation prompt artifacts in `out/<CARD>/investigations/implementation_planning_agent_prompt.md` and `out/<CARD>/investigations/implementation_executor_agent_prompt.md`.
 - Maintains compatibility mirrors in `out/<CARD>/implementation/implementation_planning_agent_prompt.md` and `out/<CARD>/implementation/implementation_executor_agent_prompt.md`.
 
+### `eaw doctor-hardening`
+
+Syntax:
+`eaw doctor-hardening`
+
+Behavior:
+- Runs advanced hardening diagnostics (prompt ACTIVE binding, validate status, canonical smoke entrypoints, tool checks).
+- Reports risk and summary (`critical_failures`, `warnings`) for operational troubleshooting.
+- Does not modify source code repositories.
+
 Outputs
 -------
 - Primary output directory: `out/<CARD>/`
@@ -97,7 +107,14 @@ Operational rules / invariants
 - Error handling:
   - Fatal errors must exit non-zero and include contextual message (file:function:line:command).
   - Best-effort collections (git/status, rg/grep) are tolerated; failures are recorded in `_warnings.txt` but do not fail the run.
+  - Write scope is enforced per phase; when violated, runtime emits `WRITE_SCOPE_VIOLATION: phase=<...> command=<...> blocked_path=<...>` and returns exit code `97`.
+  - Prompt binding is resolved through `templates/prompts/<track>/<phase>/ACTIVE`; missing file, empty value, invalid version, or missing `prompt_vN.meta` are fatal validation scenarios for prompt resolution.
 - Side effects limited to `out/<CARD>/` and temporary resources; no global state is mutated beyond `config/` during runtime.
+
+Prompt provenance
+-----------------
+- Runtime records resolved prompt bindings in `out/<CARD>/provenance/prompts_used.yaml`.
+- This provenance file is part of deterministic observability for prompt lifecycle execution.
 
 Tolerances & Observability
 --------------------------
