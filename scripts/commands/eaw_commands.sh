@@ -11,6 +11,7 @@ Example:
   eaw intake <CARD> [--round=N]
   eaw analyze <CARD>
   eaw implement <CARD>
+  eaw tracks
   eaw next <CARD>
   eaw suggest-prompt <CARD> --track <TRACK> --phase <PHASE>
   eaw prompt validate
@@ -325,6 +326,41 @@ eaw_official_track_dir() {
 		return 1
 	fi
 	printf "%s\n" "$track_dir"
+}
+
+cmd_tracks() {
+	local tracks_dir="$EAW_ROOT_DIR/tracks"
+	local track_dir track_file track_id track_dir_name
+	local -a track_ids=()
+	local -a phase_candidates=()
+
+	if [[ ! -d "$tracks_dir" ]]; then
+		die "tracks directory not found: $tracks_dir"
+	fi
+
+	shopt -s nullglob
+	for track_dir in "$tracks_dir"/*; do
+		[[ -d "$track_dir" ]] || continue
+		track_dir_name="${track_dir##*/}"
+		track_file="$track_dir/track.yaml"
+		[[ -f "$track_file" ]] || continue
+
+		phase_candidates=("$track_dir"/phases/*.yaml)
+		[[ ${#phase_candidates[@]} -gt 0 ]] || continue
+
+		track_id="$(eaw_yaml_track_scalar "$track_file" "id")"
+		[[ -n "$track_id" ]] || continue
+		[[ "$track_id" == "$track_dir_name" ]] || continue
+
+		track_ids+=("$track_id")
+	done
+	shopt -u nullglob
+
+	if [[ ${#track_ids[@]} -eq 0 ]]; then
+		return 0
+	fi
+
+	printf '%s\n' "${track_ids[@]}" | LC_ALL=C sort -u
 }
 
 eaw_load_card_workflow_context() {

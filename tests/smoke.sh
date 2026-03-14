@@ -127,5 +127,6 @@ bash "$REPO_ROOT/tests/smoke_analyze_negative.sh"
 bash "$REPO_ROOT/tests/smoke_implement_negative.sh"
 bash "$REPO_ROOT/tests/smoke_prompt_core.sh"
 bash "$REPO_ROOT/tests/smoke_config_contract.sh"
+bash "$REPO_ROOT/tests/smoke_tracks.sh"
 
 printf "Smoke OK: artifacts present in %s\n" "$OUTDIR"
