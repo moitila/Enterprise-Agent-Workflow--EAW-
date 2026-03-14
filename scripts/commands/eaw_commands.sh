@@ -5,9 +5,7 @@ usage() {
 Usage: eaw init [--workdir <path>] [--force] [--upgrade]
 Example:
   eaw init --workdir ./.eaw --upgrade
-  eaw feature <CARD> "<TITLE>"
-  eaw spike  <CARD> "<TITLE>"
-  eaw bug    <CARD> "<TITLE>"
+  eaw card <CARD> --track <TRACK> ["<TITLE>"]
   eaw intake <CARD> [--round=N]
   eaw analyze <CARD>
   eaw implement <CARD>
@@ -779,6 +777,72 @@ eaw_render_state_yaml() {
 	' "$state_file"
 }
 
+eaw_card_template_type_for_track() {
+	local track_id="${1:-}"
+	case "$track_id" in
+	standard | feature)
+		printf "feature\n"
+		;;
+	bug | spike)
+		printf "%s\n" "$track_id"
+		;;
+	*)
+		return 1
+		;;
+	esac
+}
+
+cmd_card_cli() {
+	local card="${1:-}"
+	shift || true
+
+	if [[ -z "$card" ]]; then
+		die "usage: eaw card <CARD> --track <TRACK> [\"<TITLE>\"]"
+	fi
+
+	local track=""
+	local title=""
+	while [[ $# -gt 0 ]]; do
+		case "$1" in
+		--track)
+			shift || true
+			if [[ $# -eq 0 || -z "${1:-}" ]]; then
+				die "usage: eaw card <CARD> --track <TRACK> [\"<TITLE>\"]"
+			fi
+			track="$1"
+			;;
+		--track=*)
+			track="${1#--track=}"
+			;;
+		-h | --help)
+			echo "usage: eaw card <CARD> --track <TRACK> [\"<TITLE>\"]"
+			return 0
+			;;
+		*)
+			if [[ -n "$title" ]]; then
+				die "usage: eaw card <CARD> --track <TRACK> [\"<TITLE>\"]"
+			fi
+			title="$1"
+			;;
+		esac
+		shift || true
+	done
+
+	if [[ -z "$track" ]]; then
+		die "missing required argument: --track"
+	fi
+	if ! eaw_official_track_dir "$track" >/dev/null; then
+		die "track '$track' is invalid or not installed"
+	fi
+
+	local template_type
+	if ! template_type="$(eaw_card_template_type_for_track "$track")"; then
+		die "track '$track' is unsupported for card creation"
+	fi
+
+	cmd_card "$template_type" "$card" "$title" "$track"
+}
+
 eaw_write_next_state() {
 	local state_file="$1"
 	local previous_phase="$2"
@@ -835,6 +899,7 @@ cmd_card() {
 	local type="$1"
 	local card="$2"
 	local title="$3"
+	local track_id="${4:-${type,,}}"
 	local outdir="$EAW_OUT_DIR/$card"
 	# expose OUTDIR for run_phase and others
 	OUTDIR="$outdir"
@@ -843,7 +908,7 @@ cmd_card() {
 	# Preserve the lifecycle engine, but load declarative workflow context before
 	# proceeding with the remaining phases so the runtime can validate state and
 	# resolve the next track phase deterministically.
-	run_phase "init_runtime" true phase_init_runtime "$type" "$card" "$title" "$outdir" || return 1
+	run_phase "init_runtime" true phase_init_runtime "$type" "$card" "$title" "$outdir" "$track_id" || return 1
 	run_phase "load_workflow_context" true phase_load_workflow_context "$card" || return 1
 	run_phase "resolve_workflow_transition" true phase_resolve_workflow_transition "$card" || return 1
 	run_phase "load_config" false phase_load_config "$outdir"

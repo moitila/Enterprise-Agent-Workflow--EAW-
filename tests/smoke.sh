@@ -4,7 +4,7 @@ set -euo pipefail
 # Minimal smoke harness for Card Execution Engine (EAW)
 # - Creates a temporary git repo
 # - Writes a repos.conf pointing to it
-# - Runs `eaw feature` for a dummy card
+# - Runs `eaw card --track standard` for a dummy card
 # - Validates expected output artifacts
 # - Cleans up
 
@@ -14,6 +14,8 @@ export TZ=UTC
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT"
+unset EAW_WORKDIR
+unset EAW_OUT_DIR
 
 for conf in "$REPO_ROOT"/config/search.conf "$REPO_ROOT"/config/search.example.conf; do
 	[[ -f "$conf" ]] || continue
@@ -67,7 +69,7 @@ printf "%s|%s\n" "smoke-test" "$REPO_DIR" >"$REPOS_CONF"
 
 # run eaw to create a card
 CARD_ID="SMOKE_CARD_1"
-./scripts/eaw feature "$CARD_ID" "Smoke test"
+./scripts/eaw card "$CARD_ID" --track standard "Smoke test"
 
 OUTDIR="$REPO_ROOT/out/$CARD_ID"
 if [[ ! -d "$OUTDIR" ]]; then
@@ -128,5 +130,6 @@ bash "$REPO_ROOT/tests/smoke_implement_negative.sh"
 bash "$REPO_ROOT/tests/smoke_prompt_core.sh"
 bash "$REPO_ROOT/tests/smoke_config_contract.sh"
 bash "$REPO_ROOT/tests/smoke_tracks.sh"
+bash "$REPO_ROOT/tests/smoke_card_command.sh"
 
 printf "Smoke OK: artifacts present in %s\n" "$OUTDIR"

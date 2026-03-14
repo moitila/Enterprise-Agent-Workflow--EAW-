@@ -40,14 +40,14 @@ main() {
 	}
 	trap cleanup EXIT
 
-	EAW_WORKDIR="" EAW_OUT_DIR="$normal_out" ./scripts/eaw bug "$CARD_ID" "scaffold test normal" >/dev/null
+	EAW_WORKDIR="" EAW_OUT_DIR="$normal_out" ./scripts/eaw card "$CARD_ID" --track bug "scaffold test normal" >/dev/null
 	assert_intake_empty "$normal_card/intake"
 
 	./scripts/eaw init --workdir "$ws" --upgrade >/dev/null
 	cat >"$ws/config/repos.conf" <<EOF
 local-main|$REPO_ROOT|target
 EOF
-	EAW_WORKDIR="$ws" ./scripts/eaw bug "$CARD_ID" "scaffold test workspace" >/dev/null
+	EAW_WORKDIR="$ws" ./scripts/eaw card "$CARD_ID" --track bug "scaffold test workspace" >/dev/null
 	assert_intake_empty "$ws_card/intake"
 
 	local normal_paths ws_paths normal_norm ws_norm

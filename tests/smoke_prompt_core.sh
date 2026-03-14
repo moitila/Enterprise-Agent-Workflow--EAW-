@@ -36,7 +36,7 @@ trap cleanup EXIT
 "$REPO_ROOT/scripts/eaw" validate >/dev/null
 "$REPO_ROOT/scripts/eaw" prompt validate >/dev/null
 
-"$REPO_ROOT/scripts/eaw" feature 500 "Prompt core smoke" >/dev/null
+"$REPO_ROOT/scripts/eaw" card 500 --track standard "Prompt core smoke" >/dev/null
 "$REPO_ROOT/scripts/eaw" intake 500 --round=1 >/dev/null
 
 test -f "$EAW_WORKDIR/out/500/investigations/intake_agent_prompt.round_1.md"

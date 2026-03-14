@@ -16,7 +16,7 @@ export EAW_WORKDIR="$tmpdir/.eaw"
 CARD="4012"
 
 ./scripts/eaw init --workdir "$EAW_WORKDIR" --upgrade
-./scripts/eaw feature "$CARD" "intake smoke"
+./scripts/eaw card "$CARD" --track standard "intake smoke"
 ./scripts/eaw intake "$CARD" >/dev/null
 ./scripts/eaw intake "$CARD" --round=2 >/dev/null
 

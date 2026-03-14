@@ -86,19 +86,19 @@ CFG
   local actual_spike="$tmp_root/spike.paths.txt"
   local actual_analyze="$tmp_root/analyze.paths.txt"
 
-  ./scripts/eaw feature "$card_feature" "Golden feature" >/dev/null
+  ./scripts/eaw card "$card_feature" --track feature "Golden feature" >/dev/null
   capture_paths "$workdir" "$card_feature" "$actual_feature"
   compare_fixture "$actual_feature" "$FIXTURES_DIR/feature.paths.txt"
 
-  ./scripts/eaw bug "$card_bug" "Golden bug" >/dev/null
+  ./scripts/eaw card "$card_bug" --track bug "Golden bug" >/dev/null
   capture_paths "$workdir" "$card_bug" "$actual_bug"
   compare_fixture "$actual_bug" "$FIXTURES_DIR/bug.paths.txt"
 
-  ./scripts/eaw spike "$card_spike" "Golden spike" >/dev/null
+  ./scripts/eaw card "$card_spike" --track spike "Golden spike" >/dev/null
   capture_paths "$workdir" "$card_spike" "$actual_spike"
   compare_fixture "$actual_spike" "$FIXTURES_DIR/spike.paths.txt"
 
-  ./scripts/eaw feature "$card_pipeline" "Golden pipeline" >/dev/null
+  ./scripts/eaw card "$card_pipeline" --track feature "Golden pipeline" >/dev/null
 
   ./scripts/eaw analyze "$card_pipeline" >/dev/null
   capture_paths "$workdir" "$card_pipeline" "$actual_analyze"

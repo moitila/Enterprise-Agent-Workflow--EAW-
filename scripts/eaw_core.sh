@@ -5,9 +5,7 @@ usage() {
 Usage: eaw init [--workdir <path>] [--force] [--upgrade]
 Example:
   eaw init --workdir ./.eaw --upgrade
-  eaw feature <CARD> "<TITLE>"
-  eaw spike  <CARD> "<TITLE>"
-  eaw bug    <CARD> "<TITLE>"
+  eaw card <CARD> --track <TRACK> ["<TITLE>"]
   eaw intake <CARD> [--round=N]
   eaw analyze <CARD>
   eaw implement <CARD>
@@ -693,8 +691,8 @@ run_phase() {
 }
 
 phase_init_runtime() {
-	# $1 = type, $2 = card, $3 = title, $4 = outdir
-	local type="$1" card="$2" title="$3" outdir="$4"
+	# $1 = template type, $2 = card, $3 = title, $4 = outdir, $5 = track_id(optional)
+	local type="$1" card="$2" title="$3" outdir="$4" track_id_override="${5:-}"
 	# deterministic runtime for phases
 	export LC_ALL=C
 	export TZ=UTC
@@ -717,16 +715,9 @@ phase_init_runtime() {
 	ensure_dir "$intake_runtime_dir"
 	ensure_dir "$intake_dir"
 	if ! compgen -G "$intake_runtime_dir/state_card_*.yaml" >/dev/null; then
-		local track_id="${type,,}"
+		local track_id="${track_id_override:-${type,,}}"
 		local state_file current_phase track_file
-		case "$track_id" in
-		feature | bug | spike)
-			;;
-		*)
-			track_id="standard"
-			;;
-		esac
-		if [[ ! -d "$EAW_ROOT_DIR/tracks/$track_id" ]]; then
+		if [[ -z "$track_id" || ! -d "$EAW_ROOT_DIR/tracks/$track_id" ]]; then
 			track_id="standard"
 		fi
 		track_file="$EAW_ROOT_DIR/tracks/$track_id/track.yaml"

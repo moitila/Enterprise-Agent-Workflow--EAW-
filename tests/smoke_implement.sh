@@ -26,7 +26,7 @@ fi
 echo "SMOKE: card=$CARD"
 
 bash ./scripts/eaw init --workdir "$EAW_WORKDIR" --upgrade >/dev/null 2>&1
-bash ./scripts/eaw feature "$CARD" "smoke implement" >/dev/null 2>&1
+bash ./scripts/eaw card "$CARD" --track standard "smoke implement" >/dev/null 2>&1
 bash ./scripts/eaw implement "$CARD" >/dev/null 2>&1
 echo "SMOKE: implement OK"
 
