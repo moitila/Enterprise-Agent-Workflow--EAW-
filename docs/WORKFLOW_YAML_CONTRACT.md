@@ -53,7 +53,7 @@ out/<CARD>/intake/phase_*.yaml
 out/<CARD>/intake/state_card_*.yaml
 ```
 
-The current runtime in `scripts/commands/eaw_commands.sh` resolves the official repository tree first and keeps the compatibility model above as a fallback for per-card workflow artifacts. Cards created by `eaw feature`, `eaw bug`, and `eaw spike` initialize `state_card_*.yaml` with `track_id` matching the command type when the corresponding official track is installed. This document uses `track.yaml`, `phase.yaml`, and `card_state.yaml` as logical names, while explicitly preserving the current runtime-compatible file naming used today.
+The current runtime in `scripts/commands/eaw_commands.sh` resolves the official repository tree first and keeps the compatibility model above as a fallback for per-card workflow artifacts. Cards are created through `eaw card <CARD> --track <TRACK> ["<TITLE>"]`, which initializes `state_card_*.yaml` with the selected `track_id` when the corresponding official track is installed. This document uses `track.yaml`, `phase.yaml`, and `card_state.yaml` as logical names, while explicitly preserving the current runtime-compatible file naming used today.
 
 Track Contract
 --------------
@@ -225,6 +225,8 @@ Creating a New Track Without Reading Code
    - `track_<name>.yaml`
    - `phase_<phase>.yaml`
    - `state_card_<name>.yaml`
+
+For example, `eaw card 123 --track standard` creates a card whose primary classification is `card_state.track_id: standard`, and `eaw card 124 --track bug "Fix race condition"` does the same for the `bug` track.
 
 Compatibility Notes
 -------------------

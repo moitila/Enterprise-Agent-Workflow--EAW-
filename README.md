@@ -1,6 +1,6 @@
 # Enterprise Agent Workflow (EAW)
 
-EAW is a lightweight, deterministic workflow for generating engineering dossiers for features, spikes, and bugs. It focuses on context engineering, deterministic outputs, and risk-aware decision making.
+EAW is a lightweight, deterministic workflow for generating engineering dossiers across official workflow tracks such as `standard`, `bug`, `spike`, and `feature`. It focuses on context engineering, deterministic outputs, and risk-aware decision making.
 
 ## What is EAW
 
@@ -24,14 +24,15 @@ chmod +x scripts/eaw scripts/lib.sh
 ```bash
 # from repo root
 ./scripts/eaw init
-./scripts/eaw feature 12345 "Short title"
-./scripts/eaw spike 23456 "Research question"
-./scripts/eaw bug 99999 "Short bug title"
-./scripts/eaw intake 12345
-./scripts/eaw analyze 12345
+./scripts/eaw card 123 --track standard
+./scripts/eaw card 124 --track bug "Fix race condition"
+./scripts/eaw intake 123
+./scripts/eaw analyze 123
 ./scripts/eaw smoke
 ./scripts/eaw test
 ```
+
+`track` is the primary workflow classification for a card. The runtime stores the selected value in `card_state.track_id` and resolves the official workflow from `tracks/<track>/track.yaml`.
 
 ## Test Scopes
 
@@ -47,7 +48,7 @@ If you are on Windows and using PowerShell, run via `bash`:
 
 ```powershell
 bash ./scripts/eaw init
-bash ./scripts/eaw bug 999999 "Smoke test"
+bash ./scripts/eaw card 999999 --track bug "Smoke test"
 ```
 
 ## Output structure
@@ -102,7 +103,7 @@ Released versions and historical changes are tracked in `CHANGELOG.md`.
 
 ## PT-BR
 
-EAW é um fluxo de trabalho leve para gerar dossiês determinísticos (features, spikes, bugs). Use `./scripts/eaw init`, depois `./scripts/eaw feature|spike|bug`, `./scripts/eaw intake <CARD>`, `./scripts/eaw analyze <CARD>`, `./scripts/eaw smoke` e `./scripts/eaw test`.
+EAW é um fluxo de trabalho leve para gerar dossiês determinísticos por track. Use `./scripts/eaw init`, depois `./scripts/eaw card <CARD> --track <TRACK> ["<TITLE>"]`, `./scripts/eaw intake <CARD>`, `./scripts/eaw analyze <CARD>`, `./scripts/eaw implement <CARD>`, `./scripts/eaw smoke` e `./scripts/eaw test`. O valor escolhido em `--track` torna-se `card_state.track_id` e o workflow oficial é resolvido por `tracks/<track>/track.yaml`.
 
 ## Commit Governance (ECS)
 
@@ -156,7 +157,7 @@ EAW Mode D provides a deterministic path to integrate an external AI/assistant i
 
 Workflow (example):
 
-1. Create a card: `./scripts/eaw feature 12345 "Short title"`
+1. Create a card: `./scripts/eaw card 12345 --track feature "Short title"`
 2. Fill the dossier following the template sections.
 3. Populate `out/12345/intake/` with evidence files (logs, screenshots, traces).
 

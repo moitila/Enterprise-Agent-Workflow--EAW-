@@ -154,9 +154,9 @@ repos.conf entry:
 ```
 myrepo|~/projects/foo
 ```
-Invocation (unchanged):
+Invocation (current public CLI):
 ```
-eaw feature CARD123 "Implement X"
+eaw card CARD123 --track feature "Implement X"
 ```
 Expected artifact:
 ```
