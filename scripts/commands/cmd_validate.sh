@@ -4,7 +4,7 @@ cmd_validate() {
 	local errors=0
 	local warnings=0
 	local line lineno normalized key path role resolved_path card_dir impl_dir impl_name impl_path
-	local prompt_phase
+	local prompt_phase workflow_summary
 
 	echo "EAW validate"
 	echo "Resolved dirs:"
@@ -73,6 +73,23 @@ cmd_validate() {
 		implementation_executor; do
 		if ! prompt_resolve_active_metadata "default" "$prompt_phase" >/dev/null; then
 			errors=$((errors + 1))
+		fi
+	done
+
+	for card_dir in "$EAW_OUT_DIR"/*; do
+		[[ -d "$card_dir" ]] || continue
+		if ! eaw_card_has_workflow_config "$card_dir"; then
+			continue
+		fi
+		if ! eaw_load_card_workflow_context "$card_dir"; then
+			errors=$((errors + 1))
+			continue
+		fi
+		workflow_summary="SUMMARY: workflow card=$(basename "$card_dir") track=$EAW_CARD_WORKFLOW_TRACK_ID current_phase=$EAW_CARD_WORKFLOW_CURRENT_PHASE prompt_phase=$EAW_CARD_WORKFLOW_CURRENT_PROMPT_PHASE"
+		if [[ "$EAW_CARD_WORKFLOW_CURRENT_PHASE" == "$EAW_CARD_WORKFLOW_FINAL_PHASE" ]]; then
+			echo "$workflow_summary next_phase=<none> final_phase=$EAW_CARD_WORKFLOW_FINAL_PHASE"
+		else
+			echo "$workflow_summary next_phase=$EAW_CARD_WORKFLOW_NEXT_PHASE final_phase=$EAW_CARD_WORKFLOW_FINAL_PHASE"
 		fi
 	done
 
