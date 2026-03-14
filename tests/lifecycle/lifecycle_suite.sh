@@ -11,3 +11,6 @@ bash "$REPO_ROOT/tests/smoke_prompt_core.sh"
 
 printf "[lifecycle] running prompt lifecycle integration checks\n"
 bash "$REPO_ROOT/tests/integration/integration_prompt_lifecycle.sh"
+
+printf "[lifecycle] running workflow prompt.path smoke checks\n"
+bash "$REPO_ROOT/tests/workflow_prompt_path_smoke.sh"

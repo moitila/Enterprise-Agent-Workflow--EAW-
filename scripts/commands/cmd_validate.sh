@@ -85,7 +85,7 @@ cmd_validate() {
 			errors=$((errors + 1))
 			continue
 		fi
-		workflow_summary="SUMMARY: workflow card=$(basename "$card_dir") track=$EAW_CARD_WORKFLOW_TRACK_ID current_phase=$EAW_CARD_WORKFLOW_CURRENT_PHASE prompt_phase=$EAW_CARD_WORKFLOW_CURRENT_PROMPT_PHASE"
+		workflow_summary="SUMMARY: workflow card=$(basename "$card_dir") track=$EAW_CARD_WORKFLOW_TRACK_ID current_phase=$EAW_CARD_WORKFLOW_CURRENT_PHASE prompt_phase=$EAW_CARD_WORKFLOW_CURRENT_PROMPT_PHASE prompt_path=$EAW_CARD_WORKFLOW_CURRENT_PROMPT_PATH"
 		if [[ "$EAW_CARD_WORKFLOW_CURRENT_PHASE" == "$EAW_CARD_WORKFLOW_FINAL_PHASE" ]]; then
 			echo "$workflow_summary next_phase=<none> final_phase=$EAW_CARD_WORKFLOW_FINAL_PHASE"
 		else

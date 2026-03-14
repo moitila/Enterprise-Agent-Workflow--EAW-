@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+
 eaw_normalize_phase_id() {
 	local phase="${1:-}"
 	case "$phase" in
@@ -39,6 +40,25 @@ eaw_phase_prompt_phase() {
 		;;
 	*)
 		return 1
+		;;
+	esac
+}
+
+eaw_normalize_prompt_phase_id() {
+	local phase="${1:-}"
+	phase="$(eaw_normalize_phase_id "$phase")"
+	case "$phase" in
+	findings)
+		printf "analyze_findings\n"
+		;;
+	hypotheses)
+		printf "analyze_hypotheses\n"
+		;;
+	planning)
+		printf "analyze_planning\n"
+		;;
+	*)
+		printf "%s\n" "$phase"
 		;;
 	esac
 }
@@ -141,6 +161,77 @@ eaw_yaml_phase_prompt_path() {
 	' "$file"
 }
 
+eaw_prompt_binding_from_path() {
+	local prompt_path="${1:-}"
+	local normalized_path remainder track raw_phase phase
+	local -a segments=()
+
+	normalized_path="${prompt_path#./}"
+	case "$normalized_path" in
+	templates/prompts/*)
+		remainder="${normalized_path#templates/prompts/}"
+		;;
+	prompts/*)
+		remainder="${normalized_path#prompts/}"
+		;;
+	*)
+		return 1
+		;;
+	esac
+
+	IFS='/' read -r -a segments <<<"$remainder"
+	if [[ ${#segments[@]} -lt 2 ]]; then
+		return 1
+	fi
+
+	if [[ ${#segments[@]} -ge 3 ]]; then
+		track="${segments[0]}"
+		raw_phase="${segments[1]}"
+	else
+		track="default"
+		raw_phase="${segments[0]}"
+	fi
+
+	if [[ -z "$track" || -z "$raw_phase" ]]; then
+		return 1
+	fi
+
+	phase="$(eaw_normalize_prompt_phase_id "$raw_phase")"
+	printf "track=%s\n" "$track"
+	printf "phase=%s\n" "$phase"
+}
+
+eaw_resolve_prompt_binding_from_path() {
+	local phase_file="$1"
+	local prompt_path="$2"
+	local binding key value prompt_track="" prompt_phase=""
+
+	if ! binding="$(eaw_prompt_binding_from_path "$prompt_path")"; then
+		echo "ERROR: phase file '$phase_file' has invalid prompt.path '$prompt_path'; expected templates/prompts/<track>/<phase>/prompt_v*.md or prompts/<track>/<phase>/prompt_v*.md" >&2
+		return 1
+	fi
+
+	while IFS='=' read -r key value; do
+		case "$key" in
+		track) prompt_track="$value" ;;
+		phase) prompt_phase="$value" ;;
+		esac
+	done <<<"$binding"
+
+	if [[ -z "$prompt_track" || -z "$prompt_phase" ]]; then
+		echo "ERROR: phase file '$phase_file' has invalid prompt.path '$prompt_path'; could not derive track/phase binding" >&2
+		return 1
+	fi
+
+	if ! prompt_resolve_active_metadata "$prompt_track" "$prompt_phase" >/dev/null; then
+		echo "ERROR: phase file '$phase_file' has prompt.path '$prompt_path' that is not resolvable via ACTIVE" >&2
+		return 1
+	fi
+
+	printf "track=%s\n" "$prompt_track"
+	printf "phase=%s\n" "$prompt_phase"
+}
+
 eaw_yaml_track_phases() {
 	local file="$1"
 	awk '
@@ -211,8 +302,8 @@ eaw_load_card_workflow_context() {
 	local intake_dir="$card_dir/intake"
 	local errors=0
 	local track_file state_file initial_phase final_phase track_id state_track_id current_phase previous_phase
-	local current_phase_file current_prompt_phase current_prompt_path declared_prompt_phase next_phase
-	local raw_phase normalized_phase phase_file phase_id prompt_phase prompt_path prompt_dir
+	local current_phase_file current_prompt_phase current_prompt_path current_prompt_track next_phase
+	local raw_phase normalized_phase phase_file phase_id prompt_path prompt_binding prompt_track prompt_phase
 	local raw_transition from_phase to_phase
 	local -a track_phase_list=()
 	local -a transition_list=()
@@ -234,7 +325,9 @@ eaw_load_card_workflow_context() {
 	EAW_CARD_WORKFLOW_FINAL_PHASE=""
 	EAW_CARD_WORKFLOW_CURRENT_PHASE=""
 	EAW_CARD_WORKFLOW_CURRENT_PHASE_FILE=""
+	EAW_CARD_WORKFLOW_CURRENT_PROMPT_TRACK=""
 	EAW_CARD_WORKFLOW_CURRENT_PROMPT_PHASE=""
+	EAW_CARD_WORKFLOW_CURRENT_PROMPT_PATH=""
 	EAW_CARD_WORKFLOW_NEXT_PHASE=""
 
 	shopt -s nullglob
@@ -341,19 +434,19 @@ eaw_load_card_workflow_context() {
 			errors=$((errors + 1))
 			continue
 		fi
-		prompt_dir="$(printf "%s\n" "$prompt_path" | awk -F/ '{ print $(NF-1) }')"
-		declared_prompt_phase="$(eaw_normalize_phase_id "$prompt_dir")"
-		if [[ "$declared_prompt_phase" != "$phase_id" ]]; then
-			echo "ERROR: phase '$phase_id' has prompt.path phase '$prompt_dir' inconsistent with phase.id in $phase_file; prompt.path is a declarative contract and must use canonical YAML naming" >&2
-			errors=$((errors + 1))
-		fi
-		if ! prompt_phase="$(eaw_phase_prompt_phase "$phase_id")"; then
-			echo "ERROR: phase '$phase_id' has no unique official prompt mapping" >&2
+
+		if ! prompt_binding="$(eaw_resolve_prompt_binding_from_path "$phase_file" "$prompt_path")"; then
 			errors=$((errors + 1))
 			continue
 		fi
-		if ! prompt_resolve_active_metadata "default" "$prompt_phase" >/dev/null; then
-			echo "ERROR: phase '$phase_id' official prompt '$prompt_phase' is not resolvable" >&2
+		prompt_phase=""
+		while IFS='=' read -r key value; do
+			case "$key" in
+			phase) prompt_phase="$value" ;;
+			esac
+		done <<<"$prompt_binding"
+		if [[ -z "$prompt_phase" ]]; then
+			echo "ERROR: phase '$phase_id' has prompt.path '$prompt_path' but derived prompt phase is empty in $phase_file" >&2
 			errors=$((errors + 1))
 		fi
 	done
@@ -446,8 +539,23 @@ eaw_load_card_workflow_context() {
 		return 1
 	fi
 
-	current_prompt_phase="$(eaw_phase_prompt_phase "$current_phase")"
 	current_prompt_path="$(eaw_yaml_phase_prompt_path "$current_phase_file")"
+	if ! prompt_binding="$(eaw_resolve_prompt_binding_from_path "$current_phase_file" "$current_prompt_path")"; then
+		return 1
+	fi
+	current_prompt_track=""
+	current_prompt_phase=""
+	while IFS='=' read -r key value; do
+		case "$key" in
+		track) current_prompt_track="$value" ;;
+		phase) current_prompt_phase="$value" ;;
+		esac
+	done <<<"$prompt_binding"
+	if [[ -z "$current_prompt_track" || -z "$current_prompt_phase" ]]; then
+		echo "ERROR: current phase '$current_phase' has prompt.path '$current_prompt_path' but derived prompt binding is incomplete in $current_phase_file" >&2
+		return 1
+	fi
+
 	if [[ "$current_phase" == "$final_phase" ]]; then
 		next_phase=""
 	else
@@ -464,6 +572,7 @@ eaw_load_card_workflow_context() {
 	EAW_CARD_WORKFLOW_CURRENT_PHASE="$current_phase"
 	EAW_CARD_WORKFLOW_CURRENT_PHASE_FILE="$current_phase_file"
 	EAW_CARD_WORKFLOW_CURRENT_PROMPT_PHASE="$current_prompt_phase"
+	EAW_CARD_WORKFLOW_CURRENT_PROMPT_TRACK="$current_prompt_track"
 	EAW_CARD_WORKFLOW_CURRENT_PROMPT_PATH="$current_prompt_path"
 	EAW_CARD_WORKFLOW_NEXT_PHASE="$next_phase"
 	return 0
@@ -483,7 +592,7 @@ phase_load_workflow_context() {
 
 	echo "RUNTIME: loaded track id=$EAW_CARD_WORKFLOW_TRACK_ID file=$EAW_CARD_WORKFLOW_TRACK_FILE"
 	echo "RUNTIME: loaded state file=$EAW_CARD_WORKFLOW_STATE_FILE current_phase=$EAW_CARD_WORKFLOW_CURRENT_PHASE"
-	echo "RUNTIME: loaded phase file=$EAW_CARD_WORKFLOW_CURRENT_PHASE_FILE prompt_phase=$EAW_CARD_WORKFLOW_CURRENT_PROMPT_PHASE prompt_path=$EAW_CARD_WORKFLOW_CURRENT_PROMPT_PATH"
+	echo "RUNTIME: loaded phase file=$EAW_CARD_WORKFLOW_CURRENT_PHASE_FILE prompt_track=$EAW_CARD_WORKFLOW_CURRENT_PROMPT_TRACK prompt_phase=$EAW_CARD_WORKFLOW_CURRENT_PROMPT_PHASE prompt_path=$EAW_CARD_WORKFLOW_CURRENT_PROMPT_PATH"
 	return 0
 }
 
@@ -530,3 +639,4 @@ cmd_card() {
 	run_phase "search_hits" false phase_search_hits "$outdir"
 	run_phase "finalize" false phase_finalize "$card" "$outdir"
 }
+
