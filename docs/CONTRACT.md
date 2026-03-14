@@ -10,11 +10,12 @@ This is a _contract_ for callers and implementers — it does not change CLI or 
 Inputs
 ------
 - Command: `eaw <subcommand>` (no changes to CLI).
-- Card parameters: `type` (feature|bug|spike), `card id` (string), `title` (string).
+- Card parameters: `card id` (string), `title` (string), and the workflow track selected during card creation via `eaw card <CARD> --track <TRACK>`.
+- Primary workflow classification is the selected `track`, persisted as `card_state.track_id`.
 - Configuration files (workspace `config/`):
   - `repos.conf` — lines in format `key|path` (legacy) or `key|path|role`, where role is `target` or `infra` (path may be absolute, ~/, or relative to EAW root). Missing role defaults to `target`.
   - `search.conf` — newline-separated search patterns (optional).
-- Templates: `templates/<type>.md` must exist for card rendering.
+- Templates: `templates/<type>.md` must exist for dossier rendering compatibility. This filename/template family does not replace `track` as the primary workflow classification.
 
 Command semantics
 -----------------
@@ -36,7 +37,7 @@ Syntax:
 
 Behavior:
 - Generates investigation prompt artifacts at `out/<CARD>/investigations/findings_agent_prompt.md`, `out/<CARD>/investigations/hypotheses_agent_prompt.md`, and `out/<CARD>/investigations/planning_agent_prompt.md`.
-- Validates intake structure heuristically by card type and emits warnings in the generated prompt when intake is incomplete.
+- Validates intake structure heuristically using the available intake/dossier template family and emits warnings in the generated prompt when intake is incomplete.
 - Ensures deterministic auxiliary artifacts for analysis flow, including `TEST_PLAN_<CARD>.md` when absent.
 - Does not modify source code repositories.
 
@@ -64,7 +65,7 @@ Outputs
 -------
 - Primary output directory: `out/<CARD>/`
 - Expected artifacts inside `out/<CARD>/`:
-  - `<type>_<CARD>.md` — rendered dossier (main artifact)
+  - `<type>_<CARD>.md` — rendered dossier (main artifact; deterministic compatibility filename, not the primary workflow classification)
   - `investigations/00_intake.md` — investigation intake
   - `investigations/10_baseline.md` — baseline stage scaffold
   - `investigations/20_findings.md` — findings stage scaffold
@@ -86,7 +87,7 @@ Outputs
 
 Determinism
 -----------
-- Filenames and artifact paths are deterministic and must match the contract exactly (e.g. `out/<CARD>/feature_<CARD>.md`).
+- Filenames and artifact paths are deterministic and must match the contract exactly (e.g. `out/<CARD>/feature_<CARD>.md`). This is an output naming convention kept for compatibility; workflow classification remains track-based through `card_state.track_id`.
 - Where EAW emits `date` values it uses UTC in ISO 8601 `YYYY-MM-DD` format (see `iso_date()` in `scripts/lib.sh`).
 - `git-commit.txt` contains the canonical commit SHA; `git-branch.txt` contains the branch name.
 - `changed-files.txt` is a newline-separated list of paths. Implementations SHOULD present this list in stable (sorted) order to improve reproducibility; callers must not rely on directory listing order.
@@ -162,6 +163,7 @@ Expected artifact:
 ```
 out/CARD123/feature_CARD123.md
 ```
+This filename remains deterministic for compatibility with existing tooling; the workflow itself is still classified by `track` / `card_state.track_id`.
 
 Change policy
 -------------

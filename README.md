@@ -53,7 +53,7 @@ bash ./scripts/eaw card 999999 --track bug "Smoke test"
 
 ## Output structure
 
-- `out/<CARD>/<TYPE>_<CARD>.md` — the generated dossier
+- `out/<CARD>/<TYPE>_<CARD>.md` — the generated dossier; this filename is a deterministic compatibility convention, while workflow classification remains `track` / `card_state.track_id`
 - `out/<CARD>/investigations/00_intake.md` — intake for investigation flow
 - `out/<CARD>/investigations/10_baseline.md` — baseline checklist and initial evidence
 - `out/<CARD>/investigations/20_findings.md` — findings and collected artifacts
@@ -173,7 +173,7 @@ Workflow (example):
 
 This produces deterministic files under `out/12345/`:
 
-- `feature_12345.md` — original dossier
+- `feature_12345.md` — original dossier filename retained for deterministic compatibility; workflow classification still comes from `track` / `card_state.track_id`
 - `investigations/findings_agent_prompt.md` — findings prompt to feed to an assistant
 - `investigations/hypotheses_agent_prompt.md` — hypotheses prompt to feed to an assistant
 - `investigations/planning_agent_prompt.md` — planning prompt to feed to an assistant

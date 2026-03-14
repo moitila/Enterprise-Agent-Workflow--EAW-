@@ -25,7 +25,7 @@ The architecture is intentionally contract-first: internal modularization must n
 ## Deterministic Output Boundaries
 
 Public output surface:
-- dossier: `out/<CARD>/<type>_<CARD>.md`
+- dossier: `out/<CARD>/<type>_<CARD>.md` (deterministic compatibility filename; primary workflow classification remains `track` / `card_state.track_id`)
 - staged investigations: `out/<CARD>/investigations/*.md`
 - contextual evidence: `out/<CARD>/context/<repoKey>/...`
 - phase telemetry: `out/<CARD>/execution.log`
