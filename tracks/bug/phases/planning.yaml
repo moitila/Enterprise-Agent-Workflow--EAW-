@@ -1,0 +1,20 @@
+config_version: 1
+
+phase:
+  id: planning
+  name: Planning
+  description: Define implementation steps.
+
+  prompt:
+    active: 1
+    path: templates/prompts/default/planning/prompt_v<active>.md
+
+  outputs:
+    create_directories: []
+    create_artifacts:
+      - investigations/40_next_steps.md
+
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - investigations/40_next_steps.md

@@ -9,7 +9,7 @@ This document formalizes the YAML contract used by the EAW workflow engine for t
 Status
 ------
 - Official documentation target for card 538.
-- The repository installs an official runtime tree under `tracks/standard/`.
+- The repository installs official runtime trees under `tracks/standard/`, `tracks/feature/`, `tracks/bug/`, and `tracks/spike/`.
 - Backward-compatible with the current runtime model based on `out/<CARD>/intake/**`.
 - `out/<CARD>/fixtures/**` are validation artifacts only and are not permanent runtime configuration.
 - Compatibilidade com o modelo atual e requisito explicito deste contrato.
@@ -40,6 +40,11 @@ tracks/<track>/phases/*.yaml
 tracks/<track>/card_state.yaml
 ```
 
+Important clarification:
+- `tracks/<track>/card_state.yaml` is a reference template for the logical shape of card state.
+- The runtime does not load execution state from `tracks/<track>/card_state.yaml`.
+- Real mutable execution state is always per-card under `out/<CARD>/intake/state_card_*.yaml`.
+
 Equivalent current runtime compatibility model:
 
 ```text
@@ -48,7 +53,7 @@ out/<CARD>/intake/phase_*.yaml
 out/<CARD>/intake/state_card_*.yaml
 ```
 
-The current runtime in `scripts/commands/eaw_commands.sh` resolves the official repository tree first and keeps the compatibility model above as a fallback for per-card workflow artifacts. This document uses `track.yaml`, `phase.yaml`, and `card_state.yaml` as logical names, while explicitly preserving the current runtime-compatible file naming used today.
+The current runtime in `scripts/commands/eaw_commands.sh` resolves the official repository tree first and keeps the compatibility model above as a fallback for per-card workflow artifacts. Cards created by `eaw feature`, `eaw bug`, and `eaw spike` initialize `state_card_*.yaml` with `track_id` matching the command type when the corresponding official track is installed. This document uses `track.yaml`, `phase.yaml`, and `card_state.yaml` as logical names, while explicitly preserving the current runtime-compatible file naming used today.
 
 Track Contract
 --------------
@@ -149,6 +154,11 @@ Logical name:
 Current runtime-compatible filename pattern:
 - `state_card_*.yaml`
 
+Runtime clarification:
+- `card_state.yaml` under `tracks/<track>/` is documentation/reference only.
+- The runtime reads card state from `out/<CARD>/intake/state_card_*.yaml`.
+- Official track resolution uses `tracks/<track>/track.yaml` and `tracks/<track>/phases/*.yaml`, not `tracks/<track>/card_state.yaml`.
+
 Required root:
 
 ```yaml
@@ -220,7 +230,9 @@ Compatibility Notes
 -------------------
 - This document does not change the current runtime behavior.
 - The current runtime resolves `tracks/<track>/track.yaml` and `tracks/<track>/phases/*.yaml` as the official source when the referenced track is installed in the repository.
+- The repository currently ships official tracks for `standard`, `feature`, `bug`, and `spike`; `standard` remains available for compatibility.
 - The current runtime remains compatible with the per-card model under `out/<CARD>/intake/**` as an explicit fallback.
+- `tracks/<track>/card_state.yaml` is not runtime state; it is a template/example of the logical card-state structure for that track.
 - `state_card_*.yaml` under `out/<CARD>/intake/**` remains the mutable per-card state document for workflow progression.
 - `out/<CARD>/fixtures/**` are useful for validation and tests, but they are not permanent runtime configuration.
 - If product language refers to `card_state.yaml`, this should be read as the logical state document; current runtime compatibility still relies on `state_card_*.yaml`.

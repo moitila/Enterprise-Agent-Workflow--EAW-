@@ -5,7 +5,7 @@ config_version: 1
 
 card_state:
   card_id: CARD_TEMPLATE
-  track_id: standard
+  track_id: spike
   current_phase: intake
   previous_phase: null
   phase_status: in_progress

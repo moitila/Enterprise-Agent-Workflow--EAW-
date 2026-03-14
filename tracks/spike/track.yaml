@@ -1,0 +1,43 @@
+config_version: 1
+
+track:
+  id: spike
+  name: Spike Track
+  description: >
+    Canonical EAW track installed in the repository as the official
+    workflow source for spike cards.
+  initial_phase: intake
+  final_phase: implementation_executor
+
+  initial_outputs:
+    create_directories:
+      - investigations
+      - intake
+      - context
+    create_artifacts: []
+
+  phases:
+    - intake
+    - findings
+    - hypotheses
+    - planning
+    - implementation_planning
+    - implementation_executor
+
+  transitions:
+    intake:
+      next: findings
+    findings:
+      next: hypotheses
+    hypotheses:
+      next: planning
+    planning:
+      next: implementation_planning
+    implementation_planning:
+      next: implementation_executor
+
+  rules:
+    one_prompt_per_phase: true
+    generated_artifacts_of_each_phase_must_be_non_empty: true
+    allow_phase_skip: false
+    allow_manual_phase_skip: false

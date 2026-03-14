@@ -1,0 +1,24 @@
+config_version: 1
+
+phase:
+  id: intake
+  name: Intake
+  description: Capture and normalize the initial request for the card.
+
+  prompt:
+    active: 1
+    path: templates/prompts/default/intake/prompt_v<active>.md
+
+  outputs:
+    create_directories:
+      - investigations
+      - context
+    create_artifacts:
+      - investigations/00_intake.md
+      - investigations/_intake_provenance.md
+
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - investigations/00_intake.md
+      - investigations/_intake_provenance.md

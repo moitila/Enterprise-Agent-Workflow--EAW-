@@ -716,6 +716,51 @@ phase_init_runtime() {
 	local intake_tpl="$EAW_TEMPLATES_DIR/intake_${type}.md"
 	ensure_dir "$intake_runtime_dir"
 	ensure_dir "$intake_dir"
+	if ! compgen -G "$intake_runtime_dir/state_card_*.yaml" >/dev/null; then
+		local track_id="${type,,}"
+		local state_file current_phase track_file
+		case "$track_id" in
+		feature | bug | spike)
+			;;
+		*)
+			track_id="standard"
+			;;
+		esac
+		if [[ ! -d "$EAW_ROOT_DIR/tracks/$track_id" ]]; then
+			track_id="standard"
+		fi
+		track_file="$EAW_ROOT_DIR/tracks/$track_id/track.yaml"
+		current_phase="intake"
+		if [[ -f "$track_file" ]]; then
+			current_phase="$(awk '
+				/^track:[[:space:]]*$/ { in_track=1; next }
+				in_track && /^[^[:space:]]/ { in_track=0 }
+				in_track && /^  initial_phase:[[:space:]]*/ {
+					line=$0
+					sub(/^  initial_phase:[[:space:]]*/, "", line)
+					gsub(/^"|"$/, "", line)
+					print line
+					exit
+				}
+			' "$track_file")"
+			[[ -n "$current_phase" ]] || current_phase="intake"
+		fi
+		state_file="$intake_runtime_dir/state_card_${track_id}.yaml"
+		cat >"$state_file" <<EOF
+config_version: 1
+
+card_state:
+  card_id: CARD_${card}
+  track_id: ${track_id}
+  current_phase: ${current_phase}
+  previous_phase: null
+  phase_status: in_progress
+  completed_phases: []
+  created_at: "${date}"
+  updated_at: "${date}"
+EOF
+		echo "Wrote $state_file"
+	fi
 	if [[ ! -f "$intake_file" ]]; then
 		if [[ -f "$intake_tpl" ]]; then
 			cp "$intake_tpl" "$intake_file"
