@@ -2,6 +2,8 @@
 
 Canonical architecture document for EAW.
 
+Conceptual model for onboarding and positioning: `docs/CONCEPTUAL_MODEL.md`.
+
 ## Overview
 
 EAW v0.6.0 uses a modular shell architecture that keeps CLI behavior stable while separating internal responsibilities.
