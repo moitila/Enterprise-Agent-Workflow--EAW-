@@ -314,7 +314,17 @@ eaw_yaml_state_completed_phases() {
 eaw_card_has_workflow_config() {
 	local card_dir="$1"
 	local intake_dir="$card_dir/intake"
-	compgen -G "$intake_dir/track_*.yaml" >/dev/null || compgen -G "$intake_dir/state_card_*.yaml" >/dev/null || compgen -G "$intake_dir/phase_*.yaml" >/dev/null
+	compgen -G "$intake_dir/state_card_*.yaml" >/dev/null || compgen -G "$intake_dir/track_*.yaml" >/dev/null || compgen -G "$intake_dir/phase_*.yaml" >/dev/null
+}
+
+eaw_official_track_dir() {
+	local track_id="${1:-}"
+	local track_dir="$EAW_ROOT_DIR/tracks/$track_id"
+
+	if [[ -z "$track_id" || ! -d "$track_dir" ]]; then
+		return 1
+	fi
+	printf "%s\n" "$track_dir"
 }
 
 eaw_load_card_workflow_context() {
@@ -325,13 +335,14 @@ eaw_load_card_workflow_context() {
 	local track_file state_file initial_phase final_phase track_id state_track_id current_phase previous_phase
 	local current_phase_file current_prompt_phase current_prompt_path current_prompt_track next_phase
 	local raw_phase normalized_phase phase_file phase_id prompt_path prompt_binding prompt_track prompt_phase
-	local raw_transition from_phase to_phase
+	local raw_transition from_phase to_phase official_track_dir workflow_source
 	local -a track_phase_list=()
 	local -a transition_list=()
 	local -a completed_phase_list=()
 	local -a track_candidates=()
 	local -a state_candidates=()
 	local -a phase_candidates=()
+	local -a official_phase_candidates=()
 	local -A phase_file_by_id=()
 	local -A track_phase_set=()
 	local -A completed_phase_set=()
@@ -350,6 +361,7 @@ eaw_load_card_workflow_context() {
 	EAW_CARD_WORKFLOW_CURRENT_PROMPT_PHASE=""
 	EAW_CARD_WORKFLOW_CURRENT_PROMPT_PATH=""
 	EAW_CARD_WORKFLOW_NEXT_PHASE=""
+	EAW_CARD_WORKFLOW_SOURCE=""
 
 	shopt -s nullglob
 	track_candidates=("$intake_dir"/track_*.yaml)
@@ -361,43 +373,70 @@ eaw_load_card_workflow_context() {
 		return 0
 	fi
 
-	if [[ ${#track_candidates[@]} -eq 0 ]]; then
-		echo "ERROR: card ${card_name} has declarative workflow artifacts but is missing track_*.yaml in $intake_dir (MVP requires canonical YAML structure)" >&2
-		return 1
-	fi
 	if [[ ${#state_candidates[@]} -eq 0 ]]; then
 		echo "ERROR: card ${card_name} has declarative workflow artifacts but is missing state_card_*.yaml in $intake_dir (MVP requires canonical YAML structure)" >&2
-		return 1
-	fi
-	if [[ ${#phase_candidates[@]} -eq 0 ]]; then
-		echo "ERROR: card ${card_name} has declarative workflow artifacts but is missing phase_*.yaml files in $intake_dir (MVP requires canonical YAML structure)" >&2
-		return 1
-	fi
-
-	if [[ ${#track_candidates[@]} -ne 1 ]]; then
-		echo "ERROR: card ${card_name} must define exactly one track_*.yaml in $intake_dir (MVP requires canonical YAML structure)" >&2
 		return 1
 	fi
 	if [[ ${#state_candidates[@]} -ne 1 ]]; then
 		echo "ERROR: card ${card_name} must define exactly one state_card_*.yaml in $intake_dir (MVP requires canonical YAML structure)" >&2
 		return 1
 	fi
-	if [[ ${#phase_candidates[@]} -eq 0 ]]; then
-		echo "ERROR: card ${card_name} must define at least one phase_*.yaml in $intake_dir (MVP requires canonical YAML structure)" >&2
-		return 1
-	fi
 
-	track_file="${track_candidates[0]}"
 	state_file="${state_candidates[0]}"
-	EAW_CARD_WORKFLOW_TRACK_FILE="$track_file"
 	EAW_CARD_WORKFLOW_STATE_FILE="$state_file"
 
-	track_id="$(eaw_yaml_track_scalar "$track_file" "id")"
-	initial_phase="$(eaw_normalize_phase_id "$(eaw_yaml_track_scalar "$track_file" "initial_phase")")"
-	final_phase="$(eaw_normalize_phase_id "$(eaw_yaml_track_scalar "$track_file" "final_phase")")"
 	state_track_id="$(eaw_yaml_state_scalar "$state_file" "track_id")"
 	current_phase="$(eaw_normalize_phase_id "$(eaw_yaml_state_scalar "$state_file" "current_phase")")"
 	previous_phase="$(eaw_normalize_phase_id "$(eaw_yaml_state_scalar "$state_file" "previous_phase")")"
+
+	if [[ -z "$state_track_id" ]]; then
+		echo "ERROR: card ${card_name} state file missing required field card_state.track_id: $state_file" >&2
+		errors=$((errors + 1))
+	fi
+	if [[ -z "$current_phase" ]]; then
+		echo "ERROR: card ${card_name} state file missing required field card_state.current_phase: $state_file" >&2
+		errors=$((errors + 1))
+	fi
+	if [[ "$errors" -gt 0 ]]; then
+		return 1
+	fi
+
+	if official_track_dir="$(eaw_official_track_dir "$state_track_id")"; then
+		shopt -s nullglob
+		official_phase_candidates=("$official_track_dir"/phases/*.yaml)
+		shopt -u nullglob
+		if [[ ! -f "$official_track_dir/track.yaml" ]]; then
+			echo "ERROR: official track '${state_track_id}' is missing track.yaml in $official_track_dir" >&2
+			return 1
+		fi
+		if [[ ${#official_phase_candidates[@]} -eq 0 ]]; then
+			echo "ERROR: official track '${state_track_id}' is missing phase YAML files in $official_track_dir/phases" >&2
+			return 1
+		fi
+		track_file="$official_track_dir/track.yaml"
+		phase_candidates=("${official_phase_candidates[@]}")
+		workflow_source="official"
+	else
+		if [[ ${#track_candidates[@]} -eq 0 ]]; then
+			echo "ERROR: card ${card_name} has declarative workflow artifacts but is missing track_*.yaml in $intake_dir and no official track '${state_track_id}' was found in $EAW_ROOT_DIR/tracks" >&2
+			return 1
+		fi
+		if [[ ${#phase_candidates[@]} -eq 0 ]]; then
+			echo "ERROR: card ${card_name} has declarative workflow artifacts but is missing phase_*.yaml files in $intake_dir and no official track '${state_track_id}' was found in $EAW_ROOT_DIR/tracks" >&2
+			return 1
+		fi
+		if [[ ${#track_candidates[@]} -ne 1 ]]; then
+			echo "ERROR: card ${card_name} must define exactly one track_*.yaml in $intake_dir when no official track is installed" >&2
+			return 1
+		fi
+		track_file="${track_candidates[0]}"
+		workflow_source="legacy"
+	fi
+
+	EAW_CARD_WORKFLOW_TRACK_FILE="$track_file"
+	track_id="$(eaw_yaml_track_scalar "$track_file" "id")"
+	initial_phase="$(eaw_normalize_phase_id "$(eaw_yaml_track_scalar "$track_file" "initial_phase")")"
+	final_phase="$(eaw_normalize_phase_id "$(eaw_yaml_track_scalar "$track_file" "final_phase")")"
 
 	if [[ -z "$track_id" ]]; then
 		echo "ERROR: card ${card_name} track file missing required field track.id: $track_file" >&2
@@ -409,14 +448,6 @@ eaw_load_card_workflow_context() {
 	fi
 	if [[ -z "$final_phase" ]]; then
 		echo "ERROR: card ${card_name} track file missing required field track.final_phase: $track_file" >&2
-		errors=$((errors + 1))
-	fi
-	if [[ -z "$state_track_id" ]]; then
-		echo "ERROR: card ${card_name} state file missing required field card_state.track_id: $state_file" >&2
-		errors=$((errors + 1))
-	fi
-	if [[ -z "$current_phase" ]]; then
-		echo "ERROR: card ${card_name} state file missing required field card_state.current_phase: $state_file" >&2
 		errors=$((errors + 1))
 	fi
 
@@ -597,6 +628,7 @@ eaw_load_card_workflow_context() {
 	EAW_CARD_WORKFLOW_CURRENT_PROMPT_PATH="$current_prompt_path"
 	EAW_CARD_WORKFLOW_NEXT_PHASE="$next_phase"
 	EAW_CARD_WORKFLOW_COMPLETED_PHASES="$(printf "%s\n" "${completed_phase_list[@]}")"
+	EAW_CARD_WORKFLOW_SOURCE="$workflow_source"
 	return 0
 }
 
@@ -735,7 +767,7 @@ phase_load_workflow_context() {
 		return 1
 	fi
 
-	echo "RUNTIME: loaded track id=$EAW_CARD_WORKFLOW_TRACK_ID file=$EAW_CARD_WORKFLOW_TRACK_FILE"
+	echo "RUNTIME: loaded track id=$EAW_CARD_WORKFLOW_TRACK_ID file=$EAW_CARD_WORKFLOW_TRACK_FILE source=$EAW_CARD_WORKFLOW_SOURCE"
 	echo "RUNTIME: loaded state file=$EAW_CARD_WORKFLOW_STATE_FILE current_phase=$EAW_CARD_WORKFLOW_CURRENT_PHASE"
 	echo "RUNTIME: loaded phase file=$EAW_CARD_WORKFLOW_CURRENT_PHASE_FILE prompt_track=$EAW_CARD_WORKFLOW_CURRENT_PROMPT_TRACK prompt_phase=$EAW_CARD_WORKFLOW_CURRENT_PROMPT_PHASE prompt_path=$EAW_CARD_WORKFLOW_CURRENT_PROMPT_PATH"
 	return 0

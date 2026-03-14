@@ -48,6 +48,23 @@ phase:
 EOF
 }
 
+write_official_track_card() {
+	local workdir="$1"
+	local card="$2"
+	local intake_dir="$workdir/out/$card/intake"
+
+	mkdir -p "$intake_dir"
+
+	cat >"$intake_dir/state_card_official.yaml" <<'EOF'
+card_state:
+  track_id: standard
+  previous_phase: intake
+  current_phase: findings
+  completed_phases:
+    - intake
+EOF
+}
+
 write_invalid_card() {
 	local workdir="$1"
 	local card="$2"
@@ -88,10 +105,12 @@ failure_workdir="$tmp_root/workdir-failure"
 
 init_workdir "$success_workdir"
 write_valid_card "$success_workdir" "537SUCCESS"
+write_official_track_card "$success_workdir" "538OFFICIAL"
 
 success_output="$(EAW_WORKDIR="$success_workdir" "$REPO_ROOT/scripts/eaw" validate 2>&1)" || fail "expected success validate to pass"
 grep -Fq "current_phase=analysis prompt_phase=analyze_findings" <<<"$success_output" || fail "missing prompt_phase derived from prompt.path in success output"
 grep -Fq "prompt_path=templates/prompts/default/findings/prompt_v<active>.md" <<<"$success_output" || fail "missing prompt_path in success output"
+grep -Fq "workflow card=538OFFICIAL track=standard current_phase=findings prompt_phase=analyze_findings" <<<"$success_output" || fail "missing official track validation summary"
 if grep -Fq "inconsistent with phase.id" <<<"$success_output"; then
 	fail "unexpected phase.id consistency error in success output"
 fi

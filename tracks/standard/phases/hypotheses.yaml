@@ -1,0 +1,20 @@
+config_version: 1
+
+phase:
+  id: hypotheses
+  name: Hypotheses
+  description: Generate possible causes or solution directions.
+
+  prompt:
+    active: 1
+    path: templates/prompts/default/hypotheses/prompt_v<active>.md
+
+  outputs:
+    create_directories: []
+    create_artifacts:
+      - investigations/30_hypotheses.md
+
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - investigations/30_hypotheses.md

@@ -1,0 +1,11 @@
+config_version: 1
+
+card_state:
+  card_id: CARD_TEMPLATE
+  track_id: standard
+  current_phase: intake
+  previous_phase: null
+  phase_status: in_progress
+  completed_phases: []
+  created_at: "2026-03-14T00:00:00Z"
+  updated_at: "2026-03-14T00:00:00Z"
