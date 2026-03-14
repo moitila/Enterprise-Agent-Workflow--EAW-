@@ -146,6 +146,13 @@ main() {
 		validate_runtime_workdir
 		cmd_implement "$2"
 		;;
+	next)
+		if [[ $# -ne 2 ]]; then
+			die "usage: eaw next <CARD>"
+		fi
+		validate_runtime_workdir
+		cmd_next "$2"
+		;;
 	smoke)
 		validate_runtime_workdir
 		cmd_smoke "${@:2}"
