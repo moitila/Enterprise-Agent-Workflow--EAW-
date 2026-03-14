@@ -1,14 +1,25 @@
 # Enterprise Agent Workflow (EAW)
 
-EAW is a lightweight, deterministic workflow for generating engineering dossiers across official workflow tracks such as `standard`, `bug`, `spike`, and `feature`. It focuses on context engineering, deterministic outputs, and risk-aware decision making.
+EAW is a deterministic AI-assisted engineering system for governing work by card. It combines workflow tracks, phase contracts, per-card state, prompt governance, context collection, and auditable artifacts so engineering teams can use AI with rigor in complex systems.
 
 ## What is EAW
 
-EAW helps engineers collect repository context and produce structured Markdown artifacts for traceability and safer engineering in complex systems.
+EAW helps engineers turn a card into a governed execution flow. The runtime resolves the selected `track`, persists workflow state in `card_state.track_id` and `current_phase`, binds phase prompts through `ACTIVE`, collects repository context from target repos, and writes deterministic artifacts under `out/<CARD>/` for traceability and review.
 
 ## Architecture
 
 Canonical architecture document: `docs/ARCHITECTURE.md`.
+
+## Documentation Map
+
+Read the repository in this order if you want the full model:
+
+- `Manifesto`: `docs/manifesto.md` - philosophy, problem statement, and engineering posture
+- `Conceptual Model`: `docs/CONCEPTUAL_MODEL.md` - product positioning and the mental model that connects the system layers
+- `Architecture`: `docs/ARCHITECTURE.md` - runtime architecture, modules, and invariants
+- `Workflow YAML Contract`: `docs/WORKFLOW_YAML_CONTRACT.md` - declarative workflow model for `track`, `phase`, and `card_state`
+- `Prompt Governance`: `docs/PROMPT_GOVERNANCE.md` - prompt binding, `ACTIVE`, and provenance
+- `Contract`: `docs/CONTRACT.md` - public output, behavior, and compatibility contract
 
 ## Installation (bash)
 
@@ -26,6 +37,7 @@ chmod +x scripts/eaw scripts/lib.sh
 ./scripts/eaw init
 ./scripts/eaw card 123 --track standard
 ./scripts/eaw card 124 --track bug "Fix race condition"
+./scripts/eaw next 123
 ./scripts/eaw intake 123
 ./scripts/eaw analyze 123
 ./scripts/eaw smoke
@@ -33,6 +45,8 @@ chmod +x scripts/eaw scripts/lib.sh
 ```
 
 `track` is the primary workflow classification for a card. The runtime stores the selected value in `card_state.track_id` and resolves the official workflow from `tracks/<track>/track.yaml`.
+
+The declarative lifecycle advances through `current_phase` and `track.transitions`. `./scripts/eaw next <CARD>` is the command that moves a card to its next declared phase, while `intake`, `analyze`, and `implement` remain aggregated prompt-oriented commands that coexist for compatibility and AI-assisted execution flows.
 
 ## Test Scopes
 
@@ -103,7 +117,9 @@ Released versions and historical changes are tracked in `CHANGELOG.md`.
 
 ## PT-BR
 
-EAW é um fluxo de trabalho leve para gerar dossiês determinísticos por track. Use `./scripts/eaw init`, depois `./scripts/eaw card <CARD> --track <TRACK> ["<TITLE>"]`, `./scripts/eaw intake <CARD>`, `./scripts/eaw analyze <CARD>`, `./scripts/eaw implement <CARD>`, `./scripts/eaw smoke` e `./scripts/eaw test`. O valor escolhido em `--track` torna-se `card_state.track_id` e o workflow oficial é resolvido por `tracks/<track>/track.yaml`.
+EAW é um sistema determinístico de engenharia assistida por IA para governar trabalho por card. O runtime combina `track`, `phase`, estado por card em `card_state.track_id` e `current_phase`, governança de prompts por `ACTIVE`, coleta de contexto e artefatos auditáveis em `out/<CARD>/`.
+
+Para usar: `./scripts/eaw init`, depois `./scripts/eaw card <CARD> --track <TRACK> ["<TITLE>"]`, avance o lifecycle com `./scripts/eaw next <CARD>` quando quiser progredir a fase declarada, e use `./scripts/eaw intake <CARD>`, `./scripts/eaw analyze <CARD>` e `./scripts/eaw implement <CARD>` como macrocomandos agregados de prompts e compatibilidade. O valor escolhido em `--track` torna-se `card_state.track_id`, o workflow oficial e resolvido por `tracks/<track>/track.yaml` e a proxima fase vem de `track.transitions`.
 
 ## Commit Governance (ECS)
 
@@ -154,6 +170,8 @@ Why this matters: making risk and scope explicit at commit time enables determin
 ## AI Integration Mode (EAW Mode D)
 
 EAW Mode D provides a deterministic path to integrate an external AI/assistant into the engineering workflow by generating complete, structured prompts and producing a test plan and action plan in a reproducible output folder.
+
+This prompt pipeline is an aggregated compatibility flow for AI-assisted execution. It coexists with the declarative lifecycle, where the runtime keeps per-card state in `current_phase` and advances the official workflow through `./scripts/eaw next <CARD>` based on `track.transitions`.
 
 Workflow (example):
 
