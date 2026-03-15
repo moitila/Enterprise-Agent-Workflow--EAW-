@@ -11,11 +11,11 @@ Usage: eaw init [--workdir <path>] [--force] [--upgrade]
 Example:
   eaw init --workdir ./.eaw --upgrade
   eaw card <CARD> --track <TRACK> ["<TITLE>"]
-  eaw intake <CARD> [--round=N]
-  eaw analyze <CARD>
-  eaw implement <CARD>
-  eaw tracks
   eaw next <CARD>
+  eaw intake <CARD> [--round=N]   # compatibility wrapper
+  eaw analyze <CARD>              # compatibility wrapper
+  eaw implement <CARD>            # compatibility wrapper
+  eaw tracks
   eaw suggest-prompt <CARD> --track <TRACK> --phase <PHASE>
   eaw prompt validate
   eaw validate-prompt <TRACK> <PHASE> <CANDIDATE>
@@ -1101,6 +1101,7 @@ eaw_render_phase_prompt_template() {
 		-v phase_header="$phase_header" \
 		-v card="$card" \
 		-v type="$type" \
+		-v round="${EAW_PHASE_PROMPT_ROUND:-1}" \
 		-v eaw_workdir="${EAW_WORKDIR:-}" \
 		-v runtime_root="$EAW_ROOT_DIR" \
 		-v config_source="$REPOS_CONF" \
@@ -1126,6 +1127,7 @@ eaw_render_phase_prompt_template() {
 			gsub(/\{\{PHASE_HEADER\}\}/, phase_header)
 			gsub(/\{\{CARD\}\}/, card)
 			gsub(/\{\{TYPE\}\}/, type)
+			gsub(/\{\{ROUND\}\}/, round)
 			gsub(/\{\{EAW_WORKDIR\}\}/, eaw_workdir)
 			gsub(/\{\{RUNTIME_ROOT\}\}/, runtime_root)
 			gsub(/\{\{CONFIG_SOURCE\}\}/, config_source)
@@ -1148,6 +1150,9 @@ eaw_phase_prompt_legacy_paths() {
 	local prompt_alias
 	prompt_alias="$(eaw_normalize_phase_id "${1:-}")"
 	case "$prompt_alias" in
+	intake)
+		printf "investigations/intake_agent_prompt.round_%s.md\n" "${EAW_PHASE_PROMPT_ROUND:-1}"
+		;;
 	findings)
 		printf "investigations/findings_agent_prompt.md\n"
 		;;
@@ -1243,6 +1248,113 @@ eaw_execute_workflow_phase() {
 	eaw_generate_phase_prompt_artifacts "$card"
 	echo "RUNTIME: phase=$phase_id action=phase_driven_execution"
 	return 0
+}
+
+eaw_warn_compatibility_wrapper() {
+	local command_name="$1"
+	printf "WARNING: '%s' is a compatibility wrapper. Prefer 'eaw next'.\n" "$command_name" >&2
+}
+
+eaw_phase_index_in_track() {
+	local track_file="$1"
+	local target_phase="$2"
+	local index=0
+	local phase_name
+
+	while IFS= read -r phase_name; do
+		[[ -n "$phase_name" ]] || continue
+		if [[ "$phase_name" == "$target_phase" ]]; then
+			printf "%s\n" "$index"
+			return 0
+		fi
+		index=$((index + 1))
+	done < <(eaw_yaml_track_phases "$track_file")
+
+	return 1
+}
+
+eaw_execute_current_phase_for_wrapper() {
+	local card="$1"
+	local card_dir="$EAW_OUT_DIR/$card"
+
+	if ! eaw_load_card_workflow_context "$card_dir"; then
+		return 1
+	fi
+
+	OUTDIR="$card_dir"
+	run_phase "workflow_phase_${EAW_CARD_WORKFLOW_CURRENT_PHASE}" true eaw_execute_workflow_phase "$card"
+}
+
+eaw_mark_current_phase_complete_for_wrapper() {
+	local card="$1"
+	local card_dir="$EAW_OUT_DIR/$card"
+	local current_phase
+	local current_phase_file
+	local previous_phase
+	local completed_phases
+	local phase_status
+
+	if ! eaw_load_card_workflow_context "$card_dir"; then
+		return 1
+	fi
+
+	current_phase="$EAW_CARD_WORKFLOW_CURRENT_PHASE"
+	current_phase_file="$EAW_CARD_WORKFLOW_CURRENT_PHASE_FILE"
+	previous_phase="$(eaw_normalize_phase_id "$(eaw_yaml_state_scalar "$EAW_CARD_WORKFLOW_STATE_FILE" "previous_phase")")"
+	completed_phases="${EAW_CARD_WORKFLOW_COMPLETED_PHASES:-}"
+	phase_status="$(eaw_state_phase_status_for_next)"
+
+	if ! eaw_validate_phase_completion "$card" "$card_dir" "$current_phase" "$current_phase_file"; then
+		return 1
+	fi
+	if [[ "$phase_status" == "COMPLETE" ]]; then
+		return 0
+	fi
+
+	eaw_write_phase_status "$EAW_CARD_WORKFLOW_STATE_FILE" "COMPLETE" "$previous_phase" "$current_phase" "$completed_phases"
+	return 0
+}
+
+eaw_wrapper_materialize_until_phase() {
+	local card="$1"
+	local target_phase="$2"
+	local card_dir="$EAW_OUT_DIR/$card"
+	local current_phase
+	local current_index
+	local target_index
+
+	if ! eaw_card_has_workflow_config "$card_dir"; then
+		echo "ERROR: card ${card} is missing canonical workflow YAMLs in $card_dir/intake (MVP requires canonical YAML structure)" >&2
+		return 1
+	fi
+	if ! eaw_load_card_workflow_context "$card_dir"; then
+		return 1
+	fi
+
+	current_phase="$EAW_CARD_WORKFLOW_CURRENT_PHASE"
+	current_index="$(eaw_phase_index_in_track "$EAW_CARD_WORKFLOW_TRACK_FILE" "$current_phase")" || return 1
+	target_index="$(eaw_phase_index_in_track "$EAW_CARD_WORKFLOW_TRACK_FILE" "$target_phase")" || return 1
+
+	if (( current_index > target_index )); then
+		echo "ERROR: card ${card} is already beyond compatibility target phase '${target_phase}' (current_phase=${current_phase})" >&2
+		return 1
+	fi
+
+	while true; do
+		if ! eaw_load_card_workflow_context "$card_dir"; then
+			return 1
+		fi
+		current_phase="$EAW_CARD_WORKFLOW_CURRENT_PHASE"
+
+		if [[ "$current_phase" == "$target_phase" ]]; then
+			eaw_execute_current_phase_for_wrapper "$card"
+			return $?
+		fi
+
+		eaw_execute_current_phase_for_wrapper "$card" || return 1
+		eaw_mark_current_phase_complete_for_wrapper "$card" || return 1
+		cmd_next "$card" || return 1
+	done
 }
 
 phase_load_workflow_context() {

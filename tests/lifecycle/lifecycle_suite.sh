@@ -17,3 +17,6 @@ bash "$REPO_ROOT/tests/workflow_prompt_path_smoke.sh"
 
 printf "[lifecycle] running workflow next phase execution checks\n"
 bash "$REPO_ROOT/tests/workflow_next_phase_execution.sh"
+
+printf "[lifecycle] running workflow wrapper compatibility checks\n"
+bash "$REPO_ROOT/tests/workflow_wrapper_compatibility.sh"

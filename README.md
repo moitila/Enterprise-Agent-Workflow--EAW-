@@ -37,21 +37,22 @@ chmod +x scripts/eaw scripts/lib.sh
 ./scripts/eaw init
 ./scripts/eaw card 123 --track standard
 ./scripts/eaw card 124 --track bug "Fix race condition"
-./scripts/eaw intake 123
 ./scripts/eaw next 123
-./scripts/eaw analyze 123
+./scripts/eaw intake 123    # compatibility wrapper
+./scripts/eaw analyze 123   # compatibility wrapper
+./scripts/eaw implement 123 # compatibility wrapper
 ./scripts/eaw smoke
 ./scripts/eaw test
 ```
 
 `track` is the primary workflow classification for a card. The runtime stores the selected value in `card_state.track_id` and resolves the official workflow from `tracks/<track>/track.yaml`.
 
-The declarative lifecycle advances through `current_phase` and `track.transitions`. `./scripts/eaw next <CARD>` is the command that moves a card to its next declared phase and executes the destination phase in a phase-driven way, but only after the current phase satisfies its declared `completion` contract. Phases may also declare prompt artifacts directly in `outputs.prompts`, which the runtime materializes under `out/<CARD>/prompts/` using the declared alias as the filename (`<alias>.md`) while preserving compatibility prompt artifacts. `intake`, `analyze`, and `implement` remain aggregated prompt-oriented commands that coexist for compatibility and AI-assisted execution flows.
+The declarative lifecycle advances through `current_phase` and `track.transitions`. `./scripts/eaw next <CARD>` is the primary command that moves a card to its next declared phase and executes the destination phase in a phase-driven way, but only after the current phase satisfies its declared `completion` contract. Phases may also declare prompt artifacts directly in `outputs.prompts`, which the runtime materializes under `out/<CARD>/prompts/` using the declared alias as the filename (`<alias>.md`) while preserving compatibility prompt artifacts. `intake`, `analyze`, and `implement` remain compatibility wrappers over the same lifecycle for transition and AI-assisted execution flows.
 
 Current phase semantics:
 - entering a phase means the card state now points to that declarative workflow phase;
 - `./scripts/eaw next <CARD>` blocks when the current phase is incomplete according to `phase.completion`, otherwise it performs the declarative state transition and executes the destination phase using the phase YAML outputs and the runtime prompt bindings;
-- `intake`, `analyze`, and `implement` remain the compatibility commands that materialize the prompt-oriented work associated with those phases.
+- `intake`, `analyze`, and `implement` remain compatibility wrappers and should be treated as transitional entrypoints; prefer `next` for the primary lifecycle interface.
 
 Future phase-driven note:
 - the current phase-driven executor is incremental: it scaffolds declared outputs, materializes `outputs.prompts` under `out/<CARD>/prompts/`, emits compatibility prompt artifacts for the built-in prompt phases, and records execution in `execution.log`;
