@@ -192,6 +192,9 @@ Rules:
 - `card_state.completed_phases` must not contain duplicates.
 - Every completed phase must exist in `track.phases`.
 - When `eaw next <CARD>` runs, the runtime updates `previous_phase`, `current_phase`, and `completed_phases` based on `track.transitions`.
+- In the current runtime model, that state transition does not execute phase work by itself.
+- Prompt-oriented execution remains manual or compatibility-driven through commands such as `intake`, `analyze`, and `implement`.
+- A future phase-driven executor requires an explicit contract that defines whether phase entry is automatic or manual and how completion is validated.
 
 Field Meanings
 --------------

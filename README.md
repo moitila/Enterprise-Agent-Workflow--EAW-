@@ -48,6 +48,14 @@ chmod +x scripts/eaw scripts/lib.sh
 
 The declarative lifecycle advances through `current_phase` and `track.transitions`. `./scripts/eaw next <CARD>` is the command that moves a card to its next declared phase, while `intake`, `analyze`, and `implement` remain aggregated prompt-oriented commands that coexist for compatibility and AI-assisted execution flows.
 
+Current phase semantics:
+- entering a phase means the card state now points to that declarative workflow phase;
+- `./scripts/eaw next <CARD>` performs a state transition and does not execute phase work by itself;
+- `intake`, `analyze`, and `implement` remain the compatibility commands that materialize the prompt-oriented work associated with those phases.
+
+Future phase-driven note:
+- a fully phase-driven executor requires an explicit contract that defines pre-conditions, completion criteria, and whether a phase is manual or automatic before runtime automation changes are introduced.
+
 ## Test Scopes
 
 - `./scripts/eaw smoke` executes the baseline smoke suite only (`tests/smoke/smoke_baseline.sh`).
@@ -120,6 +128,14 @@ Released versions and historical changes are tracked in `CHANGELOG.md`.
 EAW é um sistema determinístico de engenharia assistida por IA para governar trabalho por card. O runtime combina `track`, `phase`, estado por card em `card_state.track_id` e `current_phase`, governança de prompts por `ACTIVE`, coleta de contexto e artefatos auditáveis em `out/<CARD>/`.
 
 Para usar: `./scripts/eaw init`, depois `./scripts/eaw card <CARD> --track <TRACK> ["<TITLE>"]`, avance o lifecycle com `./scripts/eaw next <CARD>` quando quiser progredir a fase declarada, e use `./scripts/eaw intake <CARD>`, `./scripts/eaw analyze <CARD>` e `./scripts/eaw implement <CARD>` como macrocomandos agregados de prompts e compatibilidade. O valor escolhido em `--track` torna-se `card_state.track_id`, o workflow oficial e resolvido por `tracks/<track>/track.yaml` e a proxima fase vem de `track.transitions`.
+
+Semantica atual de fase:
+- entrar em uma fase significa que o estado do card agora aponta para aquela fase declarativa do workflow;
+- `./scripts/eaw next <CARD>` executa a transicao declarativa de estado e nao executa, por si so, o trabalho da fase;
+- `intake`, `analyze` e `implement` seguem como comandos agregados de compatibilidade que materializam o trabalho orientado a prompts dessas fases.
+
+Nota sobre modelo phase-driven futuro:
+- um executor totalmente orientado a fase depende de contrato explicito com pre-condicoes, criterio de conclusao e definicao objetiva de fases manuais e automaticas antes de qualquer mudanca de runtime.
 
 ## Commit Governance (ECS)
 

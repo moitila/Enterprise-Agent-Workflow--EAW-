@@ -24,6 +24,14 @@ The architecture is intentionally contract-first: internal modularization must n
 4. Outputs are written to `out/<CARD>/` according to the contract.
 5. `out/<CARD>/execution.log` records phase execution (`phase|status|duration_ms|note`).
 
+## Phase Transition Semantics
+
+- `current_phase` is the declarative workflow position persisted in card state.
+- `track.transitions` defines the next valid state transition for the current phase.
+- `./scripts/eaw next <CARD>` updates workflow state and records the new position; it does not execute phase work by itself.
+- Prompt-oriented commands such as `intake`, `analyze`, and `implement` remain the compatibility surface that materializes work for the current model.
+- A future phase-driven executor needs an explicit contract for phase entry, pre-conditions, completion criteria, and manual-versus-automatic behavior before runtime automation can change.
+
 ## Deterministic Output Boundaries
 
 Public output surface:

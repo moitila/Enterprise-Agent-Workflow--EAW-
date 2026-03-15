@@ -20,6 +20,7 @@ Inputs
 Command semantics
 -----------------
 Primary workflow classification remains the selected `track`, persisted as `card_state.track_id`. The declarative lifecycle advances through `card_state.current_phase` and `track.transitions`; `eaw next <CARD>` is the runtime command that applies that transition. The command sections below document the aggregated prompt-oriented CLI surface that remains public for compatibility and deterministic artifact generation.
+In the current runtime model, `eaw next <CARD>` performs the declarative state transition only; it does not execute phase work by itself.
 
 ### `eaw intake`
 
