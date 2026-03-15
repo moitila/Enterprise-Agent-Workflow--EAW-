@@ -20,7 +20,7 @@ Inputs
 Command semantics
 -----------------
 Primary workflow classification remains the selected `track`, persisted as `card_state.track_id`. The declarative lifecycle advances through `card_state.current_phase` and `track.transitions`; `eaw next <CARD>` is the runtime command that first validates the current phase `completion` contract, then applies the transition and executes the destination phase using the declared workflow outputs and prompt bindings. The command sections below document the aggregated prompt-oriented CLI surface that remains public for compatibility and deterministic artifact generation.
-In the current runtime model, `eaw next <CARD>` is the phase-driven entrypoint, while `eaw intake <CARD>`, `eaw analyze <CARD>`, and `eaw implement <CARD>` remain available as aggregated compatibility commands for prompt-oriented flows.
+In the current runtime model, `eaw next <CARD>` is the phase-driven entrypoint, while `eaw intake <CARD>`, `eaw analyze <CARD>`, and `eaw implement <CARD>` remain available as deprecated aggregated compatibility commands for prompt-oriented flows, with planned removal in `v1.0`.
 
 ### `eaw intake`
 
@@ -32,6 +32,7 @@ Behavior:
 - Writes `out/<CARD>/investigations/intake_agent_prompt.round_<N>.md`.
 - Does not modify source code repositories.
 - The generated prompt constrains evidence reading to `out/<CARD>/intake/**`.
+- Emits a warning in `stderr` marking the wrapper as deprecated, points callers to `eaw next`, and keeps the wrapper functional during the transition until the planned `v1.0` removal target.
 
 ### `eaw analyze`
 
@@ -45,6 +46,7 @@ Behavior:
 - Validates intake structure heuristically using the available intake/dossier template family and emits warnings in the generated prompt when intake is incomplete.
 - Ensures deterministic auxiliary artifacts for analysis flow, including `TEST_PLAN_<CARD>.md` when absent.
 - Does not modify source code repositories.
+- Emits a warning in `stderr` marking the wrapper as deprecated, points callers to `eaw next`, and keeps the wrapper functional during the transition until the planned `v1.0` removal target.
 
 ### `eaw implement`
 
@@ -55,6 +57,7 @@ Behavior:
 - Creates implementation scaffolds in `out/<CARD>/implementation/`.
 - Generates implementation prompt artifacts in `out/<CARD>/investigations/implementation_planning_agent_prompt.md` and `out/<CARD>/investigations/implementation_executor_agent_prompt.md`.
 - Maintains compatibility mirrors in `out/<CARD>/implementation/implementation_planning_agent_prompt.md` and `out/<CARD>/implementation/implementation_executor_agent_prompt.md`.
+- Emits a warning in `stderr` marking the wrapper as deprecated, points callers to `eaw next`, and keeps the wrapper functional during the transition until the planned `v1.0` removal target.
 
 ### `eaw doctor-hardening`
 

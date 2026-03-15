@@ -12,9 +12,9 @@ Example:
   eaw init --workdir ./.eaw --upgrade
   eaw card <CARD> --track <TRACK> ["<TITLE>"]
   eaw next <CARD>
-  eaw intake <CARD> [--round=N]   # deprecated compatibility wrapper
-  eaw analyze <CARD>              # deprecated compatibility wrapper
-  eaw implement <CARD>            # deprecated compatibility wrapper
+  eaw intake <CARD> [--round=N]   # deprecated compatibility wrapper; planned removal in v1.0
+  eaw analyze <CARD>              # deprecated compatibility wrapper; planned removal in v1.0
+  eaw implement <CARD>            # deprecated compatibility wrapper; planned removal in v1.0
   eaw tracks
   eaw suggest-prompt <CARD> --track <TRACK> --phase <PHASE>
   eaw prompt validate
@@ -1252,7 +1252,7 @@ eaw_execute_workflow_phase() {
 
 eaw_warn_compatibility_wrapper() {
 	local command_name="$1"
-	printf "WARNING: '%s' is a deprecated compatibility wrapper. Prefer 'eaw next'.\n" "$command_name" >&2
+	printf "WARNING: '%s' is deprecated and planned for removal in v1.0. Prefer 'eaw next'.\n" "$command_name" >&2
 }
 
 eaw_phase_index_in_track() {
