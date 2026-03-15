@@ -158,6 +158,17 @@ eaw_yaml_state_scalar() {
 	' "$file"
 }
 
+eaw_yaml_state_has_key() {
+	local file="$1"
+	local key="$2"
+	awk -v key="$key" '
+		/^card_state:[[:space:]]*$/ { in_state=1; next }
+		in_state && /^[^[:space:]]/ { in_state=0 }
+		in_state && $0 ~ ("^  " key ":[[:space:]]*") { found=1; exit }
+		END { exit(found ? 0 : 1) }
+	' "$file"
+}
+
 eaw_yaml_phase_prompt_path() {
 	local file="$1"
 	awk '
@@ -474,7 +485,7 @@ eaw_load_card_workflow_context() {
 	local card_name="${card_dir##*/}"
 	local intake_dir="$card_dir/intake"
 	local errors=0
-	local track_file state_file initial_phase final_phase track_id state_track_id current_phase previous_phase
+	local track_file state_file initial_phase final_phase track_id state_track_id current_phase previous_phase phase_status
 	local current_phase_file current_prompt_phase current_prompt_path current_prompt_track next_phase
 	local raw_phase normalized_phase phase_file phase_id prompt_path prompt_binding prompt_track prompt_phase
 	local raw_transition from_phase to_phase official_track_dir workflow_source
@@ -503,6 +514,8 @@ eaw_load_card_workflow_context() {
 	EAW_CARD_WORKFLOW_CURRENT_PROMPT_PHASE=""
 	EAW_CARD_WORKFLOW_CURRENT_PROMPT_PATH=""
 	EAW_CARD_WORKFLOW_NEXT_PHASE=""
+	EAW_CARD_WORKFLOW_PHASE_STATUS=""
+	EAW_CARD_WORKFLOW_PHASE_STATUS_EXPLICIT="false"
 	EAW_CARD_WORKFLOW_SOURCE=""
 
 	shopt -s nullglob
@@ -530,6 +543,10 @@ eaw_load_card_workflow_context() {
 	state_track_id="$(eaw_yaml_state_scalar "$state_file" "track_id")"
 	current_phase="$(eaw_normalize_phase_id "$(eaw_yaml_state_scalar "$state_file" "current_phase")")"
 	previous_phase="$(eaw_normalize_phase_id "$(eaw_yaml_state_scalar "$state_file" "previous_phase")")"
+	phase_status="$(eaw_yaml_state_scalar "$state_file" "phase_status")"
+	if eaw_yaml_state_has_key "$state_file" "phase_status"; then
+		EAW_CARD_WORKFLOW_PHASE_STATUS_EXPLICIT="true"
+	fi
 
 	if [[ -z "$state_track_id" ]]; then
 		echo "ERROR: card ${card_name} state file missing required field card_state.track_id: $state_file" >&2
@@ -769,6 +786,7 @@ eaw_load_card_workflow_context() {
 	EAW_CARD_WORKFLOW_CURRENT_PROMPT_TRACK="$current_prompt_track"
 	EAW_CARD_WORKFLOW_CURRENT_PROMPT_PATH="$current_prompt_path"
 	EAW_CARD_WORKFLOW_NEXT_PHASE="$next_phase"
+	EAW_CARD_WORKFLOW_PHASE_STATUS="$phase_status"
 	EAW_CARD_WORKFLOW_COMPLETED_PHASES="$(printf "%s\n" "${completed_phase_list[@]}")"
 	EAW_CARD_WORKFLOW_SOURCE="$workflow_source"
 	return 0
@@ -802,11 +820,13 @@ eaw_render_state_yaml() {
 	local previous_phase="$2"
 	local current_phase="$3"
 	local completed_phases="$4"
+	local phase_status="$5"
 
 	awk \
 		-v previous_phase="$previous_phase" \
 		-v current_phase="$current_phase" \
-		-v completed_phases="$completed_phases" '
+		-v completed_phases="$completed_phases" \
+		-v phase_status="$phase_status" '
 		function emit_completed(    n, i, items) {
 			if (completed_emitted) {
 				return
@@ -825,11 +845,20 @@ eaw_render_state_yaml() {
 				print "    - " items[i]
 			}
 		}
+		function emit_phase_status() {
+			if (phase_status_emitted) {
+				return
+			}
+			phase_status_emitted = 1
+			print "  phase_status: " phase_status
+		}
 		BEGIN {
 			in_state = 0
 			skip_completed = 0
 			previous_seen = 0
 			current_seen = 0
+			phase_status_seen = 0
+			phase_status_emitted = 0
 			completed_emitted = 0
 		}
 		/^card_state:[[:space:]]*$/ {
@@ -850,6 +879,9 @@ eaw_render_state_yaml() {
 			if (!current_seen) {
 				print "  current_phase: " current_phase
 			}
+			if (!phase_status_seen) {
+				emit_phase_status()
+			}
 			emit_completed()
 			in_state = 0
 		}
@@ -863,7 +895,15 @@ eaw_render_state_yaml() {
 			current_seen = 1
 			next
 		}
+		in_state && /^  phase_status:[[:space:]]*/ {
+			emit_phase_status()
+			phase_status_seen = 1
+			next
+		}
 		in_state && /^  completed_phases:[[:space:]]*(\[[[:space:]]*\])?[[:space:]]*$/ {
+			if (!phase_status_seen) {
+				emit_phase_status()
+			}
 			emit_completed()
 			skip_completed = 1
 			next
@@ -879,10 +919,21 @@ eaw_render_state_yaml() {
 				if (!current_seen) {
 					print "  current_phase: " current_phase
 				}
+				if (!phase_status_seen) {
+					emit_phase_status()
+				}
 				emit_completed()
 			}
 		}
 	' "$state_file"
+}
+
+eaw_state_phase_status_for_next() {
+	if [[ "${EAW_CARD_WORKFLOW_PHASE_STATUS_EXPLICIT:-false}" == "true" ]]; then
+		printf "%s\n" "${EAW_CARD_WORKFLOW_PHASE_STATUS:-}"
+		return 0
+	fi
+	printf "LEGACY_UNSET\n"
 }
 
 eaw_card_template_type_for_track() {
@@ -956,10 +1007,24 @@ eaw_write_next_state() {
 	local previous_phase="$2"
 	local current_phase="$3"
 	local completed_phases="$4"
+	local phase_status="$5"
 	local tmp_file
 
 	tmp_file="$(mktemp "${state_file}.tmp.XXXXXX")"
-	eaw_render_state_yaml "$state_file" "$previous_phase" "$current_phase" "$completed_phases" >"$tmp_file"
+	eaw_render_state_yaml "$state_file" "$previous_phase" "$current_phase" "$completed_phases" "$phase_status" >"$tmp_file"
+	mv "$tmp_file" "$state_file"
+}
+
+eaw_write_phase_status() {
+	local state_file="$1"
+	local phase_status="$2"
+	local previous_phase="$3"
+	local current_phase="$4"
+	local completed_phases="$5"
+	local tmp_file
+
+	tmp_file="$(mktemp "${state_file}.tmp.XXXXXX")"
+	eaw_render_state_yaml "$state_file" "$previous_phase" "$current_phase" "$completed_phases" "$phase_status" >"$tmp_file"
 	mv "$tmp_file" "$state_file"
 }
 
@@ -1261,7 +1326,7 @@ cmd_card() {
 cmd_next() {
 	local card="$1"
 	local card_dir="$EAW_OUT_DIR/$card"
-	local current_phase current_phase_file next_phase completed_phases
+	local current_phase current_phase_file next_phase completed_phases current_phase_status
 
 	if ! eaw_card_has_workflow_config "$card_dir"; then
 		echo "ERROR: card ${card} is missing canonical workflow YAMLs in $card_dir/intake (MVP requires canonical YAML structure)" >&2
@@ -1278,13 +1343,21 @@ cmd_next() {
 		echo "CARD ${card}: workflow already complete"
 		return 0
 	fi
-	if ! eaw_validate_phase_completion "$card" "$card_dir" "$current_phase" "$current_phase_file"; then
+	current_phase_status="$(eaw_state_phase_status_for_next)"
+	if [[ "$current_phase_status" == "LEGACY_UNSET" ]]; then
+		if ! eaw_validate_phase_completion "$card" "$card_dir" "$current_phase" "$current_phase_file"; then
+			return 1
+		fi
+	elif [[ "$current_phase_status" != "COMPLETE" ]]; then
+		echo "ERROR: card ${card} phase '${current_phase}' must be COMPLETE before next; current phase_status=${current_phase_status}" >&2
+		return 1
+	elif ! eaw_validate_phase_completion "$card" "$card_dir" "$current_phase" "$current_phase_file"; then
 		return 1
 	fi
 
 	next_phase="$EAW_CARD_WORKFLOW_NEXT_PHASE"
 	completed_phases="$(eaw_state_completed_phases_with_current "$current_phase")"
-	eaw_write_next_state "$EAW_CARD_WORKFLOW_STATE_FILE" "$current_phase" "$next_phase" "$completed_phases"
+	eaw_write_next_state "$EAW_CARD_WORKFLOW_STATE_FILE" "$current_phase" "$next_phase" "$completed_phases" "RUN"
 
 	echo "CARD ${card}: ${current_phase} -> ${next_phase}"
 	if ! eaw_load_card_workflow_context "$card_dir"; then
@@ -1292,5 +1365,32 @@ cmd_next() {
 	fi
 	OUTDIR="$card_dir"
 	run_phase "workflow_phase_${EAW_CARD_WORKFLOW_CURRENT_PHASE}" true eaw_execute_workflow_phase "$card" || return 1
+	return 0
+}
+
+cmd_complete() {
+	local card="$1"
+	local card_dir="$EAW_OUT_DIR/$card"
+	local current_phase current_phase_file completed_phases previous_phase
+
+	if ! eaw_card_has_workflow_config "$card_dir"; then
+		echo "ERROR: card ${card} is missing canonical workflow YAMLs in $card_dir/intake (MVP requires canonical YAML structure)" >&2
+		return 1
+	fi
+	if ! eaw_load_card_workflow_context "$card_dir"; then
+		return 1
+	fi
+
+	current_phase="$EAW_CARD_WORKFLOW_CURRENT_PHASE"
+	current_phase_file="$EAW_CARD_WORKFLOW_CURRENT_PHASE_FILE"
+	previous_phase="$(eaw_normalize_phase_id "$(eaw_yaml_state_scalar "$EAW_CARD_WORKFLOW_STATE_FILE" "previous_phase")")"
+	completed_phases="${EAW_CARD_WORKFLOW_COMPLETED_PHASES:-}"
+
+	if ! eaw_validate_phase_completion "$card" "$card_dir" "$current_phase" "$current_phase_file"; then
+		return 1
+	fi
+
+	eaw_write_phase_status "$EAW_CARD_WORKFLOW_STATE_FILE" "COMPLETE" "$previous_phase" "$current_phase" "$completed_phases"
+	echo "CARD ${card}: ${current_phase} marked COMPLETE"
 	return 0
 }

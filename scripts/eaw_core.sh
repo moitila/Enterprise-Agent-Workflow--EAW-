@@ -745,7 +745,7 @@ card_state:
   track_id: ${track_id}
   current_phase: ${current_phase}
   previous_phase: null
-  phase_status: in_progress
+  phase_status: RUN
   completed_phases: []
   created_at: "${date}"
   updated_at: "${date}"
