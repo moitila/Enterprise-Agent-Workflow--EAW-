@@ -136,4 +136,118 @@ grep -Fq "phase_status: RUN" "$custom_state" || fail "custom legacy card should 
 grep -Eq '^workflow_phase_code_review\|OK\|' "$custom_log" || fail "custom execution log missing workflow phase entry"
 grep -Fq "RUNTIME: phase=code_review action=phase_driven_execution" <<<"$custom_output" || fail "custom next output missing phase execution summary"
 
+missing_card="541MISSING"
+missing_intake="$workdir/out/$missing_card/intake"
+mkdir -p "$missing_intake"
+cat >"$missing_intake/track_custom.yaml" <<'EOF'
+track:
+  id: custom
+  initial_phase: analysis
+  final_phase: code_review
+  phases:
+    - analysis
+    - code_review
+  transitions:
+    analysis:
+      next: code_review
+EOF
+cat >"$missing_intake/state_card_custom.yaml" <<'EOF'
+card_state:
+  track_id: custom
+  previous_phase: null
+  current_phase: analysis
+  completed_phases: []
+  phase_status: COMPLETE
+EOF
+cat >"$missing_intake/phase_analysis.yaml" <<'EOF'
+phase:
+  id: analysis
+  prompt:
+    path: templates/prompts/default/findings/prompt_v<active>.md
+
+  outputs:
+    create_directories: []
+    create_artifacts: []
+
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - review/missing.md
+EOF
+cat >"$missing_intake/phase_code_review.yaml" <<'EOF'
+phase:
+  id: code_review
+  prompt:
+    path: templates/prompts/default/findings/prompt_v<active>.md
+
+  outputs:
+    create_directories: []
+    create_artifacts: []
+
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts: []
+EOF
+
+if missing_output="$(EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" next "$missing_card" 2>&1)"; then
+	fail "missing-artifact next command should fail when required artifact is absent"
+fi
+grep -Fq "missing required artifacts: review/missing.md" <<<"$missing_output" || fail "missing-artifact output missing required artifact detail"
+
+unsupported_card="541UNSUPPORTED"
+unsupported_intake="$workdir/out/$unsupported_card/intake"
+mkdir -p "$unsupported_intake"
+cat >"$unsupported_intake/track_custom.yaml" <<'EOF'
+track:
+  id: custom
+  initial_phase: analysis
+  final_phase: code_review
+  phases:
+    - analysis
+    - code_review
+  transitions:
+    analysis:
+      next: code_review
+EOF
+cat >"$unsupported_intake/state_card_custom.yaml" <<'EOF'
+card_state:
+  track_id: custom
+  previous_phase: null
+  current_phase: analysis
+  completed_phases: []
+  phase_status: COMPLETE
+EOF
+cat >"$unsupported_intake/phase_analysis.yaml" <<'EOF'
+phase:
+  id: analysis
+  prompt:
+    path: templates/prompts/default/findings/prompt_v<active>.md
+
+  outputs:
+    create_directories: []
+    create_artifacts: []
+
+  completion:
+    strategy: manual
+EOF
+cat >"$unsupported_intake/phase_code_review.yaml" <<'EOF'
+phase:
+  id: code_review
+  prompt:
+    path: templates/prompts/default/findings/prompt_v<active>.md
+
+  outputs:
+    create_directories: []
+    create_artifacts: []
+
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts: []
+EOF
+
+if unsupported_output="$(EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" next "$unsupported_card" 2>&1)"; then
+	fail "unsupported strategy next command should fail"
+fi
+grep -Fq "uses unsupported completion strategy 'manual'" <<<"$unsupported_output" || fail "unsupported strategy output missing explicit error"
+
 printf "workflow_next_phase_execution OK\n"

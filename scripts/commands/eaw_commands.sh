@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
 
+EAW_COMMANDS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+EAW_PHASE_COMPLETION_LIB="$EAW_COMMANDS_DIR/../lib/phase_completion.sh"
+# shellcheck disable=SC1090
+source "$EAW_PHASE_COMPLETION_LIB"
+
 usage() {
 	cat <<EOF
 Usage: eaw init [--workdir <path>] [--force] [--upgrade]
@@ -227,77 +232,15 @@ eaw_yaml_phase_output_artifacts() {
 }
 
 eaw_yaml_phase_completion_strategy() {
-	local file="$1"
-	awk '
-		function trim(s) {
-			sub(/^[[:space:]]+/, "", s)
-			sub(/[[:space:]]+$/, "", s)
-			sub(/^"/, "", s)
-			sub(/"$/, "", s)
-			return s
-		}
-		/^phase:[[:space:]]*$/ { in_phase=1; next }
-		in_phase && /^[^[:space:]]/ { in_phase=0; in_completion=0 }
-		in_phase && /^  completion:[[:space:]]*$/ { in_completion=1; next }
-		in_completion && /^  [^[:space:]]/ { in_completion=0 }
-		in_completion && /^    strategy:[[:space:]]*/ {
-			line=$0
-			sub(/^    strategy:[[:space:]]*/, "", line)
-			print trim(line)
-			exit
-		}
-	' "$file"
+	eaw_phase_completion_strategy_name "$1"
 }
 
 eaw_yaml_phase_completion_required_artifacts() {
-	local file="$1"
-	awk '
-		/^phase:[[:space:]]*$/ { in_phase=1; next }
-		in_phase && /^[^[:space:]]/ { in_phase=0; in_completion=0; in_required=0 }
-		in_phase && /^  completion:[[:space:]]*$/ { in_completion=1; next }
-		in_completion && /^  [^[:space:]]/ { in_completion=0; in_required=0 }
-		in_completion && /^    required_artifacts:[[:space:]]*$/ { in_required=1; next }
-		in_required && /^    [^[:space:]-]/ { in_required=0 }
-		in_required && /^      - / {
-			line=$0
-			sub(/^      - /, "", line)
-			print line
-		}
-	' "$file"
+	eaw_phase_completion_required_artifacts "$1"
 }
 
 eaw_validate_phase_completion() {
-	local card="$1"
-	local card_dir="$2"
-	local phase_id="$3"
-	local phase_file="$4"
-	local strategy rel_path
-	local -a missing_artifacts=()
-
-	strategy="$(eaw_yaml_phase_completion_strategy "$phase_file")"
-	case "$strategy" in
-	"" | required_artifacts_exist)
-		while IFS= read -r rel_path; do
-			[[ -n "$rel_path" ]] || continue
-			if [[ ! -e "$card_dir/$rel_path" ]]; then
-				missing_artifacts+=("$rel_path")
-			fi
-		done < <(eaw_yaml_phase_completion_required_artifacts "$phase_file")
-		;;
-	*)
-		echo "ERROR: card ${card} phase '${phase_id}' uses unsupported completion strategy '${strategy}'" >&2
-		return 1
-		;;
-	esac
-
-	if [[ ${#missing_artifacts[@]} -gt 0 ]]; then
-		printf "ERROR: card %s phase '%s' is incomplete; missing required artifacts:" "$card" "$phase_id" >&2
-		printf " %s" "${missing_artifacts[@]}" >&2
-		printf "\n" >&2
-		return 1
-	fi
-
-	return 0
+	eaw_phase_completion_evaluate "$1" "$2" "$3" "$4"
 }
 
 eaw_prompt_binding_from_path() {
