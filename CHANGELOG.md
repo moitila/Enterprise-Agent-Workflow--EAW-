@@ -1,15 +1,44 @@
 # Changelog
 
 ## Unreleased
+ 
+## v0.8.0 — Declarative Workflow Tracks & Onboarding Alignment
+
+### Highlights
+- Introduced official declarative workflow tracks under `tracks/<track>/` for `standard`, `feature`, `bug`, and `spike`.
+- Added runtime support for track-based card creation via `eaw card <CARD> --track <TRACK>`.
+- Added declarative workflow progression through `eaw next <CARD>`, backed by `card_state.current_phase` and `track.transitions`.
+- Resolved phase prompts through declarative `prompt.path` and strengthened workflow validation in the runtime.
+- Expanded the documentation set with a formal workflow YAML contract, track command contract, and conceptual onboarding model.
+
+### Added
+- Official workflow trees for `standard`, `feature`, `bug`, and `spike`, including `track.yaml`, `phases/*.yaml`, and logical `card_state.yaml` templates.
+- `eaw tracks` validation hardening and dedicated smoke coverage.
+- Workflow prompt path smoke coverage and card-command smoke coverage.
+- `docs/WORKFLOW_YAML_CONTRACT.md` documenting `track`, `phase`, `card_state`, and compatibility behavior.
+- `docs/TRACKS_COMMAND.md` for `eaw tracks`.
+- `docs/CONCEPTUAL_MODEL.md` to clarify the product mental model and onboarding path.
 
 ### Changed
+- Replaced legacy card creation commands with `eaw card <CARD> --track <TRACK>`.
+- Updated runtime workflow loading to prefer official installed tracks and keep per-card compatibility artifacts as fallback.
+- Updated `README.md`, `docs/integration.md`, and `docs/CONTRACT.md` to position the declarative lifecycle as primary and `intake` / `analyze` / `implement` as aggregated compatibility flows.
 - Formalized missing `config/eaw.conf` as an optional formal contract in diagnostics:
   - `doctor` now reports `eaw.conf: OPTIONAL_FORMAL (...)` with no warning increment.
   - `validate` now emits an `INFO` line for missing `eaw.conf` and keeps `warnings=0`.
-- Added smoke coverage for config contract scenarios:
-  - missing `eaw.conf`
-  - existing `eaw.conf` without `config_version`
-  - outdated `config_version`
+
+### Testing
+- Added or updated smoke coverage for:
+  - `eaw card`
+  - `eaw tracks`
+  - declarative `prompt.path`
+  - config contract scenarios for `eaw.conf`
+- Lifecycle and golden structure checks now cover the expanded workflow-track model.
+
+### Compatibility Notes
+- Public CLI remains stable and backward-compatible for prompt-oriented flows.
+- Workflow classification is now documented consistently as `track` / `card_state.track_id`.
+- `intake`, `analyze`, and `implement` remain available as aggregated compatibility commands for AI-assisted execution.
 
 ## v0.6.0 — Internal Modularization & Structural Stabilization
 
