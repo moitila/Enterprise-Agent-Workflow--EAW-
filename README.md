@@ -62,6 +62,7 @@ Future phase-driven note:
 
 - `./scripts/eaw smoke` executes the baseline smoke suite only (`tests/smoke/smoke_baseline.sh`).
 - `./scripts/eaw test` executes a broader deterministic scope (`smoke + integration + lifecycle + golden`).
+- `tests/phase_engine_lifecycle.sh` is a dedicated lifecycle/integration-light suite for the phase engine. It is executed from the lifecycle aggregate suite.
 - Category wrappers are organized under:
   - `tests/smoke/`
   - `tests/integration/`
