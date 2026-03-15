@@ -58,6 +58,12 @@ Future phase-driven note:
 - the current phase-driven executor is incremental: it scaffolds declared outputs, materializes `outputs.prompts` under `out/<CARD>/prompts/`, emits compatibility prompt artifacts for the built-in prompt phases, and records execution in `execution.log`;
 - future iterations can refine pre-conditions, completion criteria, and the distinction between manual and automatic phases without requiring new top-level commands.
 
+## Migration Path
+
+- Prefer `./scripts/eaw next <CARD>` as the primary lifecycle command.
+- Treat `intake`, `analyze`, and `implement` as deprecated compatibility wrappers during the transition to the phase-driven flow; removal remains planned for `v1.0`.
+- In the current public CLI, phase completion is enforced through `phase.completion` when `next` runs. The repository does not document a public `./scripts/eaw complete <CARD>` command today, so documentation should describe the completion contract rather than an additional CLI step.
+
 ## Test Scopes
 
 - `./scripts/eaw smoke` executes the baseline smoke suite only (`tests/smoke/smoke_baseline.sh`).
@@ -147,6 +153,12 @@ Semantica atual de fase:
 Nota sobre modelo phase-driven futuro:
 - o executor phase-driven atual e incremental: cria artefatos declarados, emite prompts das fases conhecidas e registra a execucao em `execution.log`;
 - iteracoes futuras podem refinar pre-condicoes, criterio de conclusao e a distincao entre fases manuais e automaticas sem exigir novo comando top-level.
+
+### Caminho de Migracao
+
+- Prefira `./scripts/eaw next <CARD>` como comando principal do lifecycle.
+- Trate `intake`, `analyze` e `implement` como wrappers deprecated de compatibilidade durante a transicao para o fluxo phase-driven; a remocao continua planejada para `v1.0`.
+- Na CLI publica atual, a conclusao da fase e aplicada por `phase.completion` quando `next` executa. O repositorio nao documenta hoje um comando publico `./scripts/eaw complete <CARD>`, entao a documentacao deve descrever o contrato de conclusao em vez de um passo extra de CLI.
 
 ## Commit Governance (ECS)
 

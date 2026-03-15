@@ -21,6 +21,7 @@ Command semantics
 -----------------
 Primary workflow classification remains the selected `track`, persisted as `card_state.track_id`. The declarative lifecycle advances through `card_state.current_phase` and `track.transitions`; `eaw next <CARD>` is the runtime command that first validates the current phase `completion` contract, then applies the transition and executes the destination phase using the declared workflow outputs and prompt bindings. The command sections below document the aggregated prompt-oriented CLI surface that remains public for compatibility and deterministic artifact generation.
 In the current runtime model, `eaw next <CARD>` is the phase-driven entrypoint, while `eaw intake <CARD>`, `eaw analyze <CARD>`, and `eaw implement <CARD>` remain available as deprecated aggregated compatibility commands for prompt-oriented flows, with planned removal in `v1.0`.
+The current contract documents phase completion through `phase.completion` and the `eaw next <CARD>` transition gate. It does not define a public `eaw complete <CARD>` command in the current CLI surface, so callers should treat completion as part of the declarative phase contract rather than a separate command.
 
 ### `eaw intake`
 
