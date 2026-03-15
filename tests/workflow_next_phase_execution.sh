@@ -44,7 +44,25 @@ grep -Fq "completed_phases: []" "$state_file" || fail "feature card completed ph
 [[ -f "$intake_prompt_phase" ]] || fail "card should materialize phase-driven intake prompt"
 grep -Eq '^workflow_phase_intake\|OK\|' "$execution_log" || fail "execution log missing workflow phase entry for intake"
 
-next_output="$(EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" next "$feature_card" 2>&1)" || fail "feature next command failed after complete"
+next_output="$(EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" next "$feature_card" 2>&1)" || fail "feature next command should keep intake current while required artifacts are unfilled"
+grep -Fq "unfilled required artifacts: investigations/00_intake.md investigations/_intake_provenance.md" <<<"$next_output" || fail "feature next output missing unfilled intake gate"
+grep -Fq "CARD $feature_card: intake remains current; missing required artifacts" <<<"$next_output" || fail "feature next output missing remain-current summary"
+grep -Fq "current_phase: intake" "$state_file" || fail "feature card should remain in intake while intake artifacts are unfilled"
+grep -Fq "completed_phases: []" "$state_file" || fail "feature card should not complete intake while intake artifacts are unfilled"
+test ! -f "$findings_prompt" || fail "findings prompt should not exist before intake artifacts are filled"
+test ! -f "$findings_prompt_phase" || fail "phase-driven findings prompt should not exist before intake artifacts are filled"
+
+cat >>"$workdir/out/$feature_card/investigations/00_intake.md" <<'EOF'
+
+Feature intake preenchido para teste.
+EOF
+sed -i "s/<CARD>/$feature_card/g" "$workdir/out/$feature_card/investigations/00_intake.md"
+cat >>"$workdir/out/$feature_card/investigations/_intake_provenance.md" <<'EOF'
+
+Fonte: teste automatizado.
+EOF
+
+next_output="$(EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" next "$feature_card" 2>&1)" || fail "feature next command failed after intake artifacts were filled"
 
 grep -Fq "current_phase: findings" "$state_file" || fail "feature card did not advance to findings"
 grep -Fq "previous_phase: intake" "$state_file" || fail "feature card previous_phase not updated"
@@ -60,6 +78,19 @@ cmp -s "$findings_prompt" "$findings_prompt_phase" || fail "phase-driven finding
 grep -Eq '^workflow_phase_findings\|OK\|' "$execution_log" || fail "execution log missing workflow phase entry for findings"
 grep -Fq "CARD $feature_card: intake -> findings" <<<"$next_output" || fail "next output missing transition summary"
 grep -Fq "RUNTIME: phase=findings action=phase_driven_execution" <<<"$next_output" || fail "next output missing phase execution summary"
+
+next_output="$(EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" next "$feature_card" 2>&1)" || fail "feature next command should keep findings current while findings is unfilled"
+grep -Fq "unfilled required artifacts: investigations/20_findings.md" <<<"$next_output" || fail "feature next output missing findings content gate"
+grep -Fq "current_phase: findings" "$state_file" || fail "feature card should remain in findings while findings artifact is unfilled"
+
+cat >>"$findings_file" <<'EOF'
+
+Findings preenchido para teste.
+EOF
+sed -i "s/<CARD>/$feature_card/g" "$findings_file"
+
+next_output="$(EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" next "$feature_card" 2>&1)" || fail "feature next command failed after findings was filled"
+grep -Fq "current_phase: hypotheses" "$state_file" || fail "feature card did not advance to hypotheses after findings fill"
 
 custom_card="541CUSTOM"
 custom_intake="$workdir/out/$custom_card/intake"

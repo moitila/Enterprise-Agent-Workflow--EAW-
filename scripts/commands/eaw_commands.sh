@@ -260,6 +260,10 @@ eaw_validate_phase_completion() {
 	eaw_phase_completion_evaluate "$1" "$2" "$3" "$4"
 }
 
+eaw_validate_phase_completion_strict() {
+	eaw_phase_completion_evaluate_strict "$1" "$2" "$3" "$4"
+}
+
 eaw_prompt_binding_from_path() {
 	local prompt_path="${1:-}"
 	local normalized_path remainder track raw_phase phase
@@ -1436,6 +1440,40 @@ eaw_mark_current_phase_complete_for_wrapper() {
 	return 0
 }
 
+eaw_advance_to_next_phase_for_wrapper() {
+	local card="$1"
+	local card_dir="$EAW_OUT_DIR/$card"
+	local current_phase
+	local current_phase_file
+	local next_phase
+	local completed_phases
+	local phase_started_at
+
+	if ! eaw_load_card_workflow_context "$card_dir"; then
+		return 1
+	fi
+
+	current_phase="$EAW_CARD_WORKFLOW_CURRENT_PHASE"
+	current_phase_file="$EAW_CARD_WORKFLOW_CURRENT_PHASE_FILE"
+	if [[ "$current_phase" == "$EAW_CARD_WORKFLOW_FINAL_PHASE" ]]; then
+		echo "CARD ${card}: workflow already complete"
+		return 0
+	fi
+
+	if ! eaw_validate_phase_completion "$card" "$card_dir" "$current_phase" "$current_phase_file"; then
+		return 1
+	fi
+
+	next_phase="$EAW_CARD_WORKFLOW_NEXT_PHASE"
+	completed_phases="$(eaw_state_completed_phases_with_current "$current_phase")"
+	phase_started_at="$(utc_timestamp)"
+	eaw_write_next_state "$EAW_CARD_WORKFLOW_STATE_FILE" "$current_phase" "$next_phase" "$completed_phases" "RUN" "$phase_started_at" "false" "null"
+
+	echo "CARD ${card}: ${current_phase} -> ${next_phase}"
+	eaw_materialize_current_phase "$card" || return 1
+	return 0
+}
+
 eaw_wrapper_materialize_until_phase() {
 	local card="$1"
 	local target_phase="$2"
@@ -1474,7 +1512,7 @@ eaw_wrapper_materialize_until_phase() {
 
 		eaw_execute_current_phase_for_wrapper "$card" || return 1
 		eaw_mark_current_phase_complete_for_wrapper "$card" || return 1
-		cmd_next "$card" || return 1
+		eaw_advance_to_next_phase_for_wrapper "$card" || return 1
 	done
 }
 
@@ -1573,8 +1611,8 @@ cmd_next() {
 	current_phase="$EAW_CARD_WORKFLOW_CURRENT_PHASE"
 	current_phase_file="$EAW_CARD_WORKFLOW_CURRENT_PHASE_FILE"
 
-	if ! validation_output="$(eaw_validate_phase_completion "$card" "$card_dir" "$current_phase" "$current_phase_file" 2>&1)"; then
-		if [[ "$validation_output" == *"is incomplete; missing required artifacts:"* ]]; then
+	if ! validation_output="$(eaw_validate_phase_completion_strict "$card" "$card_dir" "$current_phase" "$current_phase_file" 2>&1)"; then
+		if [[ "$validation_output" == *"is incomplete; missing required artifacts:"* || "$validation_output" == *"is incomplete; unfilled required artifacts:"* ]]; then
 			printf "%s\n" "$validation_output" >&2
 			previous_phase="$(eaw_normalize_phase_id "$(eaw_yaml_state_scalar "$EAW_CARD_WORKFLOW_STATE_FILE" "previous_phase")")"
 			completed_phases="${EAW_CARD_WORKFLOW_COMPLETED_PHASES:-}"
@@ -1616,7 +1654,7 @@ cmd_complete() {
 	completed_phases="${EAW_CARD_WORKFLOW_COMPLETED_PHASES:-}"
 	phase_started_at="$(eaw_state_scalar_or_default "$EAW_CARD_WORKFLOW_STATE_FILE" "phase_started_at" "null")"
 
-	if ! eaw_validate_phase_completion "$card" "$card_dir" "$current_phase" "$current_phase_file"; then
+	if ! eaw_validate_phase_completion_strict "$card" "$card_dir" "$current_phase" "$current_phase_file"; then
 		return 1
 	fi
 
