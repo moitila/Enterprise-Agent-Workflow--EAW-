@@ -45,6 +45,8 @@ source "$SCRIPT_DIR/commands/cmd_init.sh"
 # shellcheck disable=SC1091
 source "$SCRIPT_DIR/commands/eaw_commands.sh"
 # shellcheck disable=SC1091
+source "$SCRIPT_DIR/lib/workflow_validation.sh"
+# shellcheck disable=SC1091
 source "$SCRIPT_DIR/commands/cmd_validate.sh"
 # shellcheck disable=SC1091
 source "$SCRIPT_DIR/commands/cmd_doctor.sh"
@@ -183,6 +185,14 @@ main() {
 		cmd_apply_prompt "$2" "$3" "$4"
 		;;
 	validate)
+		if [[ "$#" -ge 2 && "$2" == "workflow" ]]; then
+			validate_runtime_workdir
+			if cmd_validate_workflow "${@:3}"; then
+				exit 0
+			else
+				exit $?
+			fi
+		fi
 		if cmd_validate; then
 			exit 0
 		else
