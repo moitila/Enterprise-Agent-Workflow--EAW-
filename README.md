@@ -46,15 +46,16 @@ chmod +x scripts/eaw scripts/lib.sh
 
 `track` is the primary workflow classification for a card. The runtime stores the selected value in `card_state.track_id` and resolves the official workflow from `tracks/<track>/track.yaml`.
 
-The declarative lifecycle advances through `current_phase` and `track.transitions`. `./scripts/eaw next <CARD>` is the command that moves a card to its next declared phase, while `intake`, `analyze`, and `implement` remain aggregated prompt-oriented commands that coexist for compatibility and AI-assisted execution flows.
+The declarative lifecycle advances through `current_phase` and `track.transitions`. `./scripts/eaw next <CARD>` is the command that moves a card to its next declared phase and executes the destination phase in a phase-driven way, while `intake`, `analyze`, and `implement` remain aggregated prompt-oriented commands that coexist for compatibility and AI-assisted execution flows.
 
 Current phase semantics:
 - entering a phase means the card state now points to that declarative workflow phase;
-- `./scripts/eaw next <CARD>` performs a state transition and does not execute phase work by itself;
+- `./scripts/eaw next <CARD>` performs the declarative state transition, then executes the destination phase using the phase YAML outputs and the runtime prompt bindings;
 - `intake`, `analyze`, and `implement` remain the compatibility commands that materialize the prompt-oriented work associated with those phases.
 
 Future phase-driven note:
-- a fully phase-driven executor requires an explicit contract that defines pre-conditions, completion criteria, and whether a phase is manual or automatic before runtime automation changes are introduced.
+- the current phase-driven executor is incremental: it scaffolds declared outputs, emits phase prompt artifacts for the built-in prompt phases, and records execution in `execution.log`;
+- future iterations can refine pre-conditions, completion criteria, and the distinction between manual and automatic phases without requiring new top-level commands.
 
 ## Test Scopes
 
@@ -131,11 +132,12 @@ Para usar: `./scripts/eaw init`, depois `./scripts/eaw card <CARD> --track <TRAC
 
 Semantica atual de fase:
 - entrar em uma fase significa que o estado do card agora aponta para aquela fase declarativa do workflow;
-- `./scripts/eaw next <CARD>` executa a transicao declarativa de estado e nao executa, por si so, o trabalho da fase;
+- `./scripts/eaw next <CARD>` executa a transicao declarativa de estado e depois executa a fase de destino com base nos outputs declarados e nos bindings de prompt do runtime;
 - `intake`, `analyze` e `implement` seguem como comandos agregados de compatibilidade que materializam o trabalho orientado a prompts dessas fases.
 
 Nota sobre modelo phase-driven futuro:
-- um executor totalmente orientado a fase depende de contrato explicito com pre-condicoes, criterio de conclusao e definicao objetiva de fases manuais e automaticas antes de qualquer mudanca de runtime.
+- o executor phase-driven atual e incremental: cria artefatos declarados, emite prompts das fases conhecidas e registra a execucao em `execution.log`;
+- iteracoes futuras podem refinar pre-condicoes, criterio de conclusao e a distincao entre fases manuais e automaticas sem exigir novo comando top-level.
 
 ## Commit Governance (ECS)
 

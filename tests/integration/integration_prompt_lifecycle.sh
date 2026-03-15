@@ -121,8 +121,8 @@ for phase in "${phases[@]}"; do
 done
 
 default_intake_dir="$EAW_WORKDIR/templates/prompts/default/intake"
+"$REPO_ROOT/scripts/eaw" card 499 --track feature "Invalid active prompt guardrail" >/dev/null
 printf "v999\n" >"$default_intake_dir/ACTIVE"
-"$REPO_ROOT/scripts/eaw" feature 499 "Invalid active prompt guardrail" >/dev/null
 set +e
 "$REPO_ROOT/scripts/eaw" intake 499 --round=1 >/dev/null 2>&1
 rc=$?
@@ -131,7 +131,7 @@ set -e
 test ! -f "$EAW_WORKDIR/out/499/investigations/intake_agent_prompt.round_1.md"
 printf "v2\n" >"$default_intake_dir/ACTIVE"
 
-"$REPO_ROOT/scripts/eaw" feature 500 "Prompt lifecycle integration" >/dev/null
+"$REPO_ROOT/scripts/eaw" card 500 --track feature "Prompt lifecycle integration" >/dev/null
 "$REPO_ROOT/scripts/eaw" intake 500 --round=1 >/dev/null
 "$REPO_ROOT/scripts/eaw" analyze 500 >/dev/null
 "$REPO_ROOT/scripts/eaw" implement 500 >/dev/null
