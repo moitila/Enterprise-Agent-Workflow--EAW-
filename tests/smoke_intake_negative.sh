@@ -23,7 +23,7 @@ card_template_missing="4013A"
 card_round_invalid="4013B"
 card_workdir_invalid="4013C"
 
-# Scenario A: missing template
+# Scenario A: missing canonical card workflow scaffold
 isolated_root="$tmpdir/isolated_root"
 mkdir -p "$isolated_root"
 ln -s "$REPO_ROOT/scripts" "$isolated_root/scripts"
@@ -37,7 +37,7 @@ scenario_a_rc=$?
 set -e
 
 [[ $scenario_a_rc -ne 0 ]] || fail "scenario A expected non-zero exit code"
-grep -Fq "failed to resolve intake prompt via ACTIVE" <<<"$scenario_a_output" || fail "scenario A missing substring: failed to resolve intake prompt via ACTIVE"
+grep -Fq "is missing canonical workflow YAMLs" <<<"$scenario_a_output" || fail "scenario A missing substring: is missing canonical workflow YAMLs"
 assert_no_repo_residue "$card_template_missing"
 
 # Scenario B: invalid --round argument
