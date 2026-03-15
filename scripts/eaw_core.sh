@@ -716,7 +716,7 @@ phase_init_runtime() {
 	ensure_dir "$intake_dir"
 	if ! compgen -G "$intake_runtime_dir/state_card_*.yaml" >/dev/null; then
 		local track_id="${track_id_override:-${type,,}}"
-		local state_file current_phase track_file
+		local state_file current_phase track_file phase_started_at
 		if [[ -z "$track_id" || ! -d "$EAW_ROOT_DIR/tracks/$track_id" ]]; then
 			track_id="standard"
 		fi
@@ -736,6 +736,7 @@ phase_init_runtime() {
 			' "$track_file")"
 			[[ -n "$current_phase" ]] || current_phase="intake"
 		fi
+		phase_started_at="$(utc_timestamp)"
 		state_file="$intake_runtime_dir/state_card_${track_id}.yaml"
 		cat >"$state_file" <<EOF
 config_version: 1
@@ -744,6 +745,9 @@ card_state:
   card_id: CARD_${card}
   track_id: ${track_id}
   current_phase: ${current_phase}
+  phase_started_at: ${phase_started_at}
+  phase_completed: false
+  phase_completed_at: null
   previous_phase: null
   phase_status: RUN
   completed_phases: []

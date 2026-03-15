@@ -16,6 +16,8 @@ ensure_dir() {
 
 iso_date() { date -u +%Y-%m-%d; }
 
+utc_timestamp() { date -u +%Y-%m-%dT%H:%M:%SZ; }
+
 resolve_workdirs() {
 	local root_dir="${1:-$EAW_BASE_DIR}"
 	EAW_ROOT_DIR="$root_dir"

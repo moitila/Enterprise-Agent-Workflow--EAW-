@@ -775,18 +775,39 @@ eaw_state_completed_phases_with_current() {
 	printf "%s\n" "${completed_phase_list[@]}"
 }
 
+eaw_state_scalar_or_default() {
+	local state_file="$1"
+	local key="$2"
+	local default_value="$3"
+	local value
+
+	value="$(eaw_yaml_state_scalar "$state_file" "$key")"
+	if [[ -n "$value" ]]; then
+		printf "%s\n" "$value"
+		return 0
+	fi
+
+	printf "%s\n" "$default_value"
+}
+
 eaw_render_state_yaml() {
 	local state_file="$1"
 	local previous_phase="$2"
 	local current_phase="$3"
 	local completed_phases="$4"
 	local phase_status="$5"
+	local phase_started_at="$6"
+	local phase_completed="$7"
+	local phase_completed_at="$8"
 
 	awk \
 		-v previous_phase="$previous_phase" \
 		-v current_phase="$current_phase" \
 		-v completed_phases="$completed_phases" \
-		-v phase_status="$phase_status" '
+		-v phase_status="$phase_status" \
+		-v phase_started_at="$phase_started_at" \
+		-v phase_completed="$phase_completed" \
+		-v phase_completed_at="$phase_completed_at" '
 		function emit_completed(    n, i, items) {
 			if (completed_emitted) {
 				return
@@ -812,13 +833,40 @@ eaw_render_state_yaml() {
 			phase_status_emitted = 1
 			print "  phase_status: " phase_status
 		}
+		function emit_phase_started_at() {
+			if (phase_started_at_emitted) {
+				return
+			}
+			phase_started_at_emitted = 1
+			print "  phase_started_at: " phase_started_at
+		}
+		function emit_phase_completed() {
+			if (phase_completed_emitted) {
+				return
+			}
+			phase_completed_emitted = 1
+			print "  phase_completed: " phase_completed
+		}
+		function emit_phase_completed_at() {
+			if (phase_completed_at_emitted) {
+				return
+			}
+			phase_completed_at_emitted = 1
+			print "  phase_completed_at: " phase_completed_at
+		}
 		BEGIN {
 			in_state = 0
 			skip_completed = 0
 			previous_seen = 0
 			current_seen = 0
+			phase_started_at_seen = 0
+			phase_completed_seen = 0
+			phase_completed_at_seen = 0
 			phase_status_seen = 0
 			phase_status_emitted = 0
+			phase_started_at_emitted = 0
+			phase_completed_emitted = 0
+			phase_completed_at_emitted = 0
 			completed_emitted = 0
 		}
 		/^card_state:[[:space:]]*$/ {
@@ -839,6 +887,15 @@ eaw_render_state_yaml() {
 			if (!current_seen) {
 				print "  current_phase: " current_phase
 			}
+			if (!phase_started_at_seen) {
+				emit_phase_started_at()
+			}
+			if (!phase_completed_seen) {
+				emit_phase_completed()
+			}
+			if (!phase_completed_at_seen) {
+				emit_phase_completed_at()
+			}
 			if (!phase_status_seen) {
 				emit_phase_status()
 			}
@@ -855,12 +912,45 @@ eaw_render_state_yaml() {
 			current_seen = 1
 			next
 		}
+		in_state && /^  phase_started_at:[[:space:]]*/ {
+			emit_phase_started_at()
+			phase_started_at_seen = 1
+			next
+		}
+		in_state && /^  phase_completed:[[:space:]]*/ {
+			emit_phase_completed()
+			phase_completed_seen = 1
+			next
+		}
+		in_state && /^  phase_completed_at:[[:space:]]*/ {
+			emit_phase_completed_at()
+			phase_completed_at_seen = 1
+			next
+		}
 		in_state && /^  phase_status:[[:space:]]*/ {
+			if (!phase_started_at_seen) {
+				emit_phase_started_at()
+			}
+			if (!phase_completed_seen) {
+				emit_phase_completed()
+			}
+			if (!phase_completed_at_seen) {
+				emit_phase_completed_at()
+			}
 			emit_phase_status()
 			phase_status_seen = 1
 			next
 		}
 		in_state && /^  completed_phases:[[:space:]]*(\[[[:space:]]*\])?[[:space:]]*$/ {
+			if (!phase_started_at_seen) {
+				emit_phase_started_at()
+			}
+			if (!phase_completed_seen) {
+				emit_phase_completed()
+			}
+			if (!phase_completed_at_seen) {
+				emit_phase_completed_at()
+			}
 			if (!phase_status_seen) {
 				emit_phase_status()
 			}
@@ -878,6 +968,15 @@ eaw_render_state_yaml() {
 				}
 				if (!current_seen) {
 					print "  current_phase: " current_phase
+				}
+				if (!phase_started_at_seen) {
+					emit_phase_started_at()
+				}
+				if (!phase_completed_seen) {
+					emit_phase_completed()
+				}
+				if (!phase_completed_at_seen) {
+					emit_phase_completed_at()
 				}
 				if (!phase_status_seen) {
 					emit_phase_status()
@@ -968,10 +1067,13 @@ eaw_write_next_state() {
 	local current_phase="$3"
 	local completed_phases="$4"
 	local phase_status="$5"
+	local phase_started_at="$6"
+	local phase_completed="$7"
+	local phase_completed_at="$8"
 	local tmp_file
 
 	tmp_file="$(mktemp "${state_file}.tmp.XXXXXX")"
-	eaw_render_state_yaml "$state_file" "$previous_phase" "$current_phase" "$completed_phases" "$phase_status" >"$tmp_file"
+	eaw_render_state_yaml "$state_file" "$previous_phase" "$current_phase" "$completed_phases" "$phase_status" "$phase_started_at" "$phase_completed" "$phase_completed_at" >"$tmp_file"
 	mv "$tmp_file" "$state_file"
 }
 
@@ -981,10 +1083,13 @@ eaw_write_phase_status() {
 	local previous_phase="$3"
 	local current_phase="$4"
 	local completed_phases="$5"
+	local phase_started_at="$6"
+	local phase_completed="$7"
+	local phase_completed_at="$8"
 	local tmp_file
 
 	tmp_file="$(mktemp "${state_file}.tmp.XXXXXX")"
-	eaw_render_state_yaml "$state_file" "$previous_phase" "$current_phase" "$completed_phases" "$phase_status" >"$tmp_file"
+	eaw_render_state_yaml "$state_file" "$previous_phase" "$current_phase" "$completed_phases" "$phase_status" "$phase_started_at" "$phase_completed" "$phase_completed_at" >"$tmp_file"
 	mv "$tmp_file" "$state_file"
 }
 
@@ -1293,6 +1398,8 @@ eaw_mark_current_phase_complete_for_wrapper() {
 	local previous_phase
 	local completed_phases
 	local phase_status
+	local phase_started_at
+	local phase_completed_at
 
 	if ! eaw_load_card_workflow_context "$card_dir"; then
 		return 1
@@ -1303,6 +1410,7 @@ eaw_mark_current_phase_complete_for_wrapper() {
 	previous_phase="$(eaw_normalize_phase_id "$(eaw_yaml_state_scalar "$EAW_CARD_WORKFLOW_STATE_FILE" "previous_phase")")"
 	completed_phases="${EAW_CARD_WORKFLOW_COMPLETED_PHASES:-}"
 	phase_status="$(eaw_state_phase_status_for_next)"
+	phase_started_at="$(eaw_state_scalar_or_default "$EAW_CARD_WORKFLOW_STATE_FILE" "phase_started_at" "null")"
 
 	if ! eaw_validate_phase_completion "$card" "$card_dir" "$current_phase" "$current_phase_file"; then
 		return 1
@@ -1311,7 +1419,8 @@ eaw_mark_current_phase_complete_for_wrapper() {
 		return 0
 	fi
 
-	eaw_write_phase_status "$EAW_CARD_WORKFLOW_STATE_FILE" "COMPLETE" "$previous_phase" "$current_phase" "$completed_phases"
+	phase_completed_at="$(utc_timestamp)"
+	eaw_write_phase_status "$EAW_CARD_WORKFLOW_STATE_FILE" "COMPLETE" "$previous_phase" "$current_phase" "$completed_phases" "$phase_started_at" "true" "$phase_completed_at"
 	return 0
 }
 
@@ -1423,7 +1532,7 @@ cmd_card() {
 cmd_next() {
 	local card="$1"
 	local card_dir="$EAW_OUT_DIR/$card"
-	local current_phase current_phase_file next_phase completed_phases current_phase_status
+	local current_phase current_phase_file next_phase completed_phases current_phase_status phase_started_at
 
 	if ! eaw_card_has_workflow_config "$card_dir"; then
 		echo "ERROR: card ${card} is missing canonical workflow YAMLs in $card_dir/intake (MVP requires canonical YAML structure)" >&2
@@ -1454,7 +1563,8 @@ cmd_next() {
 
 	next_phase="$EAW_CARD_WORKFLOW_NEXT_PHASE"
 	completed_phases="$(eaw_state_completed_phases_with_current "$current_phase")"
-	eaw_write_next_state "$EAW_CARD_WORKFLOW_STATE_FILE" "$current_phase" "$next_phase" "$completed_phases" "RUN"
+	phase_started_at="$(utc_timestamp)"
+	eaw_write_next_state "$EAW_CARD_WORKFLOW_STATE_FILE" "$current_phase" "$next_phase" "$completed_phases" "RUN" "$phase_started_at" "false" "null"
 
 	echo "CARD ${card}: ${current_phase} -> ${next_phase}"
 	if ! eaw_load_card_workflow_context "$card_dir"; then
@@ -1468,7 +1578,7 @@ cmd_next() {
 cmd_complete() {
 	local card="$1"
 	local card_dir="$EAW_OUT_DIR/$card"
-	local current_phase current_phase_file completed_phases previous_phase
+	local current_phase current_phase_file completed_phases previous_phase phase_started_at phase_completed_at
 
 	if ! eaw_card_has_workflow_config "$card_dir"; then
 		echo "ERROR: card ${card} is missing canonical workflow YAMLs in $card_dir/intake (MVP requires canonical YAML structure)" >&2
@@ -1482,12 +1592,14 @@ cmd_complete() {
 	current_phase_file="$EAW_CARD_WORKFLOW_CURRENT_PHASE_FILE"
 	previous_phase="$(eaw_normalize_phase_id "$(eaw_yaml_state_scalar "$EAW_CARD_WORKFLOW_STATE_FILE" "previous_phase")")"
 	completed_phases="${EAW_CARD_WORKFLOW_COMPLETED_PHASES:-}"
+	phase_started_at="$(eaw_state_scalar_or_default "$EAW_CARD_WORKFLOW_STATE_FILE" "phase_started_at" "null")"
 
 	if ! eaw_validate_phase_completion "$card" "$card_dir" "$current_phase" "$current_phase_file"; then
 		return 1
 	fi
 
-	eaw_write_phase_status "$EAW_CARD_WORKFLOW_STATE_FILE" "COMPLETE" "$previous_phase" "$current_phase" "$completed_phases"
+	phase_completed_at="$(utc_timestamp)"
+	eaw_write_phase_status "$EAW_CARD_WORKFLOW_STATE_FILE" "COMPLETE" "$previous_phase" "$current_phase" "$completed_phases" "$phase_started_at" "true" "$phase_completed_at"
 	echo "CARD ${card}: ${current_phase} marked COMPLETE"
 	return 0
 }
