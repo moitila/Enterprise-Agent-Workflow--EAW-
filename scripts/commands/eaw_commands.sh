@@ -231,6 +231,23 @@ eaw_yaml_phase_output_artifacts() {
 	' "$file"
 }
 
+eaw_yaml_phase_output_prompts() {
+	local file="$1"
+	awk '
+		/^phase:[[:space:]]*$/ { in_phase=1; next }
+		in_phase && /^[^[:space:]]/ { in_phase=0; in_outputs=0; in_prompts=0 }
+		in_phase && /^  outputs:[[:space:]]*$/ { in_outputs=1; next }
+		in_outputs && /^  [^[:space:]]/ { in_outputs=0; in_prompts=0 }
+		in_outputs && /^    prompts:[[:space:]]*$/ { in_prompts=1; next }
+		in_prompts && /^    [^[:space:]-]/ { in_prompts=0 }
+		in_prompts && /^      - / {
+			line=$0
+			sub(/^      - /, "", line)
+			print line
+		}
+	' "$file"
+}
+
 eaw_yaml_phase_completion_strategy() {
 	eaw_phase_completion_strategy_name "$1"
 }
@@ -1121,57 +1138,82 @@ eaw_render_phase_prompt_template() {
 	echo "RUNTIME: wrote_prompt=${output_file#$card_dir/}"
 }
 
+eaw_phase_prompt_output_relpath() {
+	local prompt_alias
+	prompt_alias="$(eaw_normalize_phase_id "${1:-}")"
+	printf "prompts/%s.md\n" "$prompt_alias"
+}
+
+eaw_phase_prompt_legacy_paths() {
+	local prompt_alias
+	prompt_alias="$(eaw_normalize_phase_id "${1:-}")"
+	case "$prompt_alias" in
+	findings)
+		printf "investigations/findings_agent_prompt.md\n"
+		;;
+	hypotheses)
+		printf "investigations/hypotheses_agent_prompt.md\n"
+		;;
+	planning)
+		printf "investigations/planning_agent_prompt.md\n"
+		;;
+	implementation_planning)
+		printf "investigations/implementation_planning_agent_prompt.md\n"
+		printf "implementation/implementation_planning_agent_prompt.md\n"
+		;;
+	implementation_executor)
+		printf "investigations/implementation_executor_agent_prompt.md\n"
+		printf "implementation/implementation_executor_agent_prompt.md\n"
+		;;
+	esac
+}
+
 eaw_generate_phase_prompt_artifacts() {
 	local card="$1"
 	local card_dir="$EAW_OUT_DIR/$card"
 	local phase_id="${EAW_CARD_WORKFLOW_CURRENT_PHASE:-}"
-	local type template_file output_file mirror_file
+	local phase_file="${EAW_CARD_WORKFLOW_CURRENT_PHASE_FILE:-}"
+	local type template_file output_file legacy_file
 	local repo_blocks target_repos excluded_repos
+	local prompt_alias prompt_phase prompt_relpath
+	local -a declared_prompts=()
 
 	type="$(eaw_detect_card_template_type "$card" "$card_dir")"
 	repo_blocks="$(collect_repos_lists)"
 	target_repos="$(printf "%s\n" "$repo_blocks" | sed -n '1,/^$/p' | sed '/^$/d')"
 	excluded_repos="$(printf "%s\n" "$repo_blocks" | sed -n '/^$/,$p' | sed '1d;/^$/d')"
 
-	case "$phase_id" in
-	findings)
-		template_file="$(load_prompt "default" "analyze_findings" "$card" "$EAW_OUT_DIR")" || return 1
-		output_file="$card_dir/investigations/findings_agent_prompt.md"
-		eaw_render_phase_prompt_template "$template_file" "$output_file" "FINDINGS" "$card" "$type" "$card_dir" "$target_repos" "$excluded_repos" "- none"
-		;;
-	hypotheses)
-		template_file="$(load_prompt "default" "analyze_hypotheses" "$card" "$EAW_OUT_DIR")" || return 1
-		output_file="$card_dir/investigations/hypotheses_agent_prompt.md"
-		eaw_render_phase_prompt_template "$template_file" "$output_file" "HYPOTHESES" "$card" "$type" "$card_dir" "$target_repos" "$excluded_repos" "- none"
-		;;
-	planning)
-		template_file="$(load_prompt "default" "analyze_planning" "$card" "$EAW_OUT_DIR")" || return 1
-		output_file="$card_dir/investigations/planning_agent_prompt.md"
-		eaw_render_phase_prompt_template "$template_file" "$output_file" "PLANNING" "$card" "$type" "$card_dir" "$target_repos" "$excluded_repos" "- none"
-		;;
-	implementation_planning)
-		template_file="$(load_prompt "default" "implementation_planning" "$card" "$EAW_OUT_DIR")" || return 1
-		output_file="$card_dir/investigations/implementation_planning_agent_prompt.md"
-		eaw_render_phase_prompt_template "$template_file" "$output_file" "IMPLEMENTATION PLANNING" "$card" "$type" "$card_dir" "$target_repos" "$excluded_repos" "- none"
-		mirror_file="$card_dir/implementation/implementation_planning_agent_prompt.md"
-		assert_write_scope "workflow_phase" "write implementation planning prompt mirror" "$mirror_file" "$card_dir"
-		ensure_dir "$(dirname "$mirror_file")"
-		cp "$output_file" "$mirror_file"
-		echo "RUNTIME: wrote_prompt=implementation/implementation_planning_agent_prompt.md"
-		;;
-	implementation_executor)
-		template_file="$(load_prompt "default" "implementation_executor" "$card" "$EAW_OUT_DIR")" || return 1
-		output_file="$card_dir/investigations/implementation_executor_agent_prompt.md"
-		eaw_render_phase_prompt_template "$template_file" "$output_file" "IMPLEMENTATION EXECUTOR" "$card" "$type" "$card_dir" "$target_repos" "$excluded_repos" "- none"
-		mirror_file="$card_dir/implementation/implementation_executor_agent_prompt.md"
-		assert_write_scope "workflow_phase" "write implementation executor prompt mirror" "$mirror_file" "$card_dir"
-		ensure_dir "$(dirname "$mirror_file")"
-		cp "$output_file" "$mirror_file"
-		echo "RUNTIME: wrote_prompt=implementation/implementation_executor_agent_prompt.md"
-		;;
-	*)
-		;;
-	esac
+	if [[ -n "$phase_file" && -f "$phase_file" ]]; then
+		while IFS= read -r prompt_alias; do
+			[[ -n "$prompt_alias" ]] || continue
+			declared_prompts+=("$prompt_alias")
+		done < <(eaw_yaml_phase_output_prompts "$phase_file")
+	fi
+
+	if [[ ${#declared_prompts[@]} -eq 0 ]]; then
+		declared_prompts=("$phase_id")
+	fi
+
+	for prompt_alias in "${declared_prompts[@]}"; do
+		prompt_alias="$(eaw_normalize_phase_id "$prompt_alias")"
+		if ! prompt_phase="$(eaw_phase_prompt_phase "$prompt_alias")"; then
+			echo "ERROR: unsupported prompt alias '$prompt_alias' declared for phase '$phase_id'" >&2
+			return 1
+		fi
+		template_file="$(load_prompt "default" "$prompt_phase" "$card" "$EAW_OUT_DIR")" || return 1
+		prompt_relpath="$(eaw_phase_prompt_output_relpath "$prompt_alias")"
+		output_file="$card_dir/$prompt_relpath"
+		eaw_render_phase_prompt_template "$template_file" "$output_file" "${prompt_alias^^}" "$card" "$type" "$card_dir" "$target_repos" "$excluded_repos" "- none"
+
+		while IFS= read -r legacy_file; do
+			[[ -n "$legacy_file" ]] || continue
+			legacy_file="$card_dir/$legacy_file"
+			assert_write_scope "workflow_phase" "write compatibility prompt artifact" "$legacy_file" "$card_dir"
+			ensure_dir "$(dirname "$legacy_file")"
+			cp "$output_file" "$legacy_file"
+			echo "RUNTIME: wrote_prompt=${legacy_file#$card_dir/}"
+		done < <(eaw_phase_prompt_legacy_paths "$prompt_alias")
+	done
 }
 
 eaw_execute_workflow_phase() {

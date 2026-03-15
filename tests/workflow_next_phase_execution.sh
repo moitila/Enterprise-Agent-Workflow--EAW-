@@ -34,6 +34,7 @@ fi
 state_file="$workdir/out/$feature_card/intake/state_card_feature.yaml"
 findings_file="$workdir/out/$feature_card/investigations/20_findings.md"
 findings_prompt="$workdir/out/$feature_card/investigations/findings_agent_prompt.md"
+findings_prompt_phase="$workdir/out/$feature_card/prompts/findings.md"
 execution_log="$workdir/out/$feature_card/execution.log"
 
 grep -Fq "must be COMPLETE before next" <<<"$next_output" || fail "feature next output missing COMPLETE gate message"
@@ -42,6 +43,7 @@ grep -Fq "current_phase: intake" "$state_file" || fail "feature card advanced de
 grep -Fq "phase_status: RUN" "$state_file" || fail "feature card should start in RUN"
 grep -Fq "completed_phases: []" "$state_file" || fail "feature card completed phases changed despite incomplete intake"
 test ! -f "$findings_prompt" || fail "findings prompt should not exist before phase completion"
+test ! -f "$findings_prompt_phase" || fail "phase-driven findings prompt should not exist before phase completion"
 ! grep -Eq '^workflow_phase_findings\|OK\|' "$execution_log" || fail "execution log should not record findings phase before completion"
 
 cat >"$workdir/out/$feature_card/investigations/_intake_provenance.md" <<'EOF'
@@ -67,6 +69,8 @@ grep -Fq "phase_status: RUN" "$state_file" || fail "feature next should set dest
 grep -Fq "    - intake" "$state_file" || fail "feature card completed_phases missing intake"
 [[ -f "$findings_file" ]] || fail "missing findings artifact after next"
 [[ -f "$findings_prompt" ]] || fail "missing findings prompt after next"
+[[ -f "$findings_prompt_phase" ]] || fail "missing phase-driven findings prompt after next"
+cmp -s "$findings_prompt" "$findings_prompt_phase" || fail "phase-driven findings prompt mismatch"
 grep -Eq '^workflow_phase_findings\|OK\|' "$execution_log" || fail "execution log missing workflow phase entry for findings"
 grep -Fq "CARD $feature_card: intake -> findings" <<<"$next_output" || fail "next output missing transition summary"
 grep -Fq "RUNTIME: phase=findings action=phase_driven_execution" <<<"$next_output" || fail "next output missing phase execution summary"

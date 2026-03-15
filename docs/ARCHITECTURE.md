@@ -30,7 +30,7 @@ The architecture is intentionally contract-first: internal modularization must n
 - `track.transitions` defines the next valid state transition for the current phase.
 - `./scripts/eaw next <CARD>` updates workflow state and executes the destination phase in a phase-driven way using the phase YAML outputs and runtime prompt bindings.
 - Prompt-oriented commands such as `intake`, `analyze`, and `implement` remain the compatibility surface that materializes the aggregated prompt flow for the same lifecycle.
-- The current phase-driven executor is incremental: it scaffolds declared outputs, emits compatibility prompt artifacts for built-in prompt phases, and records execution in `execution.log`.
+- The current phase-driven executor is incremental: it scaffolds declared outputs, materializes any `phase.outputs.prompts` entries under `out/<CARD>/prompts/` using the declared alias as the filename, emits compatibility prompt artifacts for built-in prompt phases, and records execution in `execution.log`.
 
 ## Deterministic Output Boundaries
 
