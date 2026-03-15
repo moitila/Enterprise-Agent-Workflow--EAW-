@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 
+cmd_validate_workflow() {
+	eaw_validate_workflow_cli "$@"
+}
+
 cmd_validate() {
 	local errors=0
 	local warnings=0

@@ -10,9 +10,12 @@ phase:
     path: templates/prompts/default/implementation_executor/prompt_v<active>.md
 
   outputs:
-    create_directories: []
+    create_directories:
+      - prompts
     create_artifacts:
       - implementation/20_patch_notes.md
+    prompts:
+      - implementation_executor
 
   completion:
     strategy: required_artifacts_exist

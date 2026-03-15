@@ -1,16 +1,21 @@
 #!/usr/bin/env bash
 
+EAW_COMMANDS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+EAW_PHASE_COMPLETION_LIB="$EAW_COMMANDS_DIR/../lib/phase_completion.sh"
+# shellcheck disable=SC1090
+source "$EAW_PHASE_COMPLETION_LIB"
+
 usage() {
 	cat <<EOF
 Usage: eaw init [--workdir <path>] [--force] [--upgrade]
 Example:
   eaw init --workdir ./.eaw --upgrade
   eaw card <CARD> --track <TRACK> ["<TITLE>"]
-  eaw intake <CARD> [--round=N]
-  eaw analyze <CARD>
-  eaw implement <CARD>
-  eaw tracks
   eaw next <CARD>
+  eaw intake <CARD> [--round=N]   # deprecated compatibility wrapper; planned removal in v1.0
+  eaw analyze <CARD>              # deprecated compatibility wrapper; planned removal in v1.0
+  eaw implement <CARD>            # deprecated compatibility wrapper; planned removal in v1.0
+  eaw tracks
   eaw suggest-prompt <CARD> --track <TRACK> --phase <PHASE>
   eaw prompt validate
   eaw validate-prompt <TRACK> <PHASE> <CANDIDATE>
@@ -158,6 +163,17 @@ eaw_yaml_state_scalar() {
 	' "$file"
 }
 
+eaw_yaml_state_has_key() {
+	local file="$1"
+	local key="$2"
+	awk -v key="$key" '
+		/^card_state:[[:space:]]*$/ { in_state=1; next }
+		in_state && /^[^[:space:]]/ { in_state=0 }
+		in_state && $0 ~ ("^  " key ":[[:space:]]*") { found=1; exit }
+		END { exit(found ? 0 : 1) }
+	' "$file"
+}
+
 eaw_yaml_phase_prompt_path() {
 	local file="$1"
 	awk '
@@ -179,6 +195,69 @@ eaw_yaml_phase_prompt_path() {
 			exit
 		}
 	' "$file"
+}
+
+eaw_yaml_phase_output_directories() {
+	local file="$1"
+	awk '
+		/^phase:[[:space:]]*$/ { in_phase=1; next }
+		in_phase && /^[^[:space:]]/ { in_phase=0; in_outputs=0; in_dirs=0 }
+		in_phase && /^  outputs:[[:space:]]*$/ { in_outputs=1; next }
+		in_outputs && /^  [^[:space:]]/ { in_outputs=0; in_dirs=0 }
+		in_outputs && /^    create_directories:[[:space:]]*$/ { in_dirs=1; next }
+		in_dirs && /^    [^[:space:]-]/ { in_dirs=0 }
+		in_dirs && /^      - / {
+			line=$0
+			sub(/^      - /, "", line)
+			print line
+		}
+	' "$file"
+}
+
+eaw_yaml_phase_output_artifacts() {
+	local file="$1"
+	awk '
+		/^phase:[[:space:]]*$/ { in_phase=1; next }
+		in_phase && /^[^[:space:]]/ { in_phase=0; in_outputs=0; in_artifacts=0 }
+		in_phase && /^  outputs:[[:space:]]*$/ { in_outputs=1; next }
+		in_outputs && /^  [^[:space:]]/ { in_outputs=0; in_artifacts=0 }
+		in_outputs && /^    create_artifacts:[[:space:]]*$/ { in_artifacts=1; next }
+		in_artifacts && /^    [^[:space:]-]/ { in_artifacts=0 }
+		in_artifacts && /^      - / {
+			line=$0
+			sub(/^      - /, "", line)
+			print line
+		}
+	' "$file"
+}
+
+eaw_yaml_phase_output_prompts() {
+	local file="$1"
+	awk '
+		/^phase:[[:space:]]*$/ { in_phase=1; next }
+		in_phase && /^[^[:space:]]/ { in_phase=0; in_outputs=0; in_prompts=0 }
+		in_phase && /^  outputs:[[:space:]]*$/ { in_outputs=1; next }
+		in_outputs && /^  [^[:space:]]/ { in_outputs=0; in_prompts=0 }
+		in_outputs && /^    prompts:[[:space:]]*$/ { in_prompts=1; next }
+		in_prompts && /^    [^[:space:]-]/ { in_prompts=0 }
+		in_prompts && /^      - / {
+			line=$0
+			sub(/^      - /, "", line)
+			print line
+		}
+	' "$file"
+}
+
+eaw_yaml_phase_completion_strategy() {
+	eaw_phase_completion_strategy_name "$1"
+}
+
+eaw_yaml_phase_completion_required_artifacts() {
+	eaw_phase_completion_required_artifacts "$1"
+}
+
+eaw_validate_phase_completion() {
+	eaw_phase_completion_evaluate "$1" "$2" "$3" "$4"
 }
 
 eaw_prompt_binding_from_path() {
@@ -366,7 +445,7 @@ eaw_load_card_workflow_context() {
 	local card_name="${card_dir##*/}"
 	local intake_dir="$card_dir/intake"
 	local errors=0
-	local track_file state_file initial_phase final_phase track_id state_track_id current_phase previous_phase
+	local track_file state_file initial_phase final_phase track_id state_track_id current_phase previous_phase phase_status
 	local current_phase_file current_prompt_phase current_prompt_path current_prompt_track next_phase
 	local raw_phase normalized_phase phase_file phase_id prompt_path prompt_binding prompt_track prompt_phase
 	local raw_transition from_phase to_phase official_track_dir workflow_source
@@ -395,6 +474,8 @@ eaw_load_card_workflow_context() {
 	EAW_CARD_WORKFLOW_CURRENT_PROMPT_PHASE=""
 	EAW_CARD_WORKFLOW_CURRENT_PROMPT_PATH=""
 	EAW_CARD_WORKFLOW_NEXT_PHASE=""
+	EAW_CARD_WORKFLOW_PHASE_STATUS=""
+	EAW_CARD_WORKFLOW_PHASE_STATUS_EXPLICIT="false"
 	EAW_CARD_WORKFLOW_SOURCE=""
 
 	shopt -s nullglob
@@ -422,6 +503,10 @@ eaw_load_card_workflow_context() {
 	state_track_id="$(eaw_yaml_state_scalar "$state_file" "track_id")"
 	current_phase="$(eaw_normalize_phase_id "$(eaw_yaml_state_scalar "$state_file" "current_phase")")"
 	previous_phase="$(eaw_normalize_phase_id "$(eaw_yaml_state_scalar "$state_file" "previous_phase")")"
+	phase_status="$(eaw_yaml_state_scalar "$state_file" "phase_status")"
+	if eaw_yaml_state_has_key "$state_file" "phase_status"; then
+		EAW_CARD_WORKFLOW_PHASE_STATUS_EXPLICIT="true"
+	fi
 
 	if [[ -z "$state_track_id" ]]; then
 		echo "ERROR: card ${card_name} state file missing required field card_state.track_id: $state_file" >&2
@@ -661,6 +746,7 @@ eaw_load_card_workflow_context() {
 	EAW_CARD_WORKFLOW_CURRENT_PROMPT_TRACK="$current_prompt_track"
 	EAW_CARD_WORKFLOW_CURRENT_PROMPT_PATH="$current_prompt_path"
 	EAW_CARD_WORKFLOW_NEXT_PHASE="$next_phase"
+	EAW_CARD_WORKFLOW_PHASE_STATUS="$phase_status"
 	EAW_CARD_WORKFLOW_COMPLETED_PHASES="$(printf "%s\n" "${completed_phase_list[@]}")"
 	EAW_CARD_WORKFLOW_SOURCE="$workflow_source"
 	return 0
@@ -689,16 +775,39 @@ eaw_state_completed_phases_with_current() {
 	printf "%s\n" "${completed_phase_list[@]}"
 }
 
+eaw_state_scalar_or_default() {
+	local state_file="$1"
+	local key="$2"
+	local default_value="$3"
+	local value
+
+	value="$(eaw_yaml_state_scalar "$state_file" "$key")"
+	if [[ -n "$value" ]]; then
+		printf "%s\n" "$value"
+		return 0
+	fi
+
+	printf "%s\n" "$default_value"
+}
+
 eaw_render_state_yaml() {
 	local state_file="$1"
 	local previous_phase="$2"
 	local current_phase="$3"
 	local completed_phases="$4"
+	local phase_status="$5"
+	local phase_started_at="$6"
+	local phase_completed="$7"
+	local phase_completed_at="$8"
 
 	awk \
 		-v previous_phase="$previous_phase" \
 		-v current_phase="$current_phase" \
-		-v completed_phases="$completed_phases" '
+		-v completed_phases="$completed_phases" \
+		-v phase_status="$phase_status" \
+		-v phase_started_at="$phase_started_at" \
+		-v phase_completed="$phase_completed" \
+		-v phase_completed_at="$phase_completed_at" '
 		function emit_completed(    n, i, items) {
 			if (completed_emitted) {
 				return
@@ -717,11 +826,47 @@ eaw_render_state_yaml() {
 				print "    - " items[i]
 			}
 		}
+		function emit_phase_status() {
+			if (phase_status_emitted) {
+				return
+			}
+			phase_status_emitted = 1
+			print "  phase_status: " phase_status
+		}
+		function emit_phase_started_at() {
+			if (phase_started_at_emitted) {
+				return
+			}
+			phase_started_at_emitted = 1
+			print "  phase_started_at: " phase_started_at
+		}
+		function emit_phase_completed() {
+			if (phase_completed_emitted) {
+				return
+			}
+			phase_completed_emitted = 1
+			print "  phase_completed: " phase_completed
+		}
+		function emit_phase_completed_at() {
+			if (phase_completed_at_emitted) {
+				return
+			}
+			phase_completed_at_emitted = 1
+			print "  phase_completed_at: " phase_completed_at
+		}
 		BEGIN {
 			in_state = 0
 			skip_completed = 0
 			previous_seen = 0
 			current_seen = 0
+			phase_started_at_seen = 0
+			phase_completed_seen = 0
+			phase_completed_at_seen = 0
+			phase_status_seen = 0
+			phase_status_emitted = 0
+			phase_started_at_emitted = 0
+			phase_completed_emitted = 0
+			phase_completed_at_emitted = 0
 			completed_emitted = 0
 		}
 		/^card_state:[[:space:]]*$/ {
@@ -742,6 +887,18 @@ eaw_render_state_yaml() {
 			if (!current_seen) {
 				print "  current_phase: " current_phase
 			}
+			if (!phase_started_at_seen) {
+				emit_phase_started_at()
+			}
+			if (!phase_completed_seen) {
+				emit_phase_completed()
+			}
+			if (!phase_completed_at_seen) {
+				emit_phase_completed_at()
+			}
+			if (!phase_status_seen) {
+				emit_phase_status()
+			}
 			emit_completed()
 			in_state = 0
 		}
@@ -755,7 +912,48 @@ eaw_render_state_yaml() {
 			current_seen = 1
 			next
 		}
+		in_state && /^  phase_started_at:[[:space:]]*/ {
+			emit_phase_started_at()
+			phase_started_at_seen = 1
+			next
+		}
+		in_state && /^  phase_completed:[[:space:]]*/ {
+			emit_phase_completed()
+			phase_completed_seen = 1
+			next
+		}
+		in_state && /^  phase_completed_at:[[:space:]]*/ {
+			emit_phase_completed_at()
+			phase_completed_at_seen = 1
+			next
+		}
+		in_state && /^  phase_status:[[:space:]]*/ {
+			if (!phase_started_at_seen) {
+				emit_phase_started_at()
+			}
+			if (!phase_completed_seen) {
+				emit_phase_completed()
+			}
+			if (!phase_completed_at_seen) {
+				emit_phase_completed_at()
+			}
+			emit_phase_status()
+			phase_status_seen = 1
+			next
+		}
 		in_state && /^  completed_phases:[[:space:]]*(\[[[:space:]]*\])?[[:space:]]*$/ {
+			if (!phase_started_at_seen) {
+				emit_phase_started_at()
+			}
+			if (!phase_completed_seen) {
+				emit_phase_completed()
+			}
+			if (!phase_completed_at_seen) {
+				emit_phase_completed_at()
+			}
+			if (!phase_status_seen) {
+				emit_phase_status()
+			}
 			emit_completed()
 			skip_completed = 1
 			next
@@ -771,10 +969,30 @@ eaw_render_state_yaml() {
 				if (!current_seen) {
 					print "  current_phase: " current_phase
 				}
+				if (!phase_started_at_seen) {
+					emit_phase_started_at()
+				}
+				if (!phase_completed_seen) {
+					emit_phase_completed()
+				}
+				if (!phase_completed_at_seen) {
+					emit_phase_completed_at()
+				}
+				if (!phase_status_seen) {
+					emit_phase_status()
+				}
 				emit_completed()
 			}
 		}
 	' "$state_file"
+}
+
+eaw_state_phase_status_for_next() {
+	if [[ "${EAW_CARD_WORKFLOW_PHASE_STATUS_EXPLICIT:-false}" == "true" ]]; then
+		printf "%s\n" "${EAW_CARD_WORKFLOW_PHASE_STATUS:-}"
+		return 0
+	fi
+	printf "LEGACY_UNSET\n"
 }
 
 eaw_card_template_type_for_track() {
@@ -848,11 +1066,404 @@ eaw_write_next_state() {
 	local previous_phase="$2"
 	local current_phase="$3"
 	local completed_phases="$4"
+	local phase_status="$5"
+	local phase_started_at="$6"
+	local phase_completed="$7"
+	local phase_completed_at="$8"
 	local tmp_file
 
 	tmp_file="$(mktemp "${state_file}.tmp.XXXXXX")"
-	eaw_render_state_yaml "$state_file" "$previous_phase" "$current_phase" "$completed_phases" >"$tmp_file"
+	eaw_render_state_yaml "$state_file" "$previous_phase" "$current_phase" "$completed_phases" "$phase_status" "$phase_started_at" "$phase_completed" "$phase_completed_at" >"$tmp_file"
 	mv "$tmp_file" "$state_file"
+}
+
+eaw_write_phase_status() {
+	local state_file="$1"
+	local phase_status="$2"
+	local previous_phase="$3"
+	local current_phase="$4"
+	local completed_phases="$5"
+	local phase_started_at="$6"
+	local phase_completed="$7"
+	local phase_completed_at="$8"
+	local tmp_file
+
+	tmp_file="$(mktemp "${state_file}.tmp.XXXXXX")"
+	eaw_render_state_yaml "$state_file" "$previous_phase" "$current_phase" "$completed_phases" "$phase_status" "$phase_started_at" "$phase_completed" "$phase_completed_at" >"$tmp_file"
+	mv "$tmp_file" "$state_file"
+}
+
+eaw_render_phase_template_with_card() {
+	local template_file="$1"
+	local output_file="$2"
+	local card="$3"
+
+	sed "s/<CARD>/${card}/g" "$template_file" >"$output_file"
+}
+
+eaw_detect_card_template_type() {
+	local card="$1"
+	local card_dir="$2"
+	local type="feature"
+
+	if [[ -f "$card_dir/bug_${card}.md" ]]; then
+		type="bug"
+	elif [[ -f "$card_dir/spike_${card}.md" ]]; then
+		type="spike"
+	elif [[ -f "$card_dir/feature_${card}.md" ]]; then
+		type="feature"
+	fi
+
+	printf "%s\n" "$type"
+}
+
+eaw_scaffold_phase_artifact() {
+	local card="$1"
+	local card_dir="$2"
+	local phase_id="$3"
+	local rel_path="$4"
+	local target_path="$card_dir/$rel_path"
+	local target_dir
+	local type
+
+	target_dir="$(dirname "$target_path")"
+	assert_write_scope "workflow_phase" "ensure_dir artifact_parent" "$target_dir" "$card_dir"
+	ensure_dir "$target_dir"
+
+	if [[ -f "$target_path" ]]; then
+		echo "RUNTIME: phase=$phase_id preserve_artifact=$rel_path"
+		return 0
+	fi
+
+	case "$rel_path" in
+	investigations/00_intake.md)
+		type="$(eaw_detect_card_template_type "$card" "$card_dir")"
+		eaw_render_phase_template_with_card "$EAW_TEMPLATES_DIR/intake_${type}.md" "$target_path" "$card"
+		;;
+	investigations/20_findings.md)
+		eaw_render_phase_template_with_card "$EAW_TEMPLATES_DIR/20_findings.md" "$target_path" "$card"
+		;;
+	investigations/30_hypotheses.md)
+		eaw_render_phase_template_with_card "$EAW_TEMPLATES_DIR/30_hypotheses.md" "$target_path" "$card"
+		;;
+	investigations/40_next_steps.md)
+		eaw_render_phase_template_with_card "$EAW_TEMPLATES_DIR/40_next_steps.md" "$target_path" "$card"
+		;;
+	implementation/00_scope.lock.md)
+		cat >"$target_path" <<EOF
+# Scope Lock - Card $card
+
+## In Scope
+
+## Out of Scope
+EOF
+		;;
+	implementation/10_change_plan.md)
+		cat >"$target_path" <<EOF
+# Change Plan - Card $card
+
+## Steps
+
+## Validation
+EOF
+		;;
+	implementation/20_patch_notes.md)
+		cat >"$target_path" <<EOF
+# Patch Notes - Card $card
+
+## Changes
+
+## Risks
+EOF
+		;;
+	*)
+		cat >"$target_path" <<EOF
+# ${phase_id} artifact
+
+Generated by phase-driven execution for card $card.
+EOF
+		;;
+	esac
+
+	echo "RUNTIME: phase=$phase_id created_artifact=$rel_path"
+}
+
+eaw_render_phase_prompt_template() {
+	local template_file="$1"
+	local output_file="$2"
+	local phase_header="$3"
+	local card="$4"
+	local type="$5"
+	local card_dir="$6"
+	local target_repos="$7"
+	local excluded_repos="$8"
+	local warnings_block="$9"
+
+	assert_write_scope "workflow_phase" "write phase prompt" "$output_file" "$card_dir"
+	ensure_dir "$(dirname "$output_file")"
+
+	awk \
+		-v phase_header="$phase_header" \
+		-v card="$card" \
+		-v type="$type" \
+		-v round="${EAW_PHASE_PROMPT_ROUND:-1}" \
+		-v eaw_workdir="${EAW_WORKDIR:-}" \
+		-v runtime_root="$EAW_ROOT_DIR" \
+		-v config_source="$REPOS_CONF" \
+		-v out_dir="$EAW_OUT_DIR" \
+		-v card_dir="$card_dir" \
+		-v target_repos="$target_repos" \
+		-v excluded_repos="$excluded_repos" \
+		-v warnings_block="$warnings_block" \
+		'
+		{
+			if ($0 == "{{TARGET_REPOS}}") {
+				print target_repos
+				next
+			}
+			if ($0 == "{{EXCLUDED_REPOS}}") {
+				print excluded_repos
+				next
+			}
+			if ($0 == "{{WARNINGS_BLOCK}}") {
+				print warnings_block
+				next
+			}
+			gsub(/\{\{PHASE_HEADER\}\}/, phase_header)
+			gsub(/\{\{CARD\}\}/, card)
+			gsub(/\{\{TYPE\}\}/, type)
+			gsub(/\{\{ROUND\}\}/, round)
+			gsub(/\{\{EAW_WORKDIR\}\}/, eaw_workdir)
+			gsub(/\{\{RUNTIME_ROOT\}\}/, runtime_root)
+			gsub(/\{\{CONFIG_SOURCE\}\}/, config_source)
+			gsub(/\{\{OUT_DIR\}\}/, out_dir)
+			gsub(/\{\{CARD_DIR\}\}/, card_dir)
+			print
+		}
+		' "$template_file" >"$output_file"
+
+	echo "RUNTIME: wrote_prompt=${output_file#$card_dir/}"
+}
+
+eaw_phase_prompt_output_relpath() {
+	local prompt_alias
+	prompt_alias="$(eaw_normalize_phase_id "${1:-}")"
+	printf "prompts/%s.md\n" "$prompt_alias"
+}
+
+eaw_phase_prompt_legacy_paths() {
+	local prompt_alias
+	prompt_alias="$(eaw_normalize_phase_id "${1:-}")"
+	case "$prompt_alias" in
+	intake)
+		printf "investigations/intake_agent_prompt.round_%s.md\n" "${EAW_PHASE_PROMPT_ROUND:-1}"
+		;;
+	findings)
+		printf "investigations/findings_agent_prompt.md\n"
+		;;
+	hypotheses)
+		printf "investigations/hypotheses_agent_prompt.md\n"
+		;;
+	planning)
+		printf "investigations/planning_agent_prompt.md\n"
+		;;
+	implementation_planning)
+		printf "investigations/implementation_planning_agent_prompt.md\n"
+		printf "implementation/implementation_planning_agent_prompt.md\n"
+		;;
+	implementation_executor)
+		printf "investigations/implementation_executor_agent_prompt.md\n"
+		printf "implementation/implementation_executor_agent_prompt.md\n"
+		;;
+	esac
+}
+
+eaw_generate_phase_prompt_artifacts() {
+	local card="$1"
+	local card_dir="$EAW_OUT_DIR/$card"
+	local phase_id="${EAW_CARD_WORKFLOW_CURRENT_PHASE:-}"
+	local phase_file="${EAW_CARD_WORKFLOW_CURRENT_PHASE_FILE:-}"
+	local type template_file output_file legacy_file
+	local repo_blocks target_repos excluded_repos
+	local prompt_alias prompt_phase prompt_relpath
+	local -a declared_prompts=()
+
+	type="$(eaw_detect_card_template_type "$card" "$card_dir")"
+	repo_blocks="$(collect_repos_lists)"
+	target_repos="$(printf "%s\n" "$repo_blocks" | sed -n '1,/^$/p' | sed '/^$/d')"
+	excluded_repos="$(printf "%s\n" "$repo_blocks" | sed -n '/^$/,$p' | sed '1d;/^$/d')"
+
+	if [[ -n "$phase_file" && -f "$phase_file" ]]; then
+		while IFS= read -r prompt_alias; do
+			[[ -n "$prompt_alias" ]] || continue
+			declared_prompts+=("$prompt_alias")
+		done < <(eaw_yaml_phase_output_prompts "$phase_file")
+	fi
+
+	if [[ ${#declared_prompts[@]} -eq 0 ]]; then
+		declared_prompts=("$phase_id")
+	fi
+
+	for prompt_alias in "${declared_prompts[@]}"; do
+		prompt_alias="$(eaw_normalize_phase_id "$prompt_alias")"
+		if ! prompt_phase="$(eaw_phase_prompt_phase "$prompt_alias")"; then
+			echo "ERROR: unsupported prompt alias '$prompt_alias' declared for phase '$phase_id'" >&2
+			return 1
+		fi
+		template_file="$(load_prompt "default" "$prompt_phase" "$card" "$EAW_OUT_DIR")" || return 1
+		prompt_relpath="$(eaw_phase_prompt_output_relpath "$prompt_alias")"
+		output_file="$card_dir/$prompt_relpath"
+		eaw_render_phase_prompt_template "$template_file" "$output_file" "${prompt_alias^^}" "$card" "$type" "$card_dir" "$target_repos" "$excluded_repos" "- none"
+
+		while IFS= read -r legacy_file; do
+			[[ -n "$legacy_file" ]] || continue
+			legacy_file="$card_dir/$legacy_file"
+			assert_write_scope "workflow_phase" "write compatibility prompt artifact" "$legacy_file" "$card_dir"
+			ensure_dir "$(dirname "$legacy_file")"
+			cp "$output_file" "$legacy_file"
+			echo "RUNTIME: wrote_prompt=${legacy_file#$card_dir/}"
+		done < <(eaw_phase_prompt_legacy_paths "$prompt_alias")
+	done
+}
+
+eaw_execute_workflow_phase() {
+	local card="$1"
+	local card_dir="$EAW_OUT_DIR/$card"
+	local phase_id="${EAW_CARD_WORKFLOW_CURRENT_PHASE:-}"
+	local phase_file="${EAW_CARD_WORKFLOW_CURRENT_PHASE_FILE:-}"
+	local rel_path
+
+	if [[ -z "$phase_id" || -z "$phase_file" ]]; then
+		echo "ERROR: workflow phase execution missing loaded phase context for card $card" >&2
+		return 1
+	fi
+
+	while IFS= read -r rel_path; do
+		[[ -n "$rel_path" ]] || continue
+		assert_write_scope "workflow_phase" "ensure_dir phase_output_dir" "$card_dir/$rel_path" "$card_dir"
+		ensure_dir "$card_dir/$rel_path"
+		echo "RUNTIME: phase=$phase_id created_dir=$rel_path"
+	done < <(eaw_yaml_phase_output_directories "$phase_file")
+
+	while IFS= read -r rel_path; do
+		[[ -n "$rel_path" ]] || continue
+		eaw_scaffold_phase_artifact "$card" "$card_dir" "$phase_id" "$rel_path"
+	done < <(eaw_yaml_phase_output_artifacts "$phase_file")
+
+	eaw_generate_phase_prompt_artifacts "$card"
+	echo "RUNTIME: phase=$phase_id action=phase_driven_execution"
+	return 0
+}
+
+eaw_warn_compatibility_wrapper() {
+	local command_name="$1"
+	printf "WARNING: '%s' is deprecated and planned for removal in v1.0. Prefer 'eaw next'.\n" "$command_name" >&2
+}
+
+eaw_phase_index_in_track() {
+	local track_file="$1"
+	local target_phase="$2"
+	local index=0
+	local phase_name
+
+	while IFS= read -r phase_name; do
+		[[ -n "$phase_name" ]] || continue
+		if [[ "$phase_name" == "$target_phase" ]]; then
+			printf "%s\n" "$index"
+			return 0
+		fi
+		index=$((index + 1))
+	done < <(eaw_yaml_track_phases "$track_file")
+
+	return 1
+}
+
+eaw_execute_current_phase_for_wrapper() {
+	local card="$1"
+	local card_dir="$EAW_OUT_DIR/$card"
+
+	if ! eaw_load_card_workflow_context "$card_dir"; then
+		return 1
+	fi
+
+	OUTDIR="$card_dir"
+	run_phase "workflow_phase_${EAW_CARD_WORKFLOW_CURRENT_PHASE}" true eaw_execute_workflow_phase "$card"
+}
+
+eaw_mark_current_phase_complete_for_wrapper() {
+	local card="$1"
+	local card_dir="$EAW_OUT_DIR/$card"
+	local current_phase
+	local current_phase_file
+	local previous_phase
+	local completed_phases
+	local phase_status
+	local phase_started_at
+	local phase_completed_at
+
+	if ! eaw_load_card_workflow_context "$card_dir"; then
+		return 1
+	fi
+
+	current_phase="$EAW_CARD_WORKFLOW_CURRENT_PHASE"
+	current_phase_file="$EAW_CARD_WORKFLOW_CURRENT_PHASE_FILE"
+	previous_phase="$(eaw_normalize_phase_id "$(eaw_yaml_state_scalar "$EAW_CARD_WORKFLOW_STATE_FILE" "previous_phase")")"
+	completed_phases="${EAW_CARD_WORKFLOW_COMPLETED_PHASES:-}"
+	phase_status="$(eaw_state_phase_status_for_next)"
+	phase_started_at="$(eaw_state_scalar_or_default "$EAW_CARD_WORKFLOW_STATE_FILE" "phase_started_at" "null")"
+
+	if ! eaw_validate_phase_completion "$card" "$card_dir" "$current_phase" "$current_phase_file"; then
+		return 1
+	fi
+	if [[ "$phase_status" == "COMPLETE" ]]; then
+		return 0
+	fi
+
+	phase_completed_at="$(utc_timestamp)"
+	eaw_write_phase_status "$EAW_CARD_WORKFLOW_STATE_FILE" "COMPLETE" "$previous_phase" "$current_phase" "$completed_phases" "$phase_started_at" "true" "$phase_completed_at"
+	return 0
+}
+
+eaw_wrapper_materialize_until_phase() {
+	local card="$1"
+	local target_phase="$2"
+	local card_dir="$EAW_OUT_DIR/$card"
+	local current_phase
+	local current_index
+	local target_index
+
+	if ! eaw_card_has_workflow_config "$card_dir"; then
+		echo "ERROR: card ${card} is missing canonical workflow YAMLs in $card_dir/intake (MVP requires canonical YAML structure)" >&2
+		return 1
+	fi
+	if ! eaw_load_card_workflow_context "$card_dir"; then
+		return 1
+	fi
+
+	current_phase="$EAW_CARD_WORKFLOW_CURRENT_PHASE"
+	current_index="$(eaw_phase_index_in_track "$EAW_CARD_WORKFLOW_TRACK_FILE" "$current_phase")" || return 1
+	target_index="$(eaw_phase_index_in_track "$EAW_CARD_WORKFLOW_TRACK_FILE" "$target_phase")" || return 1
+
+	if (( current_index > target_index )); then
+		echo "ERROR: card ${card} is already beyond compatibility target phase '${target_phase}' (current_phase=${current_phase})" >&2
+		return 1
+	fi
+
+	while true; do
+		if ! eaw_load_card_workflow_context "$card_dir"; then
+			return 1
+		fi
+		current_phase="$EAW_CARD_WORKFLOW_CURRENT_PHASE"
+
+		if [[ "$current_phase" == "$target_phase" ]]; then
+			eaw_execute_current_phase_for_wrapper "$card"
+			return $?
+		fi
+
+		eaw_execute_current_phase_for_wrapper "$card" || return 1
+		eaw_mark_current_phase_complete_for_wrapper "$card" || return 1
+		cmd_next "$card" || return 1
+	done
 }
 
 phase_load_workflow_context() {
@@ -921,7 +1532,7 @@ cmd_card() {
 cmd_next() {
 	local card="$1"
 	local card_dir="$EAW_OUT_DIR/$card"
-	local current_phase next_phase completed_phases
+	local current_phase current_phase_file next_phase completed_phases current_phase_status phase_started_at
 
 	if ! eaw_card_has_workflow_config "$card_dir"; then
 		echo "ERROR: card ${card} is missing canonical workflow YAMLs in $card_dir/intake (MVP requires canonical YAML structure)" >&2
@@ -933,15 +1544,62 @@ cmd_next() {
 	fi
 
 	current_phase="$EAW_CARD_WORKFLOW_CURRENT_PHASE"
+	current_phase_file="$EAW_CARD_WORKFLOW_CURRENT_PHASE_FILE"
 	if [[ "$current_phase" == "$EAW_CARD_WORKFLOW_FINAL_PHASE" ]]; then
 		echo "CARD ${card}: workflow already complete"
 		return 0
 	fi
+	current_phase_status="$(eaw_state_phase_status_for_next)"
+	if [[ "$current_phase_status" == "LEGACY_UNSET" ]]; then
+		if ! eaw_validate_phase_completion "$card" "$card_dir" "$current_phase" "$current_phase_file"; then
+			return 1
+		fi
+	elif [[ "$current_phase_status" != "COMPLETE" ]]; then
+		echo "ERROR: card ${card} phase '${current_phase}' must be COMPLETE before next; current phase_status=${current_phase_status}" >&2
+		return 1
+	elif ! eaw_validate_phase_completion "$card" "$card_dir" "$current_phase" "$current_phase_file"; then
+		return 1
+	fi
 
 	next_phase="$EAW_CARD_WORKFLOW_NEXT_PHASE"
 	completed_phases="$(eaw_state_completed_phases_with_current "$current_phase")"
-	eaw_write_next_state "$EAW_CARD_WORKFLOW_STATE_FILE" "$current_phase" "$next_phase" "$completed_phases"
+	phase_started_at="$(utc_timestamp)"
+	eaw_write_next_state "$EAW_CARD_WORKFLOW_STATE_FILE" "$current_phase" "$next_phase" "$completed_phases" "RUN" "$phase_started_at" "false" "null"
 
 	echo "CARD ${card}: ${current_phase} -> ${next_phase}"
+	if ! eaw_load_card_workflow_context "$card_dir"; then
+		return 1
+	fi
+	OUTDIR="$card_dir"
+	run_phase "workflow_phase_${EAW_CARD_WORKFLOW_CURRENT_PHASE}" true eaw_execute_workflow_phase "$card" || return 1
+	return 0
+}
+
+cmd_complete() {
+	local card="$1"
+	local card_dir="$EAW_OUT_DIR/$card"
+	local current_phase current_phase_file completed_phases previous_phase phase_started_at phase_completed_at
+
+	if ! eaw_card_has_workflow_config "$card_dir"; then
+		echo "ERROR: card ${card} is missing canonical workflow YAMLs in $card_dir/intake (MVP requires canonical YAML structure)" >&2
+		return 1
+	fi
+	if ! eaw_load_card_workflow_context "$card_dir"; then
+		return 1
+	fi
+
+	current_phase="$EAW_CARD_WORKFLOW_CURRENT_PHASE"
+	current_phase_file="$EAW_CARD_WORKFLOW_CURRENT_PHASE_FILE"
+	previous_phase="$(eaw_normalize_phase_id "$(eaw_yaml_state_scalar "$EAW_CARD_WORKFLOW_STATE_FILE" "previous_phase")")"
+	completed_phases="${EAW_CARD_WORKFLOW_COMPLETED_PHASES:-}"
+	phase_started_at="$(eaw_state_scalar_or_default "$EAW_CARD_WORKFLOW_STATE_FILE" "phase_started_at" "null")"
+
+	if ! eaw_validate_phase_completion "$card" "$card_dir" "$current_phase" "$current_phase_file"; then
+		return 1
+	fi
+
+	phase_completed_at="$(utc_timestamp)"
+	eaw_write_phase_status "$EAW_CARD_WORKFLOW_STATE_FILE" "COMPLETE" "$previous_phase" "$current_phase" "$completed_phases" "$phase_started_at" "true" "$phase_completed_at"
+	echo "CARD ${card}: ${current_phase} marked COMPLETE"
 	return 0
 }

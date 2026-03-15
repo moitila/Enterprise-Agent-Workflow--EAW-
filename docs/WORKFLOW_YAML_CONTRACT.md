@@ -120,6 +120,8 @@ phase:
       - investigations
     create_artifacts:
       - investigations/20_findings.md
+    prompts:
+      - findings
   completion:
     strategy: required_artifacts_exist
     required_artifacts:
@@ -145,6 +147,10 @@ Rules:
   - `templates/prompts/<track>/<phase>/prompt_v<active>.md`
   - `prompts/<track>/<phase>/prompt_v<active>.md`
 - The runtime derives prompt binding from `prompt.path` and validates that the path is resolvable.
+- `phase.outputs.prompts` is optional. When present, the runtime materializes each declared alias under `out/<CARD>/prompts/<alias>.md` during phase-driven execution.
+- The generated filename matches the declared alias exactly; the runtime does not rename aliases to a second canonical filename in `prompts/`.
+- Built-in aliases currently recognized by the runtime are `findings`, `hypotheses`, `planning`, `implementation_planning`, and `implementation_executor`.
+- Phases that do not generate prompts, including internal/tooling phases, may omit `phase.outputs.prompts` entirely.
 
 Card State Contract
 -------------------
@@ -191,7 +197,14 @@ Rules:
 - If present and not `null`, `card_state.previous_phase` must exist in `track.phases`.
 - `card_state.completed_phases` must not contain duplicates.
 - Every completed phase must exist in `track.phases`.
-- When `eaw next <CARD>` runs, the runtime updates `previous_phase`, `current_phase`, and `completed_phases` based on `track.transitions`.
+- When `eaw next <CARD>` runs, the runtime first evaluates the current phase `completion` block.
+- If the current phase is incomplete, the runtime blocks the transition and reports the missing required artifacts.
+- If the current phase is complete, the runtime updates `previous_phase`, `current_phase`, and `completed_phases` based on `track.transitions`.
+- After the state transition, the current runtime executes the destination phase in a phase-driven way.
+- Phase-driven execution uses the destination phase YAML to create declared directories and artifacts, materializes any declared `outputs.prompts` under `out/<CARD>/prompts/`, emits compatibility prompt artifacts for the built-in prompt phases, and records the execution in `execution.log`.
+- Legacy prompt artifacts under `investigations/` and `implementation/` may coexist with `out/<CARD>/prompts/` while compatibility with the aggregated prompt flow is preserved.
+- Prompt-oriented execution through `intake`, `analyze`, and `implement` remains available as a compatibility flow alongside the phase-driven lifecycle.
+- Future iterations can refine whether a phase is automatic or manual and how completion is validated without requiring new top-level commands.
 
 Field Meanings
 --------------

@@ -10,9 +10,12 @@ phase:
     path: templates/prompts/default/hypotheses/prompt_v<active>.md
 
   outputs:
-    create_directories: []
+    create_directories:
+      - prompts
     create_artifacts:
       - investigations/30_hypotheses.md
+    prompts:
+      - hypotheses
 
   completion:
     strategy: required_artifacts_exist

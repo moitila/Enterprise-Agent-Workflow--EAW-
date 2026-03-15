@@ -1,0 +1,269 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+fail() {
+	printf "workflow_next_phase_execution failed: %s\n" "$1" >&2
+	exit 1
+}
+
+init_workdir() {
+	local workdir="$1"
+	"$REPO_ROOT/scripts/eaw" init --workdir "$workdir" --force >/dev/null
+	cat >"$workdir/config/repos.conf" <<CFG
+local-main|$REPO_ROOT|target
+CFG
+}
+
+tmp_root="$(mktemp -d)"
+trap 'rm -rf "$tmp_root"' EXIT
+
+workdir="$tmp_root/workdir"
+init_workdir "$workdir"
+
+feature_card="541NEXT"
+EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" card "$feature_card" --track feature "phase driven next" >/dev/null
+if next_output="$(EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" next "$feature_card" 2>&1)"; then
+	fail "feature next command should block when intake artifacts are missing"
+fi
+if complete_output="$(EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" complete "$feature_card" 2>&1)"; then
+	fail "feature complete command should block when intake artifacts are missing"
+fi
+
+state_file="$workdir/out/$feature_card/intake/state_card_feature.yaml"
+findings_file="$workdir/out/$feature_card/investigations/20_findings.md"
+findings_prompt="$workdir/out/$feature_card/investigations/findings_agent_prompt.md"
+findings_prompt_phase="$workdir/out/$feature_card/prompts/findings.md"
+execution_log="$workdir/out/$feature_card/execution.log"
+
+grep -Fq "must be COMPLETE before next" <<<"$next_output" || fail "feature next output missing COMPLETE gate message"
+grep -Fq "phase 'intake' is incomplete" <<<"$complete_output" || fail "feature complete output missing completion gate message"
+grep -Fq "current_phase: intake" "$state_file" || fail "feature card advanced despite incomplete intake"
+grep -Eq '^  phase_started_at: [0-9]{4}-[0-9]{2}-[0-9]{2}T' "$state_file" || fail "feature card should record phase_started_at on creation"
+grep -Fq "phase_completed: false" "$state_file" || fail "feature card should start with phase_completed false"
+grep -Fq "phase_completed_at: null" "$state_file" || fail "feature card should start with null phase_completed_at"
+grep -Fq "phase_status: RUN" "$state_file" || fail "feature card should start in RUN"
+grep -Fq "completed_phases: []" "$state_file" || fail "feature card completed phases changed despite incomplete intake"
+test ! -f "$findings_prompt" || fail "findings prompt should not exist before phase completion"
+test ! -f "$findings_prompt_phase" || fail "phase-driven findings prompt should not exist before phase completion"
+! grep -Eq '^workflow_phase_findings\|OK\|' "$execution_log" || fail "execution log should not record findings phase before completion"
+
+cat >"$workdir/out/$feature_card/investigations/_intake_provenance.md" <<'EOF'
+# Provenance
+EOF
+
+if next_output="$(EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" next "$feature_card" 2>&1)"; then
+	fail "feature next command should require COMPLETE status before advancing"
+fi
+grep -Fq "must be COMPLETE before next" <<<"$next_output" || fail "feature next output missing COMPLETE gate message"
+
+complete_output="$(EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" complete "$feature_card" 2>&1)" || fail "feature complete command failed after intake completion"
+grep -Fq "CARD $feature_card: intake marked COMPLETE" <<<"$complete_output" || fail "feature complete output missing completion summary"
+grep -Fq "current_phase: intake" "$state_file" || fail "feature complete should not advance current_phase"
+grep -Eq '^  phase_started_at: [0-9]{4}-[0-9]{2}-[0-9]{2}T' "$state_file" || fail "feature complete should preserve phase_started_at"
+grep -Fq "phase_completed: true" "$state_file" || fail "feature complete should mark phase_completed true"
+grep -Eq '^  phase_completed_at: [0-9]{4}-[0-9]{2}-[0-9]{2}T' "$state_file" || fail "feature complete should stamp phase_completed_at"
+grep -Fq "phase_status: COMPLETE" "$state_file" || fail "feature complete should mark state COMPLETE"
+grep -Fq "completed_phases: []" "$state_file" || fail "feature complete should not alter completed phases before next"
+
+next_output="$(EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" next "$feature_card" 2>&1)" || fail "feature next command failed after complete"
+
+grep -Fq "current_phase: findings" "$state_file" || fail "feature card did not advance to findings"
+grep -Fq "previous_phase: intake" "$state_file" || fail "feature card previous_phase not updated"
+grep -Eq '^  phase_started_at: [0-9]{4}-[0-9]{2}-[0-9]{2}T' "$state_file" || fail "feature next should stamp destination phase_started_at"
+grep -Fq "phase_completed: false" "$state_file" || fail "feature next should reset phase_completed to false"
+grep -Fq "phase_completed_at: null" "$state_file" || fail "feature next should reset phase_completed_at"
+grep -Fq "phase_status: RUN" "$state_file" || fail "feature next should set destination phase_status to RUN"
+grep -Fq "    - intake" "$state_file" || fail "feature card completed_phases missing intake"
+[[ -f "$findings_file" ]] || fail "missing findings artifact after next"
+[[ -f "$findings_prompt" ]] || fail "missing findings prompt after next"
+[[ -f "$findings_prompt_phase" ]] || fail "missing phase-driven findings prompt after next"
+cmp -s "$findings_prompt" "$findings_prompt_phase" || fail "phase-driven findings prompt mismatch"
+grep -Eq '^workflow_phase_findings\|OK\|' "$execution_log" || fail "execution log missing workflow phase entry for findings"
+grep -Fq "CARD $feature_card: intake -> findings" <<<"$next_output" || fail "next output missing transition summary"
+grep -Fq "RUNTIME: phase=findings action=phase_driven_execution" <<<"$next_output" || fail "next output missing phase execution summary"
+
+custom_card="541CUSTOM"
+custom_intake="$workdir/out/$custom_card/intake"
+mkdir -p "$custom_intake"
+cat >"$custom_intake/track_custom.yaml" <<'EOF'
+track:
+  id: custom
+  initial_phase: analysis
+  final_phase: code_review
+  phases:
+    - analysis
+    - code_review
+  transitions:
+    analysis:
+      next: code_review
+EOF
+cat >"$custom_intake/state_card_custom.yaml" <<'EOF'
+card_state:
+  track_id: custom
+  previous_phase: null
+  current_phase: analysis
+  completed_phases: []
+EOF
+cat >"$custom_intake/phase_analysis.yaml" <<'EOF'
+phase:
+  id: analysis
+  prompt:
+    path: templates/prompts/default/findings/prompt_v<active>.md
+
+  outputs:
+    create_directories: []
+    create_artifacts: []
+
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts: []
+EOF
+cat >"$custom_intake/phase_code_review.yaml" <<'EOF'
+phase:
+  id: code_review
+  prompt:
+    path: templates/prompts/default/findings/prompt_v<active>.md
+
+  outputs:
+    create_directories:
+      - review
+    create_artifacts:
+      - review/report.md
+
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - review/report.md
+EOF
+
+custom_output="$(EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" next "$custom_card" 2>&1)" || fail "custom next command failed"
+custom_state="$workdir/out/$custom_card/intake/state_card_custom.yaml"
+custom_report="$workdir/out/$custom_card/review/report.md"
+custom_log="$workdir/out/$custom_card/execution.log"
+
+grep -Fq "current_phase: code_review" "$custom_state" || fail "custom card did not advance to code_review"
+grep -Eq '^  phase_started_at: [0-9]{4}-[0-9]{2}-[0-9]{2}T' "$custom_state" || fail "custom legacy card should receive phase_started_at after next"
+grep -Fq "phase_completed: false" "$custom_state" || fail "custom legacy card should reset phase_completed to false"
+grep -Fq "phase_completed_at: null" "$custom_state" || fail "custom legacy card should reset phase_completed_at"
+grep -Fq "phase_status: RUN" "$custom_state" || fail "custom legacy card should receive RUN phase_status after next"
+[[ -f "$custom_report" ]] || fail "custom phase did not create declared artifact"
+grep -Eq '^workflow_phase_code_review\|OK\|' "$custom_log" || fail "custom execution log missing workflow phase entry"
+grep -Fq "RUNTIME: phase=code_review action=phase_driven_execution" <<<"$custom_output" || fail "custom next output missing phase execution summary"
+
+missing_card="541MISSING"
+missing_intake="$workdir/out/$missing_card/intake"
+mkdir -p "$missing_intake"
+cat >"$missing_intake/track_custom.yaml" <<'EOF'
+track:
+  id: custom
+  initial_phase: analysis
+  final_phase: code_review
+  phases:
+    - analysis
+    - code_review
+  transitions:
+    analysis:
+      next: code_review
+EOF
+cat >"$missing_intake/state_card_custom.yaml" <<'EOF'
+card_state:
+  track_id: custom
+  previous_phase: null
+  current_phase: analysis
+  completed_phases: []
+  phase_status: COMPLETE
+EOF
+cat >"$missing_intake/phase_analysis.yaml" <<'EOF'
+phase:
+  id: analysis
+  prompt:
+    path: templates/prompts/default/findings/prompt_v<active>.md
+
+  outputs:
+    create_directories: []
+    create_artifacts: []
+
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - review/missing.md
+EOF
+cat >"$missing_intake/phase_code_review.yaml" <<'EOF'
+phase:
+  id: code_review
+  prompt:
+    path: templates/prompts/default/findings/prompt_v<active>.md
+
+  outputs:
+    create_directories: []
+    create_artifacts: []
+
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts: []
+EOF
+
+if missing_output="$(EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" next "$missing_card" 2>&1)"; then
+	fail "missing-artifact next command should fail when required artifact is absent"
+fi
+grep -Fq "missing required artifacts: review/missing.md" <<<"$missing_output" || fail "missing-artifact output missing required artifact detail"
+
+unsupported_card="541UNSUPPORTED"
+unsupported_intake="$workdir/out/$unsupported_card/intake"
+mkdir -p "$unsupported_intake"
+cat >"$unsupported_intake/track_custom.yaml" <<'EOF'
+track:
+  id: custom
+  initial_phase: analysis
+  final_phase: code_review
+  phases:
+    - analysis
+    - code_review
+  transitions:
+    analysis:
+      next: code_review
+EOF
+cat >"$unsupported_intake/state_card_custom.yaml" <<'EOF'
+card_state:
+  track_id: custom
+  previous_phase: null
+  current_phase: analysis
+  completed_phases: []
+  phase_status: COMPLETE
+EOF
+cat >"$unsupported_intake/phase_analysis.yaml" <<'EOF'
+phase:
+  id: analysis
+  prompt:
+    path: templates/prompts/default/findings/prompt_v<active>.md
+
+  outputs:
+    create_directories: []
+    create_artifacts: []
+
+  completion:
+    strategy: manual
+EOF
+cat >"$unsupported_intake/phase_code_review.yaml" <<'EOF'
+phase:
+  id: code_review
+  prompt:
+    path: templates/prompts/default/findings/prompt_v<active>.md
+
+  outputs:
+    create_directories: []
+    create_artifacts: []
+
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts: []
+EOF
+
+if unsupported_output="$(EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" next "$unsupported_card" 2>&1)"; then
+	fail "unsupported strategy next command should fail"
+fi
+grep -Fq "uses unsupported completion strategy 'manual'" <<<"$unsupported_output" || fail "unsupported strategy output missing explicit error"
+
+printf "workflow_next_phase_execution OK\n"

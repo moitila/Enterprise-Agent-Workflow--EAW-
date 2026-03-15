@@ -24,6 +24,15 @@ The architecture is intentionally contract-first: internal modularization must n
 4. Outputs are written to `out/<CARD>/` according to the contract.
 5. `out/<CARD>/execution.log` records phase execution (`phase|status|duration_ms|note`).
 
+## Phase Transition Semantics
+
+- `current_phase` is the declarative workflow position persisted in card state.
+- `track.transitions` defines the next valid state transition for the current phase.
+- `./scripts/eaw next <CARD>` updates workflow state and executes the destination phase in a phase-driven way using the phase YAML outputs and runtime prompt bindings.
+- Prompt-oriented commands such as `intake`, `analyze`, and `implement` remain the deprecated compatibility surface that materializes the aggregated prompt flow for the same lifecycle during the transition to the phase-driven model, with planned removal in `v1.0`.
+- In the current runtime model, phase completion is validated through the phase `completion` contract when `next` runs; the architecture does not rely on a separate public `complete` CLI command.
+- The current phase-driven executor is incremental: it scaffolds declared outputs, materializes any `phase.outputs.prompts` entries under `out/<CARD>/prompts/` using the declared alias as the filename, emits compatibility prompt artifacts for built-in prompt phases, and records execution in `execution.log`.
+
 ## Deterministic Output Boundaries
 
 Public output surface:

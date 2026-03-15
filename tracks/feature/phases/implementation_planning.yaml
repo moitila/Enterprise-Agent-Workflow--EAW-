@@ -11,10 +11,13 @@ phase:
 
   outputs:
     create_directories:
+      - prompts
       - implementation
     create_artifacts:
       - implementation/00_scope.lock.md
       - implementation/10_change_plan.md
+    prompts:
+      - implementation_planning
 
   completion:
     strategy: required_artifacts_exist

@@ -50,7 +50,7 @@ cmd_output="$(EAW_WORKDIR="$workdir" ./scripts/eaw analyze "../escape-analyze" 2
 cmd_rc=$?
 set -e
 [[ $cmd_rc -ne 0 ]] || fail "command scenario expected non-zero exit"
-grep -Fq "WRITE_SCOPE_VIOLATION: phase=analyze" <<<"$cmd_output" || fail "command scenario missing analyze WRITE_SCOPE_VIOLATION"
+grep -Fq "is missing canonical workflow YAMLs" <<<"$cmd_output" || fail "command scenario missing canonical workflow YAML failure"
 [[ ! -e "$workdir/escape-analyze" ]] || fail "unexpected residue outside out dir"
 
 # Scenario H5: missing repos.conf in workspace config (CONFIG_SOURCE precondition)
@@ -77,8 +77,8 @@ h1_rc=$?
 set -e
 [[ $h1_rc -ne 0 ]] || fail "H1 expected non-zero exit code"
 grep -Fq "ERROR:" <<<"$h1_output" || fail "H1 missing ERROR prefix"
-grep -Fq "prompt directory not found" <<<"$h1_output" || fail "H1 missing invalid root failure context"
-grep -Fq "$invalid_analyze_root/templates/prompts/analyze_findings" <<<"$h1_output" || fail "H1 missing invalid root path context"
+grep -Fq "is missing canonical workflow YAMLs" <<<"$h1_output" || fail "H1 missing invalid root failure context"
+grep -Fq "$invalid_analyze_root/out/528/intake" <<<"$h1_output" || fail "H1 missing invalid root path context"
 [[ ! -e "$REPO_ROOT/out/528" ]] || fail "H1 unexpected residue in repo out dir"
 
 printf "OK\n"
