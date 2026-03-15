@@ -1390,6 +1390,18 @@ eaw_execute_current_phase_for_wrapper() {
 	run_phase "workflow_phase_${EAW_CARD_WORKFLOW_CURRENT_PHASE}" true eaw_execute_workflow_phase "$card"
 }
 
+eaw_materialize_current_phase() {
+	local card="$1"
+	local card_dir="$EAW_OUT_DIR/$card"
+
+	if ! eaw_load_card_workflow_context "$card_dir"; then
+		return 1
+	fi
+
+	OUTDIR="$card_dir"
+	run_phase "workflow_phase_${EAW_CARD_WORKFLOW_CURRENT_PHASE}" true eaw_execute_workflow_phase "$card"
+}
+
 eaw_mark_current_phase_complete_for_wrapper() {
 	local card="$1"
 	local card_dir="$EAW_OUT_DIR/$card"
@@ -1527,12 +1539,16 @@ cmd_card() {
 	run_phase "collect_context" false phase_collect_context "$card" "$outdir"
 	run_phase "search_hits" false phase_search_hits "$outdir"
 	run_phase "finalize" false phase_finalize "$card" "$outdir"
+
+	if eaw_card_has_workflow_config "$outdir"; then
+		eaw_materialize_current_phase "$card" || return 1
+	fi
 }
 
 cmd_next() {
 	local card="$1"
 	local card_dir="$EAW_OUT_DIR/$card"
-	local current_phase current_phase_file next_phase completed_phases current_phase_status phase_started_at
+	local current_phase current_phase_file next_phase completed_phases phase_started_at previous_phase validation_output
 
 	if ! eaw_card_has_workflow_config "$card_dir"; then
 		echo "ERROR: card ${card} is missing canonical workflow YAMLs in $card_dir/intake (MVP requires canonical YAML structure)" >&2
@@ -1549,15 +1565,25 @@ cmd_next() {
 		echo "CARD ${card}: workflow already complete"
 		return 0
 	fi
-	current_phase_status="$(eaw_state_phase_status_for_next)"
-	if [[ "$current_phase_status" == "LEGACY_UNSET" ]]; then
-		if ! eaw_validate_phase_completion "$card" "$card_dir" "$current_phase" "$current_phase_file"; then
-			return 1
-		fi
-	elif [[ "$current_phase_status" != "COMPLETE" ]]; then
-		echo "ERROR: card ${card} phase '${current_phase}' must be COMPLETE before next; current phase_status=${current_phase_status}" >&2
+
+	eaw_materialize_current_phase "$card" || return 1
+	if ! eaw_load_card_workflow_context "$card_dir"; then
 		return 1
-	elif ! eaw_validate_phase_completion "$card" "$card_dir" "$current_phase" "$current_phase_file"; then
+	fi
+	current_phase="$EAW_CARD_WORKFLOW_CURRENT_PHASE"
+	current_phase_file="$EAW_CARD_WORKFLOW_CURRENT_PHASE_FILE"
+
+	if ! validation_output="$(eaw_validate_phase_completion "$card" "$card_dir" "$current_phase" "$current_phase_file" 2>&1)"; then
+		if [[ "$validation_output" == *"is incomplete; missing required artifacts:"* ]]; then
+			printf "%s\n" "$validation_output" >&2
+			previous_phase="$(eaw_normalize_phase_id "$(eaw_yaml_state_scalar "$EAW_CARD_WORKFLOW_STATE_FILE" "previous_phase")")"
+			completed_phases="${EAW_CARD_WORKFLOW_COMPLETED_PHASES:-}"
+			phase_started_at="$(eaw_state_scalar_or_default "$EAW_CARD_WORKFLOW_STATE_FILE" "phase_started_at" "$(utc_timestamp)")"
+			eaw_write_phase_status "$EAW_CARD_WORKFLOW_STATE_FILE" "RUN" "$previous_phase" "$current_phase" "$completed_phases" "$phase_started_at" "false" "null"
+			echo "CARD ${card}: ${current_phase} remains current; missing required artifacts"
+			return 0
+		fi
+		printf "%s\n" "$validation_output" >&2
 		return 1
 	fi
 
@@ -1567,11 +1593,7 @@ cmd_next() {
 	eaw_write_next_state "$EAW_CARD_WORKFLOW_STATE_FILE" "$current_phase" "$next_phase" "$completed_phases" "RUN" "$phase_started_at" "false" "null"
 
 	echo "CARD ${card}: ${current_phase} -> ${next_phase}"
-	if ! eaw_load_card_workflow_context "$card_dir"; then
-		return 1
-	fi
-	OUTDIR="$card_dir"
-	run_phase "workflow_phase_${EAW_CARD_WORKFLOW_CURRENT_PHASE}" true eaw_execute_workflow_phase "$card" || return 1
+	eaw_materialize_current_phase "$card" || return 1
 	return 0
 }
 
