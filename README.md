@@ -37,8 +37,8 @@ chmod +x scripts/eaw scripts/lib.sh
 ./scripts/eaw init
 ./scripts/eaw card 123 --track standard
 ./scripts/eaw card 124 --track bug "Fix race condition"
-./scripts/eaw next 123
 ./scripts/eaw intake 123
+./scripts/eaw next 123
 ./scripts/eaw analyze 123
 ./scripts/eaw smoke
 ./scripts/eaw test
@@ -46,11 +46,11 @@ chmod +x scripts/eaw scripts/lib.sh
 
 `track` is the primary workflow classification for a card. The runtime stores the selected value in `card_state.track_id` and resolves the official workflow from `tracks/<track>/track.yaml`.
 
-The declarative lifecycle advances through `current_phase` and `track.transitions`. `./scripts/eaw next <CARD>` is the command that moves a card to its next declared phase and executes the destination phase in a phase-driven way, while `intake`, `analyze`, and `implement` remain aggregated prompt-oriented commands that coexist for compatibility and AI-assisted execution flows.
+The declarative lifecycle advances through `current_phase` and `track.transitions`. `./scripts/eaw next <CARD>` is the command that moves a card to its next declared phase and executes the destination phase in a phase-driven way, but only after the current phase satisfies its declared `completion` contract. `intake`, `analyze`, and `implement` remain aggregated prompt-oriented commands that coexist for compatibility and AI-assisted execution flows.
 
 Current phase semantics:
 - entering a phase means the card state now points to that declarative workflow phase;
-- `./scripts/eaw next <CARD>` performs the declarative state transition, then executes the destination phase using the phase YAML outputs and the runtime prompt bindings;
+- `./scripts/eaw next <CARD>` blocks when the current phase is incomplete according to `phase.completion`, otherwise it performs the declarative state transition and executes the destination phase using the phase YAML outputs and the runtime prompt bindings;
 - `intake`, `analyze`, and `implement` remain the compatibility commands that materialize the prompt-oriented work associated with those phases.
 
 Future phase-driven note:

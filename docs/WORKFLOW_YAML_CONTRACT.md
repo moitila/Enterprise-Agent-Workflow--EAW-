@@ -191,7 +191,9 @@ Rules:
 - If present and not `null`, `card_state.previous_phase` must exist in `track.phases`.
 - `card_state.completed_phases` must not contain duplicates.
 - Every completed phase must exist in `track.phases`.
-- When `eaw next <CARD>` runs, the runtime updates `previous_phase`, `current_phase`, and `completed_phases` based on `track.transitions`.
+- When `eaw next <CARD>` runs, the runtime first evaluates the current phase `completion` block.
+- If the current phase is incomplete, the runtime blocks the transition and reports the missing required artifacts.
+- If the current phase is complete, the runtime updates `previous_phase`, `current_phase`, and `completed_phases` based on `track.transitions`.
 - After the state transition, the current runtime executes the destination phase in a phase-driven way.
 - Phase-driven execution uses the destination phase YAML to create declared directories and artifacts, emits compatibility prompt artifacts for the built-in prompt phases, and records the execution in `execution.log`.
 - Prompt-oriented execution through `intake`, `analyze`, and `implement` remains available as a compatibility flow alongside the phase-driven lifecycle.
