@@ -22,6 +22,7 @@ assert_no_repo_residue() {
 card_template_missing="4013A"
 card_round_invalid="4013B"
 card_workdir_invalid="4013C"
+card_ingest_and_intake_missing="9901"
 
 # Scenario A: missing canonical card workflow scaffold
 isolated_root="$tmpdir/isolated_root"
@@ -66,5 +67,21 @@ if ! grep -Fq "ERROR:" <<<"$scenario_c_output"; then
 fi
 grep -Fq "./scripts/eaw init --workdir \"$invalid_workdir\"" <<<"$scenario_c_output" || fail "scenario C missing recommended action"
 assert_no_repo_residue "$card_workdir_invalid"
+
+# Scenario D: missing ingest/ and intake/ after feature card scaffold
+scenario_d_workdir="$tmpdir/scenario-d-workdir"
+./scripts/eaw init --workdir "$scenario_d_workdir" --force >/dev/null
+EAW_WORKDIR="$scenario_d_workdir" ./scripts/eaw card "$card_ingest_and_intake_missing" --track feature >/dev/null 2>&1
+rm -rf "$scenario_d_workdir/out/$card_ingest_and_intake_missing/ingest"
+rm -rf "$scenario_d_workdir/out/$card_ingest_and_intake_missing/intake"
+
+set +e
+scenario_d_output="$(EAW_WORKDIR="$scenario_d_workdir" ./scripts/eaw intake "$card_ingest_and_intake_missing" --round=1 2>&1)"
+scenario_d_rc=$?
+set -e
+
+[[ $scenario_d_rc -ne 0 ]] || fail "scenario D expected non-zero exit code"
+grep -Fq "missing required artifacts: ingest/intake_feature.md" <<<"$scenario_d_output" || fail "scenario D missing expected ingest artifact failure"
+assert_no_repo_residue "$card_ingest_and_intake_missing"
 
 printf "OK\n"

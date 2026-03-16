@@ -184,6 +184,7 @@ Runtime clarification:
 - New cards write mutable state to `out/<CARD>/state_card_*.yaml` (card root). The runtime falls back to `out/<CARD>/intake/state_card_*.yaml` for cards created before this change.
 - When a track declares `ingest`, raw source files can be collected under `out/<CARD>/ingest/` while mutable workflow state remains under `out/<CARD>/intake/state_card_*.yaml` for compatibility.
 - End-of-transition criterion: the fallback path (`out/<CARD>/intake/state_card_*.yaml`) may be removed when no active card in `EAW_OUT_DIR` contains a `state_card_*.yaml` exclusively under `intake/`. Verify with: `ls "$EAW_OUT_DIR"/*/intake/state_card_*.yaml 2>/dev/null`. Until this command returns no results, the fallback MUST remain in `eaw_load_card_workflow_context`.
+- Activation criterion per card (by design): the ingest transition is active for a card when `out/<CARD>/ingest/` exists. The runtime scaffolds this directory for cards created after `ingest` became the initial phase. Older cards without `ingest/` continue via the compatibility fallback `out/<CARD>/intake/` in `eaw_load_card_workflow_context`. No extra flag or YAML field is required; directory presence is the sole runtime indicator.
 - Official track resolution uses `tracks/<track>/track.yaml` and `tracks/<track>/phases/*.yaml`, not `tracks/<track>/card_state.yaml`.
 
 Required root:
