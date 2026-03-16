@@ -1,0 +1,26 @@
+config_version: 1
+
+phase:
+  id: ingest
+  name: Ingest
+  description: Collect and normalize raw card inputs before the structured intake phase.
+
+  prompt:
+    active: 1
+    path: templates/prompts/default/ingest/prompt_v<active>.md
+
+  tooling_hints:
+    - Tratar `out/<CARD>/ingest/` como a origem primaria de insumos brutos quando existir.
+    - Preservar compatibilidade com `out/<CARD>/intake/` como fallback temporario durante a transicao.
+
+  outputs:
+    create_directories:
+      - ingest
+      - investigations
+      - context
+    create_artifacts: []
+
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - ingest/sources.md

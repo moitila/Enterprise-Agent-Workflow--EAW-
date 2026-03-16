@@ -11,15 +11,11 @@ fail() {
 	exit 1
 }
 
-assert_intake_scaffold() {
-	local dir="$1"
-	[[ -d "$dir" ]] || fail "missing intake dir: $dir"
+assert_state_scaffold() {
+	local card_dir="$1"
 	local state_file
-	state_file="$(find "$dir" -maxdepth 1 -type f -name 'state_card_*.yaml' | LC_ALL=C sort)"
-	[[ -n "$state_file" ]] || fail "missing canonical state scaffold in intake dir: $dir"
-	local count
-	count="$(find "$dir" -mindepth 1 -maxdepth 1 -print | wc -l | tr -d '[:space:]')"
-	[[ "$count" == "1" ]] || fail "unexpected extra intake scaffold entries in: $dir"
+	state_file="$(find "$card_dir" -maxdepth 1 -type f -name 'state_card_*.yaml' | LC_ALL=C sort | head -n 1)"
+	[[ -n "$state_file" ]] || fail "missing canonical state scaffold in card root: $card_dir"
 }
 
 capture_tree() {
@@ -44,14 +40,14 @@ main() {
 	trap cleanup EXIT
 
 	EAW_WORKDIR="" EAW_OUT_DIR="$normal_out" ./scripts/eaw card "$CARD_ID" --track bug "scaffold test normal" >/dev/null
-	assert_intake_scaffold "$normal_card/intake"
+	assert_state_scaffold "$normal_card"
 
 	./scripts/eaw init --workdir "$ws" --upgrade >/dev/null
 	cat >"$ws/config/repos.conf" <<EOF
 local-main|$REPO_ROOT|target
 EOF
 	EAW_WORKDIR="$ws" ./scripts/eaw card "$CARD_ID" --track bug "scaffold test workspace" >/dev/null
-	assert_intake_scaffold "$ws_card/intake"
+	assert_state_scaffold "$ws_card"
 
 	local normal_paths ws_paths normal_norm ws_norm
 	normal_paths="$TMP_ROOT/normal.paths"

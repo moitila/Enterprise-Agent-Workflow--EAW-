@@ -709,13 +709,32 @@ phase_init_runtime() {
 	render_template "$tpl" "$target_md" "$card" "$title" "$type" "$date"
 	echo "Wrote $target_md"
 	local intake_runtime_dir="$outdir/intake"
+	local ingest_dir="$outdir/ingest"
 	local intake_dir="$outdir/investigations"
 	local intake_file="$intake_dir/00_intake.md"
 	local intake_tpl="$EAW_TEMPLATES_DIR/intake_${type}.md"
+	local ingest_input_file="$ingest_dir/sources.md"
+	local state_runtime_file=""
+	# Determine whether the effective track declares an ingest phase (H1, H8).
+	# This check must precede any conditional scaffold creation.
+	local track_has_ingest="false"
+	local _effective_track_id="${track_id_override:-${type,,}}"
+	local _check_track_file="$EAW_ROOT_DIR/tracks/${_effective_track_id}/track.yaml"
+	if [[ -f "$_check_track_file" ]] && grep -qE '^    - ingest[[:space:]]*$' "$_check_track_file"; then
+		track_has_ingest="true"
+	fi
 	ensure_dir "$intake_runtime_dir"
+	if [[ "$track_has_ingest" == "true" ]]; then
+		ensure_dir "$ingest_dir"
+	fi
 	ensure_dir "$intake_dir"
-	if ! compgen -G "$intake_runtime_dir/state_card_*.yaml" >/dev/null; then
-		local track_id="${track_id_override:-${type,,}}"
+	if compgen -G "$outdir/state_card_*.yaml" >/dev/null; then
+		state_runtime_file="$(compgen -G "$outdir/state_card_*.yaml" | LC_ALL=C sort | head -n 1)"
+	elif compgen -G "$intake_runtime_dir/state_card_*.yaml" >/dev/null; then
+		state_runtime_file="$(compgen -G "$intake_runtime_dir/state_card_*.yaml" | LC_ALL=C sort | head -n 1)"
+	fi
+	if [[ -z "$state_runtime_file" ]]; then
+		local track_id="${_effective_track_id}"
 		local state_file current_phase track_file phase_started_at
 		if [[ -z "$track_id" || ! -d "$EAW_ROOT_DIR/tracks/$track_id" ]]; then
 			track_id="standard"
@@ -737,7 +756,7 @@ phase_init_runtime() {
 			[[ -n "$current_phase" ]] || current_phase="intake"
 		fi
 		phase_started_at="$(utc_timestamp)"
-		state_file="$intake_runtime_dir/state_card_${track_id}.yaml"
+		state_file="$outdir/state_card_${track_id}.yaml"
 		cat >"$state_file" <<EOF
 config_version: 1
 
@@ -756,12 +775,22 @@ card_state:
 EOF
 		echo "Wrote $state_file"
 	fi
-	if [[ ! -f "$intake_file" ]]; then
-		if [[ -f "$intake_tpl" ]]; then
-			cp "$intake_tpl" "$intake_file"
-		else
-			echo "WARNING: missing intake template for type '$type': $intake_tpl; using minimal fallback"
-			cat >"$intake_file" <<EOF
+	# Create ingest/sources.md only for tracks that declare ingest (H3, H8).
+	if [[ "$track_has_ingest" == "true" ]]; then
+		if [[ ! -f "$ingest_input_file" && -f "$intake_tpl" ]]; then
+			cp "$intake_tpl" "$ingest_input_file"
+			echo "Wrote $ingest_input_file"
+		fi
+	fi
+	# Create investigations/00_intake.md only for tracks without ingest (H1, H8).
+	# For tracks that declare ingest, 00_intake.md is created by the intake phase execution.
+	if [[ "$track_has_ingest" != "true" ]]; then
+		if [[ ! -f "$intake_file" ]]; then
+			if [[ -f "$intake_tpl" ]]; then
+				cp "$intake_tpl" "$intake_file"
+			else
+				echo "WARNING: missing intake template for type '$type': $intake_tpl; using minimal fallback"
+				cat >"$intake_file" <<EOF
 # Intake ${type^^} ${card}
 
 ## Resumo
@@ -772,8 +801,9 @@ EOF
 
 ## Passos para reproduzir
 EOF
+			fi
+			echo "Wrote $intake_file"
 		fi
-		echo "Wrote $intake_file"
 	fi
 	# Create investigation scaffolds (non-breaking, idempotent)
 	while IFS= read -r scaffold_name; do

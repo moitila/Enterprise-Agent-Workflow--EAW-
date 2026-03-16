@@ -45,6 +45,22 @@ test -f "$provenance_file"
 grep -F "phase: intake" "$provenance_file" >/dev/null
 grep -Eq "prompt_used: intake_v[0-9]+" "$provenance_file"
 
+test -f "$REPO_ROOT/tracks/feature/phases/ingest.yaml"
+grep -F "initial_phase: ingest" "$REPO_ROOT/tracks/feature/track.yaml" >/dev/null
+
+"$REPO_ROOT/scripts/eaw" card 501 --track feature "Ingest phase smoke" >/dev/null
+test -d "$EAW_WORKDIR/out/501/ingest"
+test -f "$EAW_WORKDIR/out/501/ingest/sources.md"
+test -d "$EAW_WORKDIR/out/501/intake"
+test -d "$EAW_WORKDIR/out/501/investigations"
+# feature ingest smoke must exercise `eaw next`
+"$REPO_ROOT/scripts/eaw" next 501 >/dev/null
+feature_prompt="$EAW_WORKDIR/out/501/investigations/intake_agent_prompt.round_1.md"
+test -f "$feature_prompt"
+grep -F 'EVIDENCIAS=`out/<CARD>/ingest/** (primario)`, fallback=`out/<CARD>/intake/**`' "$feature_prompt" >/dev/null
+grep -F "Ler \`$EAW_WORKDIR/out/501/ingest\` quando existir." "$feature_prompt" >/dev/null
+grep -F "Ler \`$EAW_WORKDIR/out/501/intake\` apenas como fallback compativel quando \`$EAW_WORKDIR/out/501/ingest\` nao existir." "$feature_prompt" >/dev/null
+
 log_missing_md="$WORK_ROOT/validate_missing_md.log"
 mv "$md_file" "$md_backup"
 if "$REPO_ROOT/scripts/eaw" validate >"$log_missing_md" 2>&1; then

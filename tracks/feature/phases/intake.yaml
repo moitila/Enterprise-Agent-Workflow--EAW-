@@ -3,7 +3,7 @@ config_version: 1
 phase:
   id: intake
   name: Intake
-  description: Capture and normalize the initial request for the card.
+  description: Build the structured intake artifact from ingest evidence and compatibility fallback inputs.
 
   prompt:
     active: 1

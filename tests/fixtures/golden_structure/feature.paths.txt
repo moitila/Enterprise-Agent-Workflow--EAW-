@@ -7,13 +7,11 @@ out/940101/context/local-main/git-status.txt
 out/940101/context/local-main/rg-symbols.txt
 out/940101/execution.log
 out/940101/feature_940101.md
-out/940101/intake/state_card_feature.yaml
-out/940101/investigations/00_intake.md
+out/940101/ingest/sources.md
 out/940101/investigations/10_baseline.md
 out/940101/investigations/20_findings.md
 out/940101/investigations/30_hypotheses.md
 out/940101/investigations/40_next_steps.md
-out/940101/investigations/_intake_provenance.md
-out/940101/investigations/intake_agent_prompt.round_1.md
-out/940101/prompts/intake.md
+out/940101/prompts/ingest.md
 out/940101/provenance/prompts_used.yaml
+out/940101/state_card_feature.yaml

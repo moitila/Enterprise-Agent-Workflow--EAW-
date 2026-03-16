@@ -48,6 +48,9 @@ eaw_phase_prompt_phase() {
 	local phase
 	phase="$(eaw_normalize_phase_id "${1:-}")"
 	case "$phase" in
+	ingest)
+		printf "intake\n"
+		;;
 	intake)
 		printf "intake\n"
 		;;
@@ -248,6 +251,29 @@ eaw_yaml_phase_output_prompts() {
 	' "$file"
 }
 
+eaw_yaml_phase_tooling_hints() {
+	local file="$1"
+	awk '
+		function trim(s) {
+			sub(/^[[:space:]]+/, "", s)
+			sub(/[[:space:]]+$/, "", s)
+			sub(/^"/, "", s)
+			sub(/"$/, "", s)
+			return s
+		}
+		/^phase:[[:space:]]*$/ { in_phase=1; next }
+		in_phase && /^[^[:space:]]/ { in_phase=0; in_hints=0 }
+		in_phase && /^  tooling_hints:[[:space:]]*$/ { in_hints=1; next }
+		in_phase && /^  tooling_hints:[[:space:]]*\[[[:space:]]*\][[:space:]]*$/ { in_hints=0; next }
+		in_hints && /^  [^[:space:]-]/ { in_hints=0 }
+		in_hints && /^    - / {
+			line=$0
+			sub(/^    - /, "", line)
+			print trim(line)
+		}
+	' "$file"
+}
+
 eaw_yaml_phase_completion_strategy() {
 	eaw_phase_completion_strategy_name "$1"
 }
@@ -396,7 +422,7 @@ eaw_yaml_state_completed_phases() {
 eaw_card_has_workflow_config() {
 	local card_dir="$1"
 	local intake_dir="$card_dir/intake"
-	compgen -G "$intake_dir/state_card_*.yaml" >/dev/null || compgen -G "$intake_dir/track_*.yaml" >/dev/null || compgen -G "$intake_dir/phase_*.yaml" >/dev/null
+	compgen -G "$card_dir/state_card_*.yaml" >/dev/null || compgen -G "$intake_dir/state_card_*.yaml" >/dev/null || compgen -G "$intake_dir/track_*.yaml" >/dev/null || compgen -G "$intake_dir/phase_*.yaml" >/dev/null
 }
 
 eaw_official_track_dir() {
@@ -448,6 +474,7 @@ eaw_load_card_workflow_context() {
 	local card_dir="$1"
 	local card_name="${card_dir##*/}"
 	local intake_dir="$card_dir/intake"
+	local state_dir="$card_dir"
 	local errors=0
 	local track_file state_file initial_phase final_phase track_id state_track_id current_phase previous_phase phase_status
 	local current_phase_file current_prompt_phase current_prompt_path current_prompt_track next_phase
@@ -484,7 +511,10 @@ eaw_load_card_workflow_context() {
 
 	shopt -s nullglob
 	track_candidates=("$intake_dir"/track_*.yaml)
-	state_candidates=("$intake_dir"/state_card_*.yaml)
+	state_candidates=("$state_dir"/state_card_*.yaml)
+	if [[ ${#state_candidates[@]} -eq 0 ]]; then
+		state_candidates=("$intake_dir"/state_card_*.yaml)
+	fi
 	phase_candidates=("$intake_dir"/phase_*.yaml)
 	shopt -u nullglob
 
@@ -493,11 +523,11 @@ eaw_load_card_workflow_context() {
 	fi
 
 	if [[ ${#state_candidates[@]} -eq 0 ]]; then
-		echo "ERROR: card ${card_name} has declarative workflow artifacts but is missing state_card_*.yaml in $intake_dir (MVP requires canonical YAML structure)" >&2
+		echo "ERROR: card ${card_name} has declarative workflow artifacts but is missing state_card_*.yaml in $state_dir or fallback $intake_dir (MVP requires canonical YAML structure)" >&2
 		return 1
 	fi
 	if [[ ${#state_candidates[@]} -ne 1 ]]; then
-		echo "ERROR: card ${card_name} must define exactly one state_card_*.yaml in $intake_dir (MVP requires canonical YAML structure)" >&2
+		echo "ERROR: card ${card_name} must define exactly one state_card_*.yaml in $state_dir or fallback $intake_dir (MVP requires canonical YAML structure)" >&2
 		return 1
 	fi
 
@@ -1393,6 +1423,12 @@ eaw_render_phase_prompt_template() {
 	local write_allowlist="${12}"
 	local critical_paths="${13}"
 	local runtime_environment="${14}"
+	local tooling_hints="${15:-}"
+	local tooling_hints_serialized=""
+
+	if [[ -n "$tooling_hints" ]]; then
+		tooling_hints_serialized="${tooling_hints//$'\n'/__EAW_TOOLING_HINT_NL__}"
+	fi
 
 	assert_write_scope "workflow_phase" "write phase prompt" "$output_file" "$card_dir"
 	ensure_dir "$(dirname "$output_file")"
@@ -1415,6 +1451,7 @@ eaw_render_phase_prompt_template() {
 		-v write_allowlist="$write_allowlist" \
 		-v critical_paths="$critical_paths" \
 		-v runtime_environment="$runtime_environment" \
+		-v tooling_hints="$tooling_hints_serialized" \
 		'
 		{
 			if ($0 == "{{RUNTIME_ENVIRONMENT}}") {
@@ -1431,6 +1468,13 @@ eaw_render_phase_prompt_template() {
 			}
 			if ($0 == "{{WARNINGS_BLOCK}}") {
 				print warnings_block
+				next
+			}
+			if ($0 == "{{TOOLING_HINTS}}") {
+				if (tooling_hints != "") {
+					gsub(/__EAW_TOOLING_HINT_NL__/, "\n", tooling_hints)
+					print tooling_hints
+				}
 				next
 			}
 			gsub(/\{\{PHASE_HEADER\}\}/, phase_header)
@@ -1451,6 +1495,53 @@ eaw_render_phase_prompt_template() {
 		' "$template_file" >"$output_file"
 
 	echo "RUNTIME: wrote_prompt=${output_file#$card_dir/}"
+}
+
+eaw_primary_target_repo() {
+	local target_repos="$1"
+	printf "%s\n" "$target_repos" | awk 'NF { sub(/^- /, "", $0); print; exit }'
+}
+
+eaw_render_tooling_hints_block() {
+	local phase_file="$1"
+	local card="$2"
+	local type="$3"
+	local card_dir="$4"
+	local track_id="$5"
+	local step_id="$6"
+	local target_repos="$7"
+	local primary_target_repo hint rendered
+	local count=0
+
+	primary_target_repo="$(eaw_primary_target_repo "$target_repos")"
+
+	while IFS= read -r hint; do
+		[[ -n "$hint" ]] || continue
+		rendered="$hint"
+		rendered="${rendered//\{\{CARD\}\}/$card}"
+		rendered="${rendered//<CARD>/$card}"
+		rendered="${rendered//\{\{TYPE\}\}/$type}"
+		rendered="${rendered//<TYPE>/$type}"
+		rendered="${rendered//\{\{EAW_WORKDIR\}\}/${EAW_WORKDIR:-}}"
+		rendered="${rendered//<WORKDIR>/${EAW_WORKDIR:-}}"
+		rendered="${rendered//\{\{OUT_DIR\}\}/$EAW_OUT_DIR}"
+		rendered="${rendered//<OUTDIR>/$EAW_OUT_DIR}"
+		rendered="${rendered//\{\{CARD_DIR\}\}/$card_dir}"
+		rendered="${rendered//<CARD_DIR>/$card_dir}"
+		rendered="${rendered//\{\{TRACK_ID\}\}/$track_id}"
+		rendered="${rendered//<TRACK_ID>/$track_id}"
+		rendered="${rendered//\{\{STEP_ID\}\}/$step_id}"
+		rendered="${rendered//<STEP_ID>/$step_id}"
+		rendered="${rendered//\{\{TARGET_REPO\}\}/$primary_target_repo}"
+		rendered="${rendered//<TARGET_REPO>/$primary_target_repo}"
+		rendered="${rendered//\{\{TARGET_REPOS\}\}/$primary_target_repo}"
+		rendered="${rendered//<TARGET_REPOS>/$primary_target_repo}"
+		if [[ "$count" -eq 0 ]]; then
+			printf "## Tooling Hints\n\n"
+		fi
+		printf -- "- %s\n" "$rendered"
+		count=$((count + 1))
+	done < <(eaw_yaml_phase_tooling_hints "$phase_file")
 }
 
 eaw_phase_prompt_output_relpath() {
@@ -1494,7 +1585,7 @@ eaw_generate_phase_prompt_artifacts() {
 	local type template_file output_file legacy_file
 	local repo_blocks target_repos excluded_repos
 	local prompt_alias prompt_phase prompt_relpath
-	local track_id step_id write_allowlist critical_paths runtime_environment
+	local track_id step_id write_allowlist critical_paths runtime_environment tooling_hints
 	local -a declared_prompts=()
 
 	type="$(eaw_detect_card_template_type "$card" "$card_dir")"
@@ -1522,6 +1613,7 @@ eaw_generate_phase_prompt_artifacts() {
 	write_allowlist="$(eaw_card_write_allowlist_block "$card_dir")"
 	critical_paths="$(eaw_card_critical_paths_block "$card_dir")"
 	runtime_environment="$(eaw_runtime_environment_block "$card" "$card_dir" "$track_id" "$step_id" "$write_allowlist" "$critical_paths" "$target_repos")"
+	tooling_hints="$(eaw_render_tooling_hints_block "$phase_file" "$card" "$type" "$card_dir" "$track_id" "$step_id" "$target_repos")"
 
 	for prompt_alias in "${declared_prompts[@]}"; do
 		prompt_alias="$(eaw_normalize_phase_id "$prompt_alias")"
@@ -1532,7 +1624,7 @@ eaw_generate_phase_prompt_artifacts() {
 		template_file="$(load_prompt "default" "$prompt_phase" "$card" "$EAW_OUT_DIR")" || return 1
 		prompt_relpath="$(eaw_phase_prompt_output_relpath "$prompt_alias")"
 		output_file="$card_dir/$prompt_relpath"
-		eaw_render_phase_prompt_template "$template_file" "$output_file" "${prompt_alias^^}" "$card" "$type" "$card_dir" "$target_repos" "$excluded_repos" "- none" "$track_id" "$step_id" "$write_allowlist" "$critical_paths" "$runtime_environment"
+		eaw_render_phase_prompt_template "$template_file" "$output_file" "${prompt_alias^^}" "$card" "$type" "$card_dir" "$target_repos" "$excluded_repos" "- none" "$track_id" "$step_id" "$write_allowlist" "$critical_paths" "$runtime_environment" "$tooling_hints"
 
 		while IFS= read -r legacy_file; do
 			[[ -n "$legacy_file" ]] || continue
