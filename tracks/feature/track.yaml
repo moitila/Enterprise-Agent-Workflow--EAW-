@@ -6,17 +6,19 @@ track:
   description: >
     Canonical EAW track installed in the repository as the official
     workflow source for feature cards.
-  initial_phase: intake
+  initial_phase: ingest
   final_phase: implementation_executor
 
   initial_outputs:
     create_directories:
+      - ingest
       - investigations
       - intake
       - context
     create_artifacts: []
 
   phases:
+    - ingest
     - intake
     - findings
     - hypotheses
@@ -25,6 +27,8 @@ track:
     - implementation_executor
 
   transitions:
+    ingest:
+      next: intake
     intake:
       next: findings
     findings:

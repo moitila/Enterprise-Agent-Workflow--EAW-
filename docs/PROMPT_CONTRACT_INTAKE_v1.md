@@ -22,7 +22,8 @@ Seu proposito e:
 
 | Categoria | Caminho | Regra |
 | --- | --- | --- |
-| Entrada obrigatoria | `out/<CARD>/intake/` | Deve existir antes da execucao da fase |
+| Entrada obrigatoria | `out/<CARD>/ingest/` | Quando existir, deve ser tratada como origem primaria dos insumos brutos |
+| Compatibilidade de entrada | `out/<CARD>/intake/` | Pode ser usada como fallback temporario durante a transicao |
 | Artefato runtime | `out/<CARD>/investigations/intake_agent_prompt.round_<N>.md` | Prompt auxiliar emitido por `eaw intake <CARD> [--round=N]` |
 | Saida obrigatoria do fluxo | `out/<CARD>/investigations/00_intake.md` | Artefato preenchido a partir do prompt gerado e das evidencias de `intake/` |
 | Saida obrigatoria do fluxo | `out/<CARD>/investigations/_intake_provenance.md` | Proveniencia obrigatoria do intake |
@@ -34,13 +35,14 @@ Seu proposito e:
 - Template efetivo observado: `templates/prompts/default/intake/prompt_v{ACTIVE}.md` (resolvido via `ACTIVE`)
 - Contrato estrutural complementar do prompt: `docs/PROMPT_CONTRACT_v1.md`
 - Configuracao obrigatoria: `config/repos.conf`
-- Diretorio de entrada obrigatorio por card: `out/<CARD>/intake/`
+- Diretorio primario de entrada por card: `out/<CARD>/ingest/`
+- Diretorio de compatibilidade observado por card: `out/<CARD>/intake/`
 - Parametro obrigatorio: `<CARD>`
 - Parametro opcional observado: `--round=N`
 
 ## 4. READ_SCOPE
 
-- Ler somente `out/<CARD>/intake/` durante a execucao da fase Intake.
+- Ler `out/<CARD>/ingest/` quando existir e usar `out/<CARD>/intake/` apenas como fallback compativel.
 - Consumir arquivos de texto `.md`, `.txt` e `.log` quando instruido pelo prompt ativo.
 - Para imagens `.png`, `.jpg`, `.jpeg` e `.webp`, descrever apenas o visivel quando houver consumo pelo agente.
 - Nao ler `TARGET_REPOS` na fase Intake.
@@ -54,21 +56,23 @@ Seu proposito e:
 
 ## 6. Regras Obrigatorias
 
-- Executar o pre-check com `cd "$RUNTIME_ROOT"`, `test -f ./scripts/eaw`, `test -f "$CONFIG_SOURCE"` e `test -d "$CARD_DIR/intake"`.
+- Executar o pre-check com `cd "$RUNTIME_ROOT"`, `test -f ./scripts/eaw`, `test -f "$CONFIG_SOURCE"` e validar `"$CARD_DIR/ingest"` ou `"$CARD_DIR/intake"` como fonte de entrada.
 - Resolver os templates de header e corpo a partir de `EAW_TEMPLATES_DIR`, com fallback para `EAW_ROOT_DIR/templates/` quando necessario.
 - Gerar o prompt deterministico em `investigations/intake_agent_prompt.round_<N>.md`.
 - Materializar o bloco `RUNTIME_ENVIRONMENT` no inicio do prompt final, mantendo a sequencia imediata `RUNTIME_ENVIRONMENT -> ROLE`.
-- Restringir leitura a `intake/` e escrita a `investigations/` no prompt gerado.
+- Restringir leitura ao perimetro de entrada bruta (`ingest/`, com fallback para `intake/`) e escrita a `investigations/` no prompt gerado.
 - Declarar no fluxo de Intake a producao de `investigations/00_intake.md` e `investigations/_intake_provenance.md`.
+- Quando a fase de ingest estiver declarada no workflow, tratar `investigations/00_intake.md` como intake estruturado derivado dos insumos brutos, e nao como copia direta do input do usuario.
 - Preencher `00_intake.md` somente com fatos observaveis e perguntas abertas reais, conforme o template ativo.
 - Registrar em `_intake_provenance.md` os arquivos encontrados, arquivos consumidos, arquivos ignorados com motivo, lacunas detectadas e observacoes de processo.
+- Quando definido pelo workflow, registrar a rastreabilidade minima das fontes consolidadas, como `investigations/intake_sources.txt` ou equivalente contratual.
 
 ## 7. Condicoes de Falha
 
 - Falha em `cd "$RUNTIME_ROOT"`.
 - Ausencia de `./scripts/eaw`.
 - Ausencia de `"$CONFIG_SOURCE"`.
-- Ausencia de `"$CARD_DIR/intake"`.
+- Ausencia simultanea de `"$CARD_DIR/ingest"` e `"$CARD_DIR/intake"`.
 - Template de header nao encontrado no path primario nem no fallback.
 - Template de body nao encontrado no path primario nem no fallback.
 - Uso invalido da CLI fora de `eaw intake <CARD> [--round=N]`.
@@ -92,6 +96,7 @@ Em caso de conflito entre documentacao auxiliar e o comportamento observado em `
 
 - `docs/PROMPT_CONTRACT_v1.md` permanece como contrato estrutural complementar do prompt de Intake.
 - Este documento detalha especificamente a fase Intake e nao altera os contratos das fases Analyze ou Implement.
+- Em tracks que declaram `ingest`, a fase Intake passa a representar o intake estruturado gerado a partir da entrada bruta consolidada.
 
 ## 10. Limitacoes Conhecidas
 

@@ -11,6 +11,7 @@ Status
 - Official documentation target for card 538.
 - The repository installs official runtime trees under `tracks/standard/`, `tracks/feature/`, `tracks/bug/`, and `tracks/spike/`.
 - Backward-compatible with the current runtime model based on `out/<CARD>/intake/**`.
+- Feature-track ingest transition introduces `out/<CARD>/ingest/**` as the primary raw-input area while preserving `out/<CARD>/intake/**` as compatibility fallback during migration.
 - `out/<CARD>/fixtures/**` are validation artifacts only and are not permanent runtime configuration.
 - Compatibilidade com o modelo atual e requisito explicito deste contrato.
 - `out/<CARD>/fixtures/**` nao sao configuracao permanente do runtime.
@@ -44,6 +45,7 @@ Important clarification:
 - `tracks/<track>/card_state.yaml` is a reference template for the logical shape of card state.
 - The runtime does not load execution state from `tracks/<track>/card_state.yaml`.
 - Real mutable execution state is always per-card under `out/<CARD>/intake/state_card_*.yaml`.
+- Raw user-facing intake sources may live under `out/<CARD>/ingest/` when the track declares an explicit `ingest` phase.
 
 Equivalent current runtime compatibility model:
 
@@ -51,6 +53,13 @@ Equivalent current runtime compatibility model:
 out/<CARD>/intake/track_*.yaml
 out/<CARD>/intake/phase_*.yaml
 out/<CARD>/intake/state_card_*.yaml
+```
+
+Primary raw-input model for tracks that declare `ingest`:
+
+```text
+out/<CARD>/ingest/
+out/<CARD>/investigations/00_intake.md
 ```
 
 The current runtime in `scripts/commands/eaw_commands.sh` resolves the official repository tree first and keeps the compatibility model above as a fallback for per-card workflow artifacts. Cards are created through `eaw card <CARD> --track <TRACK> ["<TITLE>"]`, which initializes `state_card_*.yaml` with the selected `track_id` when the corresponding official track is installed. This document uses `track.yaml`, `phase.yaml`, and `card_state.yaml` as logical names, while explicitly preserving the current runtime-compatible file naming used today.
@@ -64,9 +73,10 @@ track:
   id: standard
   name: Standard Track
   description: Canonical workflow
-  initial_phase: intake
+  initial_phase: ingest
   final_phase: implementation_executor
   phases:
+    - ingest
     - intake
     - findings
     - hypotheses
@@ -74,6 +84,8 @@ track:
     - implementation_planning
     - implementation_executor
   transitions:
+    ingest:
+      next: intake
     intake:
       next: findings
 ```
@@ -98,6 +110,7 @@ Rules:
 - `track.final_phase` must not define a `next` transition.
 - Transition sources and targets must exist in `track.phases`.
 - Duplicate phases and duplicate transition sources are invalid.
+- Tracks may introduce a preparatory `ingest` phase before `intake` to separate raw inputs from the structured intake artifact.
 - Historical aliases may be normalized by runtime helpers:
   - `hypoteses` -> `hypotheses`
   - `planing` -> `planning`
@@ -150,7 +163,7 @@ Rules:
 - The runtime derives prompt binding from `prompt.path` and validates that the path is resolvable.
 - `phase.outputs.prompts` is optional. When present, the runtime materializes each declared alias under `out/<CARD>/prompts/<alias>.md` during phase-driven execution.
 - The generated filename matches the declared alias exactly; the runtime does not rename aliases to a second canonical filename in `prompts/`.
-- Built-in aliases currently recognized by the runtime are `findings`, `hypotheses`, `planning`, `implementation_planning`, and `implementation_executor`.
+- Built-in aliases currently recognized by the runtime are `ingest`, `findings`, `hypotheses`, `planning`, `implementation_planning`, and `implementation_executor`.
 - Phases that do not generate prompts, including internal/tooling phases, may omit `phase.outputs.prompts` entirely.
 - For agent-oriented tracks, the observable emission rule remains fail-closed: steps equivalent to `steps[].type == ai_prompt` or `steps[].runtime == agent` must resolve to phase-driven prompt emission through `phase.outputs.prompts` or, when omitted, the normalized `phase.id` fallback used by the runtime.
 - The runtime injects `RUNTIME_ENVIRONMENT` only into those agent prompt artifacts; non-agent phases that do not materialize prompts do not receive the header.
@@ -169,6 +182,7 @@ Current runtime-compatible filename pattern:
 Runtime clarification:
 - `card_state.yaml` under `tracks/<track>/` is documentation/reference only.
 - The runtime reads card state from `out/<CARD>/intake/state_card_*.yaml`.
+- When a track declares `ingest`, raw source files can be collected under `out/<CARD>/ingest/` while mutable workflow state remains under `out/<CARD>/intake/state_card_*.yaml` for compatibility.
 - Official track resolution uses `tracks/<track>/track.yaml` and `tracks/<track>/phases/*.yaml`, not `tracks/<track>/card_state.yaml`.
 
 Required root:
@@ -177,7 +191,7 @@ Required root:
 card_state:
   card_id: CARD_538
   track_id: standard
-  current_phase: intake
+  current_phase: ingest
   previous_phase: null
   phase_status: in_progress
   completed_phases: []
@@ -254,8 +268,10 @@ Compatibility Notes
 - The current runtime resolves `tracks/<track>/track.yaml` and `tracks/<track>/phases/*.yaml` as the official source when the referenced track is installed in the repository.
 - The repository currently ships official tracks for `standard`, `feature`, `bug`, and `spike`; `standard` remains available for compatibility.
 - The current runtime remains compatible with the per-card model under `out/<CARD>/intake/**` as an explicit fallback.
+- Tracks may additionally use `out/<CARD>/ingest/**` as the primary raw-input area when `ingest` is declared explicitly in the track.
 - `tracks/<track>/card_state.yaml` is not runtime state; it is a template/example of the logical card-state structure for that track.
 - `state_card_*.yaml` under `out/<CARD>/intake/**` remains the mutable per-card state document for workflow progression.
+- `out/<CARD>/investigations/00_intake.md` remains the structured intake artifact even when raw sources are first collected under `out/<CARD>/ingest/`.
 - `out/<CARD>/fixtures/**` are useful for validation and tests, but they are not permanent runtime configuration.
 - If product language refers to `card_state.yaml`, this should be read as the logical state document; current runtime compatibility still relies on `state_card_*.yaml`.
 

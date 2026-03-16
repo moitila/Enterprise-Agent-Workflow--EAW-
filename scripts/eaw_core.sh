@@ -709,10 +709,13 @@ phase_init_runtime() {
 	render_template "$tpl" "$target_md" "$card" "$title" "$type" "$date"
 	echo "Wrote $target_md"
 	local intake_runtime_dir="$outdir/intake"
+	local ingest_dir="$outdir/ingest"
 	local intake_dir="$outdir/investigations"
 	local intake_file="$intake_dir/00_intake.md"
 	local intake_tpl="$EAW_TEMPLATES_DIR/intake_${type}.md"
+	local ingest_input_file="$ingest_dir/intake_${type}.md"
 	ensure_dir "$intake_runtime_dir"
+	ensure_dir "$ingest_dir"
 	ensure_dir "$intake_dir"
 	if ! compgen -G "$intake_runtime_dir/state_card_*.yaml" >/dev/null; then
 		local track_id="${track_id_override:-${type,,}}"
@@ -755,6 +758,10 @@ card_state:
   updated_at: "${date}"
 EOF
 		echo "Wrote $state_file"
+	fi
+	if [[ ! -f "$ingest_input_file" && -f "$intake_tpl" ]]; then
+		cp "$intake_tpl" "$ingest_input_file"
+		echo "Wrote $ingest_input_file"
 	fi
 	if [[ ! -f "$intake_file" ]]; then
 		if [[ -f "$intake_tpl" ]]; then

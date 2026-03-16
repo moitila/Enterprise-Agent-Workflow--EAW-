@@ -48,6 +48,9 @@ eaw_phase_prompt_phase() {
 	local phase
 	phase="$(eaw_normalize_phase_id "${1:-}")"
 	case "$phase" in
+	ingest)
+		printf "intake\n"
+		;;
 	intake)
 		printf "intake\n"
 		;;
