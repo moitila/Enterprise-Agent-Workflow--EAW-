@@ -44,7 +44,7 @@ tracks/<track>/card_state.yaml
 Important clarification:
 - `tracks/<track>/card_state.yaml` is a reference template for the logical shape of card state.
 - The runtime does not load execution state from `tracks/<track>/card_state.yaml`.
-- Real mutable execution state is always per-card under `out/<CARD>/intake/state_card_*.yaml`.
+- New cards write mutable execution state to `out/<CARD>/state_card_*.yaml` (card root). The runtime falls back to `out/<CARD>/intake/state_card_*.yaml` for cards created before this change; this fallback remains active until no active card in `EAW_OUT_DIR` contains a `state_card_*.yaml` exclusively under `intake/`.
 - Raw user-facing intake sources may live under `out/<CARD>/ingest/` when the track declares an explicit `ingest` phase.
 
 Equivalent current runtime compatibility model:

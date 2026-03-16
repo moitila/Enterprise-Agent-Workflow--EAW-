@@ -50,7 +50,7 @@ grep -F "initial_phase: ingest" "$REPO_ROOT/tracks/feature/track.yaml" >/dev/nul
 
 "$REPO_ROOT/scripts/eaw" card 501 --track feature "Ingest phase smoke" >/dev/null
 test -d "$EAW_WORKDIR/out/501/ingest"
-test -f "$EAW_WORKDIR/out/501/ingest/intake_feature.md"
+test -f "$EAW_WORKDIR/out/501/ingest/sources.md"
 test -d "$EAW_WORKDIR/out/501/intake"
 test -d "$EAW_WORKDIR/out/501/investigations"
 # feature ingest smoke must exercise `eaw next`

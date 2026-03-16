@@ -7,7 +7,7 @@ phase:
 
   prompt:
     active: 1
-    path: templates/prompts/default/intake/prompt_v<active>.md
+    path: templates/prompts/default/ingest/prompt_v<active>.md
 
   tooling_hints:
     - Tratar `out/<CARD>/ingest/` como a origem primaria de insumos brutos quando existir.
@@ -23,4 +23,4 @@ phase:
   completion:
     strategy: required_artifacts_exist
     required_artifacts:
-      - ingest/intake_feature.md
+      - ingest/sources.md

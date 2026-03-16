@@ -32,6 +32,7 @@ grep -Fq "current_phase: intake" "$state_file" || fail "intake wrapper should pr
 grep -Eq '^  phase_started_at: [0-9]{4}-[0-9]{2}-[0-9]{2}T' "$state_file" || fail "intake wrapper should preserve phase_started_at"
 grep -Fq "phase_completed: false" "$state_file" || fail "intake wrapper should keep phase_completed false"
 grep -Fq "phase_completed_at: null" "$state_file" || fail "intake wrapper should keep null phase_completed_at"
+# 00_intake.md is created by the intake phase execution, not by eaw card scaffold
 test -f "$workdir/out/$card/investigations/00_intake.md" || fail "intake wrapper missing 00_intake"
 test -f "$workdir/out/$card/investigations/_intake_provenance.md" || fail "intake wrapper missing provenance"
 test -f "$workdir/out/$card/investigations/intake_agent_prompt.round_1.md" || fail "intake wrapper missing round 1 prompt"

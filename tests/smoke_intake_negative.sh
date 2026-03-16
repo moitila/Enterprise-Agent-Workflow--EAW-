@@ -81,7 +81,7 @@ scenario_d_rc=$?
 set -e
 
 [[ $scenario_d_rc -ne 0 ]] || fail "scenario D expected non-zero exit code"
-grep -Fq "missing required artifacts: ingest/intake_feature.md" <<<"$scenario_d_output" || fail "scenario D missing expected ingest artifact failure"
+grep -Fq "missing required artifacts: ingest/sources.md" <<<"$scenario_d_output" || fail "scenario D missing expected ingest artifact failure"
 assert_no_repo_residue "$card_ingest_and_intake_missing"
 
 printf "OK\n"

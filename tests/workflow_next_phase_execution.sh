@@ -25,7 +25,7 @@ init_workdir "$workdir"
 feature_card="541NEXT"
 EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" card "$feature_card" --track feature "phase driven next" >/dev/null
 state_file="$workdir/out/$feature_card/state_card_feature.yaml"
-ingest_input_file="$workdir/out/$feature_card/ingest/intake_feature.md"
+ingest_input_file="$workdir/out/$feature_card/ingest/sources.md"
 ingest_prompt_phase="$workdir/out/$feature_card/prompts/ingest.md"
 intake_file="$workdir/out/$feature_card/investigations/00_intake.md"
 intake_prompt="$workdir/out/$feature_card/investigations/intake_agent_prompt.round_1.md"
@@ -43,7 +43,8 @@ grep -Fq "phase_status: RUN" "$state_file" || fail "feature card should start in
 grep -Fq "completed_phases: []" "$state_file" || fail "feature card completed phases changed despite incomplete intake"
 [[ -f "$ingest_input_file" ]] || fail "card should materialize ingest input"
 [[ -f "$ingest_prompt_phase" ]] || fail "card should materialize phase-driven ingest prompt"
-[[ -f "$intake_file" ]] || fail "card should materialize intake artifact"
+# 00_intake.md is created by the intake phase execution, not by eaw card scaffold
+test ! -f "$intake_file" || fail "00_intake.md should not exist before ingest phase advances to intake"
 test ! -f "$intake_prompt" || fail "intake prompt should not exist before ingest advances"
 test ! -f "$intake_prompt_phase" || fail "phase-driven intake prompt should not exist before ingest advances"
 grep -Eq '^workflow_phase_ingest\|OK\|' "$execution_log" || fail "execution log missing workflow phase entry for ingest"
@@ -55,6 +56,7 @@ grep -Fq "CARD $feature_card: ingest -> intake" <<<"$next_output" || fail "featu
 grep -Fq "RUNTIME: phase=intake action=phase_driven_execution" <<<"$next_output" || fail "feature next output missing intake phase execution summary"
 [[ -f "$intake_prompt" ]] || fail "card should materialize intake prompt after ingest"
 [[ -f "$intake_prompt_phase" ]] || fail "card should materialize phase-driven intake prompt after ingest"
+[[ -f "$intake_file" ]] || fail "card should materialize 00_intake.md after ingest advances to intake"
 
 next_output="$(EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" next "$feature_card" 2>&1)" || fail "feature next command should keep intake current while required artifacts are unfilled"
 grep -Fq "unfilled required artifacts: investigations/00_intake.md investigations/_intake_provenance.md" <<<"$next_output" || fail "feature next output missing unfilled intake gate"
