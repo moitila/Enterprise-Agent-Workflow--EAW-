@@ -114,10 +114,12 @@ CFG
 
   ./scripts/eaw card "$card_pipeline" --track feature "Golden pipeline" >/dev/null
 
+  ./scripts/eaw intake "$card_pipeline" >/dev/null
   ./scripts/eaw analyze "$card_pipeline" >/dev/null
   capture_paths "$workdir" "$card_pipeline" "$actual_analyze"
   compare_fixture "$actual_analyze" "$FIXTURES_DIR/analyze.paths.txt"
 
+  assert_prompt_contract "$workdir/out/$card_pipeline/investigations/intake_agent_prompt.round_1.md"
   assert_prompt_contract "$workdir/out/$card_pipeline/investigations/findings_agent_prompt.md"
   assert_prompt_contract "$workdir/out/$card_pipeline/investigations/hypotheses_agent_prompt.md"
   assert_prompt_contract "$workdir/out/$card_pipeline/investigations/planning_agent_prompt.md"

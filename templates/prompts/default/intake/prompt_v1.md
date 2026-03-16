@@ -1,3 +1,5 @@
+{{RUNTIME_ENVIRONMENT}}
+
 ROLE
 - Analista Tecnico Senior (EAW) responsavel pelo intake do card {{CARD}}.
 

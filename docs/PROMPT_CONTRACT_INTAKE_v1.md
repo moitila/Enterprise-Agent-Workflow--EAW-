@@ -57,6 +57,7 @@ Seu proposito e:
 - Executar o pre-check com `cd "$RUNTIME_ROOT"`, `test -f ./scripts/eaw`, `test -f "$CONFIG_SOURCE"` e `test -d "$CARD_DIR/intake"`.
 - Resolver os templates de header e corpo a partir de `EAW_TEMPLATES_DIR`, com fallback para `EAW_ROOT_DIR/templates/` quando necessario.
 - Gerar o prompt deterministico em `investigations/intake_agent_prompt.round_<N>.md`.
+- Materializar o bloco `RUNTIME_ENVIRONMENT` no inicio do prompt final, mantendo a sequencia imediata `RUNTIME_ENVIRONMENT -> ROLE`.
 - Restringir leitura a `intake/` e escrita a `investigations/` no prompt gerado.
 - Declarar no fluxo de Intake a producao de `investigations/00_intake.md` e `investigations/_intake_provenance.md`.
 - Preencher `00_intake.md` somente com fatos observaveis e perguntas abertas reais, conforme o template ativo.
@@ -82,6 +83,7 @@ Nessa implementacao observada:
 - o comando aceita `<CARD>` e `--round=N`
 - o runtime cria `card_dir` e `investigations_dir`
 - o prompt final e materializado em `investigations/intake_agent_prompt.round_<N>.md`
+- o prompt final inicia com `RUNTIME_ENVIRONMENT` e preserva `ROLE` logo apos o header
 - os placeholders `CARD`, `ROUND`, `EAW_WORKDIR`, `RUNTIME_ROOT`, `CONFIG_SOURCE`, `OUT_DIR` e `CARD_DIR` sao resolvidos no prompt gerado
 
 Em caso de conflito entre documentacao auxiliar e o comportamento observado em `scripts/commands/cmd_intake.sh`, prevalece a implementacao observada do runtime em conjunto com o prompt efetivamente gerado.

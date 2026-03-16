@@ -122,6 +122,7 @@ done
 
 default_intake_dir="$EAW_WORKDIR/templates/prompts/default/intake"
 "$REPO_ROOT/scripts/eaw" card 499 --track feature "Invalid active prompt guardrail" >/dev/null
+rm -f "$EAW_WORKDIR/out/499/investigations/intake_agent_prompt.round_1.md"
 printf "v999\n" >"$default_intake_dir/ACTIVE"
 set +e
 "$REPO_ROOT/scripts/eaw" intake 499 --round=1 >/dev/null 2>&1
@@ -143,6 +144,7 @@ test -f "$EAW_WORKDIR/out/500/investigations/planning_agent_prompt.md"
 test -f "$EAW_WORKDIR/out/500/investigations/implementation_planning_agent_prompt.md"
 test -f "$EAW_WORKDIR/out/500/investigations/implementation_executor_agent_prompt.md"
 
+[[ "$(sed -n '1p' "$EAW_WORKDIR/out/500/investigations/intake_agent_prompt.round_1.md")" == "RUNTIME_ENVIRONMENT" ]]
 grep -F "ACTIVE_BINDING_OK default/intake v2" "$EAW_WORKDIR/out/500/investigations/intake_agent_prompt.round_1.md" >/dev/null
 grep -F "ACTIVE_BINDING_OK default/analyze_findings v2" "$EAW_WORKDIR/out/500/investigations/findings_agent_prompt.md" >/dev/null
 grep -F "ACTIVE_BINDING_OK default/analyze_hypotheses v2" "$EAW_WORKDIR/out/500/investigations/hypotheses_agent_prompt.md" >/dev/null
