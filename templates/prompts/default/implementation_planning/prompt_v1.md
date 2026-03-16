@@ -68,6 +68,8 @@ RULES
   - Nao permitir glob (`*`, `**`) na allowlist.
   - Nao incluir arquivos de `out/{{CARD}}/**` na allowlist soberana; estes artefatos pertencem apenas a fase planning.
 - VALIDACOES FINAIS:
+  - Garantir que os artefatos finais nao contenham placeholders literais de template como `<CARD>`, `{{CARD}}`, `{{TYPE}}`, `{{OUT_DIR}}` ou equivalentes.
+  - Substituir referencias genericas ao diretorio do card pelo path concreto do card atual sempre que elas aparecerem no conteudo final.
   - Confirmar que `00_scope.lock.md` contem `Hipotese(s) Base`.
   - Confirmar que `10_change_plan.md` contem `Hipotese(s) Selecionada(s)`.
   - Confirmar que a allowlist e fechada sem glob.
@@ -75,6 +77,7 @@ RULES
   - Confirmar que nenhum arquivo listado em `arquivos envolvidos` do `10_change_plan.md` ficou fora da allowlist.
   - Confirmar que todos os arquivos da allowlist pertencem a TARGET_REPOS.
   - Confirmar que rollback esta presente.
+  - Validar `rg -n '<CARD>|\\{\\{CARD\\}\\}|\\{\\{TYPE\\}\\}|\\{\\{OUT_DIR\\}\\}' "out/{{CARD}}/implementation/00_scope.lock.md" "out/{{CARD}}/implementation/10_change_plan.md"` com resultado vazio.
   - Validar `test -f "out/{{CARD}}/implementation/00_scope.lock.md"`.
   - Validar `test -f "out/{{CARD}}/implementation/10_change_plan.md"`.
 
