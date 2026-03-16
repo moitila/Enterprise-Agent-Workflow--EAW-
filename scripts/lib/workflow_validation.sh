@@ -113,6 +113,50 @@ eaw_validate_workflow_phase_completion() {
 	return "$errors"
 }
 
+eaw_validate_workflow_phase_tooling_hints() {
+	local track_id="$1"
+	local phase_id="$2"
+	local phase_file="$3"
+	local issue
+	local errors=0
+
+	while IFS= read -r issue; do
+		[[ -n "$issue" ]] || continue
+		errors=$((errors + 1))
+		eaw_validate_workflow_error "$track_id" "$phase_id" "tooling_hints" "$issue"
+	done < <(
+		awk '
+			function ltrim(s) {
+				sub(/^[[:space:]]+/, "", s)
+				return s
+			}
+			/^phase:[[:space:]]*$/ { in_phase=1; next }
+			in_phase && /^[^[:space:]]/ { in_phase=0; in_hints=0; saw_header=0 }
+			in_phase && /^  tooling_hints:[[:space:]]*$/ { in_hints=1; saw_header=1; next }
+			in_phase && /^  tooling_hints:[[:space:]]*\[[[:space:]]*\][[:space:]]*$/ { saw_header=1; in_hints=0; next }
+			in_phase && /^  tooling_hints:[[:space:]]*\S/ {
+				saw_header=1
+				in_hints=0
+				printf "tooling_hints must be declared as list or []\n"
+				next
+			}
+			in_hints && /^  [^[:space:]-]/ { in_hints=0 }
+			!in_hints { next }
+			/^[[:space:]]*$/ { next }
+			/^    - .+/ { next }
+			/^    -[[:space:]]*$/ {
+				printf "tooling_hints entries must be non-empty strings\n"
+				next
+			}
+			{
+				printf "invalid tooling_hints line: %s\n", ltrim($0)
+			}
+		' "$phase_file"
+	)
+
+	return "$errors"
+}
+
 eaw_validate_workflow_track() {
 	local track_id="$1"
 	local track_dir track_file initial_phase final_phase raw_phase normalized_phase phase_file phase_id prompt_path phase_errors
@@ -204,6 +248,11 @@ eaw_validate_workflow_track() {
 			errors=$((errors + phase_errors))
 		fi
 		eaw_validate_workflow_phase_completion "$track_id" "$phase_id" "$phase_file"
+		phase_errors=$?
+		if [[ "$phase_errors" -gt 0 ]]; then
+			errors=$((errors + phase_errors))
+		fi
+		eaw_validate_workflow_phase_tooling_hints "$track_id" "$phase_id" "$phase_file"
 		phase_errors=$?
 		if [[ "$phase_errors" -gt 0 ]]; then
 			errors=$((errors + phase_errors))

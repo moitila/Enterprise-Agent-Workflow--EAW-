@@ -39,6 +39,8 @@ WRITE_SCOPE
 - Escrever somente `{{CARD_DIR}}/investigations/20_findings.md`.
 - Escrever somente `{{CARD_DIR}}/investigations/_warnings.md` se necessario.
 
+{{TOOLING_HINTS}}
+
 RULES
 - Executar pre-check em fail-fast:
   - `set -euo pipefail`

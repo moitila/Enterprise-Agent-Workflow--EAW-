@@ -9,6 +9,11 @@ phase:
     active: 1
     path: templates/prompts/default/findings/prompt_v<active>.md
 
+  tooling_hints:
+    - Ler somente `<CARD_DIR>` e TARGET_REPOS em modo read-only.
+    - Quando `WORKDIR` estiver definido como `<WORKDIR>`, tratar `<OUTDIR>` como a saida base isolada do runtime.
+    - Registrar no findings a saida relevante de `doctor` e `validate`, usando `<TARGET_REPO>` apenas como referencia do repositorio alvo listado no ambiente.
+
   outputs:
     create_directories:
       - prompts

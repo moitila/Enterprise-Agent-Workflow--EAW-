@@ -68,6 +68,25 @@ card_state:
 EOF
 }
 
+write_official_track_card_without_completed() {
+	local workdir="$1"
+	local card="$2"
+	local track="$3"
+	local current_phase="$4"
+	local previous_phase="$5"
+	local intake_dir="$workdir/out/$card/intake"
+
+	mkdir -p "$intake_dir"
+
+	cat >"$intake_dir/state_card_official.yaml" <<EOF
+card_state:
+  track_id: $track
+  previous_phase: $previous_phase
+  current_phase: $current_phase
+  completed_phases: []
+EOF
+}
+
 write_invalid_card() {
 	local workdir="$1"
 	local card="$2"
@@ -147,6 +166,27 @@ grep -Fq "workflow card=539BUG track=bug current_phase=findings prompt_phase=ana
 grep -Fq "workflow card=539SPIKE track=spike current_phase=findings prompt_phase=analyze_findings" <<<"$success_output" || fail "missing spike track validation summary"
 if grep -Fq "inconsistent with phase.id" <<<"$success_output"; then
 	fail "unexpected phase.id consistency error in success output"
+fi
+
+prompt_workdir="$tmp_root/workdir-prompts"
+init_workdir "$prompt_workdir"
+write_official_track_card_without_completed "$prompt_workdir" "544FEATURE" "feature" "findings" "intake"
+write_official_track_card_without_completed "$prompt_workdir" "544STANDARD" "standard" "findings" "intake"
+
+feature_prompt_output="$(EAW_WORKDIR="$prompt_workdir" "$REPO_ROOT/scripts/eaw" next "544FEATURE" 2>&1)" || fail "expected feature findings prompt generation to pass"
+standard_prompt_output="$(EAW_WORKDIR="$prompt_workdir" "$REPO_ROOT/scripts/eaw" next "544STANDARD" 2>&1)" || fail "expected standard findings prompt generation to pass"
+
+feature_prompt="$prompt_workdir/out/544FEATURE/prompts/findings.md"
+standard_prompt="$prompt_workdir/out/544STANDARD/prompts/findings.md"
+
+grep -Fq "RUNTIME: wrote_prompt=prompts/findings.md" <<<"$feature_prompt_output" || fail "missing feature prompt artifact log"
+grep -Fq "RUNTIME: wrote_prompt=prompts/findings.md" <<<"$standard_prompt_output" || fail "missing standard prompt artifact log"
+grep -n "Tooling Hints" "$feature_prompt" >/dev/null || fail "missing Tooling Hints heading in feature prompt"
+if grep -n "Tooling Hints" "$standard_prompt" >/dev/null; then
+	fail "unexpected Tooling Hints heading in prompt without tooling_hints"
+fi
+if grep -En '<CARD>|<WORKDIR>|<OUTDIR>|<TARGET_REPO>|\{\{CARD\}\}|\{\{EAW_WORKDIR\}\}|\{\{OUT_DIR\}\}|\{\{TARGET_REPOS\}\}' "$feature_prompt" >/dev/null; then
+	fail "feature prompt still contains unresolved tooling_hints placeholders"
 fi
 
 init_workdir "$failure_workdir"

@@ -136,6 +136,7 @@ Optional fields:
 - `phase.name`
 - `phase.description`
 - `phase.prompt.active`
+- `phase.tooling_hints`
 - `phase.outputs`
 - `phase.completion`
 
@@ -153,6 +154,9 @@ Rules:
 - Phases that do not generate prompts, including internal/tooling phases, may omit `phase.outputs.prompts` entirely.
 - For agent-oriented tracks, the observable emission rule remains fail-closed: steps equivalent to `steps[].type == ai_prompt` or `steps[].runtime == agent` must resolve to phase-driven prompt emission through `phase.outputs.prompts` or, when omitted, the normalized `phase.id` fallback used by the runtime.
 - The runtime injects `RUNTIME_ENVIRONMENT` only into those agent prompt artifacts; non-agent phases that do not materialize prompts do not receive the header.
+- `phase.tooling_hints` is optional and, when present, must be declared as a YAML list of strings or as `[]`.
+- Each `phase.tooling_hints` entry is rendered as a textual hint inside a stable `## Tooling Hints` section in the final prompt only when the phase declares hints.
+- Supported runtime placeholders inside `phase.tooling_hints` are normalized before prompt emission. The current deterministic tokens are `<CARD>`, `<WORKDIR>`, `<OUTDIR>`, `<CARD_DIR>`, `<TARGET_REPO>`, `{{CARD}}`, `{{EAW_WORKDIR}}`, `{{OUT_DIR}}`, `{{CARD_DIR}}`, and `{{TARGET_REPOS}}`.
 
 Card State Contract
 -------------------
