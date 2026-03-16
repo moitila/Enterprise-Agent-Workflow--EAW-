@@ -25,57 +25,32 @@ Nenhum prompt de Analyze pode violar este contrato.
 
 ## 2. Header Oficial (v1)
 
-O prompt de `eaw analyze` deve iniciar com o header oficial da fase, sem modificacoes estruturais:
+O prompt de `eaw analyze` deve iniciar com o bloco `RUNTIME_ENVIRONMENT` antes de `ROLE`, sem modificacoes estruturais nem secoes extras fora do contrato:
 
 ```text
-=== EAW ANALYZE PROMPT ({{PHASE_HEADER}}) CARD {{CARD}} ===
+RUNTIME_ENVIRONMENT
 
-EAW_WORKDIR={{EAW_WORKDIR}}
-RUNTIME_ROOT={{RUNTIME_ROOT}}
-CONFIG_SOURCE={{CONFIG_SOURCE}}
-EAW_ROOT_DIR="$RUNTIME_ROOT"
-OUT_DIR={{OUT_DIR}}
-CARD_DIR={{CARD_DIR}}
+CARD_ID: {{CARD}}
+TRACK_ID: {{TRACK_ID}}
+STEP_ID: {{STEP_ID}}
+WORKDIR: {{EAW_WORKDIR}}
+CARD_DIR: {{CARD_DIR}}
+OUT_DIR: {{OUT_DIR}}
 
-TARGET_REPOS:
+TARGET_REPOSITORIES:
 {{TARGET_REPOS}}
 
-EXCLUDED_REPOS:
-{{EXCLUDED_REPOS}}
+WRITE_ALLOWLIST:
+{{WRITE_ALLOWLIST}}
 
-WARNINGS:
-{{WARNINGS_BLOCK}}
+CRITICAL_PATHS:
+{{CRITICAL_PATHS}}
 
-MODE:
-- When EAW_WORKDIR is empty -> outputs under OUT_DIR.
-- When EAW_WORKDIR is set -> outputs isolated under EAW_WORKDIR.
-
-EXECUTION STRUCTURE RULE:
-
-- RUNTIME_ROOT = tool/runtime root (never modify).
-- TARGET_REPOS = read-only.
-- CARD_DIR = single writable boundary for this card.
-- Writing allowed only inside CARD_DIR unless explicitly stated by phase.
-
-READ POLICY (default):
-
-Reading allowed:
-- CARD_DIR
-- TARGET_REPOS (read-only)
-
-Writing allowed:
-- CARD_DIR only
-
-PRE-CHECK REQUIRED:
-
-cd "$EAW_ROOT_DIR" || { echo "ERROR: cannot cd to EAW_ROOT_DIR"; exit 2; }
-test -f ./scripts/eaw || { echo "ERROR: not in EAW root"; exit 2; }
-test -f "$CONFIG_SOURCE" || { echo "ERROR: missing config source"; exit 2; }
-
-Any failure -> abort immediately.
+ROLE
+...
 ```
 
-Este header e soberano para a fase Analyze e nao pode ser redefinido por templates sem manter a mesma estrutura.
+O bloco `RUNTIME_ENVIRONMENT` e soberano para a fase Analyze, deve ser materializado pelo runtime no inicio do prompt final e nao pode ser redefinido por templates sem manter a mesma estrutura e a sequencia imediata `RUNTIME_ENVIRONMENT` -> `ROLE`.
 
 ## 3. Regras Globais Imutaveis
 
@@ -129,6 +104,7 @@ Nao ha permissao para escrever em `prompts/`, `scripts/commands/`, `docs/` fora 
 O prompt de Analyze deve:
 
 - Declarar `EAW_WORKDIR`, `RUNTIME_ROOT`, `CONFIG_SOURCE`, `OUT_DIR` e `CARD_DIR` no header
+- Declarar `CARD_ID`, `TRACK_ID`, `STEP_ID`, `TARGET_REPOSITORIES`, `WRITE_ALLOWLIST` e `CRITICAL_PATHS` no bloco `RUNTIME_ENVIRONMENT`
 - Tratar `investigations/00_intake.md` como unica entrada obrigatoria da fase
 - Permitir os artefatos auxiliares `findings_agent_prompt.md`, `hypotheses_agent_prompt.md`, `planning_agent_prompt.md` e `TEST_PLAN_<CARD>.md` quando emitidos pelo runtime
 - Preservar a relacao causal entre findings, hypotheses e next steps

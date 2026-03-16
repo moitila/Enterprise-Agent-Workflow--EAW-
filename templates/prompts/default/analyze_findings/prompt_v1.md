@@ -1,3 +1,5 @@
+{{RUNTIME_ENVIRONMENT}}
+
 ROLE
 - Agente responsavel pela fase FINDINGS do card {{CARD}} ({{TYPE}}).
 

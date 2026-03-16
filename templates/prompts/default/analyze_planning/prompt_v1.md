@@ -1,3 +1,5 @@
+{{RUNTIME_ENVIRONMENT}}
+
 ROLE
 - Agente responsavel pela fase PLANNING do card {{CARD}} ({{TYPE}}).
 

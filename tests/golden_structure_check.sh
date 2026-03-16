@@ -34,6 +34,7 @@ assert_file_contains() {
 assert_prompt_contract() {
   local file="$1"
   local required_sections=(
+    "RUNTIME_ENVIRONMENT"
     "ROLE"
     "OBJECTIVE"
     "INPUT"
@@ -47,6 +48,19 @@ assert_prompt_contract() {
   for section in "${required_sections[@]}"; do
     assert_file_contains "$file" "$section"
   done
+  if [[ "$(sed -n '1p' "$file")" != "RUNTIME_ENVIRONMENT" ]]; then
+    echo "ERROR: prompt must start with RUNTIME_ENVIRONMENT in $file" >&2
+    return 1
+  fi
+  assert_file_contains "$file" "CARD_ID:"
+  assert_file_contains "$file" "TRACK_ID:"
+  assert_file_contains "$file" "STEP_ID:"
+  assert_file_contains "$file" "WORKDIR:"
+  assert_file_contains "$file" "CARD_DIR:"
+  assert_file_contains "$file" "OUT_DIR:"
+  assert_file_contains "$file" "TARGET_REPOSITORIES:"
+  assert_file_contains "$file" "WRITE_ALLOWLIST:"
+  assert_file_contains "$file" "CRITICAL_PATHS:"
 }
 
 main() {

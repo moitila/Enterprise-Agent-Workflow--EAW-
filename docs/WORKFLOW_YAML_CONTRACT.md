@@ -151,6 +151,8 @@ Rules:
 - The generated filename matches the declared alias exactly; the runtime does not rename aliases to a second canonical filename in `prompts/`.
 - Built-in aliases currently recognized by the runtime are `findings`, `hypotheses`, `planning`, `implementation_planning`, and `implementation_executor`.
 - Phases that do not generate prompts, including internal/tooling phases, may omit `phase.outputs.prompts` entirely.
+- For agent-oriented tracks, the observable emission rule remains fail-closed: steps equivalent to `steps[].type == ai_prompt` or `steps[].runtime == agent` must resolve to phase-driven prompt emission through `phase.outputs.prompts` or, when omitted, the normalized `phase.id` fallback used by the runtime.
+- The runtime injects `RUNTIME_ENVIRONMENT` only into those agent prompt artifacts; non-agent phases that do not materialize prompts do not receive the header.
 
 Card State Contract
 -------------------

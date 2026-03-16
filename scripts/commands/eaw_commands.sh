@@ -1121,6 +1121,192 @@ eaw_detect_card_template_type() {
 	printf "%s\n" "$type"
 }
 
+eaw_card_markdown_list_after_label() {
+	local file="$1"
+	local label="$2"
+	awk -v label="$label" '
+		BEGIN { capture=0 }
+		{
+			line=$0
+			gsub(/\r/, "", line)
+			if (!capture && (line == label || line == label ":")) {
+				capture=1
+				next
+			}
+			if (capture) {
+				if (line ~ /^- /) {
+					seen_items=1
+					print line
+					next
+				}
+				if (line ~ /^[[:space:]]*$/) {
+					if (seen_items) {
+						exit
+					}
+					next
+				}
+				exit
+			}
+		}
+	' "$file"
+}
+
+eaw_card_markdown_section_list() {
+	local file="$1"
+	local section="$2"
+	awk -v section="$section" '
+		function flush_and_exit() {
+			if (seen_items) {
+				exit
+			}
+		}
+		{
+			line=$0
+			gsub(/\r/, "", line)
+			if (!capture && line == section) {
+				capture=1
+				next
+			}
+			if (capture) {
+				if (line ~ /^## /) {
+					flush_and_exit()
+					exit
+				}
+				if (line ~ /^- /) {
+					seen_items=1
+					print line
+					next
+				}
+				if (line ~ /^[[:space:]]*$/) {
+					if (seen_items) {
+						next
+					}
+					continue
+				}
+				if (seen_items) {
+					exit
+				}
+			}
+		}
+	' "$file"
+}
+
+eaw_card_change_plan_involved_files() {
+	local change_plan_file="$1"
+	awk '
+		/^   - \// {
+			line=$0
+			sub(/^   - /, "", line)
+			print line
+			next
+		}
+		/^   Validacao tecnica obrigatoria:/ {
+			exit
+		}
+	' "$change_plan_file"
+}
+
+eaw_card_write_allowlist_entries() {
+	local card_dir="$1"
+	local scope_lock_file="$card_dir/implementation/00_scope.lock.md"
+	local change_plan_file="$card_dir/implementation/10_change_plan.md"
+	local card_allowlist_file=""
+	local file
+	local -a markdown_candidates=()
+
+	if [[ -f "$scope_lock_file" ]]; then
+		eaw_card_markdown_section_list "$scope_lock_file" "## Allowlist de Escrita" | sed '/^[[:space:]]*$/d'
+		return 0
+	fi
+
+	shopt -s nullglob
+	markdown_candidates=("$card_dir"/*.md "$card_dir"/intake/*.md)
+	shopt -u nullglob
+	for file in "${markdown_candidates[@]}"; do
+		[[ -f "$file" ]] || continue
+		if eaw_card_markdown_list_after_label "$file" "WRITE_ALLOWLIST" | grep -q '^- '; then
+			card_allowlist_file="$file"
+			break
+		fi
+	done
+	if [[ -n "$card_allowlist_file" ]]; then
+		eaw_card_markdown_list_after_label "$card_allowlist_file" "WRITE_ALLOWLIST" | sed '/^[[:space:]]*$/d'
+		return 0
+	fi
+
+	if [[ -f "$change_plan_file" ]]; then
+		eaw_card_change_plan_involved_files "$change_plan_file" | sed 's/^/- /'
+		return 0
+	fi
+
+	printf -- "- %s\n" "$card_dir"
+}
+
+eaw_card_write_allowlist_block() {
+	local card_dir="$1"
+	local allowlist
+
+	allowlist="$(eaw_card_write_allowlist_entries "$card_dir" | awk '!seen[$0]++')"
+	if [[ -n "$allowlist" ]]; then
+		printf "%s\n" "$allowlist"
+		return 0
+	fi
+
+	printf -- "- %s\n" "$card_dir"
+}
+
+eaw_card_critical_paths_block() {
+	local card_dir="$1"
+	local -a critical_paths=()
+
+	critical_paths+=("$EAW_ROOT_DIR/scripts/eaw")
+	if [[ -n "${EAW_CARD_WORKFLOW_STATE_FILE:-}" ]]; then
+		critical_paths+=("$EAW_CARD_WORKFLOW_STATE_FILE")
+	fi
+	if [[ -n "${EAW_CARD_WORKFLOW_TRACK_FILE:-}" ]]; then
+		critical_paths+=("$EAW_CARD_WORKFLOW_TRACK_FILE")
+	fi
+	if [[ -n "${EAW_CARD_WORKFLOW_CURRENT_PHASE_FILE:-}" ]]; then
+		critical_paths+=("$EAW_CARD_WORKFLOW_CURRENT_PHASE_FILE")
+	fi
+	if [[ -f "$card_dir/investigations/00_intake.md" ]]; then
+		critical_paths+=("$card_dir/investigations/00_intake.md")
+	fi
+
+	printf '%s\n' "${critical_paths[@]}" | awk 'NF && !seen[$0]++ { printf "- %s\n", $0 }'
+}
+
+eaw_runtime_environment_block() {
+	local card="$1"
+	local card_dir="$2"
+	local track_id="$3"
+	local step_id="$4"
+	local workdir="${EAW_WORKDIR:-}"
+	local write_allowlist="$5"
+	local critical_paths="$6"
+	local target_repos="$7"
+
+	cat <<EOF
+RUNTIME_ENVIRONMENT
+
+CARD_ID: $card
+TRACK_ID: $track_id
+STEP_ID: $step_id
+WORKDIR: $workdir
+CARD_DIR: $card_dir
+OUT_DIR: $EAW_OUT_DIR
+
+TARGET_REPOSITORIES:
+$target_repos
+
+WRITE_ALLOWLIST:
+$write_allowlist
+
+CRITICAL_PATHS:
+$critical_paths
+EOF
+}
+
 eaw_scaffold_phase_artifact() {
 	local card="$1"
 	local card_dir="$2"
@@ -1202,6 +1388,11 @@ eaw_render_phase_prompt_template() {
 	local target_repos="$7"
 	local excluded_repos="$8"
 	local warnings_block="$9"
+	local track_id="${10}"
+	local step_id="${11}"
+	local write_allowlist="${12}"
+	local critical_paths="${13}"
+	local runtime_environment="${14}"
 
 	assert_write_scope "workflow_phase" "write phase prompt" "$output_file" "$card_dir"
 	ensure_dir "$(dirname "$output_file")"
@@ -1219,8 +1410,17 @@ eaw_render_phase_prompt_template() {
 		-v target_repos="$target_repos" \
 		-v excluded_repos="$excluded_repos" \
 		-v warnings_block="$warnings_block" \
+		-v track_id="$track_id" \
+		-v step_id="$step_id" \
+		-v write_allowlist="$write_allowlist" \
+		-v critical_paths="$critical_paths" \
+		-v runtime_environment="$runtime_environment" \
 		'
 		{
+			if ($0 == "{{RUNTIME_ENVIRONMENT}}") {
+				print runtime_environment
+				next
+			}
 			if ($0 == "{{TARGET_REPOS}}") {
 				print target_repos
 				next
@@ -1242,6 +1442,10 @@ eaw_render_phase_prompt_template() {
 			gsub(/\{\{CONFIG_SOURCE\}\}/, config_source)
 			gsub(/\{\{OUT_DIR\}\}/, out_dir)
 			gsub(/\{\{CARD_DIR\}\}/, card_dir)
+			gsub(/\{\{TRACK_ID\}\}/, track_id)
+			gsub(/\{\{STEP_ID\}\}/, step_id)
+			gsub(/\{\{WRITE_ALLOWLIST\}\}/, write_allowlist)
+			gsub(/\{\{CRITICAL_PATHS\}\}/, critical_paths)
 			print
 		}
 		' "$template_file" >"$output_file"
@@ -1290,6 +1494,7 @@ eaw_generate_phase_prompt_artifacts() {
 	local type template_file output_file legacy_file
 	local repo_blocks target_repos excluded_repos
 	local prompt_alias prompt_phase prompt_relpath
+	local track_id step_id write_allowlist critical_paths runtime_environment
 	local -a declared_prompts=()
 
 	type="$(eaw_detect_card_template_type "$card" "$card_dir")"
@@ -1308,6 +1513,16 @@ eaw_generate_phase_prompt_artifacts() {
 		declared_prompts=("$phase_id")
 	fi
 
+	# Tracks that emit agent prompts are represented in the runtime by
+	# phase.outputs.prompts or, when omitted, by the current phase id fallback.
+	# This keeps prompt emission compatible with YAML steps equivalent to
+	# steps[].type == ai_prompt or steps[].runtime == agent.
+	track_id="${EAW_CARD_WORKFLOW_TRACK_ID:-$type}"
+	step_id="${EAW_CARD_WORKFLOW_CURRENT_PHASE:-$phase_id}"
+	write_allowlist="$(eaw_card_write_allowlist_block "$card_dir")"
+	critical_paths="$(eaw_card_critical_paths_block "$card_dir")"
+	runtime_environment="$(eaw_runtime_environment_block "$card" "$card_dir" "$track_id" "$step_id" "$write_allowlist" "$critical_paths" "$target_repos")"
+
 	for prompt_alias in "${declared_prompts[@]}"; do
 		prompt_alias="$(eaw_normalize_phase_id "$prompt_alias")"
 		if ! prompt_phase="$(eaw_phase_prompt_phase "$prompt_alias")"; then
@@ -1317,7 +1532,7 @@ eaw_generate_phase_prompt_artifacts() {
 		template_file="$(load_prompt "default" "$prompt_phase" "$card" "$EAW_OUT_DIR")" || return 1
 		prompt_relpath="$(eaw_phase_prompt_output_relpath "$prompt_alias")"
 		output_file="$card_dir/$prompt_relpath"
-		eaw_render_phase_prompt_template "$template_file" "$output_file" "${prompt_alias^^}" "$card" "$type" "$card_dir" "$target_repos" "$excluded_repos" "- none"
+		eaw_render_phase_prompt_template "$template_file" "$output_file" "${prompt_alias^^}" "$card" "$type" "$card_dir" "$target_repos" "$excluded_repos" "- none" "$track_id" "$step_id" "$write_allowlist" "$critical_paths" "$runtime_environment"
 
 		while IFS= read -r legacy_file; do
 			[[ -n "$legacy_file" ]] || continue
