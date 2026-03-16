@@ -137,6 +137,34 @@ EOF
 	esac
 }
 
+eaw_phase_completion_render_source_scaffold() {
+	local card="$1"
+	local card_dir="$2"
+	local phase_id="$3"
+	local rel_path="$4"
+	local type template_file
+
+	case "$rel_path" in
+	investigations/00_intake.md)
+		type="$(eaw_phase_completion_detect_card_template_type "$card" "$card_dir")"
+		template_file="$EAW_TEMPLATES_DIR/intake_${type}.md"
+		cat "$template_file"
+		;;
+	investigations/20_findings.md)
+		cat "$EAW_TEMPLATES_DIR/20_findings.md"
+		;;
+	investigations/30_hypotheses.md)
+		cat "$EAW_TEMPLATES_DIR/30_hypotheses.md"
+		;;
+	investigations/40_next_steps.md)
+		cat "$EAW_TEMPLATES_DIR/40_next_steps.md"
+		;;
+	*)
+		eaw_phase_completion_render_expected_scaffold "$card" "$card_dir" "$phase_id" "$rel_path"
+		;;
+	esac
+}
+
 eaw_phase_completion_artifact_has_meaningful_content() {
 	local card="$1"
 	local card_dir="$2"
@@ -144,11 +172,9 @@ eaw_phase_completion_artifact_has_meaningful_content() {
 	local rel_path="$4"
 	local file="$card_dir/$rel_path"
 	local scaffold_file
+	local source_scaffold_file
 
 	if [[ ! -s "$file" ]]; then
-		return 1
-	fi
-	if grep -Fq "<CARD>" "$file"; then
 		return 1
 	fi
 
@@ -158,7 +184,14 @@ eaw_phase_completion_artifact_has_meaningful_content() {
 		rm -f "$scaffold_file"
 		return 1
 	fi
-	rm -f "$scaffold_file"
+
+	source_scaffold_file="$(mktemp)"
+	eaw_phase_completion_render_source_scaffold "$card" "$card_dir" "$phase_id" "$rel_path" >"$source_scaffold_file"
+	if cmp -s "$file" "$source_scaffold_file"; then
+		rm -f "$scaffold_file" "$source_scaffold_file"
+		return 1
+	fi
+	rm -f "$scaffold_file" "$source_scaffold_file"
 	return 0
 }
 

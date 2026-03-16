@@ -55,8 +55,8 @@ test ! -f "$findings_prompt_phase" || fail "phase-driven findings prompt should 
 cat >>"$workdir/out/$feature_card/investigations/00_intake.md" <<'EOF'
 
 Feature intake preenchido para teste.
+Referencia textual mantida: out/<CARD>/investigations/00_intake.md
 EOF
-sed -i "s/<CARD>/$feature_card/g" "$workdir/out/$feature_card/investigations/00_intake.md"
 cat >>"$workdir/out/$feature_card/investigations/_intake_provenance.md" <<'EOF'
 
 Fonte: teste automatizado.
@@ -86,8 +86,8 @@ grep -Fq "current_phase: findings" "$state_file" || fail "feature card should re
 cat >>"$findings_file" <<'EOF'
 
 Findings preenchido para teste.
+Referencia textual mantida: out/<CARD>/investigations/20_findings.md
 EOF
-sed -i "s/<CARD>/$feature_card/g" "$findings_file"
 
 next_output="$(EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" next "$feature_card" 2>&1)" || fail "feature next command failed after findings was filled"
 grep -Fq "current_phase: hypotheses" "$state_file" || fail "feature card did not advance to hypotheses after findings fill"
