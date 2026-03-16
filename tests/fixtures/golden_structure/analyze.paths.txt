@@ -8,7 +8,7 @@ out/940104/context/local-main/git-status.txt
 out/940104/context/local-main/rg-symbols.txt
 out/940104/execution.log
 out/940104/feature_940104.md
-out/940104/intake/state_card_feature.yaml
+out/940104/state_card_feature.yaml
 out/940104/investigations/00_intake.md
 out/940104/investigations/10_baseline.md
 out/940104/investigations/20_findings.md

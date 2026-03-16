@@ -1,6 +1,7 @@
 # Reference template only.
 # The runtime does not read card state from tracks/<track>/card_state.yaml.
-# Real execution state is per-card in out/<CARD>/intake/state_card_*.yaml.
+# Real execution state is per-card in out/<CARD>/state_card_*.yaml.
+# Legacy cards may still resolve out/<CARD>/intake/state_card_*.yaml as fallback.
 config_version: 1
 
 card_state:

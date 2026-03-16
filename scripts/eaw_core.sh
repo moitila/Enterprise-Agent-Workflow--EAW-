@@ -714,10 +714,16 @@ phase_init_runtime() {
 	local intake_file="$intake_dir/00_intake.md"
 	local intake_tpl="$EAW_TEMPLATES_DIR/intake_${type}.md"
 	local ingest_input_file="$ingest_dir/intake_${type}.md"
+	local state_runtime_file=""
 	ensure_dir "$intake_runtime_dir"
 	ensure_dir "$ingest_dir"
 	ensure_dir "$intake_dir"
-	if ! compgen -G "$intake_runtime_dir/state_card_*.yaml" >/dev/null; then
+	if compgen -G "$outdir/state_card_*.yaml" >/dev/null; then
+		state_runtime_file="$(compgen -G "$outdir/state_card_*.yaml" | LC_ALL=C sort | head -n 1)"
+	elif compgen -G "$intake_runtime_dir/state_card_*.yaml" >/dev/null; then
+		state_runtime_file="$(compgen -G "$intake_runtime_dir/state_card_*.yaml" | LC_ALL=C sort | head -n 1)"
+	fi
+	if [[ -z "$state_runtime_file" ]]; then
 		local track_id="${track_id_override:-${type,,}}"
 		local state_file current_phase track_file phase_started_at
 		if [[ -z "$track_id" || ! -d "$EAW_ROOT_DIR/tracks/$track_id" ]]; then
@@ -740,7 +746,7 @@ phase_init_runtime() {
 			[[ -n "$current_phase" ]] || current_phase="intake"
 		fi
 		phase_started_at="$(utc_timestamp)"
-		state_file="$intake_runtime_dir/state_card_${track_id}.yaml"
+		state_file="$outdir/state_card_${track_id}.yaml"
 		cat >"$state_file" <<EOF
 config_version: 1
 

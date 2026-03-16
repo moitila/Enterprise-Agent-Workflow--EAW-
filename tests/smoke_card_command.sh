@@ -33,13 +33,13 @@ grep -Fq 'eaw card <CARD> --track <TRACK>' <<<"$help_output" || fail "usage miss
 
 EAW_WORKDIR="$workdir" ./scripts/eaw card CARDSTD --track standard >/dev/null
 test -f "$workdir/out/CARDSTD/feature_CARDSTD.md" || fail "standard track did not create feature dossier"
-test -f "$workdir/out/CARDSTD/intake/state_card_standard.yaml" || fail "standard track state file missing"
-grep -Fq 'track_id: standard' "$workdir/out/CARDSTD/intake/state_card_standard.yaml" || fail "standard track state mismatch"
+test -f "$workdir/out/CARDSTD/state_card_standard.yaml" || fail "standard track state file missing"
+grep -Fq 'track_id: standard' "$workdir/out/CARDSTD/state_card_standard.yaml" || fail "standard track state mismatch"
 
 EAW_WORKDIR="$workdir" ./scripts/eaw card CARDBUG --track bug "Bug title" >/dev/null
 test -f "$workdir/out/CARDBUG/bug_CARDBUG.md" || fail "bug track did not create bug dossier"
-test -f "$workdir/out/CARDBUG/intake/state_card_bug.yaml" || fail "bug track state file missing"
-grep -Fq 'track_id: bug' "$workdir/out/CARDBUG/intake/state_card_bug.yaml" || fail "bug track state mismatch"
+test -f "$workdir/out/CARDBUG/state_card_bug.yaml" || fail "bug track state file missing"
+grep -Fq 'track_id: bug' "$workdir/out/CARDBUG/state_card_bug.yaml" || fail "bug track state mismatch"
 
 set +e
 missing_output="$(EAW_WORKDIR="$workdir" ./scripts/eaw card CARDMISS 2>&1)"

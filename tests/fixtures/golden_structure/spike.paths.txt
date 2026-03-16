@@ -6,7 +6,7 @@ out/940103/context/local-main/git-diff.patch
 out/940103/context/local-main/git-status.txt
 out/940103/context/local-main/rg-symbols.txt
 out/940103/execution.log
-out/940103/intake/state_card_spike.yaml
+out/940103/state_card_spike.yaml
 out/940103/investigations/00_intake.md
 out/940103/investigations/10_baseline.md
 out/940103/investigations/20_findings.md

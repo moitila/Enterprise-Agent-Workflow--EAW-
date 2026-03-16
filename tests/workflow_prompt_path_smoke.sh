@@ -153,9 +153,9 @@ EAW_WORKDIR="$success_workdir" "$REPO_ROOT/scripts/eaw" card "540FEATURE" --trac
 EAW_WORKDIR="$success_workdir" "$REPO_ROOT/scripts/eaw" card "540BUG" --track bug "bug track smoke" >/dev/null
 EAW_WORKDIR="$success_workdir" "$REPO_ROOT/scripts/eaw" card "540SPIKE" --track spike "spike track smoke" >/dev/null
 
-grep -Fq "track_id: feature" "$success_workdir/out/540FEATURE/intake/state_card_feature.yaml" || fail "card command did not create track_id: feature"
-grep -Fq "track_id: bug" "$success_workdir/out/540BUG/intake/state_card_bug.yaml" || fail "card command did not create track_id: bug"
-grep -Fq "track_id: spike" "$success_workdir/out/540SPIKE/intake/state_card_spike.yaml" || fail "card command did not create track_id: spike"
+grep -Fq "track_id: feature" "$success_workdir/out/540FEATURE/state_card_feature.yaml" || fail "card command did not create track_id: feature"
+grep -Fq "track_id: bug" "$success_workdir/out/540BUG/state_card_bug.yaml" || fail "card command did not create track_id: bug"
+grep -Fq "track_id: spike" "$success_workdir/out/540SPIKE/state_card_spike.yaml" || fail "card command did not create track_id: spike"
 
 success_output="$(EAW_WORKDIR="$success_workdir" "$REPO_ROOT/scripts/eaw" validate 2>&1)" || fail "expected success validate to pass"
 grep -Fq "current_phase=analysis prompt_phase=analyze_findings" <<<"$success_output" || fail "missing prompt_phase derived from prompt.path in success output"

@@ -422,7 +422,7 @@ eaw_yaml_state_completed_phases() {
 eaw_card_has_workflow_config() {
 	local card_dir="$1"
 	local intake_dir="$card_dir/intake"
-	compgen -G "$intake_dir/state_card_*.yaml" >/dev/null || compgen -G "$intake_dir/track_*.yaml" >/dev/null || compgen -G "$intake_dir/phase_*.yaml" >/dev/null
+	compgen -G "$card_dir/state_card_*.yaml" >/dev/null || compgen -G "$intake_dir/state_card_*.yaml" >/dev/null || compgen -G "$intake_dir/track_*.yaml" >/dev/null || compgen -G "$intake_dir/phase_*.yaml" >/dev/null
 }
 
 eaw_official_track_dir() {
@@ -474,6 +474,7 @@ eaw_load_card_workflow_context() {
 	local card_dir="$1"
 	local card_name="${card_dir##*/}"
 	local intake_dir="$card_dir/intake"
+	local state_dir="$card_dir"
 	local errors=0
 	local track_file state_file initial_phase final_phase track_id state_track_id current_phase previous_phase phase_status
 	local current_phase_file current_prompt_phase current_prompt_path current_prompt_track next_phase
@@ -510,7 +511,10 @@ eaw_load_card_workflow_context() {
 
 	shopt -s nullglob
 	track_candidates=("$intake_dir"/track_*.yaml)
-	state_candidates=("$intake_dir"/state_card_*.yaml)
+	state_candidates=("$state_dir"/state_card_*.yaml)
+	if [[ ${#state_candidates[@]} -eq 0 ]]; then
+		state_candidates=("$intake_dir"/state_card_*.yaml)
+	fi
 	phase_candidates=("$intake_dir"/phase_*.yaml)
 	shopt -u nullglob
 
@@ -519,11 +523,11 @@ eaw_load_card_workflow_context() {
 	fi
 
 	if [[ ${#state_candidates[@]} -eq 0 ]]; then
-		echo "ERROR: card ${card_name} has declarative workflow artifacts but is missing state_card_*.yaml in $intake_dir (MVP requires canonical YAML structure)" >&2
+		echo "ERROR: card ${card_name} has declarative workflow artifacts but is missing state_card_*.yaml in $state_dir or fallback $intake_dir (MVP requires canonical YAML structure)" >&2
 		return 1
 	fi
 	if [[ ${#state_candidates[@]} -ne 1 ]]; then
-		echo "ERROR: card ${card_name} must define exactly one state_card_*.yaml in $intake_dir (MVP requires canonical YAML structure)" >&2
+		echo "ERROR: card ${card_name} must define exactly one state_card_*.yaml in $state_dir or fallback $intake_dir (MVP requires canonical YAML structure)" >&2
 		return 1
 	fi
 

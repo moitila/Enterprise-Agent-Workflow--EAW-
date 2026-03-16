@@ -24,7 +24,7 @@ init_workdir "$workdir"
 
 card="554WRAP"
 EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" card "$card" --track feature "wrapper compatibility" >/dev/null
-state_file="$workdir/out/$card/intake/state_card_feature.yaml"
+state_file="$workdir/out/$card/state_card_feature.yaml"
 
 intake_output="$(EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" intake "$card" 2>&1)" || fail "intake wrapper failed"
 grep -Fq "WARNING: 'intake' is deprecated and planned for removal in v1.0. Prefer 'eaw next'." <<<"$intake_output" || fail "intake wrapper deprecation warning missing"
