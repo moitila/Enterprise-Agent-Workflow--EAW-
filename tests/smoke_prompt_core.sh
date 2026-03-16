@@ -53,6 +53,12 @@ test -d "$EAW_WORKDIR/out/501/ingest"
 test -f "$EAW_WORKDIR/out/501/ingest/intake_feature.md"
 test -d "$EAW_WORKDIR/out/501/intake"
 test -d "$EAW_WORKDIR/out/501/investigations"
+"$REPO_ROOT/scripts/eaw" intake 501 --round=1 >/dev/null
+feature_prompt="$EAW_WORKDIR/out/501/investigations/intake_agent_prompt.round_1.md"
+test -f "$feature_prompt"
+grep -F 'EVIDENCIAS=`out/<CARD>/ingest/** (primario)`, fallback=`out/<CARD>/intake/**`' "$feature_prompt" >/dev/null
+grep -F "Ler \`$EAW_WORKDIR/out/501/ingest\` quando existir." "$feature_prompt" >/dev/null
+grep -F "Ler \`$EAW_WORKDIR/out/501/intake\` apenas como fallback compativel quando \`$EAW_WORKDIR/out/501/ingest\` nao existir." "$feature_prompt" >/dev/null
 
 log_missing_md="$WORK_ROOT/validate_missing_md.log"
 mv "$md_file" "$md_backup"

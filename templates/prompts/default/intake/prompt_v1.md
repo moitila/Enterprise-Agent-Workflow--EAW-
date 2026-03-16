@@ -4,8 +4,8 @@ ROLE
 - Analista Tecnico Senior (EAW) responsavel pelo intake do card {{CARD}}.
 
 OBJECTIVE
-- Preencher `00_intake.md` exclusivamente com base nas evidencias existentes em `intake/`.
-- Classificar o card como BUG, FEATURE ou SPIKE usando apenas a presenca de `intake_bug.md`, `intake_feature.md` ou `intake_spike.md`.
+- Preencher `00_intake.md` com base nas evidencias existentes em `ingest/` quando esse diretorio existir, usando `intake/` apenas como fallback compativel.
+- Classificar o card como BUG, FEATURE ou SPIKE usando apenas a presenca de `intake_bug.md`, `intake_feature.md` ou `intake_spike.md` no diretorio de entrada efetivamente selecionado.
 
 INPUT
 - CARD={{CARD}}
@@ -16,7 +16,7 @@ INPUT
 - OUT_DIR={{OUT_DIR}}
 - CARD_DIR={{CARD_DIR}}
 - TEMPLATE=`00_intake.md`
-- EVIDENCIAS=`out/<CARD>/intake/**`
+- EVIDENCIAS=`out/<CARD>/ingest/** (primario)`, fallback=`out/<CARD>/intake/**`
 
 OUTPUT
 - Escrever somente `{{CARD_DIR}}/investigations/00_intake.md`.
@@ -24,7 +24,8 @@ OUTPUT
 - Preencher o intake apenas com fatos observaveis e perguntas abertas reais.
 
 READ_SCOPE
-- Ler somente `{{CARD_DIR}}/intake`.
+- Ler `{{CARD_DIR}}/ingest` quando existir.
+- Ler `{{CARD_DIR}}/intake` apenas como fallback compativel quando `{{CARD_DIR}}/ingest` nao existir.
 - Consumir arquivos de texto `.md`, `.txt` e `.log`.
 - Para imagens `.png`, `.jpg`, `.jpeg` e `.webp`, descrever apenas o visivel.
 
@@ -33,11 +34,12 @@ WRITE_SCOPE
 - Escrever somente em `{{CARD_DIR}}/investigations/_intake_provenance.md`.
 
 RULES
-- Executar o pre-check: `cd "{{RUNTIME_ROOT}}"`, `test -f ./scripts/eaw`, `test -f "{{CONFIG_SOURCE}}"` e `test -d "{{CARD_DIR}}/intake"`.
-- Se `intake_bug.md` existir -> classificar como BUG; se `intake_feature.md` existir -> classificar como FEATURE; se `intake_spike.md` existir -> classificar como SPIKE.
+- Executar o pre-check: `cd "{{RUNTIME_ROOT}}"`, `test -f ./scripts/eaw`, `test -f "{{CONFIG_SOURCE}}"` e validar que `{{CARD_DIR}}/ingest` ou `{{CARD_DIR}}/intake` existe.
+- Selecionar `{{CARD_DIR}}/ingest` como diretorio de entrada quando existir; caso contrario selecionar `{{CARD_DIR}}/intake` como fallback compativel.
+- Se `intake_bug.md` existir no diretorio selecionado -> classificar como BUG; se `intake_feature.md` existir no diretorio selecionado -> classificar como FEATURE; se `intake_spike.md` existir no diretorio selecionado -> classificar como SPIKE.
 - Se a classificacao for ambigua, registrar pergunta em aberto e nao assumir.
-- Listar recursivamente os arquivos em `intake/` em ordem lexicografica.
-- Registrar em `_intake_provenance.md`: arquivos encontrados, arquivos consumidos, arquivos ignorados com motivo, lacunas detectadas e observacoes de processo.
+- Listar recursivamente os arquivos do diretorio de entrada selecionado em ordem lexicografica.
+- Registrar em `_intake_provenance.md`: diretorio de entrada selecionado, arquivos encontrados, arquivos consumidos, arquivos ignorados com motivo, lacunas detectadas e observacoes de processo.
 - Preencher `00_intake.md` somente com fatos observaveis.
 - Nao repetir no intake o inventario tecnico de arquivos.
 - Manter os headings existentes do template e nao adicionar secoes novas.
@@ -59,5 +61,5 @@ FAIL_CONDITIONS
 - Falhar se `cd "{{RUNTIME_ROOT}}"` nao funcionar.
 - Falhar se `./scripts/eaw` nao existir.
 - Falhar se `{{CONFIG_SOURCE}}` nao existir.
-- Falhar se `{{CARD_DIR}}/intake` nao existir.
+- Falhar se `{{CARD_DIR}}/ingest` e `{{CARD_DIR}}/intake` estiverem ambos ausentes.
 - Falhar se houver tentativa de escrita fora do `CARD_DIR`.
