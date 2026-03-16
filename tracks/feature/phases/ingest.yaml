@@ -22,4 +22,5 @@ phase:
 
   completion:
     strategy: required_artifacts_exist
-    required_artifacts: []
+    required_artifacts:
+      - ingest/intake_feature.md

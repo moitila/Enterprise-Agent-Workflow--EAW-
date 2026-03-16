@@ -106,3 +106,5 @@ Em caso de conflito entre documentacao auxiliar e o comportamento observado em `
 ## 11. Status
 
 `PROMPT_CONTRACT_INTAKE_v1` define o contrato observavel da fase Intake no EAW.
+
+> Para o modelo completo de transicao `ingest -> intake`, incluindo criterio de encerramento e lista de artefatos afetados, consultar `docs/INGEST_TRANSITION.md`.
