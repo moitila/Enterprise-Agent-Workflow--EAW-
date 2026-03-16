@@ -1,3 +1,5 @@
+{{RUNTIME_ENVIRONMENT}}
+
 ROLE
 - Engenheiro do EAW responsavel pela fase de implementation planning do card {{CARD}} ({{TYPE}}).
 

@@ -1177,12 +1177,12 @@ eaw_card_markdown_section_list() {
 					print line
 					next
 				}
-				if (line ~ /^[[:space:]]*$/) {
-					if (seen_items) {
+					if (line ~ /^[[:space:]]*$/) {
+						if (seen_items) {
+							next
+						}
 						next
 					}
-					continue
-				}
 				if (seen_items) {
 					exit
 				}

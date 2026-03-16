@@ -25,48 +25,32 @@ Nenhum prompt de Implementation pode violar este contrato.
 
 ## 2. Header Oficial (v1)
 
-O prompt de `eaw implement` deve iniciar com o header oficial da fase, sem modificacoes estruturais:
+O prompt de Implementation deve iniciar com o bloco `RUNTIME_ENVIRONMENT` antes de `ROLE`, sem modificacoes estruturais nem secoes extras fora do contrato:
 
 ```text
-=== EAW IMPLEMENTATION EXECUTOR PROMPT ({{TYPE}}) CARD {{CARD}} ===
+RUNTIME_ENVIRONMENT
 
-EAW_WORKDIR={{EAW_WORKDIR}}
-RUNTIME_ROOT={{RUNTIME_ROOT}}
-CONFIG_SOURCE={{CONFIG_SOURCE}}
-EAW_ROOT_DIR="$RUNTIME_ROOT"
-OUT_DIR={{OUT_DIR}}
-CARD_DIR={{CARD_DIR}}
+CARD_ID: {{CARD}}
+TRACK_ID: {{TRACK_ID}}
+STEP_ID: {{STEP_ID}}
+WORKDIR: {{EAW_WORKDIR}}
+CARD_DIR: {{CARD_DIR}}
+OUT_DIR: {{OUT_DIR}}
 
-TARGET_REPOS:
+TARGET_REPOSITORIES:
 {{TARGET_REPOS}}
 
-EXCLUDED_REPOS:
-{{EXCLUDED_REPOS}}
+WRITE_ALLOWLIST:
+{{WRITE_ALLOWLIST}}
 
-WARNINGS:
-{{WARNINGS_BLOCK}}
+CRITICAL_PATHS:
+{{CRITICAL_PATHS}}
 
-MODE:
-- When EAW_WORKDIR is empty -> outputs under OUT_DIR.
-- When EAW_WORKDIR is set -> outputs isolated under EAW_WORKDIR.
-
-EXECUTION STRUCTURE RULE:
-
-- RUNTIME_ROOT = tool/runtime root (never modify).
-- Codigo so pode ser alterado nos TARGET_REPOS.
-- Artefatos so podem ser alterados dentro de CARD_DIR.
-- A allowlist definida no scope.lock e soberana.
-
-PRE-CHECK OBRIGATORIO:
-
-cd "$EAW_ROOT_DIR"
-test -f ./scripts/eaw || { echo "ERROR: not in EAW root"; exit 2; }
-test -f "$CONFIG_SOURCE" || { echo "ERROR: missing config source"; exit 2; }
-
-Qualquer falha -> abortar imediatamente.
+ROLE
+...
 ```
 
-Este header e soberano para a fase Implementation e nao pode ser redefinido por templates sem manter a mesma estrutura.
+O bloco `RUNTIME_ENVIRONMENT` e soberano para a fase Implementation, deve ser materializado pelo runtime no inicio do prompt final e nao pode ser redefinido por templates sem manter a mesma estrutura e a sequencia imediata `RUNTIME_ENVIRONMENT` -> `ROLE`.
 
 ## 3. Regras Globais Imutaveis
 
@@ -118,6 +102,7 @@ Nao ha permissao para alterar `prompts/`, `scripts/commands/`, `EAW-tool` ou qua
 O prompt de Implementation deve:
 
 - Declarar `EAW_WORKDIR`, `RUNTIME_ROOT`, `CONFIG_SOURCE`, `OUT_DIR` e `CARD_DIR` no header
+- Declarar `CARD_ID`, `TRACK_ID`, `STEP_ID`, `TARGET_REPOSITORIES`, `WRITE_ALLOWLIST` e `CRITICAL_PATHS` no bloco `RUNTIME_ENVIRONMENT`
 - Tratar `investigations/40_next_steps.md` como base unica do planejamento
 - Permitir os artefatos auxiliares `implementation/implementation_planning_agent_prompt.md` e `implementation/implementation_executor_agent_prompt.md` quando emitidos pelo runtime
 - Exigir rastreabilidade explicita entre hipoteses `H[0-9]+` selecionadas, `40_next_steps.md` e `implementation/10_change_plan.md`
