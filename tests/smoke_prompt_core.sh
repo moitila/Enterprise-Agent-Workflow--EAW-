@@ -51,6 +51,8 @@ grep -F "initial_phase: ingest" "$REPO_ROOT/tracks/feature/track.yaml" >/dev/nul
 "$REPO_ROOT/scripts/eaw" card 501 --track feature "Ingest phase smoke" >/dev/null
 test -d "$EAW_WORKDIR/out/501/ingest"
 test -f "$EAW_WORKDIR/out/501/ingest/intake_feature.md"
+test -d "$EAW_WORKDIR/out/501/intake"
+test -d "$EAW_WORKDIR/out/501/investigations"
 
 log_missing_md="$WORK_ROOT/validate_missing_md.log"
 mv "$md_file" "$md_backup"
