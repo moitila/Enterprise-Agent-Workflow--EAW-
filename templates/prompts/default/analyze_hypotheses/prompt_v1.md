@@ -23,6 +23,8 @@ INPUT
 - REQUIRED_ARTIFACTS:
   - `{{CARD_DIR}}/investigations/00_intake.md`
   - `{{CARD_DIR}}/investigations/20_findings.md`
+- MODE: quando `EAW_WORKDIR` estiver vazio, saida em `OUT_DIR`; quando definido, saida isolada em `EAW_WORKDIR`.
+- EXECUTION_STRUCTURE: `RUNTIME_ROOT` nunca deve ser modificado; `TARGET_REPOS` somente leitura; `CARD_DIR` e o limite unico de escrita da fase.
 
 OUTPUT
 - Escrever somente `{{CARD_DIR}}/investigations/30_hypotheses.md`.
@@ -35,12 +37,6 @@ READ_SCOPE
 WRITE_SCOPE
 - Escrever somente `{{CARD_DIR}}/investigations/30_hypotheses.md`.
 
-CONTEXT_USAGE
-- Antes de consultar TARGET_REPOS, verificar se `{{CARD_DIR}}/context/**` existe.
-- Se existir, consumir no maximo 3 arquivos.
-- Prioridade: `changed-files.txt` > `git-diff.patch` > arquivos citados no intake > demais.
-- Se `context/**` estiver vazio ou ausente, registrar isso explicitamente e seguir normalmente.
-
 RULES
 - Executar pre-check em fail-fast:
   - `set -euo pipefail`
@@ -48,11 +44,6 @@ RULES
   - `test -f ./scripts/eaw`
   - `test -f "{{CONFIG_SOURCE}}"`
 - Confirmar existencia de `{{CARD_DIR}}/investigations/00_intake.md` e `{{CARD_DIR}}/investigations/20_findings.md`; se faltar qualquer um, abortar.
-- PASSO 0 - CONTEXTO:
-  - Verificar `{{CARD_DIR}}/context/**`.
-  - Registrar na secao `## Provenance` de `30_hypotheses.md`:
-    - `Contexto utilizado: <arquivos>` ou
-    - `Contexto utilizado: nenhum`
 - PASSO 1 - EXTRACAO FORMAL:
   - Extrair criterios de aceite, regras deterministicas, comportamentos esperados, comportamentos observados divergentes e contratos de erro.
   - Criar secao `## Coverage Map` listando cada criterio identificado.

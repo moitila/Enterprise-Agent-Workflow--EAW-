@@ -28,7 +28,7 @@ INPUT
   - `out/{{CARD}}/investigations/40_next_steps.md`
   - `out/{{CARD}}/implementation/00_scope.lock.md`
   - `out/{{CARD}}/implementation/10_change_plan.md`
-- OPTIONAL_CONTEXT=`out/{{CARD}}/context/**`
+  - `out/{{CARD}}/context/**`
 - MODE: quando `EAW_WORKDIR` estiver vazio, saida em `OUT_DIR`; quando definido, saida isolada em `EAW_WORKDIR`.
 - EXECUTION_STRUCTURE: `RUNTIME_ROOT` nunca deve ser modificado; codigo apenas em TARGET_REPOS; artefatos apenas dentro de `CARD_DIR`; allowlist do `00_scope.lock.md` e soberana para implementacao real nos TARGET_REPOS.
 
@@ -46,23 +46,12 @@ WRITE_SCOPE
 - Artefatos: escrever somente em `CARD_DIR` para arquivos previstos pelo plano (`10_change_plan.md`).
 - A allowlist soberana governa apenas alteracoes de codigo nos TARGET_REPOS.
 
-CONTEXT_USAGE
-- Antes de iniciar a execucao dos Steps, verificar se `{{CARD_DIR}}/context/**` existe.
-- Se existir, consumir no maximo 3 arquivos.
-- Prioridade: `changed-files.txt` > `git-diff.patch` > arquivos citados no intake > demais.
-- Se `context/**` estiver vazio ou ausente, registrar isso explicitamente e seguir normalmente.
-
 RULES
 - Executar pre-check em fail-fast:
   - `set -euo pipefail`
   - `cd "{{RUNTIME_ROOT}}"`
   - `test -f ./scripts/eaw`
   - `test -f "{{CONFIG_SOURCE}}"`
-- PASSO 0 - CONTEXTO:
-  - Verificar `{{CARD_DIR}}/context/**`.
-  - Registrar em `Contexto entendido` do relatorio:
-    - `Contexto utilizado: <arquivos>` ou
-    - `Contexto utilizado: nenhum`
 - PASSO 1 - VALIDACAO ESTRUTURAL PRE-EXECUCAO:
   - Validar que `00_scope.lock.md` contem `Base Obrigatoria`, `In Scope`, `Out of Scope`, `Hipotese(s) Base`, `Allowlist de Escrita` e `Regra de Escrita`.
   - Tratar `Allowlist de Escrita` do scope lock como contrato soberano de implementacao real (arquivos de TARGET_REPOS), independente da whitelist de escrita da fase planning.

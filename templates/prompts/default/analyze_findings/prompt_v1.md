@@ -22,24 +22,22 @@ INPUT
 - WARNINGS:
 {{WARNINGS_BLOCK}}
 - REQUIRED_ARTIFACT=`{{CARD_DIR}}/investigations/00_intake.md`
+- MODE: quando `EAW_WORKDIR` estiver vazio, saida em `OUT_DIR`; quando definido, saida isolada em `EAW_WORKDIR`.
+- EXECUTION_STRUCTURE: `RUNTIME_ROOT` nunca deve ser modificado; `TARGET_REPOS` somente leitura; `CARD_DIR` e o limite unico de escrita da fase.
 
 OUTPUT
 - Escrever somente `{{CARD_DIR}}/investigations/20_findings.md`.
 - Escrever `{{CARD_DIR}}/investigations/_warnings.md` somente se necessario.
+- Registrar no findings a saida relevante de `doctor` e `validate`.
 
 READ_SCOPE
 - Ler `{{CARD_DIR}}`.
 - Ler TARGET_REPOS em modo read-only.
+- Extrair evidencias factuais, logs relevantes, trechos de codigo apenas para leitura e criterios de aceite mencionados no intake.
 
 WRITE_SCOPE
 - Escrever somente `{{CARD_DIR}}/investigations/20_findings.md`.
 - Escrever somente `{{CARD_DIR}}/investigations/_warnings.md` se necessario.
-
-CONTEXT_USAGE
-- Antes de consultar TARGET_REPOS, verificar se `{{CARD_DIR}}/context/**` existe.
-- Se existir, consumir no maximo 3 arquivos.
-- Prioridade: `changed-files.txt` > `git-diff.patch` > arquivos citados no intake > demais.
-- Se `context/**` estiver vazio ou ausente, registrar isso explicitamente e seguir normalmente.
 
 {{TOOLING_HINTS}}
 
@@ -50,11 +48,6 @@ RULES
   - `test -f ./scripts/eaw`
   - `test -f "{{CONFIG_SOURCE}}"`
 - Confirmar existencia de `{{CARD_DIR}}/investigations/00_intake.md`; se faltar, abortar.
-- PASSO 0 - CONTEXTO:
-  - Verificar `{{CARD_DIR}}/context/**`.
-  - Registrar em `## 1. Contexto Confirmado` de `20_findings.md`:
-    - `Contexto utilizado: <arquivos>` ou
-    - `Contexto utilizado: nenhum`
 - PASSO 1 - BASELINE:
   - Executar `export EAW_WORKDIR="{{EAW_WORKDIR}}"`.
   - Executar `./scripts/eaw doctor`.
@@ -62,14 +55,21 @@ RULES
   - Registrar no findings a saida relevante de `doctor` e `validate`.
 - PASSO 2 - INVESTIGACAO CONTROLADA:
   - Investigar apenas `{{CARD_DIR}}` e TARGET_REPOS em read-only.
-  - Extrair evidencias factuais, logs relevantes, trechos de codigo somente leitura e criterios de aceite do intake.
+  - Extrair evidencias factuais.
+  - Extrair logs relevantes.
+  - Extrair trechos de codigo somente leitura.
+  - Extrair condicoes observaveis e comportamentos divergentes.
+  - Extrair criterios de aceite mencionados no intake.
 - PASSO 3 - PRODUZIR 20_findings.md:
+  - Gerar `20_findings.md`.
   - Manter as secoes `# 20_findings`, `## 1. Contexto Confirmado`, `## 2. Evidencias Coletadas`, `## 3. Criterios de Aceite Identificados`, `## 4. Comportamentos Observados`, `## 5. Divergencias Identificadas` e `## 6. Lacunas de Informacao`.
-- Toda afirmacao do findings deve conter path real, comando executado e trecho curto de evidencia.
+- Toda afirmacao do findings deve conter: path real, comando executado e trecho curto de evidencia.
+- Em cada evidencia, incluir arquivo, comando executado, trecho relevante e interpretacao objetiva.
 - Retornar lista de arquivos lidos, lista de arquivos alterados, saida literal dos testes executados, confirmacao de que nenhuma hipotese foi criada e confirmacao de que nenhum plano foi definido.
 - VALIDACOES FINAIS:
   - Validar `test -f "{{CARD_DIR}}/investigations/20_findings.md"`.
   - Confirmar escrita apenas na whitelist da fase.
+- Preservar backward compatibility e evitar refatoracoes extras.
 
 FORBIDDEN
 - Nao alterar codigo.
