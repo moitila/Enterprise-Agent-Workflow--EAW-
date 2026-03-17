@@ -12,12 +12,6 @@ phase:
   outputs:
     create_directories:
       - prompts
-    create_artifacts:
-      - implementation/20_patch_notes.md
     prompts:
       - implementation_executor
 
-  completion:
-    strategy: required_artifacts_exist
-    required_artifacts:
-      - implementation/20_patch_notes.md
