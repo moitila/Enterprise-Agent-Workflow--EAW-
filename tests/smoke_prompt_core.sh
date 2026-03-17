@@ -39,7 +39,7 @@ trap cleanup EXIT
 "$REPO_ROOT/scripts/eaw" card 500 --track standard "Prompt core smoke" >/dev/null
 "$REPO_ROOT/scripts/eaw" intake 500 --round=1 >/dev/null
 
-test -f "$EAW_WORKDIR/out/500/investigations/intake_agent_prompt.round_1.md"
+test -f "$EAW_WORKDIR/out/500/prompts/intake.md"
 provenance_file="$EAW_WORKDIR/out/500/provenance/prompts_used.yaml"
 test -f "$provenance_file"
 grep -F "phase: intake" "$provenance_file" >/dev/null
@@ -55,7 +55,7 @@ test -d "$EAW_WORKDIR/out/501/intake"
 test -d "$EAW_WORKDIR/out/501/investigations"
 # feature ingest smoke must exercise `eaw next`
 "$REPO_ROOT/scripts/eaw" next 501 >/dev/null
-feature_prompt="$EAW_WORKDIR/out/501/investigations/intake_agent_prompt.round_1.md"
+feature_prompt="$EAW_WORKDIR/out/501/prompts/ingest.md"
 test -f "$feature_prompt"
 grep -F 'EVIDENCIAS=`out/<CARD>/ingest/** (primario)`, fallback=`out/<CARD>/intake/**`' "$feature_prompt" >/dev/null
 grep -F "Ler \`$EAW_WORKDIR/out/501/ingest\` quando existir." "$feature_prompt" >/dev/null

@@ -6,14 +6,14 @@ out/940103/context/local-main/git-diff.patch
 out/940103/context/local-main/git-status.txt
 out/940103/context/local-main/rg-symbols.txt
 out/940103/execution.log
-out/940103/state_card_spike.yaml
+out/940103/execution_journal.jsonl
 out/940103/investigations/00_intake.md
 out/940103/investigations/10_baseline.md
 out/940103/investigations/20_findings.md
 out/940103/investigations/30_hypotheses.md
 out/940103/investigations/40_next_steps.md
 out/940103/investigations/_intake_provenance.md
-out/940103/investigations/intake_agent_prompt.round_1.md
 out/940103/prompts/intake.md
 out/940103/provenance/prompts_used.yaml
 out/940103/spike_940103.md
+out/940103/state_card_spike.yaml
