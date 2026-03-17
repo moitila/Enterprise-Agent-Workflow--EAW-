@@ -39,6 +39,8 @@ Example events (schema v2):
 
 Each phase execution produces one `phase_started` event followed by one `phase_completed` event. If a phase is aborted before `run_phase()` returns, the `phase_completed` event may be absent — readers must tolerate unpaired `phase_started` events.
 
+**`track_completed`:** Emitted by `cmd_next` when `current_phase` equals `final_phase` (as declared in `track.yaml`). Signals that the track workflow has reached its terminal state. `status` is `"OK"`, `duration_ms` is `0` (not applicable at track level), and `phase` contains the name of the terminal phase. Emission is idempotent: `cmd_next` checks for an existing `track_completed` event in the journal before emitting and skips if one is already present.
+
 ## Semantics
 
 **`agent`:** Identifies the entity responsible for writing the event. The value is read from the `EAW_AGENT` environment variable; if unset, it defaults to `"runtime"`. Known values: `"runtime"` (EAW runtime, default), `"unknown"` (context not determinable). Additional values may be introduced by callers (e.g., an AI agent identity such as `"claude-sonnet"`).

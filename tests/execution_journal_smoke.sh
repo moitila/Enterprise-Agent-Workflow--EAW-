@@ -127,4 +127,25 @@ run_phase "retry_phase" true fn_success || fail "expected second retry_phase run
 line_count="$(wc -l <"$OUTDIR_RETRY/execution_journal.jsonl")"
 [ "$line_count" -ge 4 ] || fail "retry must accumulate events: expected >= 4 lines, got $line_count"
 
+# --- Assertion 12: track_completed event emitted with correct fields ---
+tmpdir_track="$(mktemp -d)"
+trap 'rm -rf "$tmpdir_track"' EXIT
+OUTDIR_TRACK="$tmpdir_track/out"
+mkdir -p "$OUTDIR_TRACK"
+OUTDIR="$OUTDIR_TRACK"
+EAW_CARD_WORKFLOW_CARD="TEST_CARD"
+EAW_CARD_WORKFLOW_TRACK_ID="feature"
+eaw_journal_append "TEST_CARD" "feature" "implementation_executor" "OK" "0" "track_completed"
+grep -q '"event_type":"track_completed"' "$OUTDIR_TRACK/execution_journal.jsonl" || fail "track_completed not emitted"
+grep -q '"card_id":"TEST_CARD"' "$OUTDIR_TRACK/execution_journal.jsonl" || fail "card_id missing from track_completed"
+grep -q '"track":"feature"' "$OUTDIR_TRACK/execution_journal.jsonl" || fail "track missing from track_completed"
+grep -q '"phase":"implementation_executor"' "$OUTDIR_TRACK/execution_journal.jsonl" || fail "phase missing from track_completed"
+
+# --- Assertion 13: track_completed idempotency guard ---
+if ! grep -q '"event_type":"track_completed"' "$OUTDIR_TRACK/execution_journal.jsonl" 2>/dev/null; then
+	eaw_journal_append "TEST_CARD" "feature" "implementation_executor" "OK" "0" "track_completed"
+fi
+track_count="$(grep -c '"event_type":"track_completed"' "$OUTDIR_TRACK/execution_journal.jsonl")"
+[ "$track_count" -eq 1 ] || fail "track_completed must appear exactly once, got $track_count"
+
 printf "execution_journal smoke OK\n"

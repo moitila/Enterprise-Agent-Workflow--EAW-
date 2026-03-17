@@ -1916,6 +1916,11 @@ cmd_next() {
 	current_phase="$EAW_CARD_WORKFLOW_CURRENT_PHASE"
 	current_phase_file="$EAW_CARD_WORKFLOW_CURRENT_PHASE_FILE"
 	if [[ "$current_phase" == "$EAW_CARD_WORKFLOW_FINAL_PHASE" ]]; then
+		OUTDIR="$card_dir"
+		if ! grep -q '"event_type":"track_completed"' "${OUTDIR}/execution_journal.jsonl" 2>/dev/null; then
+			eaw_journal_append "${EAW_CARD_WORKFLOW_CARD}" "${EAW_CARD_WORKFLOW_TRACK_ID}" \
+				"${EAW_CARD_WORKFLOW_FINAL_PHASE}" "OK" "0" "track_completed"
+		fi
 		echo "CARD ${card}: workflow already complete"
 		return 0
 	fi
