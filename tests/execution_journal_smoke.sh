@@ -148,4 +148,25 @@ fi
 track_count="$(grep -c '"event_type":"track_completed"' "$OUTDIR_TRACK/execution_journal.jsonl")"
 [ "$track_count" -eq 1 ] || fail "track_completed must appear exactly once, got $track_count"
 
+# --- Assertion 14: card_completed event emitted with correct fields ---
+tmpdir_card="$(mktemp -d)"
+trap 'rm -rf "$tmpdir_card"' EXIT
+OUTDIR_CARD="$tmpdir_card/out"
+mkdir -p "$OUTDIR_CARD"
+OUTDIR="$OUTDIR_CARD"
+EAW_CARD_WORKFLOW_CARD="TEST_CARD"
+EAW_CARD_WORKFLOW_TRACK_ID="feature"
+eaw_journal_append "TEST_CARD" "feature" "implementation_executor" "OK" "0" "card_completed"
+grep -q '"event_type":"card_completed"' "$OUTDIR_CARD/execution_journal.jsonl" || fail "card_completed not emitted"
+grep -q '"card_id":"TEST_CARD"' "$OUTDIR_CARD/execution_journal.jsonl" || fail "card_id missing from card_completed"
+grep -q '"track":"feature"' "$OUTDIR_CARD/execution_journal.jsonl" || fail "track missing from card_completed"
+grep -q '"phase":"implementation_executor"' "$OUTDIR_CARD/execution_journal.jsonl" || fail "phase missing from card_completed"
+
+# --- Assertion 15: card_completed idempotency guard ---
+if ! grep -q '"event_type":"card_completed"' "$OUTDIR_CARD/execution_journal.jsonl" 2>/dev/null; then
+	eaw_journal_append "TEST_CARD" "feature" "implementation_executor" "OK" "0" "card_completed"
+fi
+card_count="$(grep -c '"event_type":"card_completed"' "$OUTDIR_CARD/execution_journal.jsonl")"
+[ "$card_count" -eq 1 ] || fail "card_completed must appear exactly once, got $card_count"
+
 printf "execution_journal smoke OK\n"

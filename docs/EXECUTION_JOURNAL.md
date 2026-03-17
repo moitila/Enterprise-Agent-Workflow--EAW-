@@ -41,6 +41,8 @@ Each phase execution produces one `phase_started` event followed by one `phase_c
 
 **`track_completed`:** Emitted by `cmd_next` when `current_phase` equals `final_phase` (as declared in `track.yaml`). Signals that the track workflow has reached its terminal state. `status` is `"OK"`, `duration_ms` is `0` (not applicable at track level), and `phase` contains the name of the terminal phase. Emission is idempotent: `cmd_next` checks for an existing `track_completed` event in the journal before emitting and skips if one is already present.
 
+**`card_completed`:** Emitted by `cmd_complete` (`eaw complete <CARD>`) when `current_phase` equals `final_phase` and the phase artifacts pass explicit validation. Represents the operator-affirmed closure of the card as a unit of work — distinct from `track_completed`, which is emitted automatically by `cmd_next` when the workflow reaches its terminal state without additional artifact validation. `status` is `"OK"`, `duration_ms` is `0`, and `phase` contains the name of the terminal phase. Emission is idempotent: repeated calls to `eaw complete` emit the event exactly once.
+
 ## Semantics
 
 **`agent`:** Identifies the entity responsible for writing the event. The value is read from the `EAW_AGENT` environment variable; if unset, it defaults to `"runtime"`. Known values: `"runtime"` (EAW runtime, default), `"unknown"` (context not determinable). Additional values may be introduced by callers (e.g., an AI agent identity such as `"claude-sonnet"`).

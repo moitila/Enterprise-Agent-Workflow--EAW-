@@ -1979,6 +1979,13 @@ cmd_complete() {
 		return 1
 	fi
 
+	OUTDIR="$card_dir"
+	if [[ "$current_phase" == "$EAW_CARD_WORKFLOW_FINAL_PHASE" ]]; then
+		if ! grep -q '"event_type":"card_completed"' "${OUTDIR}/execution_journal.jsonl" 2>/dev/null; then
+			eaw_journal_append "${EAW_CARD_WORKFLOW_CARD}" "${EAW_CARD_WORKFLOW_TRACK_ID}" \
+				"${EAW_CARD_WORKFLOW_FINAL_PHASE}" "OK" "0" "card_completed"
+		fi
+	fi
 	phase_completed_at="$(utc_timestamp)"
 	eaw_write_phase_status "$EAW_CARD_WORKFLOW_STATE_FILE" "COMPLETE" "$previous_phase" "$current_phase" "$completed_phases" "$phase_started_at" "true" "$phase_completed_at"
 	echo "CARD ${card}: ${current_phase} marked COMPLETE"
