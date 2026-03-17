@@ -1036,3 +1036,21 @@ intake_has_section_headings() {
 		grep -Eq -- '^[[:space:]]*##[[:space:]]+\S' "$file"
 	fi
 }
+
+# Parse the context_pack list from a phase YAML file.
+# Emits one alias per line; silent if context_pack is absent (backward compatible).
+eaw_yaml_phase_context_pack() {
+	local file="$1"
+	awk '
+		/^phase:[[:space:]]*$/ { in_phase=1; next }
+		in_phase && /^[^[:space:]]/ { in_phase=0; in_cp=0 }
+		in_phase && /^  context_pack:[[:space:]]*$/ { in_cp=1; next }
+		in_cp && /^  [^[:space:]-]/ { in_cp=0 }
+		in_cp && /^    - / {
+			line=$0
+			sub(/^    - /, "", line)
+			gsub(/^[[:space:]]+|[[:space:]]+$/, "", line)
+			if (line != "") print line
+		}
+	' "$file"
+}

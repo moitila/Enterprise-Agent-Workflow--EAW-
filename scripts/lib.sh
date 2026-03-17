@@ -214,6 +214,33 @@ gather_context_for_repo() {
 	fi
 }
 
+# Resolve a context_pack alias to a physical artifact path.
+# MVP catalog: intake, repo_tree, repo_symbols, changed_files.
+# Normalization: repo_symbols -> rg-symbols.txt, changed_files -> changed-files.txt
+# Usage: resolve_context_pack_alias <alias> <card_dir> [primary_repo_key]
+resolve_context_pack_alias() {
+	local alias="$1"
+	local card_dir="$2"
+	local primary_repo_key="${3:-}"
+	case "$alias" in
+	intake)
+		printf "%s\n" "$card_dir/investigations/00_intake.md"
+		;;
+	repo_tree)
+		printf "%s\n" "$card_dir/context/${primary_repo_key}/git-status.txt"
+		;;
+	repo_symbols)
+		printf "%s\n" "$card_dir/context/${primary_repo_key}/rg-symbols.txt"
+		;;
+	changed_files)
+		printf "%s\n" "$card_dir/context/${primary_repo_key}/changed-files.txt"
+		;;
+	*)
+		return 1
+		;;
+	esac
+}
+
 collect_search_hits() {
 	local repoKey="$1"
 	local repoPath="$2"

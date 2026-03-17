@@ -112,6 +112,32 @@ Decision note:
 - `out/<CARD>/context/<repoKey>/changed-files.txt` — changed file list
 - `out/<CARD>/context/<repoKey>/rg-symbols.txt` — symbol search hits
 
+## Context Pack
+
+Phases may declare an optional `context_pack` key in their YAML contract to inject resolved artifact content into the prompt between `RUNTIME_ENVIRONMENT` and the phase template (`PROMPT_TEMPLATE`).
+
+```yaml
+phase:
+  id: findings
+  context_pack:
+    - intake
+    - repo_symbols
+    - changed_files
+```
+
+The runtime resolves each alias to a physical artifact already collected under `out/<CARD>/context/` or `out/<CARD>/investigations/`. Phases without `context_pack` continue operating without change.
+
+**MVP alias catalog:**
+
+| Alias           | Physical file                                    |
+|-----------------|--------------------------------------------------|
+| `intake`        | `out/<CARD>/investigations/00_intake.md`         |
+| `repo_tree`     | `out/<CARD>/context/<repoKey>/git-status.txt`    |
+| `repo_symbols`  | `out/<CARD>/context/<repoKey>/rg-symbols.txt`    |
+| `changed_files` | `out/<CARD>/context/<repoKey>/changed-files.txt` |
+
+When a configured pack has no content, the runtime emits `[PACK_EMPTY: <alias> => <path>]` in the `CONTEXT_PACK` block instead of failing silently.
+
 ## Config
 
 - `config/repos.conf` — map of repoKey to path with optional role (created by `eaw init` from `repos.example.conf`)

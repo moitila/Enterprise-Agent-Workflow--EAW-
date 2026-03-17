@@ -5,6 +5,11 @@ phase:
   name: Findings
   description: Analyze the intake information and identify key findings.
 
+  context_pack:
+    - intake
+    - repo_symbols
+    - changed_files
+
   prompt:
     active: 1
     path: templates/prompts/default/findings/prompt_v<active>.md

@@ -1424,10 +1424,15 @@ eaw_render_phase_prompt_template() {
 	local critical_paths="${13}"
 	local runtime_environment="${14}"
 	local tooling_hints="${15:-}"
+	local context_pack_block="${16:-}"
 	local tooling_hints_serialized=""
+	local context_pack_block_serialized=""
 
 	if [[ -n "$tooling_hints" ]]; then
 		tooling_hints_serialized="${tooling_hints//$'\n'/__EAW_TOOLING_HINT_NL__}"
+	fi
+	if [[ -n "$context_pack_block" ]]; then
+		context_pack_block_serialized="${context_pack_block//$'\n'/__EAW_CP_NL__}"
 	fi
 
 	assert_write_scope "workflow_phase" "write phase prompt" "$output_file" "$card_dir"
@@ -1452,10 +1457,16 @@ eaw_render_phase_prompt_template() {
 		-v critical_paths="$critical_paths" \
 		-v runtime_environment="$runtime_environment" \
 		-v tooling_hints="$tooling_hints_serialized" \
+		-v context_pack_block="$context_pack_block_serialized" \
 		'
 		{
 			if ($0 == "{{RUNTIME_ENVIRONMENT}}") {
 				print runtime_environment
+				if (context_pack_block != "") {
+					gsub(/__EAW_CP_NL__/, "\n", context_pack_block)
+					printf "\n"
+					print context_pack_block
+				}
 				next
 			}
 			if ($0 == "{{TARGET_REPOS}}") {
@@ -1544,6 +1555,39 @@ eaw_render_tooling_hints_block() {
 	done < <(eaw_yaml_phase_tooling_hints "$phase_file")
 }
 
+eaw_render_context_pack_block() {
+	local phase_file="$1"
+	local card_dir="$2"
+	local target_repos="$3"
+	local primary_repo_key alias resolved_path
+	local has_packs=0
+
+	[[ -n "$phase_file" && -f "$phase_file" ]] || return 0
+
+	primary_repo_key="$(printf "%s\n" "$target_repos" | awk 'NF { sub(/^- /, ""); sub(/ =>.*$/, ""); gsub(/^[[:space:]]+|[[:space:]]+$/, ""); print; exit }')"
+
+	while IFS= read -r alias; do
+		[[ -n "$alias" ]] || continue
+		if [[ "$has_packs" -eq 0 ]]; then
+			printf "CONTEXT_PACK\n"
+			has_packs=1
+		fi
+		if resolved_path="$(resolve_context_pack_alias "$alias" "$card_dir" "$primary_repo_key")"; then
+			printf "\n## %s\n" "$alias"
+			printf "# origin: %s\n" "$resolved_path"
+			if [[ -s "$resolved_path" ]]; then
+				cat "$resolved_path"
+				printf "\n"
+			else
+				printf "[PACK_EMPTY: %s => %s]\n" "$alias" "$resolved_path"
+			fi
+		else
+			printf "\n## %s\n" "$alias"
+			printf "[PACK_UNSUPPORTED: %s]\n" "$alias"
+		fi
+	done < <(eaw_yaml_phase_context_pack "$phase_file")
+}
+
 eaw_phase_prompt_output_relpath() {
 	local prompt_alias
 	prompt_alias="$(eaw_normalize_phase_id "${1:-}")"
@@ -1585,7 +1629,7 @@ eaw_generate_phase_prompt_artifacts() {
 	local type template_file output_file legacy_file
 	local repo_blocks target_repos excluded_repos
 	local prompt_alias prompt_phase prompt_relpath
-	local track_id step_id write_allowlist critical_paths runtime_environment tooling_hints
+	local track_id step_id write_allowlist critical_paths runtime_environment tooling_hints context_pack_block
 	local -a declared_prompts=()
 
 	type="$(eaw_detect_card_template_type "$card" "$card_dir")"
@@ -1614,6 +1658,7 @@ eaw_generate_phase_prompt_artifacts() {
 	critical_paths="$(eaw_card_critical_paths_block "$card_dir")"
 	runtime_environment="$(eaw_runtime_environment_block "$card" "$card_dir" "$track_id" "$step_id" "$write_allowlist" "$critical_paths" "$target_repos")"
 	tooling_hints="$(eaw_render_tooling_hints_block "$phase_file" "$card" "$type" "$card_dir" "$track_id" "$step_id" "$target_repos")"
+	context_pack_block="$(eaw_render_context_pack_block "$phase_file" "$card_dir" "$target_repos")"
 
 	for prompt_alias in "${declared_prompts[@]}"; do
 		prompt_alias="$(eaw_normalize_phase_id "$prompt_alias")"
@@ -1624,7 +1669,7 @@ eaw_generate_phase_prompt_artifacts() {
 		template_file="$(load_prompt "default" "$prompt_phase" "$card" "$EAW_OUT_DIR")" || return 1
 		prompt_relpath="$(eaw_phase_prompt_output_relpath "$prompt_alias")"
 		output_file="$card_dir/$prompt_relpath"
-		eaw_render_phase_prompt_template "$template_file" "$output_file" "${prompt_alias^^}" "$card" "$type" "$card_dir" "$target_repos" "$excluded_repos" "- none" "$track_id" "$step_id" "$write_allowlist" "$critical_paths" "$runtime_environment" "$tooling_hints"
+		eaw_render_phase_prompt_template "$template_file" "$output_file" "${prompt_alias^^}" "$card" "$type" "$card_dir" "$target_repos" "$excluded_repos" "- none" "$track_id" "$step_id" "$write_allowlist" "$critical_paths" "$runtime_environment" "$tooling_hints" "$context_pack_block"
 
 		while IFS= read -r legacy_file; do
 			[[ -n "$legacy_file" ]] || continue
