@@ -681,6 +681,8 @@ run_phase() {
 	dur=$((end - start))
 	# record to execution log
 	printf "%s|%s|%s|%s\n" "$phase" "$status" "$dur" "$note" >>"$OUTDIR/execution.log"
+	# record to execution journal (H2/H3/H5)
+	eaw_journal_append "${EAW_CARD_WORKFLOW_CARD:-}" "${EAW_CARD_WORKFLOW_TRACK_ID:-}" "$phase" "$status" "$dur"
 	# print summary line
 	echo "[phase] $phase -> $status (${dur}ms)"
 	if [[ "$status" != "OK" && "$fatal" == "true" ]]; then
@@ -1035,6 +1037,27 @@ intake_has_section_headings() {
 	else
 		grep -Eq -- '^[[:space:]]*##[[:space:]]+\S' "$file"
 	fi
+}
+
+# Append one JSON event to the Execution Journal for the current card.
+# H2: writes to ${OUTDIR}/execution_journal.jsonl (separate file, JSON Lines).
+# H3: centralised wrapper — all journal writes go through this function.
+# H5: no-op when OUTDIR or card_id is empty (safe in unit-test contexts).
+eaw_journal_append() {
+	local card_id="$1"
+	local track="$2"
+	local phase="$3"
+	local status="$4"
+	local duration_ms="$5"
+	# H5: guard — do not write without a card context
+	[[ -n "${OUTDIR:-}" && -n "${card_id:-}" ]] || return 0
+	local timestamp agent mode
+	timestamp="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+	agent="runtime"
+	mode="phase_driven"
+	printf '{"card_id":"%s","track":"%s","phase":"%s","timestamp":"%s","agent":"%s","mode":"%s","status":"%s","duration_ms":%s}\n' \
+		"$card_id" "$track" "$phase" "$timestamp" "$agent" "$mode" "$status" "$duration_ms" \
+		>>"${OUTDIR}/execution_journal.jsonl"
 }
 
 # Parse the context_pack list from a phase YAML file.
