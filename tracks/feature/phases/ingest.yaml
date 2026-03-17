@@ -11,16 +11,18 @@ phase:
 
   tooling_hints:
     - Tratar `out/<CARD>/ingest/` como a origem primaria de insumos brutos quando existir.
-    - Preservar compatibilidade com `out/<CARD>/intake/` como fallback temporario durante a transicao.
 
   outputs:
     create_directories:
       - ingest
       - investigations
       - context
-    create_artifacts: []
+    create_artifacts: 
+      - investigations/00_intake.md
+      - investigations/_intake_provenance.md
 
   completion:
     strategy: required_artifacts_exist
     required_artifacts:
-      - ingest/sources.md
+      - investigations/00_intake.md
+      - investigations/_intake_provenance.md

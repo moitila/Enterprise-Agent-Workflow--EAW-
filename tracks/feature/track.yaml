@@ -13,13 +13,11 @@ track:
     create_directories:
       - ingest
       - investigations
-      - intake
       - context
     create_artifacts: []
 
   phases:
     - ingest
-    - intake
     - findings
     - hypotheses
     - planning
@@ -28,8 +26,6 @@ track:
 
   transitions:
     ingest:
-      next: intake
-    intake:
       next: findings
     findings:
       next: hypotheses
