@@ -1594,39 +1594,12 @@ eaw_phase_prompt_output_relpath() {
 	printf "prompts/%s.md\n" "$prompt_alias"
 }
 
-eaw_phase_prompt_legacy_paths() {
-	local prompt_alias
-	prompt_alias="$(eaw_normalize_phase_id "${1:-}")"
-	case "$prompt_alias" in
-	intake)
-		printf "investigations/intake_agent_prompt.round_%s.md\n" "${EAW_PHASE_PROMPT_ROUND:-1}"
-		;;
-	findings)
-		printf "investigations/findings_agent_prompt.md\n"
-		;;
-	hypotheses)
-		printf "investigations/hypotheses_agent_prompt.md\n"
-		;;
-	planning)
-		printf "investigations/planning_agent_prompt.md\n"
-		;;
-	implementation_planning)
-		printf "investigations/implementation_planning_agent_prompt.md\n"
-		printf "implementation/implementation_planning_agent_prompt.md\n"
-		;;
-	implementation_executor)
-		printf "investigations/implementation_executor_agent_prompt.md\n"
-		printf "implementation/implementation_executor_agent_prompt.md\n"
-		;;
-	esac
-}
-
 eaw_generate_phase_prompt_artifacts() {
 	local card="$1"
 	local card_dir="$EAW_OUT_DIR/$card"
 	local phase_id="${EAW_CARD_WORKFLOW_CURRENT_PHASE:-}"
 	local phase_file="${EAW_CARD_WORKFLOW_CURRENT_PHASE_FILE:-}"
-	local type template_file output_file legacy_file
+	local type template_file output_file
 	local repo_blocks target_repos excluded_repos
 	local prompt_alias prompt_phase prompt_relpath
 	local track_id step_id write_allowlist critical_paths runtime_environment tooling_hints context_pack_block
@@ -1670,15 +1643,6 @@ eaw_generate_phase_prompt_artifacts() {
 		prompt_relpath="$(eaw_phase_prompt_output_relpath "$prompt_alias")"
 		output_file="$card_dir/$prompt_relpath"
 		eaw_render_phase_prompt_template "$template_file" "$output_file" "${prompt_alias^^}" "$card" "$type" "$card_dir" "$target_repos" "$excluded_repos" "- none" "$track_id" "$step_id" "$write_allowlist" "$critical_paths" "$runtime_environment" "$tooling_hints" "$context_pack_block"
-
-		while IFS= read -r legacy_file; do
-			[[ -n "$legacy_file" ]] || continue
-			legacy_file="$card_dir/$legacy_file"
-			assert_write_scope "workflow_phase" "write compatibility prompt artifact" "$legacy_file" "$card_dir"
-			ensure_dir "$(dirname "$legacy_file")"
-			cp "$output_file" "$legacy_file"
-			echo "RUNTIME: wrote_prompt=${legacy_file#$card_dir/}"
-		done < <(eaw_phase_prompt_legacy_paths "$prompt_alias")
 	done
 }
 

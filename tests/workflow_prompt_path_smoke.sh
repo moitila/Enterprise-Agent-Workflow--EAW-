@@ -145,7 +145,7 @@ missing_track_workdir="$tmp_root/workdir-missing-track"
 init_workdir "$success_workdir"
 write_valid_card "$success_workdir" "537SUCCESS"
 write_official_track_card "$success_workdir" "538OFFICIAL" "standard" "findings" "intake"
-write_official_track_card "$success_workdir" "539FEATURE" "feature" "findings" "intake"
+write_official_track_card "$success_workdir" "539FEATURE" "feature" "findings" "ingest"
 write_official_track_card "$success_workdir" "539BUG" "bug" "findings" "intake"
 write_official_track_card "$success_workdir" "539SPIKE" "spike" "findings" "intake"
 
@@ -170,7 +170,7 @@ fi
 
 prompt_workdir="$tmp_root/workdir-prompts"
 init_workdir "$prompt_workdir"
-write_official_track_card_without_completed "$prompt_workdir" "544FEATURE" "feature" "findings" "intake"
+write_official_track_card_without_completed "$prompt_workdir" "544FEATURE" "feature" "findings" "ingest"
 write_official_track_card_without_completed "$prompt_workdir" "544STANDARD" "standard" "findings" "intake"
 
 feature_prompt_output="$(EAW_WORKDIR="$prompt_workdir" "$REPO_ROOT/scripts/eaw" next "544FEATURE" 2>&1)" || fail "expected feature findings prompt generation to pass"
@@ -178,6 +178,8 @@ standard_prompt_output="$(EAW_WORKDIR="$prompt_workdir" "$REPO_ROOT/scripts/eaw"
 
 feature_prompt="$prompt_workdir/out/544FEATURE/prompts/findings.md"
 standard_prompt="$prompt_workdir/out/544STANDARD/prompts/findings.md"
+feature_legacy_prompt="$prompt_workdir/out/544FEATURE/investigations/findings_agent_prompt.md"
+standard_legacy_prompt="$prompt_workdir/out/544STANDARD/investigations/findings_agent_prompt.md"
 
 grep -Fq "RUNTIME: wrote_prompt=prompts/findings.md" <<<"$feature_prompt_output" || fail "missing feature prompt artifact log"
 grep -Fq "RUNTIME: wrote_prompt=prompts/findings.md" <<<"$standard_prompt_output" || fail "missing standard prompt artifact log"
@@ -188,6 +190,8 @@ fi
 if grep -En '<CARD>|<WORKDIR>|<OUTDIR>|<TARGET_REPO>|\{\{CARD\}\}|\{\{EAW_WORKDIR\}\}|\{\{OUT_DIR\}\}|\{\{TARGET_REPOS\}\}' "$feature_prompt" >/dev/null; then
 	fail "feature prompt still contains unresolved tooling_hints placeholders"
 fi
+test ! -f "$feature_legacy_prompt" || fail "feature findings prompt should not be mirrored into investigations"
+test ! -f "$standard_legacy_prompt" || fail "standard findings prompt should not be mirrored into investigations"
 
 init_workdir "$failure_workdir"
 write_invalid_card "$failure_workdir" "537FAIL"

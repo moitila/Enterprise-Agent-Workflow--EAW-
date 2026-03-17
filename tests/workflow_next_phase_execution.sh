@@ -28,10 +28,7 @@ state_file="$workdir/out/$feature_card/state_card_feature.yaml"
 ingest_input_file="$workdir/out/$feature_card/ingest/sources.md"
 ingest_prompt_phase="$workdir/out/$feature_card/prompts/ingest.md"
 intake_file="$workdir/out/$feature_card/investigations/00_intake.md"
-intake_prompt="$workdir/out/$feature_card/investigations/intake_agent_prompt.round_1.md"
-intake_prompt_phase="$workdir/out/$feature_card/prompts/intake.md"
 findings_file="$workdir/out/$feature_card/investigations/20_findings.md"
-findings_prompt="$workdir/out/$feature_card/investigations/findings_agent_prompt.md"
 findings_prompt_phase="$workdir/out/$feature_card/prompts/findings.md"
 execution_log="$workdir/out/$feature_card/execution.log"
 
@@ -43,27 +40,17 @@ grep -Fq "phase_status: RUN" "$state_file" || fail "feature card should start in
 grep -Fq "completed_phases: []" "$state_file" || fail "feature card completed phases changed despite incomplete intake"
 [[ -f "$ingest_input_file" ]] || fail "card should materialize ingest input"
 [[ -f "$ingest_prompt_phase" ]] || fail "card should materialize phase-driven ingest prompt"
-# 00_intake.md is created by the intake phase execution, not by eaw card scaffold
-test ! -f "$intake_file" || fail "00_intake.md should not exist before ingest phase advances to intake"
-test ! -f "$intake_prompt" || fail "intake prompt should not exist before ingest advances"
-test ! -f "$intake_prompt_phase" || fail "phase-driven intake prompt should not exist before ingest advances"
+[[ -f "$intake_file" ]] || fail "00_intake.md should exist as an ingest-phase artifact scaffold"
+test ! -f "$workdir/out/$feature_card/prompts/intake.md" || fail "intake prompt should not exist in feature next flow before ingest completion"
+test ! -f "$workdir/out/$feature_card/investigations/intake_agent_prompt.round_1.md" || fail "legacy intake prompt should not exist before ingest advances"
 grep -Eq '^workflow_phase_ingest\|OK\|' "$execution_log" || fail "execution log missing workflow phase entry for ingest"
 
-next_output="$(EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" next "$feature_card" 2>&1)" || fail "feature next command should advance ingest to intake"
-grep -Fq "current_phase: intake" "$state_file" || fail "feature card should remain in intake while intake artifacts are unfilled"
-grep -Fq "    - ingest" "$state_file" || fail "feature card completed_phases missing ingest"
-grep -Fq "CARD $feature_card: ingest -> intake" <<<"$next_output" || fail "feature next output missing ingest transition summary"
-grep -Fq "RUNTIME: phase=intake action=phase_driven_execution" <<<"$next_output" || fail "feature next output missing intake phase execution summary"
-[[ -f "$intake_prompt" ]] || fail "card should materialize intake prompt after ingest"
-[[ -f "$intake_prompt_phase" ]] || fail "card should materialize phase-driven intake prompt after ingest"
-[[ -f "$intake_file" ]] || fail "card should materialize 00_intake.md after ingest advances to intake"
-
 next_output="$(EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" next "$feature_card" 2>&1)" || fail "feature next command should keep intake current while required artifacts are unfilled"
-grep -Fq "unfilled required artifacts: investigations/00_intake.md investigations/_intake_provenance.md" <<<"$next_output" || fail "feature next output missing unfilled intake gate"
-grep -Fq "CARD $feature_card: intake remains current; missing required artifacts" <<<"$next_output" || fail "feature next output missing remain-current summary"
-grep -Fq "current_phase: intake" "$state_file" || fail "feature card should remain in intake while intake artifacts are unfilled"
-test ! -f "$findings_prompt" || fail "findings prompt should not exist before intake artifacts are filled"
+grep -Fq "unfilled required artifacts: investigations/00_intake.md investigations/_intake_provenance.md" <<<"$next_output" || fail "feature next output missing unfilled ingest gate"
+grep -Fq "CARD $feature_card: ingest remains current; missing required artifacts" <<<"$next_output" || fail "feature next output missing remain-current summary"
+grep -Fq "current_phase: ingest" "$state_file" || fail "feature card should remain in ingest while ingest artifacts are unfilled"
 test ! -f "$findings_prompt_phase" || fail "phase-driven findings prompt should not exist before intake artifacts are filled"
+test ! -f "$workdir/out/$feature_card/investigations/findings_agent_prompt.md" || fail "legacy findings prompt should not exist before intake artifacts are filled"
 
 cat >>"$workdir/out/$feature_card/investigations/00_intake.md" <<'EOF'
 
@@ -75,21 +62,20 @@ cat >>"$workdir/out/$feature_card/investigations/_intake_provenance.md" <<'EOF'
 Fonte: teste automatizado.
 EOF
 
-next_output="$(EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" next "$feature_card" 2>&1)" || fail "feature next command failed after intake artifacts were filled"
+next_output="$(EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" next "$feature_card" 2>&1)" || fail "feature next command failed after ingest artifacts were filled"
 
 grep -Fq "current_phase: findings" "$state_file" || fail "feature card did not advance to findings"
-grep -Fq "previous_phase: intake" "$state_file" || fail "feature card previous_phase not updated"
+grep -Fq "previous_phase: ingest" "$state_file" || fail "feature card previous_phase not updated"
 grep -Eq '^  phase_started_at: [0-9]{4}-[0-9]{2}-[0-9]{2}T' "$state_file" || fail "feature next should stamp destination phase_started_at"
 grep -Fq "phase_completed: false" "$state_file" || fail "feature next should reset phase_completed to false"
 grep -Fq "phase_completed_at: null" "$state_file" || fail "feature next should reset phase_completed_at"
 grep -Fq "phase_status: RUN" "$state_file" || fail "feature next should set destination phase_status to RUN"
-grep -Fq "    - intake" "$state_file" || fail "feature card completed_phases missing intake"
+grep -Fq "    - ingest" "$state_file" || fail "feature card completed_phases missing ingest"
 [[ -f "$findings_file" ]] || fail "missing findings artifact after next"
-[[ -f "$findings_prompt" ]] || fail "missing findings prompt after next"
 [[ -f "$findings_prompt_phase" ]] || fail "missing phase-driven findings prompt after next"
-cmp -s "$findings_prompt" "$findings_prompt_phase" || fail "phase-driven findings prompt mismatch"
+test ! -f "$workdir/out/$feature_card/investigations/findings_agent_prompt.md" || fail "legacy findings prompt should not be mirrored into investigations"
 grep -Eq '^workflow_phase_findings\|OK\|' "$execution_log" || fail "execution log missing workflow phase entry for findings"
-grep -Fq "CARD $feature_card: intake -> findings" <<<"$next_output" || fail "next output missing transition summary"
+grep -Fq "CARD $feature_card: ingest -> findings" <<<"$next_output" || fail "next output missing transition summary"
 grep -Fq "RUNTIME: phase=findings action=phase_driven_execution" <<<"$next_output" || fail "next output missing phase execution summary"
 
 next_output="$(EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" next "$feature_card" 2>&1)" || fail "feature next command should keep findings current while findings is unfilled"
