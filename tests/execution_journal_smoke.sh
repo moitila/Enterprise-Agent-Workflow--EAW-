@@ -96,4 +96,35 @@ printf "#phase|status|duration_ms|note\n" >"$OUTDIR2/execution.log"
 run_phase "no_card_phase" true fn_success || fail "expected no-card phase to return 0"
 [[ ! -f "$OUTDIR2/execution_journal.jsonl" ]] || fail "journal must not be created without card context (H5)"
 
+# --- Assertion 9: duration_ms in phase_completed is a positive integer ---
+tmpdir5="$(mktemp -d)"
+trap 'rm -rf "$tmpdir5"' EXIT
+OUTDIR5="$tmpdir5/out"
+mkdir -p "$OUTDIR5"
+OUTDIR="$OUTDIR5"
+EAW_CARD_WORKFLOW_CARD="TEST_CARD"
+EAW_CARD_WORKFLOW_TRACK_ID="feature"
+printf "#phase|status|duration_ms|note\n" >"$OUTDIR5/execution.log"
+run_phase "duration_phase" true fn_success || fail "expected duration_phase to return 0"
+grep -qE '"event_type":"phase_completed"' "$OUTDIR5/execution_journal.jsonl" || fail "no phase_completed events found"
+grep -qE '"duration_ms":[1-9][0-9]*' "$OUTDIR5/execution_journal.jsonl" || fail "duration_ms must be a positive integer in phase_completed"
+
+# --- Assertion 10: duration_ms in phase_started is exactly 0 ---
+started_bad="$(grep '"event_type":"phase_started"' "$OUTDIR5/execution_journal.jsonl" | grep -v '"duration_ms":0' || true)"
+[ -z "$started_bad" ] || fail "duration_ms must be 0 in phase_started events"
+
+# --- Assertion 11: retry appends events without overwriting (append-only) ---
+tmpdir_retry="$(mktemp -d)"
+trap 'rm -rf "$tmpdir_retry"' EXIT
+OUTDIR_RETRY="$tmpdir_retry/out"
+mkdir -p "$OUTDIR_RETRY"
+OUTDIR="$OUTDIR_RETRY"
+EAW_CARD_WORKFLOW_CARD="TEST_CARD"
+EAW_CARD_WORKFLOW_TRACK_ID="feature"
+printf "#phase|status|duration_ms|note\n" >"$OUTDIR_RETRY/execution.log"
+run_phase "retry_phase" true fn_success || fail "expected first retry_phase run to return 0"
+run_phase "retry_phase" true fn_success || fail "expected second retry_phase run to return 0"
+line_count="$(wc -l <"$OUTDIR_RETRY/execution_journal.jsonl")"
+[ "$line_count" -ge 4 ] || fail "retry must accumulate events: expected >= 4 lines, got $line_count"
+
 printf "execution_journal smoke OK\n"

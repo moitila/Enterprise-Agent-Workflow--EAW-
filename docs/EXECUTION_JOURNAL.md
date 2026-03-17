@@ -45,6 +45,8 @@ Each phase execution produces one `phase_started` event followed by one `phase_c
 
 **`mode`:** Identifies how the phase was triggered. The value is read from the `EAW_MODE` environment variable; if unset, it defaults to `"phase_driven"`. Known values: `"phase_driven"` (triggered by `eaw next`, default), `"manual"` (triggered directly by a human operator), `"ci"` (triggered by a CI pipeline). Additional values may be introduced by callers.
 
+**`duration_ms`:** Phase duration in milliseconds. Calculated as the difference between two `date +%s%3N` timestamps (milliseconds since Unix epoch) captured immediately before and after the phase function call in `run_phase`. In `phase_started` events, the value is hardcoded to `0` because the phase has not yet executed — `0` acts as a sentinel indicating duration not yet known. In `phase_completed` events, the value reflects the actual elapsed time. Because the journal is append-only, each retry of the same phase appends new `phase_started` and `phase_completed` events without overwriting previous ones; consumers should treat each event pair independently when analyzing per-attempt duration.
+
 ## File Path
 
 ```
