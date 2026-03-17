@@ -41,9 +41,9 @@ Each phase execution produces one `phase_started` event followed by one `phase_c
 
 ## Semantics
 
-**`agent`:** Identifies the entity responsible for writing the event. In this version, only the EAW runtime writes journal events, so the value is always `"runtime"`. Future versions may introduce agent-specific values (e.g., AI-assisted phases with a named agent identity).
+**`agent`:** Identifies the entity responsible for writing the event. The value is read from the `EAW_AGENT` environment variable; if unset, it defaults to `"runtime"`. Known values: `"runtime"` (EAW runtime, default), `"unknown"` (context not determinable). Additional values may be introduced by callers (e.g., an AI agent identity such as `"claude-sonnet"`).
 
-**`mode`:** Identifies how the phase was triggered. In this version, all phases are triggered by the `eaw next` phase-driven lifecycle, so the value is always `"phase_driven"`. Future versions may introduce other modes (e.g., `"manual"`, `"replay"`).
+**`mode`:** Identifies how the phase was triggered. The value is read from the `EAW_MODE` environment variable; if unset, it defaults to `"phase_driven"`. Known values: `"phase_driven"` (triggered by `eaw next`, default), `"manual"` (triggered directly by a human operator), `"ci"` (triggered by a CI pipeline). Additional values may be introduced by callers.
 
 ## File Path
 
@@ -58,7 +58,8 @@ The file is created on demand the first time a phase is executed for a given car
 - New fields may be added to future events without breaking existing readers.
 - Existing required fields will not be removed in patch versions.
 - Readers must ignore unknown fields.
-- The `agent` and `mode` fields will be extended with new values in future versions; readers must not treat the current fixed values as exhaustive.
+- The `agent` field is configurable via `EAW_AGENT` (default: `"runtime"`); readers must not treat the default value as exhaustive.
+- The `mode` field is configurable via `EAW_MODE` (default: `"phase_driven"`); readers must not treat the default value as exhaustive.
 - **Schema v1 compatibility:** Events written before schema v2 (card 565) do not have `event_type`. Readers must treat absent `event_type` as a legacy `phase_completed` equivalent and must not reject v1 events.
 
 ## Invariants

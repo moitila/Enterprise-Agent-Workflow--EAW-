@@ -1056,8 +1056,8 @@ eaw_journal_append() {
 	[[ -n "${OUTDIR:-}" && -n "${card_id:-}" ]] || return 0
 	local timestamp agent mode
 	timestamp="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-	agent="runtime"
-	mode="phase_driven"
+	agent="${EAW_AGENT:-runtime}"
+	mode="${EAW_MODE:-phase_driven}"
 	printf '{"card_id":"%s","track":"%s","phase":"%s","timestamp":"%s","agent":"%s","mode":"%s","status":"%s","duration_ms":%s,"event_type":"%s"}\n' \
 		"$card_id" "$track" "$phase" "$timestamp" "$agent" "$mode" "$status" "$duration_ms" "$event_type" \
 		>>"${OUTDIR}/execution_journal.jsonl"

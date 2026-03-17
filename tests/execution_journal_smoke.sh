@@ -42,6 +42,39 @@ grep -q '"timestamp"' "$OUTDIR/execution_journal.jsonl" || fail "missing field t
 grep -q '"agent"' "$OUTDIR/execution_journal.jsonl" || fail "missing field agent"
 grep -q '"mode"' "$OUTDIR/execution_journal.jsonl" || fail "missing field mode"
 
+# --- Assertion 6: agent and mode values are non-empty ---
+grep -q '"agent":""' "$OUTDIR/execution_journal.jsonl" && fail "agent value must not be empty"
+grep -q '"mode":""' "$OUTDIR/execution_journal.jsonl" && fail "mode value must not be empty"
+
+# --- Assertion 7: EAW_AGENT is reflected in agent field when set ---
+tmpdir3="$(mktemp -d)"
+trap 'rm -rf "$tmpdir3"' EXIT
+OUTDIR3="$tmpdir3/out"
+mkdir -p "$OUTDIR3"
+OUTDIR="$OUTDIR3"
+EAW_CARD_WORKFLOW_CARD="TEST_CARD"
+EAW_CARD_WORKFLOW_TRACK_ID="feature"
+EAW_AGENT="probe-agent"
+EAW_MODE="probe-mode"
+printf "#phase|status|duration_ms|note\n" >"$OUTDIR3/execution.log"
+run_phase "probe_phase" true fn_success || fail "expected probe phase to return 0"
+grep -q '"agent":"probe-agent"' "$OUTDIR3/execution_journal.jsonl" || fail "EAW_AGENT not reflected in agent field"
+grep -q '"mode":"probe-mode"' "$OUTDIR3/execution_journal.jsonl" || fail "EAW_MODE not reflected in mode field"
+unset EAW_AGENT EAW_MODE
+
+# --- Assertion 8: fallback values used when EAW_AGENT/EAW_MODE are unset ---
+tmpdir4="$(mktemp -d)"
+trap 'rm -rf "$tmpdir4"' EXIT
+OUTDIR4="$tmpdir4/out"
+mkdir -p "$OUTDIR4"
+OUTDIR="$OUTDIR4"
+EAW_CARD_WORKFLOW_CARD="TEST_CARD"
+EAW_CARD_WORKFLOW_TRACK_ID="feature"
+printf "#phase|status|duration_ms|note\n" >"$OUTDIR4/execution.log"
+run_phase "fallback_phase" true fn_success || fail "expected fallback phase to return 0"
+grep -q '"agent":"runtime"' "$OUTDIR4/execution_journal.jsonl" || fail "agent fallback must be runtime when EAW_AGENT is unset"
+grep -q '"mode":"phase_driven"' "$OUTDIR4/execution_journal.jsonl" || fail "mode fallback must be phase_driven when EAW_MODE is unset"
+
 # --- Assertion 4: execution.log still has 4 columns (no regression) ---
 while IFS= read -r logline; do
     [[ -z "$logline" ]] && continue
