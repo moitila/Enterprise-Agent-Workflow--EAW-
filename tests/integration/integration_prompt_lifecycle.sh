@@ -121,36 +121,36 @@ for phase in "${phases[@]}"; do
 done
 
 default_intake_dir="$EAW_WORKDIR/templates/prompts/default/intake"
-"$REPO_ROOT/scripts/eaw" card 499 --track feature "Invalid active prompt guardrail" >/dev/null
-rm -f "$EAW_WORKDIR/out/499/investigations/intake_agent_prompt.round_1.md"
+"$REPO_ROOT/scripts/eaw" card 499 --track standard "Invalid active prompt guardrail" >/dev/null
+rm -f "$EAW_WORKDIR/out/499/prompts/intake.md"
 printf "v999\n" >"$default_intake_dir/ACTIVE"
 set +e
 "$REPO_ROOT/scripts/eaw" intake 499 --round=1 >/dev/null 2>&1
 rc=$?
 set -e
 [[ "$rc" -ne 0 ]]
-test ! -f "$EAW_WORKDIR/out/499/investigations/intake_agent_prompt.round_1.md"
+test ! -f "$EAW_WORKDIR/out/499/prompts/intake.md"
 printf "v2\n" >"$default_intake_dir/ACTIVE"
 
-"$REPO_ROOT/scripts/eaw" card 500 --track feature "Prompt lifecycle integration" >/dev/null
+"$REPO_ROOT/scripts/eaw" card 500 --track standard "Prompt lifecycle integration" >/dev/null
 "$REPO_ROOT/scripts/eaw" intake 500 --round=1 >/dev/null
 "$REPO_ROOT/scripts/eaw" analyze 500 >/dev/null
 "$REPO_ROOT/scripts/eaw" implement 500 >/dev/null
 
-test -f "$EAW_WORKDIR/out/500/investigations/intake_agent_prompt.round_1.md"
-test -f "$EAW_WORKDIR/out/500/investigations/findings_agent_prompt.md"
-test -f "$EAW_WORKDIR/out/500/investigations/hypotheses_agent_prompt.md"
-test -f "$EAW_WORKDIR/out/500/investigations/planning_agent_prompt.md"
-test -f "$EAW_WORKDIR/out/500/investigations/implementation_planning_agent_prompt.md"
-test -f "$EAW_WORKDIR/out/500/investigations/implementation_executor_agent_prompt.md"
+test -f "$EAW_WORKDIR/out/500/prompts/intake.md"
+test -f "$EAW_WORKDIR/out/500/prompts/findings.md"
+test -f "$EAW_WORKDIR/out/500/prompts/hypotheses.md"
+test -f "$EAW_WORKDIR/out/500/prompts/planning.md"
+test -f "$EAW_WORKDIR/out/500/prompts/implementation_planning.md"
+test -f "$EAW_WORKDIR/out/500/prompts/implementation_executor.md"
 
-[[ "$(sed -n '1p' "$EAW_WORKDIR/out/500/investigations/intake_agent_prompt.round_1.md")" == "RUNTIME_ENVIRONMENT" ]]
-grep -F "ACTIVE_BINDING_OK default/intake v2" "$EAW_WORKDIR/out/500/investigations/intake_agent_prompt.round_1.md" >/dev/null
-grep -F "ACTIVE_BINDING_OK default/analyze_findings v2" "$EAW_WORKDIR/out/500/investigations/findings_agent_prompt.md" >/dev/null
-grep -F "ACTIVE_BINDING_OK default/analyze_hypotheses v2" "$EAW_WORKDIR/out/500/investigations/hypotheses_agent_prompt.md" >/dev/null
-grep -F "ACTIVE_BINDING_OK default/analyze_planning v2" "$EAW_WORKDIR/out/500/investigations/planning_agent_prompt.md" >/dev/null
-grep -F "ACTIVE_BINDING_OK default/implementation_planning v2" "$EAW_WORKDIR/out/500/investigations/implementation_planning_agent_prompt.md" >/dev/null
-grep -F "ACTIVE_BINDING_OK default/implementation_executor v2" "$EAW_WORKDIR/out/500/investigations/implementation_executor_agent_prompt.md" >/dev/null
+[[ "$(sed -n '1p' "$EAW_WORKDIR/out/500/prompts/intake.md")" == "RUNTIME_ENVIRONMENT" ]]
+grep -F "ACTIVE_BINDING_OK default/intake v2" "$EAW_WORKDIR/out/500/prompts/intake.md" >/dev/null
+grep -F "ACTIVE_BINDING_OK default/analyze_findings v2" "$EAW_WORKDIR/out/500/prompts/findings.md" >/dev/null
+grep -F "ACTIVE_BINDING_OK default/analyze_hypotheses v2" "$EAW_WORKDIR/out/500/prompts/hypotheses.md" >/dev/null
+grep -F "ACTIVE_BINDING_OK default/analyze_planning v2" "$EAW_WORKDIR/out/500/prompts/planning.md" >/dev/null
+grep -F "ACTIVE_BINDING_OK default/implementation_planning v2" "$EAW_WORKDIR/out/500/prompts/implementation_planning.md" >/dev/null
+grep -F "ACTIVE_BINDING_OK default/implementation_executor v2" "$EAW_WORKDIR/out/500/prompts/implementation_executor.md" >/dev/null
 
 provenance_file="$EAW_WORKDIR/out/500/provenance/prompts_used.yaml"
 test -f "$provenance_file"

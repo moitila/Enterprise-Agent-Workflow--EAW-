@@ -3,7 +3,7 @@
 prompt_is_known_section() {
 	local section="$1"
 	case "$section" in
-	ROLE | OBJECTIVE | INPUT | OUTPUT | READ_SCOPE | WRITE_SCOPE | FORBIDDEN | FAIL_CONDITIONS | RULES)
+	ROLE | OBJECTIVE | INPUT | OUTPUT | READ_SCOPE | WRITE_SCOPE | FORBIDDEN | FAIL_CONDITIONS | RULES | CONTEXT_USAGE)
 		return 0
 		;;
 	esac

@@ -79,6 +79,7 @@ Outputs
   - `investigations/40_next_steps.md` — next-steps stage scaffold
   - `prompts/<prompt_alias>.md` — phase-driven prompt file generated from `outputs.prompts`; the filename matches the declared alias exactly
   - `execution.log` — phase execution log with format `phase|status|duration_ms|note`
+  - `execution_journal.jsonl` — structured Execution Journal in JSON Lines format; one event per phase execution with fields `card_id`, `track`, `phase`, `timestamp`, `agent`, `mode`, `status`, `duration_ms`; schema documented in `docs/EXECUTION_JOURNAL.md`
   - `TEST_PLAN_<CARD>.md` — placeholder test plan
   - `context/<repoKey>/` — per-repo metadata files (git-branch.txt, git-commit.txt, changed-files.txt, git-diff.patch, git-status.txt)
   - `context/<repoKey>/_warnings.txt` — optional; contains best-effort collection warnings (created only on tolerated failures)

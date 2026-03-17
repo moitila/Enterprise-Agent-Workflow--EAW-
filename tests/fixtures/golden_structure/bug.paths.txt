@@ -7,13 +7,13 @@ out/940102/context/local-main/git-diff.patch
 out/940102/context/local-main/git-status.txt
 out/940102/context/local-main/rg-symbols.txt
 out/940102/execution.log
-out/940102/state_card_bug.yaml
+out/940102/execution_journal.jsonl
 out/940102/investigations/00_intake.md
 out/940102/investigations/10_baseline.md
 out/940102/investigations/20_findings.md
 out/940102/investigations/30_hypotheses.md
 out/940102/investigations/40_next_steps.md
 out/940102/investigations/_intake_provenance.md
-out/940102/investigations/intake_agent_prompt.round_1.md
 out/940102/prompts/intake.md
 out/940102/provenance/prompts_used.yaml
+out/940102/state_card_bug.yaml

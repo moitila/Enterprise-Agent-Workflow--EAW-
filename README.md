@@ -93,6 +93,7 @@ bash ./scripts/eaw card 999999 --track bug "Smoke test"
 - `out/<CARD>/investigations/40_next_steps.md` — final diagnosis, risks, and action plan
 - `out/<CARD>/prompts/<prompt_alias>.md` — phase-driven prompt artifact generated from `outputs.prompts`; the file name matches the declared alias exactly
 - `out/<CARD>/execution.log` — deterministic phase execution log (`phase|status|duration_ms|note`)
+- `out/<CARD>/execution_journal.jsonl` — structured Execution Journal in JSON Lines; one event per phase with fields `card_id`, `track`, `phase`, `timestamp`, `agent`, `mode`, `status`, `duration_ms` (see `docs/EXECUTION_JOURNAL.md`)
 - `out/<CARD>/context/<repoKey>/git-status.txt` — git status
 - `out/<CARD>/context/<repoKey>/git-diff.patch` — diff
 

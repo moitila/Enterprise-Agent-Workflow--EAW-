@@ -68,20 +68,21 @@ fi
 grep -Fq "./scripts/eaw init --workdir \"$invalid_workdir\"" <<<"$scenario_c_output" || fail "scenario C missing recommended action"
 assert_no_repo_residue "$card_workdir_invalid"
 
-# Scenario D: missing ingest/ and intake/ after feature card scaffold
+# Scenario D: missing ingest output artifacts after feature card scaffold
+# Verifies that eaw next detects unfilled required artifacts for the ingest phase.
 scenario_d_workdir="$tmpdir/scenario-d-workdir"
 ./scripts/eaw init --workdir "$scenario_d_workdir" --force >/dev/null
 EAW_WORKDIR="$scenario_d_workdir" ./scripts/eaw card "$card_ingest_and_intake_missing" --track feature >/dev/null 2>&1
-rm -rf "$scenario_d_workdir/out/$card_ingest_and_intake_missing/ingest"
-rm -rf "$scenario_d_workdir/out/$card_ingest_and_intake_missing/intake"
+rm -f "$scenario_d_workdir/out/$card_ingest_and_intake_missing/investigations/00_intake.md"
+rm -f "$scenario_d_workdir/out/$card_ingest_and_intake_missing/investigations/_intake_provenance.md"
 
 set +e
-scenario_d_output="$(EAW_WORKDIR="$scenario_d_workdir" ./scripts/eaw intake "$card_ingest_and_intake_missing" --round=1 2>&1)"
+scenario_d_output="$(EAW_WORKDIR="$scenario_d_workdir" ./scripts/eaw next "$card_ingest_and_intake_missing" 2>&1)"
 scenario_d_rc=$?
 set -e
 
-[[ $scenario_d_rc -ne 0 ]] || fail "scenario D expected non-zero exit code"
-grep -Fq "missing required artifacts: ingest/sources.md" <<<"$scenario_d_output" || fail "scenario D missing expected ingest artifact failure"
+[[ $scenario_d_rc -eq 0 ]] || fail "scenario D expected zero exit code (unfilled artifacts are non-fatal)"
+grep -Fq "ingest remains current; missing required artifacts" <<<"$scenario_d_output" || fail "scenario D missing expected ingest artifact message"
 assert_no_repo_residue "$card_ingest_and_intake_missing"
 
 printf "OK\n"
