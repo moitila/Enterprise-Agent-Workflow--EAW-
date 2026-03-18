@@ -44,33 +44,6 @@ eaw_normalize_phase_id() {
 	esac
 }
 
-eaw_phase_prompt_phase() {
-	local phase
-	phase="$(eaw_normalize_phase_id "${1:-}")"
-	case "$phase" in
-	ingest)
-		printf "intake\n"
-		;;
-	intake)
-		printf "intake\n"
-		;;
-	findings)
-		printf "analyze_findings\n"
-		;;
-	hypotheses)
-		printf "analyze_hypotheses\n"
-		;;
-	planning)
-		printf "analyze_planning\n"
-		;;
-	implementation_planning | implementation_executor)
-		printf "%s\n" "$phase"
-		;;
-	*)
-		return 1
-		;;
-	esac
-}
 
 eaw_normalize_prompt_phase_id() {
 	local phase="${1:-}"
@@ -1601,9 +1574,19 @@ eaw_generate_phase_prompt_artifacts() {
 	local phase_file="${EAW_CARD_WORKFLOW_CURRENT_PHASE_FILE:-}"
 	local type template_file output_file
 	local repo_blocks target_repos excluded_repos
-	local prompt_alias prompt_phase prompt_relpath
+	local prompt_alias prompt_relpath
 	local track_id step_id write_allowlist critical_paths runtime_environment tooling_hints context_pack_block
+	local prompt_track prompt_phase
 	local -a declared_prompts=()
+
+	# phase.prompt.path is the source of truth for track and phase.
+	# Both are resolved at workflow context load time and available here.
+	prompt_track="${EAW_CARD_WORKFLOW_CURRENT_PROMPT_TRACK:-}"
+	prompt_phase="${EAW_CARD_WORKFLOW_CURRENT_PROMPT_PHASE:-}"
+	if [[ -z "$prompt_track" || -z "$prompt_phase" ]]; then
+		echo "ERROR: prompt track/phase not resolved for phase '$phase_id'; workflow context must be loaded before generating prompts" >&2
+		return 1
+	fi
 
 	type="$(eaw_detect_card_template_type "$card" "$card_dir")"
 	repo_blocks="$(collect_repos_lists)"
@@ -1621,10 +1604,6 @@ eaw_generate_phase_prompt_artifacts() {
 		declared_prompts=("$phase_id")
 	fi
 
-	# Tracks that emit agent prompts are represented in the runtime by
-	# phase.outputs.prompts or, when omitted, by the current phase id fallback.
-	# This keeps prompt emission compatible with YAML steps equivalent to
-	# steps[].type == ai_prompt or steps[].runtime == agent.
 	track_id="${EAW_CARD_WORKFLOW_TRACK_ID:-$type}"
 	step_id="${EAW_CARD_WORKFLOW_CURRENT_PHASE:-$phase_id}"
 	write_allowlist="$(eaw_card_write_allowlist_block "$card_dir")"
@@ -1635,11 +1614,7 @@ eaw_generate_phase_prompt_artifacts() {
 
 	for prompt_alias in "${declared_prompts[@]}"; do
 		prompt_alias="$(eaw_normalize_phase_id "$prompt_alias")"
-		if ! prompt_phase="$(eaw_phase_prompt_phase "$prompt_alias")"; then
-			echo "ERROR: unsupported prompt alias '$prompt_alias' declared for phase '$phase_id'" >&2
-			return 1
-		fi
-		template_file="$(load_prompt "default" "$prompt_phase" "$card" "$EAW_OUT_DIR")" || return 1
+		template_file="$(load_prompt "$prompt_track" "$prompt_phase" "$card" "$EAW_OUT_DIR")" || return 1
 		prompt_relpath="$(eaw_phase_prompt_output_relpath "$prompt_alias")"
 		output_file="$card_dir/$prompt_relpath"
 		eaw_render_phase_prompt_template "$template_file" "$output_file" "${prompt_alias^^}" "$card" "$type" "$card_dir" "$target_repos" "$excluded_repos" "- none" "$track_id" "$step_id" "$write_allowlist" "$critical_paths" "$runtime_environment" "$tooling_hints" "$context_pack_block"

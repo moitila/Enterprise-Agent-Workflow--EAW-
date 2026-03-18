@@ -44,6 +44,9 @@ copy_workspace_nested_templates() {
 	local overwrite="$3"
 	local rel src dst dst_parent
 	local nested_templates=(
+		"prompts/default/ingest/prompt_v1.md"
+		"prompts/default/ingest/prompt_v1.meta"
+		"prompts/default/ingest/ACTIVE"
 		"prompts/default/intake/prompt_v1.md"
 		"prompts/default/intake/prompt_v1.meta"
 		"prompts/default/intake/ACTIVE"

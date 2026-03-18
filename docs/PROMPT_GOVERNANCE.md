@@ -51,28 +51,40 @@ Referências concretas:
 - `out/<CARD>/provenance/prompts_used.yaml`
 
 ## Resolution Flow
+
 Fluxo completo de resolução até provenance:
-1. O comando de fase chama `load_prompt`.
-2. `load_prompt` chama `prompt_resolve_active_metadata`.
-3. O valor de `ACTIVE` determina `prompt_vN.md` efetivo.
-4. O caminho de prompt resolvido e retornado para a fase chamadora.
-5. O sistema registra provenance em `prompts_used.yaml`.
+
+1. O runtime lê `phase.prompt.path` do YAML da fase (fonte de verdade para track e template).
+2. `eaw_prompt_binding_from_path` deriva `track` e `phase` do path declarado.
+3. `load_prompt "<track>" "<phase>"` é chamado com os valores derivados.
+4. `prompt_resolve_active_metadata` usa `ACTIVE` para determinar `prompt_vN.md` efetivo.
+5. O template é renderizado com placeholders do runtime.
+6. O artefato de saída é gravado em `out/<CARD>/prompts/<alias>.md` (naming próprio de saída).
+7. O sistema registra provenance em `prompts_used.yaml`.
 
 ### Prompt Resolution Model
-Command (intake/analyze/implement)
+
+```text
+phase.prompt.path (YAML da fase — fonte de verdade)
 ↓
-load_prompt
+eaw_prompt_binding_from_path → track + phase
 ↓
-ACTIVE
+load_prompt(track, phase)
 ↓
-prompt_vN.md
+ACTIVE → prompt_vN.md
 ↓
-Execution
+Render + Write to prompts/{alias}.md
 ↓
 Provenance Log
+```
 
 ## Architectural Decisions
-- `ACTIVE` é a fonte de binding operacional atual.
+
+- `phase.prompt.path` é a fonte de verdade para qual track e template são usados na renderização.
+- O nome/path do artefato gerado (`prompts/<alias>.md`) é determinado pelo alias da fase, não pelo path declarado.
+- O track nunca é inferido por alias fixo quando `phase.prompt.path` está declarado.
+- O fallback para track `default` ocorre apenas quando `phase.prompt.path` está ausente ou indecifrável; nunca silenciosamente.
+- `ACTIVE` é o binding operacional de versão dentro de cada track/phase.
 - `registry.yaml` não define binding em runtime nesta fase.
 - A provenance deve registrar o prompt efetivamente utilizado na execução.
 

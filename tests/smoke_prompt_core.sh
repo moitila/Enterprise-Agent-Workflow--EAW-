@@ -57,7 +57,7 @@ test -d "$EAW_WORKDIR/out/501/investigations"
 "$REPO_ROOT/scripts/eaw" next 501 >/dev/null
 feature_prompt="$EAW_WORKDIR/out/501/prompts/ingest.md"
 test -f "$feature_prompt"
-grep -F 'EVIDENCIAS=`out/<CARD>/ingest/** (primario)`, fallback=`out/<CARD>/intake/**`' "$feature_prompt" >/dev/null
+grep -F 'INGEST_DIR=`out/<CARD>/ingest/`' "$feature_prompt" >/dev/null
 grep -F "Ler \`$EAW_WORKDIR/out/501/ingest\` quando existir." "$feature_prompt" >/dev/null
 grep -F "Ler \`$EAW_WORKDIR/out/501/intake\` apenas como fallback compativel quando \`$EAW_WORKDIR/out/501/ingest\` nao existir." "$feature_prompt" >/dev/null
 
