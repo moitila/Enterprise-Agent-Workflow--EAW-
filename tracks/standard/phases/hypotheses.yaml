@@ -7,7 +7,7 @@ phase:
 
   prompt:
     active: 1
-    path: templates/prompts/default/hypotheses/prompt_v<active>.md
+    path: templates/prompts/default/analyze_hypotheses/prompt_v<active>.md
 
   outputs:
     create_directories: []

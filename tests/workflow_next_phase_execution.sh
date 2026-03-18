@@ -117,7 +117,7 @@ cat >"$custom_intake/phase_analysis.yaml" <<'EOF'
 phase:
   id: analysis
   prompt:
-    path: templates/prompts/default/findings/prompt_v<active>.md
+    path: templates/prompts/default/analyze_findings/prompt_v<active>.md
 
   outputs:
     create_directories: []
@@ -131,7 +131,7 @@ cat >"$custom_intake/phase_code_review.yaml" <<'EOF'
 phase:
   id: code_review
   prompt:
-    path: templates/prompts/default/findings/prompt_v<active>.md
+    path: templates/prompts/default/analyze_findings/prompt_v<active>.md
 
   outputs:
     create_directories:
@@ -186,7 +186,7 @@ cat >"$missing_intake/phase_analysis.yaml" <<'EOF'
 phase:
   id: analysis
   prompt:
-    path: templates/prompts/default/findings/prompt_v<active>.md
+    path: templates/prompts/default/analyze_findings/prompt_v<active>.md
 
   outputs:
     create_directories: []
@@ -201,7 +201,7 @@ cat >"$missing_intake/phase_code_review.yaml" <<'EOF'
 phase:
   id: code_review
   prompt:
-    path: templates/prompts/default/findings/prompt_v<active>.md
+    path: templates/prompts/default/analyze_findings/prompt_v<active>.md
 
   outputs:
     create_directories: []
@@ -248,7 +248,7 @@ cat >"$unsupported_intake/phase_analysis.yaml" <<'EOF'
 phase:
   id: analysis
   prompt:
-    path: templates/prompts/default/findings/prompt_v<active>.md
+    path: templates/prompts/default/analyze_findings/prompt_v<active>.md
 
   outputs:
     create_directories: []
@@ -261,7 +261,7 @@ cat >"$unsupported_intake/phase_code_review.yaml" <<'EOF'
 phase:
   id: code_review
   prompt:
-    path: templates/prompts/default/findings/prompt_v<active>.md
+    path: templates/prompts/default/analyze_findings/prompt_v<active>.md
 
   outputs:
     create_directories: []

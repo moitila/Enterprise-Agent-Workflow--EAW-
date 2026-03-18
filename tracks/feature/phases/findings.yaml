@@ -12,7 +12,7 @@ phase:
 
   prompt:
     active: 1
-    path: templates/prompts/default/findings/prompt_v<active>.md
+    path: templates/prompts/default/analyze_findings/prompt_v<active>.md
 
   tooling_hints:
     - Ler somente `<CARD_DIR>` e TARGET_REPOS em modo read-only.

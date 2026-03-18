@@ -45,24 +45,6 @@ eaw_normalize_phase_id() {
 }
 
 
-eaw_normalize_prompt_phase_id() {
-	local phase="${1:-}"
-	phase="$(eaw_normalize_phase_id "$phase")"
-	case "$phase" in
-	findings)
-		printf "analyze_findings\n"
-		;;
-	hypotheses)
-		printf "analyze_hypotheses\n"
-		;;
-	planning)
-		printf "analyze_planning\n"
-		;;
-	*)
-		printf "%s\n" "$phase"
-		;;
-	esac
-}
 
 eaw_yaml_trim() {
 	local value="${1:-}"
@@ -298,7 +280,7 @@ eaw_prompt_binding_from_path() {
 		return 1
 	fi
 
-	phase="$(eaw_normalize_prompt_phase_id "$raw_phase")"
+	phase="$(eaw_normalize_phase_id "$raw_phase")"
 	printf "track=%s\n" "$track"
 	printf "phase=%s\n" "$phase"
 }

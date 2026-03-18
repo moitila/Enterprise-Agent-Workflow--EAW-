@@ -44,7 +44,7 @@ EOF
 phase:
   id: analysis
   prompt:
-    path: templates/prompts/default/findings/prompt_v<active>.md
+    path: templates/prompts/default/analyze_findings/prompt_v<active>.md
 EOF
 }
 
@@ -159,7 +159,7 @@ grep -Fq "track_id: spike" "$success_workdir/out/540SPIKE/state_card_spike.yaml"
 
 success_output="$(EAW_WORKDIR="$success_workdir" "$REPO_ROOT/scripts/eaw" validate 2>&1)" || fail "expected success validate to pass"
 grep -Fq "current_phase=analysis prompt_phase=analyze_findings" <<<"$success_output" || fail "missing prompt_phase derived from prompt.path in success output"
-grep -Fq "prompt_path=templates/prompts/default/findings/prompt_v<active>.md" <<<"$success_output" || fail "missing prompt_path in success output"
+grep -Fq "prompt_path=templates/prompts/default/analyze_findings/prompt_v<active>.md" <<<"$success_output" || fail "missing prompt_path in success output"
 grep -Fq "workflow card=538OFFICIAL track=standard current_phase=findings prompt_phase=analyze_findings" <<<"$success_output" || fail "missing official track validation summary"
 grep -Fq "workflow card=539FEATURE track=feature current_phase=findings prompt_phase=analyze_findings" <<<"$success_output" || fail "missing feature track validation summary"
 grep -Fq "workflow card=539BUG track=bug current_phase=findings prompt_phase=analyze_findings" <<<"$success_output" || fail "missing bug track validation summary"
