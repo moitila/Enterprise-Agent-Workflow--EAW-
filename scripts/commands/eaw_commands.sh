@@ -389,7 +389,7 @@ eaw_official_track_dir() {
 	if [[ -z "$track_id" || ! -d "$track_dir" ]]; then
 		return 1
 	fi
-	if [[ -f "$tracks_registry" ]] && ! grep -qF "  - track_id: ${track_id}" "$tracks_registry"; then
+	if [[ -f "$tracks_registry" ]] && ! awk -v id="$track_id" '/track_id:/ && $3 == id { found=1 } END { exit !found }' "$tracks_registry"; then
 		return 1
 	fi
 	printf "%s\n" "$track_dir"
