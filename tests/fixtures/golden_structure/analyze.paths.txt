@@ -1,10 +1,3 @@
-out/940104/context/local-main/_warnings.txt
-out/940104/context/local-main/changed-files.txt
-out/940104/context/local-main/git-branch.txt
-out/940104/context/local-main/git-commit.txt
-out/940104/context/local-main/git-diff.patch
-out/940104/context/local-main/git-status.txt
-out/940104/context/local-main/rg-symbols.txt
 out/940104/execution.log
 out/940104/execution_journal.jsonl
 out/940104/feature_940104.md

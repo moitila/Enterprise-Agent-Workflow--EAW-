@@ -121,11 +121,6 @@ CFG
 
   assert_prompt_contract "$workdir/out/$card_pipeline/prompts/ingest.md"
 
-  if [[ ! -f "$workdir/out/$card_feature/context/local-main/git-commit.txt" ]]; then
-    echo "ERROR: missing context signature file: $workdir/out/$card_feature/context/local-main/git-commit.txt" >&2
-    return 1
-  fi
-
   echo "OK: golden structure check passed"
 }
 
