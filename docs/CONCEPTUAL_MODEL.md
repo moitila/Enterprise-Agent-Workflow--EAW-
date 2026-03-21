@@ -78,6 +78,7 @@ This makes prompt selection observable and versioned instead of implicit.
 
 Context is collected from target repositories into `out/<CARD>/context/<repoKey>/`.
 This keeps AI inputs bounded and reviewable.
+> **Standby**: context collection is currently disabled. This section describes the intended design and is reserved for future activation.
 
 ### Artifacts
 

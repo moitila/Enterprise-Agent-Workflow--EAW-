@@ -38,7 +38,7 @@ The architecture is intentionally contract-first: internal modularization must n
 Public output surface:
 - dossier: `out/<CARD>/<type>_<CARD>.md` (deterministic compatibility filename; primary workflow classification remains `track` / `card_state.track_id`)
 - staged investigations: `out/<CARD>/investigations/*.md`
-- contextual evidence: `out/<CARD>/context/<repoKey>/...`
+- contextual evidence: `out/<CARD>/context/<repoKey>/...` (**standby**: context engine disabled; not collected at runtime)
 - phase telemetry: `out/<CARD>/execution.log`
 
 Compatibility rule:
@@ -48,7 +48,7 @@ Compatibility rule:
 ## Operational Constraints
 
 - `repos.conf` defines repositories and roles (`target`/`infra`).
-- Only `target` repos are collected under `context/`.
+- Only `target` repos are collected under `context/` (**standby**: collection currently disabled).
 - Best-effort collector failures are logged in `_warnings.txt` and do not fail the full run by default.
 - Fatal errors remain explicit and non-zero.
 

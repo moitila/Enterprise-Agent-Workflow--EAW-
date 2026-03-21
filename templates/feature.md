@@ -37,7 +37,7 @@ Open questions for stakeholders.
 
 # Evidence
 
-References to context files in `context/`.
+References to evidence collected during investigation.
 
 ## Inputs
 - User reports:
