@@ -707,8 +707,14 @@ phase_init_runtime() {
 	local tpl
 	tpl="$EAW_TEMPLATES_DIR/$(echo "$type" | tr '[:upper:]' '[:lower:]').md"
 	if [[ ! -f "$tpl" ]]; then
-		echo "Template not found: $tpl" >&2
-		return 1
+		local default_tpl="$EAW_TEMPLATES_DIR/feature.md"
+		if [[ -f "$default_tpl" ]]; then
+			echo "WARNING: template '${tpl##*/}' not found; using default 'feature.md'" >&2
+			tpl="$default_tpl"
+		else
+			echo "Template not found: $tpl" >&2
+			return 1
+		fi
 	fi
 	local date
 	date=$(iso_date)
