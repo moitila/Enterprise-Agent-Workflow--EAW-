@@ -16,6 +16,7 @@ Example:
   eaw analyze <CARD>              # deprecated compatibility wrapper; planned removal in v1.0
   eaw implement <CARD>            # deprecated compatibility wrapper; planned removal in v1.0
   eaw tracks
+  eaw tracks install
   eaw suggest-prompt <CARD> --track <TRACK> --phase <PHASE>
   eaw prompt validate
   eaw validate-prompt <TRACK> <PHASE> <CANDIDATE>
@@ -383,8 +384,12 @@ eaw_card_has_workflow_config() {
 eaw_official_track_dir() {
 	local track_id="${1:-}"
 	local track_dir="$EAW_ROOT_DIR/tracks/$track_id"
+	local tracks_registry="$EAW_ROOT_DIR/tracks.yaml"
 
 	if [[ -z "$track_id" || ! -d "$track_dir" ]]; then
+		return 1
+	fi
+	if [[ -f "$tracks_registry" ]] && ! grep -qF "  - track_id: ${track_id}" "$tracks_registry"; then
 		return 1
 	fi
 	printf "%s\n" "$track_dir"
@@ -405,14 +410,26 @@ cmd_tracks() {
 		[[ -d "$track_dir" ]] || continue
 		track_dir_name="${track_dir##*/}"
 		track_file="$track_dir/track.yaml"
-		[[ -f "$track_file" ]] || continue
+		if [[ ! -f "$track_file" ]]; then
+			echo "ERROR: track '$track_dir_name' rejected: missing track.yaml" >&2
+			continue
+		fi
 
 		phase_candidates=("$track_dir"/phases/*.yaml)
-		[[ ${#phase_candidates[@]} -gt 0 ]] || continue
+		if [[ ${#phase_candidates[@]} -eq 0 ]]; then
+			echo "ERROR: track '$track_dir_name' rejected: no phase YAML files found in phases/" >&2
+			continue
+		fi
 
 		track_id="$(eaw_yaml_track_scalar "$track_file" "id")"
-		[[ -n "$track_id" ]] || continue
-		[[ "$track_id" == "$track_dir_name" ]] || continue
+		if [[ -z "$track_id" ]]; then
+			echo "ERROR: track '$track_dir_name' rejected: missing track.id in track.yaml" >&2
+			continue
+		fi
+		if [[ "$track_id" != "$track_dir_name" ]]; then
+			echo "ERROR: track '$track_dir_name' rejected: track.id '$track_id' does not match directory name" >&2
+			continue
+		fi
 
 		track_ids+=("$track_id")
 	done
@@ -423,6 +440,67 @@ cmd_tracks() {
 	fi
 
 	printf '%s\n' "${track_ids[@]}" | LC_ALL=C sort -u
+}
+
+cmd_tracks_install() {
+	local tracks_dir="$EAW_ROOT_DIR/tracks"
+	local tracks_registry="$EAW_ROOT_DIR/tracks.yaml"
+	local track_dir track_dir_name
+	local -a discovered=()
+	local -a valid_tracks=()
+	local -a rejected_tracks=()
+
+	if [[ ! -d "$tracks_dir" ]]; then
+		die "tracks directory not found: $tracks_dir"
+	fi
+
+	shopt -s nullglob
+	for track_dir in "$tracks_dir"/*; do
+		[[ -d "$track_dir" ]] || continue
+		discovered+=("${track_dir##*/}")
+	done
+	shopt -u nullglob
+
+	printf "discovered: %d candidate(s)\n" "${#discovered[@]}"
+
+	# Pre-register all candidates so eaw_official_track_dir resolves during validation.
+	# Rejected candidates are removed from the registry after validation.
+	{
+		printf "tracks:\n"
+		for track_dir_name in "${discovered[@]}"; do
+			printf "  - track_id: %s\n" "$track_dir_name"
+			printf "    status: candidate\n"
+		done
+	} >"$tracks_registry"
+
+	for track_dir_name in "${discovered[@]}"; do
+		if eaw_validate_workflow_track "$track_dir_name" >/dev/null 2>&1; then
+			valid_tracks+=("$track_dir_name")
+		else
+			rejected_tracks+=("$track_dir_name")
+			printf "REJECTED: %s\n" "$track_dir_name" >&2
+			eaw_validate_workflow_track "$track_dir_name" 2>&1 | sed 's/^/  /' >&2 || true
+		fi
+	done
+
+	{
+		printf "tracks:\n"
+		for track_dir_name in "${valid_tracks[@]}"; do
+			printf "  - track_id: %s\n" "$track_dir_name"
+			printf "    status: installed\n"
+		done
+	} >"$tracks_registry"
+
+	printf "installed: %d\n" "${#valid_tracks[@]}"
+	for track_dir_name in "${valid_tracks[@]}"; do
+		printf "  - %s\n" "$track_dir_name"
+	done
+	if [[ ${#rejected_tracks[@]} -gt 0 ]]; then
+		printf "rejected: %d\n" "${#rejected_tracks[@]}" >&2
+		for track_dir_name in "${rejected_tracks[@]}"; do
+			printf "  - %s\n" "$track_dir_name" >&2
+		done
+	fi
 }
 
 eaw_load_card_workflow_context() {
@@ -1029,7 +1107,22 @@ cmd_card_cli() {
 	done
 
 	if [[ -z "$track" ]]; then
-		die "missing required argument: --track"
+		local tracks_registry="$EAW_ROOT_DIR/tracks.yaml"
+		if [[ -f "$tracks_registry" ]]; then
+			local -a registered_tracks=()
+			while IFS= read -r _t; do
+				[[ -n "$_t" ]] && registered_tracks+=("$_t")
+			done < <(awk '/track_id:/ {print $2}' "$tracks_registry")
+			if [[ ${#registered_tracks[@]} -eq 1 ]]; then
+				track="${registered_tracks[0]}"
+			elif [[ ${#registered_tracks[@]} -gt 1 ]]; then
+				die "multiple tracks installed — specify with --track <TRACK>: $(printf '%s ' "${registered_tracks[@]}")"
+			else
+				die "no tracks installed — run 'eaw tracks install' first"
+			fi
+		else
+			die "missing required argument: --track"
+		fi
 	fi
 	if ! eaw_official_track_dir "$track" >/dev/null; then
 		die "track '$track' is invalid or not installed"
