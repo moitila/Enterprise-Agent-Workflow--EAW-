@@ -887,38 +887,12 @@ phase_resolve_repos() {
 }
 
 phase_collect_context() {
-	local card="$1" outdir="$2"
-	# iterate resolved repos and gather context
-	for entry in "${REPO_ENTRIES[@]:-}"; do
-		IFS='|' read -r key path role <<<"$entry"
-		if [[ -z "$key" || -z "$path" ]]; then
-			continue
-		fi
-		repoPath="$(resolve_repo_path "$path")"
-		repoOutDir="$outdir/context/$key"
-		ensure_dir "$repoOutDir"
-		echo "Collecting context for $key -> $repoPath"
-		# gather context; failures are tolerated and produce _warnings.txt within gather_context_for_repo
-		if ! gather_context_for_repo "$key" "$repoPath" "$repoOutDir"; then
-			echo "allowed to fail: gather_context_for_repo failed for $key (see $repoOutDir)" >>"$repoOutDir/_warnings.txt"
-		fi
-	done
+	# context engine in standby: collection disabled
 	return 0
 }
 
 phase_search_hits() {
-	local outdir="$1"
-	for entry in "${REPO_ENTRIES[@]:-}"; do
-		IFS='|' read -r key path role <<<"$entry"
-		if [[ -z "$key" || -z "$path" ]]; then
-			continue
-		fi
-		repoPath="$(resolve_repo_path "$path")"
-		repoOutDir="$outdir/context/$key"
-		if ! collect_search_hits "$key" "$repoPath" "$repoOutDir" "$SEARCH_CONF"; then
-			echo "allowed to fail: collect_search_hits failed for $key (see $repoOutDir)" >>"$repoOutDir/_warnings.txt"
-		fi
-	done
+	# context engine in standby: search hits disabled
 	return 0
 }
 
@@ -1066,20 +1040,7 @@ eaw_journal_append() {
 		>>"${OUTDIR}/execution_journal.jsonl"
 }
 
-# Parse the context_pack list from a phase YAML file.
-# Emits one alias per line; silent if context_pack is absent (backward compatible).
+# context engine in standby: context_pack parsing disabled
 eaw_yaml_phase_context_pack() {
-	local file="$1"
-	awk '
-		/^phase:[[:space:]]*$/ { in_phase=1; next }
-		in_phase && /^[^[:space:]]/ { in_phase=0; in_cp=0 }
-		in_phase && /^  context_pack:[[:space:]]*$/ { in_cp=1; next }
-		in_cp && /^  [^[:space:]-]/ { in_cp=0 }
-		in_cp && /^    - / {
-			line=$0
-			sub(/^    - /, "", line)
-			gsub(/^[[:space:]]+|[[:space:]]+$/, "", line)
-			if (line != "") print line
-		}
-	' "$file"
+	return 0
 }
