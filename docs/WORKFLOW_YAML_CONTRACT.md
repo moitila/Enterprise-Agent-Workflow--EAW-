@@ -9,7 +9,7 @@ This document formalizes the YAML contract used by the EAW workflow engine for t
 Status
 ------
 - Official documentation target for card 538.
-- The repository installs official runtime trees under `tracks/standard/`, `tracks/feature/`, `tracks/bug/`, and `tracks/spike/`.
+- The repository installs official runtime trees under `tracks/<track_id>/`; any directory under `tracks/` with a valid `track.yaml` is recognized as an installed track without requiring changes to the core.
 - Backward-compatible with the current runtime model based on `out/<CARD>/intake/**`.
 - Feature-track ingest transition introduces `out/<CARD>/ingest/**` as the primary raw-input area while preserving `out/<CARD>/intake/**` as compatibility fallback during migration.
 - `out/<CARD>/fixtures/**` are validation artifacts only and are not permanent runtime configuration.
@@ -268,7 +268,7 @@ Compatibility Notes
 -------------------
 - This document does not change the current runtime behavior.
 - The current runtime resolves `tracks/<track>/track.yaml` and `tracks/<track>/phases/*.yaml` as the official source when the referenced track is installed in the repository.
-- The repository currently ships official tracks for `standard`, `feature`, `bug`, and `spike`; `standard` remains available for compatibility.
+- The repository currently ships official tracks for `standard`, `feature`, `bug`, and `spike`. New tracks can be added by placing a valid `tracks/<track_id>/` tree in the repository; no changes to the core are required.
 - The current runtime remains compatible with the per-card model under `out/<CARD>/intake/**` as an explicit fallback.
 - Tracks may additionally use `out/<CARD>/ingest/**` as the primary raw-input area when `ingest` is declared explicitly in the track.
 - `tracks/<track>/card_state.yaml` is not runtime state; it is a template/example of the logical card-state structure for that track.

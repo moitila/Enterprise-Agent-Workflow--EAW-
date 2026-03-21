@@ -744,7 +744,8 @@ phase_init_runtime() {
 		local track_id="${_effective_track_id}"
 		local state_file current_phase track_file phase_started_at
 		if [[ -z "$track_id" || ! -d "$EAW_ROOT_DIR/tracks/$track_id" ]]; then
-			track_id="standard"
+			echo "ERROR: track '$track_id' is invalid or not installed" >&2
+			return 1
 		fi
 		track_file="$EAW_ROOT_DIR/tracks/$track_id/track.yaml"
 		current_phase="intake"

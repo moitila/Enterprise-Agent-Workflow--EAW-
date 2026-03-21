@@ -986,17 +986,10 @@ eaw_state_phase_status_for_next() {
 
 eaw_card_template_type_for_track() {
 	local track_id="${1:-}"
-	case "$track_id" in
-	standard | feature)
-		printf "feature\n"
-		;;
-	bug | spike)
-		printf "%s\n" "$track_id"
-		;;
-	*)
+	if [[ -z "$track_id" ]] || ! eaw_official_track_dir "$track_id" >/dev/null 2>&1; then
 		return 1
-		;;
-	esac
+	fi
+	printf "%s\n" "$track_id"
 }
 
 cmd_card_cli() {
