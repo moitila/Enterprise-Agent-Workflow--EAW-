@@ -384,7 +384,7 @@ eaw_card_has_workflow_config() {
 eaw_official_track_dir() {
 	local track_id="${1:-}"
 	local track_dir="$EAW_ROOT_DIR/tracks/$track_id"
-	local tracks_registry="$EAW_ROOT_DIR/tracks.yaml"
+	local tracks_registry="$EAW_ROOT_DIR/tracks/tracks.yaml"
 
 	if [[ -z "$track_id" || ! -d "$track_dir" ]]; then
 		return 1
@@ -444,7 +444,7 @@ cmd_tracks() {
 
 cmd_tracks_install() {
 	local tracks_dir="$EAW_ROOT_DIR/tracks"
-	local tracks_registry="$EAW_ROOT_DIR/tracks.yaml"
+	local tracks_registry="$EAW_ROOT_DIR/tracks/tracks.yaml"
 	local track_dir track_dir_name
 	local -a discovered=()
 	local -a valid_tracks=()
@@ -1107,7 +1107,7 @@ cmd_card_cli() {
 	done
 
 	if [[ -z "$track" ]]; then
-		local tracks_registry="$EAW_ROOT_DIR/tracks.yaml"
+		local tracks_registry="$EAW_ROOT_DIR/tracks/tracks.yaml"
 		if [[ -f "$tracks_registry" ]]; then
 			local -a registered_tracks=()
 			while IFS= read -r _t; do
