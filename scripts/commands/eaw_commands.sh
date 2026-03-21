@@ -1179,17 +1179,18 @@ eaw_render_phase_template_with_card() {
 eaw_detect_card_template_type() {
 	local card="$1"
 	local card_dir="$2"
-	local type="feature"
+	local track_id
+	local -a state_candidates=()
 
-	if [[ -f "$card_dir/bug_${card}.md" ]]; then
-		type="bug"
-	elif [[ -f "$card_dir/spike_${card}.md" ]]; then
-		type="spike"
-	elif [[ -f "$card_dir/feature_${card}.md" ]]; then
-		type="feature"
+	shopt -s nullglob
+	state_candidates=("$card_dir"/state_card_*.yaml)
+	shopt -u nullglob
+
+	if [[ ${#state_candidates[@]} -eq 1 ]]; then
+		track_id="$(eaw_yaml_state_scalar "${state_candidates[0]}" "track_id")"
 	fi
 
-	printf "%s\n" "$type"
+	printf "%s\n" "${track_id:-feature}"
 }
 
 eaw_card_markdown_list_after_label() {
