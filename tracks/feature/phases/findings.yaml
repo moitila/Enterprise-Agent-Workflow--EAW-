@@ -6,8 +6,8 @@ phase:
   description: Analyze the intake information and identify key findings.
 
   prompt:
-    active: 1
-    path: templates/prompts/default/analyze_findings/prompt_v<active>.md
+    active: 2
+    path: templates/prompts/feature/findings/prompt_v<active>.md
 
   tooling_hints:
     - Ler somente `<CARD_DIR>` e TARGET_REPOS em modo read-only.

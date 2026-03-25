@@ -6,8 +6,8 @@ phase:
   description: Collect and normalize raw card inputs before the structured intake phase.
 
   prompt:
-    active: 1
-    path: templates/prompts/default/ingest/prompt_v<active>.md
+    active: 2
+    path: templates/prompts/feature/ingest/prompt_v<active>.md
 
   tooling_hints:
     - Tratar `out/<CARD>/ingest/` como a origem primaria de insumos brutos quando existir.

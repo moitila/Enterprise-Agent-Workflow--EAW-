@@ -6,8 +6,8 @@ phase:
   description: Capture and normalize the initial request for the card.
 
   prompt:
-    active: 1
-    path: templates/prompts/default/intake/prompt_v<active>.md
+    active: 2
+    path: templates/prompts/bug/intake/prompt_v<active>.md
 
   outputs:
     create_directories:

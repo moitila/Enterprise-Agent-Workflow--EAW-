@@ -6,8 +6,8 @@ phase:
   description: Build the structured intake artifact from ingest evidence and compatibility fallback inputs.
 
   prompt:
-    active: 1
-    path: templates/prompts/default/intake/prompt_v<active>.md
+    active: 2
+    path: templates/prompts/feature/intake/prompt_v<active>.md
 
   outputs:
     create_directories:

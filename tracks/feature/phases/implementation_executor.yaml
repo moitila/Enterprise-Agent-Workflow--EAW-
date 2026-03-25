@@ -6,8 +6,8 @@ phase:
   description: Execute the planned implementation tasks.
 
   prompt:
-    active: 1
-    path: templates/prompts/default/implementation_executor/prompt_v<active>.md
+    active: 2
+    path: templates/prompts/feature/implementation_executor/prompt_v<active>.md
 
   outputs:
     create_directories:
