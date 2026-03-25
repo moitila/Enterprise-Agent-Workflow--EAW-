@@ -6,13 +6,14 @@ phase:
   description: Analyze the intake information and identify key findings.
 
   prompt:
-    active: 2
+    active: 4
     path: templates/prompts/feature/findings/prompt_v<active>.md
 
   tooling_hints:
     - Ler somente `<CARD_DIR>` e TARGET_REPOS em modo read-only.
     - Quando `WORKDIR` estiver definido como `<WORKDIR>`, tratar `<OUTDIR>` como a saida base isolada do runtime.
-    - Registrar no findings a saida relevante de `doctor` e `validate`, usando `<TARGET_REPO>` apenas como referencia do repositorio alvo listado no ambiente.
+    - Nao executar `doctor` ou `validate` nesta fase.
+    - A consistencia de execucao e garantida pelo `eaw next`, usando `<TARGET_REPO>` apenas como referencia do repositorio alvo listado no ambiente.
 
   outputs:
     create_directories:
