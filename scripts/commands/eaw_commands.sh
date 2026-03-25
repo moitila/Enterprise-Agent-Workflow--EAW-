@@ -384,12 +384,12 @@ eaw_card_has_workflow_config() {
 eaw_official_track_dir() {
 	local track_id="${1:-}"
 	local track_dir="$EAW_ROOT_DIR/tracks/$track_id"
-	local tracks_registry="$EAW_ROOT_DIR/tracks.yaml"
+	local tracks_registry="$EAW_ROOT_DIR/tracks/tracks.yaml"
 
 	if [[ -z "$track_id" || ! -d "$track_dir" ]]; then
 		return 1
 	fi
-	if [[ -f "$tracks_registry" ]] && ! grep -qF "  - track_id: ${track_id}" "$tracks_registry"; then
+	if [[ -f "$tracks_registry" ]] && ! awk -v id="$track_id" '/track_id:/ && $3 == id { found=1 } END { exit !found }' "$tracks_registry"; then
 		return 1
 	fi
 	printf "%s\n" "$track_dir"
@@ -444,60 +444,70 @@ cmd_tracks() {
 
 cmd_tracks_install() {
 	local tracks_dir="$EAW_ROOT_DIR/tracks"
-	local tracks_registry="$EAW_ROOT_DIR/tracks.yaml"
+	local tracks_registry="$EAW_ROOT_DIR/tracks/tracks.yaml"
 	local track_dir track_dir_name
 	local -a discovered=()
-	local -a valid_tracks=()
-	local -a rejected_tracks=()
+	local -a preserved=()
+	local -a new_installed=()
+	local -a rejected=()
+	local -A installed_set=()
 
 	if [[ ! -d "$tracks_dir" ]]; then
 		die "tracks directory not found: $tracks_dir"
 	fi
 
+	# Step 1: Read current registry — extract already-installed tracks
+	if [[ -f "$tracks_registry" ]]; then
+		while IFS= read -r track_dir_name; do
+			[[ -n "$track_dir_name" ]] || continue
+			installed_set["$track_dir_name"]=1
+		done < <(awk '/track_id:/ { print $3 }' "$tracks_registry")
+	fi
+
+	# Step 2: Discover candidate directories
 	shopt -s nullglob
-	for track_dir in "$tracks_dir"/*; do
-		[[ -d "$track_dir" ]] || continue
-		discovered+=("${track_dir##*/}")
+	for track_dir in "$tracks_dir"/*/; do
+		track_dir_name="${track_dir%/}"
+		track_dir_name="${track_dir_name##*/}"
+		discovered+=("$track_dir_name")
 	done
 	shopt -u nullglob
 
 	printf "discovered: %d candidate(s)\n" "${#discovered[@]}"
 
-	# Pre-register all candidates so eaw_official_track_dir resolves during validation.
-	# Rejected candidates are removed from the registry after validation.
-	{
-		printf "tracks:\n"
-		for track_dir_name in "${discovered[@]}"; do
-			printf "  - track_id: %s\n" "$track_dir_name"
-			printf "    status: candidate\n"
-		done
-	} >"$tracks_registry"
-
+	# Step 3: Reconcile — preserve installed, validate new candidates
 	for track_dir_name in "${discovered[@]}"; do
-		if eaw_validate_workflow_track "$track_dir_name" >/dev/null 2>&1; then
-			valid_tracks+=("$track_dir_name")
+		if [[ -n "${installed_set[$track_dir_name]:-}" ]]; then
+			preserved+=("$track_dir_name")
+		elif eaw_validate_workflow_track "$track_dir_name" >/dev/null 2>&1; then
+			new_installed+=("$track_dir_name")
 		else
-			rejected_tracks+=("$track_dir_name")
-			printf "REJECTED: %s\n" "$track_dir_name" >&2
+			rejected+=("$track_dir_name")
 			eaw_validate_workflow_track "$track_dir_name" 2>&1 | sed 's/^/  /' >&2 || true
 		fi
 	done
 
+	# Step 7: Write final registry once
 	{
 		printf "tracks:\n"
-		for track_dir_name in "${valid_tracks[@]}"; do
+		for track_dir_name in "${preserved[@]}" "${new_installed[@]}"; do
 			printf "  - track_id: %s\n" "$track_dir_name"
 			printf "    status: installed\n"
 		done
 	} >"$tracks_registry"
 
-	printf "installed: %d\n" "${#valid_tracks[@]}"
-	for track_dir_name in "${valid_tracks[@]}"; do
-		printf "  - %s\n" "$track_dir_name"
-	done
-	if [[ ${#rejected_tracks[@]} -gt 0 ]]; then
-		printf "rejected: %d\n" "${#rejected_tracks[@]}" >&2
-		for track_dir_name in "${rejected_tracks[@]}"; do
+	if [[ ${#new_installed[@]} -gt 0 ]]; then
+		printf "installed: %d\n" "${#new_installed[@]}"
+		for track_dir_name in "${new_installed[@]}"; do
+			printf "  + %s\n" "$track_dir_name"
+		done
+	fi
+	if [[ ${#preserved[@]} -gt 0 ]]; then
+		printf "preserved: %d\n" "${#preserved[@]}"
+	fi
+	if [[ ${#rejected[@]} -gt 0 ]]; then
+		printf "rejected: %d\n" "${#rejected[@]}" >&2
+		for track_dir_name in "${rejected[@]}"; do
 			printf "  - %s\n" "$track_dir_name" >&2
 		done
 	fi
@@ -1107,7 +1117,7 @@ cmd_card_cli() {
 	done
 
 	if [[ -z "$track" ]]; then
-		local tracks_registry="$EAW_ROOT_DIR/tracks.yaml"
+		local tracks_registry="$EAW_ROOT_DIR/tracks/tracks.yaml"
 		if [[ -f "$tracks_registry" ]]; then
 			local -a registered_tracks=()
 			while IFS= read -r _t; do
@@ -1179,17 +1189,18 @@ eaw_render_phase_template_with_card() {
 eaw_detect_card_template_type() {
 	local card="$1"
 	local card_dir="$2"
-	local type="feature"
+	local track_id
+	local -a state_candidates=()
 
-	if [[ -f "$card_dir/bug_${card}.md" ]]; then
-		type="bug"
-	elif [[ -f "$card_dir/spike_${card}.md" ]]; then
-		type="spike"
-	elif [[ -f "$card_dir/feature_${card}.md" ]]; then
-		type="feature"
+	shopt -s nullglob
+	state_candidates=("$card_dir"/state_card_*.yaml)
+	shopt -u nullglob
+
+	if [[ ${#state_candidates[@]} -eq 1 ]]; then
+		track_id="$(eaw_yaml_state_scalar "${state_candidates[0]}" "track_id")"
 	fi
 
-	printf "%s\n" "$type"
+	printf "%s\n" "${track_id:-feature}"
 }
 
 eaw_card_markdown_list_after_label() {

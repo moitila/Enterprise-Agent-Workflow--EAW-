@@ -43,13 +43,13 @@ Se a raiz `tracks/` nao existir, o comando falha com mensagem acionavel em `stde
 
 ### Objetivo
 
-`eaw tracks install` executa o ciclo formal de instalacao de tracks: descoberta, validacao pelo contrato minimo, registro em `tracks.yaml` e relatorio de resultado.
+`eaw tracks install` executa o ciclo formal de instalacao de tracks: descoberta, validacao pelo contrato minimo, registro em `tracks/tracks.yaml` e relatorio de resultado.
 
 ### Fluxo de instalacao
 
 1. Varre `tracks/` por subpastas candidatas.
 2. Valida cada candidata contra o contrato minimo (`eaw_validate_workflow_track`).
-3. Registra as validas em `tracks.yaml` com `status: installed`.
+3. Registra as validas em `tracks/tracks.yaml` com `status: installed`.
 4. Emite relatorio com: candidatas descobertas, instaladas, rejeitadas com motivo.
 
 ### Saida do comando
@@ -57,7 +57,7 @@ Se a raiz `tracks/` nao existir, o comando falha com mensagem acionavel em `stde
 - `stdout`: `discovered: N`, `installed: N`, lista de tracks instaladas.
 - `stderr`: `REJECTED: <track>` com motivo detalhado para cada candidata rejeitada.
 
-## `tracks.yaml`
+## `tracks/tracks.yaml`
 
 Registro oficial das tracks instaladas. Estrutura minima por entrada:
 
@@ -67,4 +67,4 @@ tracks:
     status: installed
 ```
 
-Uma track presente em `tracks/` mas ausente de `tracks.yaml` nao e reconhecida pelo runtime como track oficial.
+Uma track presente em `tracks/` mas ausente de `tracks/tracks.yaml` nao e reconhecida pelo runtime como track oficial.
