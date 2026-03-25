@@ -7,3 +7,5 @@ tracks:
     status: installed
   - track_id: standard
     status: installed
+  - track_id: ARCH_REFACTOR
+    status: installed

@@ -1,0 +1,47 @@
+config_version: 1
+
+track:
+  id: ARCH_REFACTOR
+  name: Architecture Refactor Track
+  description: >
+    Canonical EAW track for deterministic architectural refactor analysis,
+    alignment, scoped implementation planning and controlled execution.
+  initial_phase: ingest
+  final_phase: implementation_executor
+
+  initial_outputs:
+    create_directories:
+      - ingest
+      - investigations
+      - context
+      - implementation
+    create_artifacts: []
+
+  phases:
+    - ingest
+    - intake
+    - findings
+    - hypotheses
+    - planning
+    - implementation_planning
+    - implementation_executor
+
+  transitions:
+    ingest:
+      next: intake
+    intake:
+      next: findings
+    findings:
+      next: hypotheses
+    hypotheses:
+      next: planning
+    planning:
+      next: implementation_planning
+    implementation_planning:
+      next: implementation_executor
+
+  rules:
+    one_prompt_per_phase: true
+    generated_artifacts_of_each_phase_must_be_non_empty: true
+    allow_phase_skip: false
+    allow_manual_phase_skip: false
