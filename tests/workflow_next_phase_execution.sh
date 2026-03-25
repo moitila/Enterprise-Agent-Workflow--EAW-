@@ -47,7 +47,7 @@ grep -Eq '^workflow_phase_ingest\|OK\|' "$execution_log" || fail "execution log 
 
 next_output="$(EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" next "$feature_card" 2>&1)" || fail "feature next command should keep intake current while required artifacts are unfilled"
 grep -Fq "unfilled required artifacts: investigations/00_intake.md investigations/_intake_provenance.md" <<<"$next_output" || fail "feature next output missing unfilled ingest gate"
-grep -Fq "CARD $feature_card: ingest remains current; missing required artifacts" <<<"$next_output" || fail "feature next output missing remain-current summary"
+grep -Fq "CARD $feature_card: ingest remains current; unfilled required artifacts" <<<"$next_output" || fail "feature next output missing remain-current summary"
 grep -Fq "current_phase: ingest" "$state_file" || fail "feature card should remain in ingest while ingest artifacts are unfilled"
 test ! -f "$findings_prompt_phase" || fail "phase-driven findings prompt should not exist before intake artifacts are filled"
 test ! -f "$workdir/out/$feature_card/investigations/findings_agent_prompt.md" || fail "legacy findings prompt should not exist before intake artifacts are filled"

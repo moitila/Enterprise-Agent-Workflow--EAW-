@@ -82,7 +82,7 @@ scenario_d_rc=$?
 set -e
 
 [[ $scenario_d_rc -eq 0 ]] || fail "scenario D expected zero exit code (unfilled artifacts are non-fatal)"
-grep -Fq "ingest remains current; missing required artifacts" <<<"$scenario_d_output" || fail "scenario D missing expected ingest artifact message"
+grep -Fq "ingest remains current; unfilled required artifacts" <<<"$scenario_d_output" || fail "scenario D missing expected ingest artifact message"
 assert_no_repo_residue "$card_ingest_and_intake_missing"
 
 printf "OK\n"
