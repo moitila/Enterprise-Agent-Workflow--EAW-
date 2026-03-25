@@ -1,0 +1,23 @@
+config_version: 1
+
+phase:
+  id: planning
+  name: Planning
+  description: Produce the architectural alignment plan without implementation leakage.
+
+  prompt:
+    active: 1
+    path: templates/prompts/ARCH_REFACTOR/planning/prompt_v<active>.md
+
+  outputs:
+    create_directories:
+      - prompts
+    create_artifacts:
+      - investigations/40_next_steps.md
+    prompts:
+      - planning
+
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - investigations/40_next_steps.md

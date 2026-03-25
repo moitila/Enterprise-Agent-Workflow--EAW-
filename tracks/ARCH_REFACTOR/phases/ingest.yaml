@@ -1,0 +1,29 @@
+config_version: 1
+
+phase:
+  id: ingest
+  name: Ingest
+  description: Collect and normalize raw review evidence before intake.
+
+  prompt:
+    active: 1
+    path: templates/prompts/ARCH_REFACTOR/ingest/prompt_v<active>.md
+
+  tooling_hints:
+    - Tratar `out/<CARD>/ingest/` como a origem primaria dos insumos brutos.
+    - Nao acessar TARGET_REPOS durante a fase de ingest.
+
+  outputs:
+    create_directories:
+      - ingest
+    create_artifacts:
+      - ingest/sources.md
+      - ingest/review_evidence.raw.md
+      - ingest/review_evidence.normalized.md
+
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - ingest/sources.md
+      - ingest/review_evidence.raw.md
+      - ingest/review_evidence.normalized.md

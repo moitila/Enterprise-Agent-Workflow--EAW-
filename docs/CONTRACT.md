@@ -81,9 +81,7 @@ Outputs
   - `execution.log` — phase execution log with format `phase|status|duration_ms|note`
   - `execution_journal.jsonl` — structured Execution Journal in JSON Lines format; one event per phase execution with fields `card_id`, `track`, `phase`, `timestamp`, `agent`, `mode`, `status`, `duration_ms`; schema documented in `docs/EXECUTION_JOURNAL.md`
   - `TEST_PLAN_<CARD>.md` — placeholder test plan
-  - `context/<repoKey>/` — per-repo metadata files (git-branch.txt, git-commit.txt, changed-files.txt, git-diff.patch, git-status.txt)
-  - `context/<repoKey>/_warnings.txt` — optional; contains best-effort collection warnings (created only on tolerated failures)
-  - Only repositories with role `target` are processed into `context/`; role `infra` is explicitly excluded from collection.
+  - `context/<repoKey>/` — **standby**: context engine is currently disabled; no `context/` artifacts are collected at runtime. This contract entry is reserved for future activation.
 
 Prompt declaration rule
 -----------------------
@@ -102,9 +100,8 @@ Determinism
 
 Notes on `_warnings.txt`
 -----------------------
-- `_warnings.txt` is created per-repo under `out/<CARD>/context/<repoKey>/` only when a best-effort collection step fails.
-- Each line in `_warnings.txt` should contain a short, human-readable reason and a pointer to the related artifact (example: `allowed to fail: git diff failed (see git-diff.patch)`).
-- Presence of `_warnings.txt` is informational and does not constitute a fatal error by contract.
+
+- **Standby**: `_warnings.txt` under `context/<repoKey>/` is not produced while the context engine is disabled. This section is reserved for future activation.
 
 
 Operational rules / invariants

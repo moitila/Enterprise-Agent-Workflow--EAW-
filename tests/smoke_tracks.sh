@@ -15,7 +15,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-expected_output=$'bug\nfeature\nspike\nstandard'
+expected_output=$'ARCH_REFACTOR\nbug\nfeature\nspike\nstandard'
 actual_output="$(./scripts/eaw tracks)"
 [[ "$actual_output" == "$expected_output" ]] || fail "unexpected output for current repository"
 
@@ -27,6 +27,7 @@ mkdir -p "$fixture_root"
 cp -R "$REPO_ROOT/scripts" "$fixture_root/"
 cp -R "$REPO_ROOT/config" "$fixture_root/"
 cp -R "$REPO_ROOT/tracks" "$fixture_root/"
+cp -R "$REPO_ROOT/templates" "$fixture_root/"
 
 mkdir -p "$fixture_root/tracks/invalid-no-phases"
 cat >"$fixture_root/tracks/invalid-no-phases/track.yaml" <<'EOF'
@@ -63,5 +64,58 @@ set -e
 
 [[ "$missing_rc" -ne 0 ]] || fail "missing tracks root should fail"
 grep -Fq "ERROR: tracks directory not found" <<<"$missing_output" || fail "missing tracks error should be actionable"
+
+# DA-5: eaw tracks install coverage
+
+# Case 1: eaw validate workflow --track <track> works before install (no registry)
+validate_root="$tmp_root/validate-before-install"
+mkdir -p "$validate_root"
+cp -R "$REPO_ROOT/scripts" "$validate_root/"
+cp -R "$REPO_ROOT/config" "$validate_root/"
+cp -R "$REPO_ROOT/tracks" "$validate_root/"
+cp -R "$REPO_ROOT/templates" "$validate_root/"
+rm -f "$validate_root/tracks/tracks.yaml"
+
+validate_wf_output="$(cd "$validate_root" && ./scripts/eaw validate workflow --track bug 2>&1)"
+grep -Fq "errors=0" <<<"$validate_wf_output" || fail "validate workflow must work before install (no registry)"
+
+# Case 2: fresh install creates registry at tracks/tracks.yaml
+install_root="$tmp_root/install-fresh"
+mkdir -p "$install_root"
+cp -R "$REPO_ROOT/scripts" "$install_root/"
+cp -R "$REPO_ROOT/config" "$install_root/"
+cp -R "$REPO_ROOT/tracks" "$install_root/"
+cp -R "$REPO_ROOT/templates" "$install_root/"
+rm -f "$install_root/tracks/tracks.yaml"
+
+set +e
+install_out="$(cd "$install_root" && ./scripts/eaw tracks install 2>&1)"
+install_rc=$?
+set -e
+[[ "$install_rc" -eq 0 ]] || fail "fresh install should succeed"
+
+[[ -f "$install_root/tracks/tracks.yaml" ]] || fail "fresh install must create tracks/tracks.yaml"
+grep -Fq "track_id:" "$install_root/tracks/tracks.yaml" || fail "fresh install must register valid tracks in tracks/tracks.yaml"
+
+# Case 3: second run is idempotent — already-installed tracks preserved
+set +e
+install2_out="$(cd "$install_root" && ./scripts/eaw tracks install 2>&1)"
+install2_rc=$?
+set -e
+[[ "$install2_rc" -eq 0 ]] || fail "second install should succeed"
+
+grep -Fq "preserved:" <<<"$install2_out" || fail "second install should report preserved tracks"
+grep -Fq "installed:" <<<"$install2_out" && fail "second install should not report new installations" || true
+
+# Case 4: invalid candidate rejected with stderr; batch not interrupted; registry written
+set +e
+reject_out="$(cd "$fixture_root" && ./scripts/eaw tracks install 2>&1)"
+reject_rc=$?
+set -e
+[[ "$reject_rc" -eq 0 ]] || fail "install with partial rejections should still succeed"
+
+grep -Fq "rejected:" <<<"$reject_out" || fail "install should report rejected candidates on stderr"
+[[ -f "$fixture_root/tracks/tracks.yaml" ]] || fail "registry must exist after install with partial rejections"
+grep -Fq "preserved:" <<<"$reject_out" || fail "valid tracks must be preserved when invalid candidates are present"
 
 printf "smoke tracks OK\n"

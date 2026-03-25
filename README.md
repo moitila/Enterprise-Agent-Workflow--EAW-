@@ -94,42 +94,16 @@ bash ./scripts/eaw card 999999 --track bug "Smoke test"
 - `out/<CARD>/prompts/<prompt_alias>.md` — phase-driven prompt artifact generated from `outputs.prompts`; the file name matches the declared alias exactly
 - `out/<CARD>/execution.log` — deterministic phase execution log (`phase|status|duration_ms|note`)
 - `out/<CARD>/execution_journal.jsonl` — structured Execution Journal in JSON Lines; one event per phase with fields `card_id`, `track`, `phase`, `timestamp`, `agent`, `mode`, `status`, `duration_ms` (see `docs/EXECUTION_JOURNAL.md`)
-- `out/<CARD>/context/<repoKey>/git-status.txt` — git status
-- `out/<CARD>/context/<repoKey>/git-diff.patch` — diff
 
 Decision note:
 - `outputs.prompts` is optional in the general contract.
 - Phases that generate prompts should declare them explicitly in `outputs.prompts`.
 - Internal/tooling phases that do not generate prompts should omit `outputs.prompts`.
 - Prompt artifacts are materialized only under `out/<CARD>/prompts/`; `investigations/` and `implementation/` keep only phase work artifacts.
-- `out/<CARD>/context/<repoKey>/changed-files.txt` — changed file list
-- `out/<CARD>/context/<repoKey>/rg-symbols.txt` — symbol search hits
 
 ## Context Pack
 
-Phases may declare an optional `context_pack` key in their YAML contract to inject resolved artifact content into the prompt between `RUNTIME_ENVIRONMENT` and the phase template (`PROMPT_TEMPLATE`).
-
-```yaml
-phase:
-  id: findings
-  context_pack:
-    - intake
-    - repo_symbols
-    - changed_files
-```
-
-The runtime resolves each alias to a physical artifact already collected under `out/<CARD>/context/` or `out/<CARD>/investigations/`. Phases without `context_pack` continue operating without change.
-
-**MVP alias catalog:**
-
-| Alias           | Physical file                                    |
-|-----------------|--------------------------------------------------|
-| `intake`        | `out/<CARD>/investigations/00_intake.md`         |
-| `repo_tree`     | `out/<CARD>/context/<repoKey>/git-status.txt`    |
-| `repo_symbols`  | `out/<CARD>/context/<repoKey>/rg-symbols.txt`    |
-| `changed_files` | `out/<CARD>/context/<repoKey>/changed-files.txt` |
-
-When a configured pack has no content, the runtime emits `[PACK_EMPTY: <alias> => <path>]` in the `CONTEXT_PACK` block instead of failing silently.
+> **Standby**: the context engine is currently disabled. `context_pack` parsing is inactive and no `context/` artifacts are collected at runtime. The contract below describes the intended design and remains reserved for future activation.
 
 ## Config
 
@@ -255,7 +229,6 @@ This produces deterministic files under `out/12345/`:
 - `investigations/hypotheses_agent_prompt.md` — hypotheses prompt to feed to an assistant
 - `investigations/planning_agent_prompt.md` — planning prompt to feed to an assistant
 - `TEST_PLAN_12345.md` — deterministic test plan produced by the analysis
-- `context/` — repository context captured earlier
 
 5. Copy the generated prompts under `out/12345/investigations/`, run each phase with your chosen agent, and capture outputs back into `out/12345/dev/` as needed (manual step). The generated artifacts are deterministic and versionable.
 

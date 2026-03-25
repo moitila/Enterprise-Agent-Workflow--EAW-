@@ -120,10 +120,18 @@ main() {
 		cmd_implement "$2"
 		;;
 	tracks)
-		if [[ $# -ne 1 ]]; then
-			die "usage: eaw tracks"
+		if [[ "${2:-}" == "install" ]]; then
+			if [[ $# -ne 2 ]]; then
+				die "usage: eaw tracks install"
+			fi
+			validate_runtime_workdir
+			cmd_tracks_install
+		else
+			if [[ $# -ne 1 ]]; then
+				die "usage: eaw tracks"
+			fi
+			cmd_tracks
 		fi
-		cmd_tracks
 		;;
 	next)
 		if [[ $# -ne 2 ]]; then

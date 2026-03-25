@@ -1,7 +1,16 @@
 # Changelog
 
 ## Unreleased
- 
+
+### Fixed (CARD 574A — CompleteYAML)
+
+- `eaw_official_track_dir`: substituiu `grep -qF` por awk via `eaw_yaml_track_scalar` para leitura consistente do registry (DV-DA1).
+- `eaw_detect_card_template_type`: substituiu inferencia por nome de arquivo pela leitura de `card_state.track_id` em `state_card_*.yaml` via `eaw_yaml_state_scalar` (DV-DA3).
+- `tracks.yaml` movido de `$EAW_ROOT_DIR/tracks.yaml` para `$EAW_ROOT_DIR/tracks/tracks.yaml`; todos os call sites atualizados (DV-DA2).
+- `eaw_validate_workflow_track`: substituiu chamada a `eaw_official_track_dir` por verificacao direta do diretorio, eliminando dependencia circular com o registry (DV-DA4).
+- `cmd_tracks_install`: substituiu sobrescrita integral do registry por reconciliacao incremental — le o registry existente, instala apenas tracks ausentes, escreve uma unica vez ao final (DV-DA0).
+- `tests/smoke_tracks.sh`: adicionada cobertura do ciclo completo de `eaw tracks install`, incluindo idempotencia e rejeicao de track invalida (DV-DA5).
+
 ## v0.8.0 — Declarative Workflow Tracks & Onboarding Alignment
 
 ### Highlights

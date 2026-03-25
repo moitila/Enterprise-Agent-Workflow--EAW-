@@ -5,7 +5,7 @@ EAW enforces a contract for output artifacts so they are machine-readable, versi
 Contract
 
 - Every dossier is a Markdown file with a deterministic filename: `<TYPE>_<CARD>.md` (e.g., `feature_12345.md`). This is an output naming convention for compatibility and tooling; the primary workflow classification remains the selected `track`, persisted as `card_state.track_id`.
-- Context is stored under `out/<CARD>/context/<repoKey>/` with fixed filenames: `git-status.txt`, `git-diff.patch`, `changed-files.txt`, `rg-symbols.txt`.
+- Context is stored under `out/<CARD>/context/<repoKey>/` with fixed filenames: `git-status.txt`, `git-diff.patch`, `changed-files.txt`, `rg-symbols.txt`. (**Standby**: context engine currently disabled; not produced at runtime.)
 - Templates must include sections in a predictable order so downstream tools can parse them.
 
 Recommended sections (order is important):

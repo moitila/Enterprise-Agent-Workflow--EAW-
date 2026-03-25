@@ -28,7 +28,6 @@ INPUT
   - `out/{{CARD}}/investigations/40_next_steps.md`
   - `out/{{CARD}}/implementation/00_scope.lock.md`
   - `out/{{CARD}}/implementation/10_change_plan.md`
-  - `out/{{CARD}}/context/**`
 - MODE: quando `EAW_WORKDIR` estiver vazio, saida em `OUT_DIR`; quando definido, saida isolada em `EAW_WORKDIR`.
 - EXECUTION_STRUCTURE: `RUNTIME_ROOT` nunca deve ser modificado; codigo apenas em TARGET_REPOS; artefatos apenas dentro de `CARD_DIR`; allowlist do `00_scope.lock.md` e soberana para implementacao real nos TARGET_REPOS.
 

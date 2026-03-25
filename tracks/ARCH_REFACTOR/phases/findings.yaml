@@ -1,0 +1,27 @@
+config_version: 1
+
+phase:
+  id: findings
+  name: Findings
+  description: Validate the current behavior and architectural adherence with evidence.
+
+  prompt:
+    active: 1
+    path: templates/prompts/ARCH_REFACTOR/findings/prompt_v<active>.md
+
+  tooling_hints:
+    - Ler somente `<CARD_DIR>` e TARGET_REPOS em modo read-only.
+    - Registrar a saida relevante de `doctor` e `validate`.
+
+  outputs:
+    create_directories:
+      - prompts
+    create_artifacts:
+      - investigations/20_findings.md
+    prompts:
+      - findings
+
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - investigations/20_findings.md
