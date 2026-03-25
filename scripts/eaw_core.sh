@@ -43,31 +43,7 @@ copy_workspace_nested_templates() {
 	local tpl_dir="$2"
 	local overwrite="$3"
 	local rel src dst dst_parent
-	local nested_templates=(
-		"prompts/default/ingest/prompt_v1.md"
-		"prompts/default/ingest/prompt_v1.meta"
-		"prompts/default/ingest/ACTIVE"
-		"prompts/default/intake/prompt_v1.md"
-		"prompts/default/intake/prompt_v1.meta"
-		"prompts/default/intake/ACTIVE"
-		"prompts/default/analyze_findings/prompt_v1.md"
-		"prompts/default/analyze_findings/prompt_v1.meta"
-		"prompts/default/analyze_findings/ACTIVE"
-		"prompts/default/analyze_hypotheses/prompt_v1.md"
-		"prompts/default/analyze_hypotheses/prompt_v1.meta"
-		"prompts/default/analyze_hypotheses/ACTIVE"
-		"prompts/default/analyze_planning/prompt_v1.md"
-		"prompts/default/analyze_planning/prompt_v1.meta"
-		"prompts/default/analyze_planning/ACTIVE"
-		"prompts/default/implementation_planning/prompt_v1.md"
-		"prompts/default/implementation_planning/prompt_v1.meta"
-		"prompts/default/implementation_planning/ACTIVE"
-		"prompts/default/implementation_executor/prompt_v1.md"
-		"prompts/default/implementation_executor/prompt_v1.meta"
-		"prompts/default/implementation_executor/ACTIVE"
-	)
-
-	for rel in "${nested_templates[@]}"; do
+	while IFS= read -r rel; do
 		src="$default_tpl_dir/$rel"
 		dst="$tpl_dir/$rel"
 		if [[ ! -f "$src" ]]; then
@@ -82,7 +58,11 @@ copy_workspace_nested_templates() {
 			cp "$src" "$dst"
 			echo "Created $dst"
 		fi
-	done
+	done < <(
+		cd "$default_tpl_dir" &&
+			find prompts/default -type f \( -name 'prompt_v*.md' -o -name 'prompt_v*.meta' -o -name 'ACTIVE' \) |
+			LC_ALL=C sort
+	)
 }
 
 read_config_version() {

@@ -9,15 +9,16 @@ export EAW_WORKDIR="$WORK_ROOT/.eaw"
 "$REPO_ROOT/scripts/eaw" init --workdir "$EAW_WORKDIR" >/dev/null
 
 default_intake_dir="$EAW_WORKDIR/templates/prompts/default/intake"
-test -f "$default_intake_dir/prompt_v1.md"
-test -f "$default_intake_dir/prompt_v1.meta"
 test -f "$default_intake_dir/ACTIVE"
-[[ -n "$(tr -d '[:space:]' <"$default_intake_dir/ACTIVE")" ]]
+active_candidate="$(tr -d '[:space:]' <"$default_intake_dir/ACTIVE")"
+[[ -n "$active_candidate" ]]
+test -f "$default_intake_dir/prompt_${active_candidate}.md"
+test -f "$default_intake_dir/prompt_${active_candidate}.meta"
 
-md_file="$default_intake_dir/prompt_v1.md"
-md_backup="$default_intake_dir/prompt_v1.md.bak"
-meta_file="$default_intake_dir/prompt_v1.meta"
-meta_backup="$default_intake_dir/prompt_v1.meta.bak"
+md_file="$default_intake_dir/prompt_${active_candidate}.md"
+md_backup="$default_intake_dir/prompt_${active_candidate}.md.bak"
+meta_file="$default_intake_dir/prompt_${active_candidate}.meta"
+meta_backup="$default_intake_dir/prompt_${active_candidate}.meta.bak"
 restore_prompt_files() {
 	if [[ -f "$md_backup" ]]; then
 		mv "$md_backup" "$md_file"
@@ -32,7 +33,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-"$REPO_ROOT/scripts/eaw" validate-prompt default intake v1 >/dev/null
+"$REPO_ROOT/scripts/eaw" validate-prompt default intake "$active_candidate" >/dev/null
 "$REPO_ROOT/scripts/eaw" validate >/dev/null
 "$REPO_ROOT/scripts/eaw" prompt validate >/dev/null
 
@@ -68,7 +69,7 @@ if "$REPO_ROOT/scripts/eaw" validate >"$log_missing_md" 2>&1; then
 	exit 1
 fi
 grep -F "phase 'intake'" "$log_missing_md" >/dev/null
-grep -F "version 'v1'" "$log_missing_md" >/dev/null
+grep -F "version '$active_candidate'" "$log_missing_md" >/dev/null
 grep -F "$md_file" "$log_missing_md" >/dev/null
 mv "$md_backup" "$md_file"
 
@@ -79,7 +80,7 @@ if "$REPO_ROOT/scripts/eaw" validate >"$log_missing_meta" 2>&1; then
 	exit 1
 fi
 grep -F "phase 'intake'" "$log_missing_meta" >/dev/null
-grep -F "version 'v1'" "$log_missing_meta" >/dev/null
+grep -F "version '$active_candidate'" "$log_missing_meta" >/dev/null
 grep -F "$meta_file" "$log_missing_meta" >/dev/null
 mv "$meta_backup" "$meta_file"
 
