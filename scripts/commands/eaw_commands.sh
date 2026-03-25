@@ -11,6 +11,7 @@ Usage: eaw init [--workdir <path>] [--force] [--upgrade]
 Example:
   eaw init --workdir ./.eaw --upgrade
   eaw card <CARD> --track <TRACK> ["<TITLE>"]
+  eaw run <CARD>
   eaw next <CARD>
   eaw intake <CARD> [--round=N]   # deprecated compatibility wrapper; planned removal in v1.0
   eaw analyze <CARD>              # deprecated compatibility wrapper; planned removal in v1.0
@@ -2001,4 +2002,245 @@ cmd_complete() {
 	eaw_write_phase_status "$EAW_CARD_WORKFLOW_STATE_FILE" "COMPLETE" "$previous_phase" "$current_phase" "$completed_phases" "$phase_started_at" "true" "$phase_completed_at"
 	echo "CARD ${card}: ${current_phase} marked COMPLETE"
 	return 0
+}
+
+# ── eaw run ──────────────────────────────────────────────────────────────────
+
+_CMD_RUN_TRACK_ID=""
+_CMD_RUN_CURRENT_PHASE=""
+_CMD_RUN_PHASE_STATUS=""
+_CMD_RUN_COMPLETED_PHASES=""
+
+_cmd_run_find_state_file() {
+	local card_dir="$1"
+	local -a state_candidates=()
+	shopt -s nullglob
+	state_candidates=("$card_dir"/state_card_*.yaml)
+	shopt -u nullglob
+	if [[ ${#state_candidates[@]} -eq 0 ]]; then
+		shopt -s nullglob
+		state_candidates=("$card_dir"/intake/state_card_*.yaml)
+		shopt -u nullglob
+	fi
+	if [[ ${#state_candidates[@]} -eq 0 ]]; then
+		return 1
+	fi
+	printf "%s\n" "${state_candidates[0]}"
+}
+
+_cmd_run_find_track_file() {
+	local card_dir="$1"
+	local track_id="$2"
+	local official_track_file="$EAW_ROOT_DIR/tracks/$track_id/track.yaml"
+	if [[ -f "$official_track_file" ]]; then
+		printf "%s\n" "$official_track_file"
+		return 0
+	fi
+	local -a track_candidates=()
+	shopt -s nullglob
+	track_candidates=("$card_dir"/intake/track_*.yaml)
+	shopt -u nullglob
+	if [[ ${#track_candidates[@]} -gt 0 ]]; then
+		printf "%s\n" "${track_candidates[0]}"
+		return 0
+	fi
+	return 1
+}
+
+_cmd_run_read_card_state() {
+	local state_file="$1"
+	local t c p cp
+	_CMD_RUN_TRACK_ID=""
+	_CMD_RUN_CURRENT_PHASE=""
+	_CMD_RUN_PHASE_STATUS=""
+	_CMD_RUN_COMPLETED_PHASES=""
+	if [[ ! -f "$state_file" ]]; then
+		return 1
+	fi
+	t="$(eaw_yaml_state_scalar "$state_file" "track_id")"
+	c="$(eaw_normalize_phase_id "$(eaw_yaml_state_scalar "$state_file" "current_phase")")"
+	p="$(eaw_yaml_state_scalar "$state_file" "phase_status")"
+	cp="$(eaw_yaml_state_completed_phases "$state_file" | tr '\n' ',')"
+	_CMD_RUN_TRACK_ID="$t"
+	_CMD_RUN_CURRENT_PHASE="$c"
+	_CMD_RUN_PHASE_STATUS="$p"
+	_CMD_RUN_COMPLETED_PHASES="$cp"
+	if [[ -z "$t" || -z "$c" ]]; then
+		return 1
+	fi
+	return 0
+}
+
+_cmd_run_write_state() {
+	local run_state_file="$1"
+	local card="$2"
+	local attempt="$3"
+	local status="$4"
+	local track_id="${5:-null}"
+	local current_phase="${6:-null}"
+	local phase_status="${7:-null}"
+	local stop_reason="${8:-null}"
+	local ts tmp_file
+	ts="$(utc_timestamp)"
+	tmp_file="$(mktemp "${run_state_file}.tmp.XXXXXX")"
+	cat >"$tmp_file" <<EOF
+run_state:
+  card: $card
+  attempt: $attempt
+  status: $status
+  track_id: $track_id
+  current_phase: $current_phase
+  phase_status: $phase_status
+  stop_reason: $stop_reason
+  timestamp: $ts
+EOF
+	mv "$tmp_file" "$run_state_file"
+}
+
+_cmd_run_log() {
+	local exec_log="$1"
+	local entry="$2"
+	local ts
+	ts="$(utc_timestamp)"
+	printf "%s|ts=%s\n" "$entry" "$ts" >>"$exec_log"
+}
+
+cmd_run() {
+	local card="${1:-}"
+	if [[ -z "$card" ]]; then
+		echo "ERROR: eaw run requires a CARD argument" >&2
+		return 1
+	fi
+	local card_dir="$EAW_OUT_DIR/$card"
+	local runtime_dir="$card_dir/runtime"
+	local run_state_file="$runtime_dir/run_state.yaml"
+	local exec_log="$runtime_dir/execution.log"
+	local attempt=0
+	local state_file track_file final_phase
+	local track_id current_phase phase_status completed_phases
+	local snap_before snap_after next_rc
+	local raw_p norm_p phase_found
+
+	mkdir -p "$runtime_dir"
+
+	# Step 2: find state file — CARD_STATE_INVALID on failure
+	if ! state_file="$(_cmd_run_find_state_file "$card_dir")"; then
+		_cmd_run_write_state "$run_state_file" "$card" "$attempt" "CARD_STATE_INVALID" "" "" "" "CARD_STATE_INVALID"
+		_cmd_run_log "$exec_log" "attempt=$attempt|status=CARD_STATE_INVALID|card=$card|reason=no state file found"
+		printf "ERROR: CARD_STATE_INVALID no state file found for card %s\n" "$card" >&2
+		return 1
+	fi
+
+	# Step 2: read required fields from state — CARD_STATE_INVALID on missing fields
+	if ! _cmd_run_read_card_state "$state_file"; then
+		_cmd_run_write_state "$run_state_file" "$card" "$attempt" "CARD_STATE_INVALID" "${_CMD_RUN_TRACK_ID:-}" "${_CMD_RUN_CURRENT_PHASE:-}" "${_CMD_RUN_PHASE_STATUS:-}" "CARD_STATE_INVALID"
+		_cmd_run_log "$exec_log" "attempt=$attempt|status=CARD_STATE_INVALID|card=$card|reason=state missing track_id or current_phase"
+		printf "ERROR: CARD_STATE_INVALID state for card %s is missing required fields track_id or current_phase\n" "$card" >&2
+		return 1
+	fi
+	track_id="$_CMD_RUN_TRACK_ID"
+	current_phase="$_CMD_RUN_CURRENT_PHASE"
+	phase_status="$_CMD_RUN_PHASE_STATUS"
+	completed_phases="$_CMD_RUN_COMPLETED_PHASES"
+
+	# Step 2: validate track consistency — TRACK_CONSISTENCY_ERROR if track.yaml not found (H7)
+	if ! track_file="$(_cmd_run_find_track_file "$card_dir" "$track_id")"; then
+		_cmd_run_write_state "$run_state_file" "$card" "$attempt" "TRACK_CONSISTENCY_ERROR" "$track_id" "$current_phase" "$phase_status" "TRACK_CONSISTENCY_ERROR"
+		_cmd_run_log "$exec_log" "attempt=$attempt|status=TRACK_CONSISTENCY_ERROR|card=$card|track=$track_id|reason=track.yaml not found"
+		printf "ERROR: TRACK_CONSISTENCY_ERROR track_id=%s track.yaml not found for card %s\n" "$track_id" "$card" >&2
+		return 1
+	fi
+
+	# Step 2: validate current_phase is listed in track.phases — TRACK_CONSISTENCY_ERROR if absent (H7)
+	phase_found=0
+	while IFS= read -r raw_p; do
+		[[ -n "$raw_p" ]] || continue
+		norm_p="$(eaw_normalize_phase_id "$raw_p")"
+		if [[ "$norm_p" == "$current_phase" ]]; then
+			phase_found=1
+			break
+		fi
+	done < <(eaw_yaml_track_phases "$track_file")
+	if [[ "$phase_found" -eq 0 ]]; then
+		_cmd_run_write_state "$run_state_file" "$card" "$attempt" "TRACK_CONSISTENCY_ERROR" "$track_id" "$current_phase" "$phase_status" "TRACK_CONSISTENCY_ERROR"
+		_cmd_run_log "$exec_log" "attempt=$attempt|status=TRACK_CONSISTENCY_ERROR|card=$card|track=$track_id|phase=$current_phase|reason=phase not listed in track"
+		printf "ERROR: TRACK_CONSISTENCY_ERROR current_phase=%s not listed in track=%s for card %s\n" "$current_phase" "$track_id" "$card" >&2
+		return 1
+	fi
+
+	final_phase="$(eaw_normalize_phase_id "$(eaw_yaml_track_scalar "$track_file" "final_phase")")"
+
+	# Step 3: initialize run state and audit log (H3)
+	_cmd_run_write_state "$run_state_file" "$card" "$attempt" "RUNNING" "$track_id" "$current_phase" "$phase_status" "null"
+	_cmd_run_log "$exec_log" "attempt=$attempt|status=start|card=$card|track=$track_id|phase=$current_phase"
+
+	# Steps 1,3,4,5: orchestration loop — eaw next exclusively (H1)
+	while true; do
+		attempt=$((attempt + 1))
+
+		# Step 4: read state before iteration — CARD_STATE_INVALID on failure (H5)
+		if ! _cmd_run_read_card_state "$state_file"; then
+			_cmd_run_write_state "$run_state_file" "$card" "$attempt" "CARD_STATE_INVALID" "${_CMD_RUN_TRACK_ID:-}" "${_CMD_RUN_CURRENT_PHASE:-}" "${_CMD_RUN_PHASE_STATUS:-}" "CARD_STATE_INVALID"
+			_cmd_run_log "$exec_log" "attempt=$attempt|status=CARD_STATE_INVALID|card=$card|reason=state unreadable before iteration"
+			printf "ERROR: CARD_STATE_INVALID state unreadable before attempt %d for card %s\n" "$attempt" "$card" >&2
+			return 1
+		fi
+		track_id="$_CMD_RUN_TRACK_ID"
+		current_phase="$_CMD_RUN_CURRENT_PHASE"
+		phase_status="$_CMD_RUN_PHASE_STATUS"
+		completed_phases="$_CMD_RUN_COMPLETED_PHASES"
+
+		# Step 1: detect completion before calling eaw next (H1)
+		if [[ "$current_phase" == "$final_phase" ]]; then
+			_cmd_run_write_state "$run_state_file" "$card" "$attempt" "COMPLETED" "$track_id" "$current_phase" "$phase_status" "COMPLETED"
+			_cmd_run_log "$exec_log" "attempt=$attempt|status=COMPLETED|card=$card|track=$track_id|phase=$current_phase"
+			printf "CARD %s: run completed\n" "$card"
+			return 0
+		fi
+
+		# Step 4: snapshot state for forward-progress detection (H5)
+		snap_before="${track_id}|${current_phase}|${completed_phases}"
+
+		# Step 3: persist pre-iteration run state (H3)
+		_cmd_run_write_state "$run_state_file" "$card" "$attempt" "RUNNING" "$track_id" "$current_phase" "$phase_status" "null"
+		_cmd_run_log "$exec_log" "attempt=$attempt|status=running|card=$card|track=$track_id|phase=$current_phase"
+
+		# Step 1: call eaw next exclusively — no intake/analyze/implement (H1)
+		next_rc=0
+		EAW_WORKDIR="$EAW_WORKDIR" "$EAW_ROOT_DIR/scripts/eaw" next "$card" || next_rc=$?
+
+		# Step 5: exit code != 0 — PHASE_EXECUTION_FAILED (H3)
+		if [[ "$next_rc" -ne 0 ]]; then
+			_cmd_run_read_card_state "$state_file" || true
+			_cmd_run_write_state "$run_state_file" "$card" "$attempt" "PHASE_EXECUTION_FAILED" "${_CMD_RUN_TRACK_ID:-$track_id}" "${_CMD_RUN_CURRENT_PHASE:-$current_phase}" "${_CMD_RUN_PHASE_STATUS:-$phase_status}" "PHASE_EXECUTION_FAILED"
+			_cmd_run_log "$exec_log" "attempt=$attempt|status=PHASE_EXECUTION_FAILED|card=$card|phase=$current_phase|exit=$next_rc"
+			printf "ERROR: PHASE_EXECUTION_FAILED eaw next exited %d for card %s phase %s\n" "$next_rc" "$card" "$current_phase" >&2
+			return 1
+		fi
+
+		# Step 4: re-read state after eaw next — CARD_STATE_INVALID on failure (H5)
+		if ! _cmd_run_read_card_state "$state_file"; then
+			_cmd_run_write_state "$run_state_file" "$card" "$attempt" "CARD_STATE_INVALID" "${_CMD_RUN_TRACK_ID:-}" "${_CMD_RUN_CURRENT_PHASE:-}" "${_CMD_RUN_PHASE_STATUS:-}" "CARD_STATE_INVALID"
+			_cmd_run_log "$exec_log" "attempt=$attempt|status=CARD_STATE_INVALID|card=$card|reason=state unreadable after eaw next"
+			printf "ERROR: CARD_STATE_INVALID state unreadable after attempt %d for card %s\n" "$attempt" "$card" >&2
+			return 1
+		fi
+		track_id="$_CMD_RUN_TRACK_ID"
+		current_phase="$_CMD_RUN_CURRENT_PHASE"
+		phase_status="$_CMD_RUN_PHASE_STATUS"
+		completed_phases="$_CMD_RUN_COMPLETED_PHASES"
+
+		# Step 4: detect no forward progress — NO_FORWARD_PROGRESS when state unchanged (H5)
+		snap_after="${track_id}|${current_phase}|${completed_phases}"
+		if [[ "$snap_after" == "$snap_before" ]]; then
+			_cmd_run_write_state "$run_state_file" "$card" "$attempt" "NO_FORWARD_PROGRESS" "$track_id" "$current_phase" "$phase_status" "NO_FORWARD_PROGRESS"
+			_cmd_run_log "$exec_log" "attempt=$attempt|status=NO_FORWARD_PROGRESS|card=$card|phase=$current_phase"
+			printf "ERROR: NO_FORWARD_PROGRESS eaw next returned 0 without state change for card %s phase %s\n" "$card" "$current_phase" >&2
+			return 1
+		fi
+
+		# Step 3: post-iteration state update (H3)
+		_cmd_run_write_state "$run_state_file" "$card" "$attempt" "RUNNING" "$track_id" "$current_phase" "$phase_status" "null"
+		_cmd_run_log "$exec_log" "attempt=$attempt|status=advanced|card=$card|track=$track_id|phase=$current_phase"
+	done
 }

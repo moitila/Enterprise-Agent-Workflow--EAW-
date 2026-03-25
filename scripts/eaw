@@ -133,6 +133,13 @@ main() {
 			cmd_tracks
 		fi
 		;;
+	run)
+		if [[ $# -ne 2 ]]; then
+			die "usage: eaw run <CARD>"
+		fi
+		validate_runtime_workdir
+		cmd_run "$2"
+		;;
 	next)
 		if [[ $# -ne 2 ]]; then
 			die "usage: eaw next <CARD>"

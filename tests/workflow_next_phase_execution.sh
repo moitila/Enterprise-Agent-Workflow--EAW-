@@ -117,7 +117,7 @@ cat >"$custom_intake/phase_analysis.yaml" <<'EOF'
 phase:
   id: analysis
   prompt:
-    path: templates/prompts/default/analyze_findings/prompt_v<active>.md
+    path: templates/prompts/feature/ingest/prompt_v<active>.md
 
   outputs:
     create_directories: []
@@ -131,7 +131,7 @@ cat >"$custom_intake/phase_code_review.yaml" <<'EOF'
 phase:
   id: code_review
   prompt:
-    path: templates/prompts/default/analyze_findings/prompt_v<active>.md
+    path: templates/prompts/feature/ingest/prompt_v<active>.md
 
   outputs:
     create_directories:
@@ -186,7 +186,7 @@ cat >"$missing_intake/phase_analysis.yaml" <<'EOF'
 phase:
   id: analysis
   prompt:
-    path: templates/prompts/default/analyze_findings/prompt_v<active>.md
+    path: templates/prompts/feature/ingest/prompt_v<active>.md
 
   outputs:
     create_directories: []
@@ -201,7 +201,7 @@ cat >"$missing_intake/phase_code_review.yaml" <<'EOF'
 phase:
   id: code_review
   prompt:
-    path: templates/prompts/default/analyze_findings/prompt_v<active>.md
+    path: templates/prompts/feature/ingest/prompt_v<active>.md
 
   outputs:
     create_directories: []
@@ -248,7 +248,7 @@ cat >"$unsupported_intake/phase_analysis.yaml" <<'EOF'
 phase:
   id: analysis
   prompt:
-    path: templates/prompts/default/analyze_findings/prompt_v<active>.md
+    path: templates/prompts/feature/ingest/prompt_v<active>.md
 
   outputs:
     create_directories: []
@@ -261,7 +261,7 @@ cat >"$unsupported_intake/phase_code_review.yaml" <<'EOF'
 phase:
   id: code_review
   prompt:
-    path: templates/prompts/default/analyze_findings/prompt_v<active>.md
+    path: templates/prompts/feature/ingest/prompt_v<active>.md
 
   outputs:
     create_directories: []
@@ -276,5 +276,275 @@ if unsupported_output="$(EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" next "$
 	fail "unsupported strategy next command should fail"
 fi
 grep -Fq "uses unsupported completion strategy 'manual'" <<<"$unsupported_output" || fail "unsupported strategy output missing explicit error"
+
+# ── eaw run smoke tests ──────────────────────────────────────────────────────
+
+# run_complete: two phases with no required artifacts — run should complete
+run_complete_card="541RUNCOMPLETE"
+run_complete_intake="$workdir/out/$run_complete_card/intake"
+mkdir -p "$run_complete_intake"
+cat >"$run_complete_intake/track_run_ab.yaml" <<'EOF'
+track:
+  id: run_test_ab
+  initial_phase: phase_a
+  final_phase: phase_b
+  phases:
+    - phase_a
+    - phase_b
+  transitions:
+    phase_a:
+      next: phase_b
+EOF
+cat >"$run_complete_intake/state_card_run_ab.yaml" <<'EOF'
+card_state:
+  track_id: run_test_ab
+  previous_phase: null
+  current_phase: phase_a
+  completed_phases: []
+EOF
+cat >"$run_complete_intake/phase_phase_a.yaml" <<'EOF'
+phase:
+  id: phase_a
+  prompt:
+    path: templates/prompts/feature/ingest/prompt_v<active>.md
+  outputs:
+    create_directories: []
+    create_artifacts: []
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts: []
+EOF
+cat >"$run_complete_intake/phase_phase_b.yaml" <<'EOF'
+phase:
+  id: phase_b
+  prompt:
+    path: templates/prompts/feature/ingest/prompt_v<active>.md
+  outputs:
+    create_directories: []
+    create_artifacts: []
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts: []
+EOF
+
+run_complete_output="$(EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" run "$run_complete_card" 2>&1)" || fail "eaw run should complete successfully for run_complete_card: $run_complete_output"
+run_complete_state="$workdir/out/$run_complete_card/runtime/run_state.yaml"
+run_complete_log="$workdir/out/$run_complete_card/runtime/execution.log"
+[[ -f "$run_complete_state" ]] || fail "eaw run should create run_state.yaml"
+[[ -f "$run_complete_log" ]] || fail "eaw run should create execution.log"
+grep -Fq "stop_reason: COMPLETED" "$run_complete_state" || fail "run_state.yaml should have stop_reason: COMPLETED"
+grep -Fq "CARD $run_complete_card: run completed" <<<"$run_complete_output" || fail "eaw run output missing completion message"
+grep -Fq "status=COMPLETED" "$run_complete_log" || fail "execution.log missing COMPLETED event"
+grep -Fq "status=start" "$run_complete_log" || fail "execution.log missing start event"
+
+# run_track_consistency_error: state with nonexistent track_id
+run_track_err_card="541RUNTRACKFAIL"
+run_track_err_intake="$workdir/out/$run_track_err_card/intake"
+mkdir -p "$run_track_err_intake"
+cat >"$run_track_err_intake/state_card_badtrack.yaml" <<'EOF'
+card_state:
+  track_id: nonexistent_track_eaw547
+  previous_phase: null
+  current_phase: some_phase
+  completed_phases: []
+EOF
+
+if EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" run "$run_track_err_card" 2>/dev/null; then
+	fail "eaw run should fail with TRACK_CONSISTENCY_ERROR"
+fi
+run_track_err_state="$workdir/out/$run_track_err_card/runtime/run_state.yaml"
+[[ -f "$run_track_err_state" ]] || fail "eaw run should create run_state.yaml on track consistency error"
+grep -Fq "stop_reason: TRACK_CONSISTENCY_ERROR" "$run_track_err_state" || fail "run_state.yaml should have stop_reason: TRACK_CONSISTENCY_ERROR"
+
+# run_card_state_invalid: state file missing current_phase field
+run_state_inv_card="541RUNSTATEINV"
+run_state_inv_intake="$workdir/out/$run_state_inv_card/intake"
+mkdir -p "$run_state_inv_intake"
+cat >"$run_state_inv_intake/state_card_invalid.yaml" <<'EOF'
+card_state:
+  track_id: run_test_ab
+  previous_phase: null
+  completed_phases: []
+EOF
+
+if EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" run "$run_state_inv_card" 2>/dev/null; then
+	fail "eaw run should fail with CARD_STATE_INVALID"
+fi
+run_state_inv_state="$workdir/out/$run_state_inv_card/runtime/run_state.yaml"
+[[ -f "$run_state_inv_state" ]] || fail "eaw run should create run_state.yaml on card state invalid"
+grep -Fq "stop_reason: CARD_STATE_INVALID" "$run_state_inv_state" || fail "run_state.yaml should have stop_reason: CARD_STATE_INVALID"
+
+# run_no_progress: phase has unfilled required artifact — eaw next returns 0 without state change
+run_no_prog_card="541RUNNOPROG"
+run_no_prog_intake="$workdir/out/$run_no_prog_card/intake"
+mkdir -p "$run_no_prog_intake"
+cat >"$run_no_prog_intake/track_run_stuck.yaml" <<'EOF'
+track:
+  id: run_test_stuck
+  initial_phase: stuck
+  final_phase: done
+  phases:
+    - stuck
+    - done
+  transitions:
+    stuck:
+      next: done
+EOF
+cat >"$run_no_prog_intake/state_card_run_stuck.yaml" <<'EOF'
+card_state:
+  track_id: run_test_stuck
+  previous_phase: null
+  current_phase: stuck
+  phase_status: RUN
+  completed_phases: []
+EOF
+cat >"$run_no_prog_intake/phase_stuck.yaml" <<'EOF'
+phase:
+  id: stuck
+  prompt:
+    path: templates/prompts/feature/ingest/prompt_v<active>.md
+  outputs:
+    create_directories: []
+    create_artifacts: []
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - review/missing_run_547.md
+EOF
+cat >"$run_no_prog_intake/phase_done.yaml" <<'EOF'
+phase:
+  id: done
+  prompt:
+    path: templates/prompts/feature/ingest/prompt_v<active>.md
+  outputs:
+    create_directories: []
+    create_artifacts: []
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts: []
+EOF
+
+if EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" run "$run_no_prog_card" 2>/dev/null; then
+	fail "eaw run should fail with NO_FORWARD_PROGRESS"
+fi
+run_no_prog_state="$workdir/out/$run_no_prog_card/runtime/run_state.yaml"
+run_no_prog_log="$workdir/out/$run_no_prog_card/runtime/execution.log"
+[[ -f "$run_no_prog_state" ]] || fail "eaw run should create run_state.yaml on no forward progress"
+grep -Fq "stop_reason: NO_FORWARD_PROGRESS" "$run_no_prog_state" || fail "run_state.yaml should have stop_reason: NO_FORWARD_PROGRESS"
+grep -Fq "status=NO_FORWARD_PROGRESS" "$run_no_prog_log" || fail "execution.log should record NO_FORWARD_PROGRESS"
+
+# 541RUNNOPROG_RAW: state without phase_status ("cru") — NO_FORWARD_PROGRESS must be detected on first iteration (H4)
+run_no_prog_raw_card="541RUNNOPROG_RAW"
+run_no_prog_raw_intake="$workdir/out/$run_no_prog_raw_card/intake"
+mkdir -p "$run_no_prog_raw_intake"
+cat >"$run_no_prog_raw_intake/track_run_stuck.yaml" <<'EOF'
+track:
+  id: run_test_stuck
+  initial_phase: stuck
+  final_phase: done
+  phases:
+    - stuck
+    - done
+  transitions:
+    stuck:
+      next: done
+EOF
+cat >"$run_no_prog_raw_intake/state_card_run_stuck.yaml" <<'EOF'
+card_state:
+  track_id: run_test_stuck
+  previous_phase: null
+  current_phase: stuck
+  completed_phases: []
+EOF
+cat >"$run_no_prog_raw_intake/phase_stuck.yaml" <<'EOF'
+phase:
+  id: stuck
+  prompt:
+    path: templates/prompts/feature/ingest/prompt_v<active>.md
+  outputs:
+    create_directories: []
+    create_artifacts: []
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - review/missing_run_547.md
+EOF
+cat >"$run_no_prog_raw_intake/phase_done.yaml" <<'EOF'
+phase:
+  id: done
+  prompt:
+    path: templates/prompts/feature/ingest/prompt_v<active>.md
+  outputs:
+    create_directories: []
+    create_artifacts: []
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts: []
+EOF
+
+if EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" run "$run_no_prog_raw_card" 2>/dev/null; then
+	fail "eaw run should fail with NO_FORWARD_PROGRESS for raw state (541RUNNOPROG_RAW)"
+fi
+run_no_prog_raw_state="$workdir/out/$run_no_prog_raw_card/runtime/run_state.yaml"
+run_no_prog_raw_log="$workdir/out/$run_no_prog_raw_card/runtime/execution.log"
+[[ -f "$run_no_prog_raw_state" ]] || fail "eaw run should create run_state.yaml on no forward progress (541RUNNOPROG_RAW)"
+grep -Fq "stop_reason: NO_FORWARD_PROGRESS" "$run_no_prog_raw_state" || fail "run_state.yaml should have stop_reason: NO_FORWARD_PROGRESS (541RUNNOPROG_RAW)"
+grep -Fq "status=NO_FORWARD_PROGRESS" "$run_no_prog_raw_log" || fail "execution.log should record NO_FORWARD_PROGRESS (541RUNNOPROG_RAW)"
+
+# run_phase_fail: phase with unsupported strategy causes eaw next to exit non-zero
+run_phase_fail_card="541RUNPHASEFAIL"
+run_phase_fail_intake="$workdir/out/$run_phase_fail_card/intake"
+mkdir -p "$run_phase_fail_intake"
+cat >"$run_phase_fail_intake/track_run_fail.yaml" <<'EOF'
+track:
+  id: run_test_fail
+  initial_phase: fail_phase
+  final_phase: end_phase
+  phases:
+    - fail_phase
+    - end_phase
+  transitions:
+    fail_phase:
+      next: end_phase
+EOF
+cat >"$run_phase_fail_intake/state_card_run_fail.yaml" <<'EOF'
+card_state:
+  track_id: run_test_fail
+  previous_phase: null
+  current_phase: fail_phase
+  completed_phases: []
+EOF
+cat >"$run_phase_fail_intake/phase_fail_phase.yaml" <<'EOF'
+phase:
+  id: fail_phase
+  prompt:
+    path: templates/prompts/feature/ingest/prompt_v<active>.md
+  outputs:
+    create_directories: []
+    create_artifacts: []
+  completion:
+    strategy: manual
+EOF
+cat >"$run_phase_fail_intake/phase_end_phase.yaml" <<'EOF'
+phase:
+  id: end_phase
+  prompt:
+    path: templates/prompts/feature/ingest/prompt_v<active>.md
+  outputs:
+    create_directories: []
+    create_artifacts: []
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts: []
+EOF
+
+if EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" run "$run_phase_fail_card" 2>/dev/null; then
+	fail "eaw run should fail with PHASE_EXECUTION_FAILED"
+fi
+run_phase_fail_state="$workdir/out/$run_phase_fail_card/runtime/run_state.yaml"
+run_phase_fail_log="$workdir/out/$run_phase_fail_card/runtime/execution.log"
+[[ -f "$run_phase_fail_state" ]] || fail "eaw run should create run_state.yaml on phase execution failed"
+grep -Fq "stop_reason: PHASE_EXECUTION_FAILED" "$run_phase_fail_state" || fail "run_state.yaml should have stop_reason: PHASE_EXECUTION_FAILED"
+grep -Fq "status=PHASE_EXECUTION_FAILED" "$run_phase_fail_log" || fail "execution.log should record PHASE_EXECUTION_FAILED"
 
 printf "workflow_next_phase_execution OK\n"
