@@ -32,7 +32,7 @@ help_output="$(EAW_WORKDIR="$workdir" ./scripts/eaw --help)"
 grep -Fq 'eaw card <CARD> --track <TRACK>' <<<"$help_output" || fail "usage missing card command"
 
 EAW_WORKDIR="$workdir" ./scripts/eaw card CARDSTD --track standard >/dev/null
-test -f "$workdir/out/CARDSTD/feature_CARDSTD.md" || fail "standard track did not create feature dossier"
+test -f "$workdir/out/CARDSTD/standard_CARDSTD.md" || fail "standard track did not create standard dossier"
 test -f "$workdir/out/CARDSTD/state_card_standard.yaml" || fail "standard track state file missing"
 grep -Fq 'track_id: standard' "$workdir/out/CARDSTD/state_card_standard.yaml" || fail "standard track state mismatch"
 
@@ -46,7 +46,7 @@ missing_output="$(EAW_WORKDIR="$workdir" ./scripts/eaw card CARDMISS 2>&1)"
 missing_rc=$?
 set -e
 [[ "$missing_rc" -ne 0 ]] || fail "missing --track should fail"
-grep -Fq 'missing required argument: --track' <<<"$missing_output" || fail "missing --track message mismatch"
+grep -Fq 'multiple tracks installed — specify with --track <TRACK>' <<<"$missing_output" || fail "missing --track message mismatch"
 
 set +e
 invalid_output="$(EAW_WORKDIR="$workdir" ./scripts/eaw card CARDINV --track ghost 2>&1)"

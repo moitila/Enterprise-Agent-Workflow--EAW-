@@ -77,7 +77,7 @@ if [[ ! -d "$OUTDIR" ]]; then
 	exit 2
 fi
 
-MAIN_MD="$OUTDIR/feature_${CARD_ID}.md"
+MAIN_MD="$OUTDIR/standard_${CARD_ID}.md"
 if [[ ! -f "$MAIN_MD" ]]; then
 	printf "Smoke failed: missing main md %s\n" "$MAIN_MD" >&2
 	exit 3
