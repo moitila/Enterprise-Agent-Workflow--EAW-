@@ -47,6 +47,22 @@ missing_rc=$?
 set -e
 [[ "$missing_rc" -ne 0 ]] || fail "missing --track should fail"
 grep -Fq 'multiple tracks installed — specify with --track <TRACK>' <<<"$missing_output" || fail "missing --track message mismatch"
+! grep -Fq 'track_id: track_id:' <<<"$missing_output" || fail "missing --track message lists 'track_id:' instead of real track names (bug 575)"
+
+# auto-select with 1 track installed
+tracks_real="$REPO_ROOT/tracks/tracks.yaml"
+tracks_backup="$(mktemp)"
+cp "$tracks_real" "$tracks_backup"
+trap 'cp "$tracks_backup" "$tracks_real"; rm -f "$tracks_backup"; rm -rf "$tmp_root"' EXIT
+printf -- "- track_id: bug\n" >"$tracks_real"
+set +e
+autosel_output="$(EAW_WORKDIR="$workdir" ./scripts/eaw card CARDAUTO 2>&1)"
+autosel_rc=$?
+set -e
+cp "$tracks_backup" "$tracks_real"
+trap 'rm -rf "$tmp_root"' EXIT
+[[ "$autosel_rc" -eq 0 ]] || fail "auto-select with 1 track should succeed (rc=$autosel_rc output=$autosel_output)"
+test -f "$workdir/out/CARDAUTO/state_card_bug.yaml" || fail "auto-select single track did not create state file"
 
 set +e
 invalid_output="$(EAW_WORKDIR="$workdir" ./scripts/eaw card CARDINV --track ghost 2>&1)"

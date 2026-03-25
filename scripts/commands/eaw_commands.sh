@@ -1122,7 +1122,7 @@ cmd_card_cli() {
 			local -a registered_tracks=()
 			while IFS= read -r _t; do
 				[[ -n "$_t" ]] && registered_tracks+=("$_t")
-			done < <(awk '/track_id:/ {print $2}' "$tracks_registry")
+			done < <(awk '/track_id:/ {print $3}' "$tracks_registry")
 			if [[ ${#registered_tracks[@]} -eq 1 ]]; then
 				track="${registered_tracks[0]}"
 			elif [[ ${#registered_tracks[@]} -gt 1 ]]; then
