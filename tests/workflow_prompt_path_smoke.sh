@@ -161,9 +161,12 @@ success_output="$(EAW_WORKDIR="$success_workdir" "$REPO_ROOT/scripts/eaw" valida
 grep -Fq "current_phase=analysis prompt_phase=analyze_findings" <<<"$success_output" || fail "missing prompt_phase derived from prompt.path in success output"
 grep -Fq "prompt_path=templates/prompts/default/analyze_findings/prompt_v<active>.md" <<<"$success_output" || fail "missing prompt_path in success output"
 grep -Fq "workflow card=538OFFICIAL track=standard current_phase=findings prompt_phase=analyze_findings" <<<"$success_output" || fail "missing official track validation summary"
-grep -Fq "workflow card=539FEATURE track=feature current_phase=findings prompt_phase=analyze_findings" <<<"$success_output" || fail "missing feature track validation summary"
-grep -Fq "workflow card=539BUG track=bug current_phase=findings prompt_phase=analyze_findings" <<<"$success_output" || fail "missing bug track validation summary"
-grep -Fq "workflow card=539SPIKE track=spike current_phase=findings prompt_phase=analyze_findings" <<<"$success_output" || fail "missing spike track validation summary"
+grep -Fq "workflow card=539FEATURE track=feature current_phase=findings prompt_phase=findings" <<<"$success_output" || fail "missing feature track validation summary"
+grep -Fq "prompt_path=templates/prompts/feature/findings/prompt_v<active>.md" <<<"$success_output" || fail "missing feature track prompt_path summary"
+grep -Fq "workflow card=539BUG track=bug current_phase=findings prompt_phase=findings" <<<"$success_output" || fail "missing bug track validation summary"
+grep -Fq "prompt_path=templates/prompts/bug/findings/prompt_v<active>.md" <<<"$success_output" || fail "missing bug track prompt_path summary"
+grep -Fq "workflow card=539SPIKE track=spike current_phase=findings prompt_phase=findings" <<<"$success_output" || fail "missing spike track validation summary"
+grep -Fq "prompt_path=templates/prompts/spike/findings/prompt_v<active>.md" <<<"$success_output" || fail "missing spike track prompt_path summary"
 if grep -Fq "inconsistent with phase.id" <<<"$success_output"; then
 	fail "unexpected phase.id consistency error in success output"
 fi
