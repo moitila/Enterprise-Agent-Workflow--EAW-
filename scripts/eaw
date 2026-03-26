@@ -18,7 +18,18 @@ on_err() {
 trap on_err ERR
 
 # Simple CLI for EAW
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+resolve_script_path() {
+	local source_path="$1"
+	while [[ -L "$source_path" ]]; do
+		local source_dir
+		source_dir="$(cd -P "$(dirname "$source_path")" && pwd)"
+		source_path="$(readlink "$source_path")"
+		[[ "$source_path" == /* ]] || source_path="$source_dir/$source_path"
+	done
+	cd -P "$(dirname "$source_path")" && pwd
+}
+
+SCRIPT_DIR="$(resolve_script_path "${BASH_SOURCE[0]}")"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 LIB="$SCRIPT_DIR/lib.sh"
 

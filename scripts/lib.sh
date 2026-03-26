@@ -1,7 +1,18 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-EAW_BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+resolve_script_parent_dir() {
+	local source_path="$1"
+	while [[ -L "$source_path" ]]; do
+		local source_dir
+		source_dir="$(cd -P "$(dirname "$source_path")" && pwd)"
+		source_path="$(readlink "$source_path")"
+		[[ "$source_path" == /* ]] || source_path="$source_dir/$source_path"
+	done
+	cd -P "$(dirname "$source_path")/.." && pwd
+}
+
+EAW_BASE_DIR="$(resolve_script_parent_dir "${BASH_SOURCE[0]}")"
 
 log() { printf "%s\n" "$*" >&2; }
 
