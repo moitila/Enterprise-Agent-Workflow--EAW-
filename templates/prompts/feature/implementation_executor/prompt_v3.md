@@ -15,6 +15,9 @@ INPUT
 - CONFIG_SOURCE={{CONFIG_SOURCE}}
 - OUT_DIR={{OUT_DIR}}
 - CARD_DIR={{CARD_DIR}}
+- CONTEXT_SOURCE_PRIORITY:
+  - `{{CARD_DIR}}/ingest` como origem primaria quando existir
+  - `{{CARD_DIR}}/intake` como fallback temporario compativel
 - TARGET_REPOS:
 {{TARGET_REPOS}}
 - EXCLUDED_REPOS:
@@ -22,12 +25,12 @@ INPUT
 - WARNINGS:
 {{WARNINGS_BLOCK}}
 - REQUIRED_ARTIFACTS:
-  - `out/{{CARD}}/investigations/00_intake.md`
-  - `out/{{CARD}}/investigations/20_findings.md`
-  - `out/{{CARD}}/investigations/30_hypotheses.md`
-  - `out/{{CARD}}/investigations/40_next_steps.md`
-  - `out/{{CARD}}/implementation/00_scope.lock.md`
-  - `out/{{CARD}}/implementation/10_change_plan.md`
+  - `{{EAW_WORKDIR}}/out/{{CARD}}/investigations/00_intake.md`
+  - `{{EAW_WORKDIR}}/out/{{CARD}}/investigations/20_findings.md`
+  - `{{EAW_WORKDIR}}/out/{{CARD}}/investigations/30_hypotheses.md`
+  - `{{EAW_WORKDIR}}/out/{{CARD}}/investigations/40_next_steps.md`
+  - `{{EAW_WORKDIR}}/out/{{CARD}}/implementation/00_scope.lock.md`
+  - `{{EAW_WORKDIR}}/out/{{CARD}}/implementation/10_change_plan.md`
 - MODE: quando `EAW_WORKDIR` estiver vazio, saida em `OUT_DIR`; quando definido, saida isolada em `EAW_WORKDIR`.
 - EXECUTION_STRUCTURE: `RUNTIME_ROOT` nunca deve ser modificado; codigo apenas em TARGET_REPOS; artefatos apenas dentro de `CARD_DIR`; allowlist do `00_scope.lock.md` e soberana para implementacao real nos TARGET_REPOS.
 
@@ -47,7 +50,7 @@ READ_SCOPE
 
 WRITE_SCOPE
 - Codigo: escrever somente nos TARGET_REPOS autorizados por `00_scope.lock.md`.
-- Artefatos: escrever somente em `CARD_DIR` para arquivos previstos pelo plano (`10_change_plan.md`).
+- Artefatos: escrever somente em `CARD_DIR` para arquivos previstos pelo plano (`10_change_plan.md`) e em `{{CARD_DIR}}/implementation/20_patch_notes.md`.
 - A allowlist soberana governa apenas alteracoes de codigo nos TARGET_REPOS.
 
 RULES
@@ -69,8 +72,8 @@ RULES
   - Identificar explicitamente se o plano envolve cenarios de debugging, verificacao de runtime ou mudancas estruturais, e registrar como condicoes de validacao adicionais.
 - PASSO 3 - EXECUCAO EM MICRO-PASSOS:
   - Executar os Steps do `10_change_plan.md` em micro-passos, sem desvio.
-  - Executar `bash -n` apenas para arquivos `.sh` alterados, quando aplicavel.
-  - Executar exatamente os comandos listados em `out/{{CARD}}/implementation/10_change_plan.md -> Validacao Tecnica Obrigatoria`.
+  - Executar `bash -n` para qualquer arquivo `.sh` alterado.
+  - Executar exatamente os comandos listados em `{{EAW_WORKDIR}}/out/{{CARD}}/implementation/10_change_plan.md -> Validacao Tecnica Obrigatoria`.
 
 ### EXECUCAO COMPLETA OBRIGATORIA
 
@@ -122,7 +125,7 @@ FORBIDDEN
 - Nao alterar contratos publicos.
 - Nao alterar layout de saida.
 - Nao executar automacoes destrutivas.
-- Nao criar ou alterar `20_patch_notes.md` fora do fluxo aprovado da fase; preservar quando ja existir.
+- Nao criar ou alterar `20_patch_notes.md` fora do fluxo aprovado da fase.
 - Nao tentar solucao alternativa em caso de falha.
 
 FAIL_CONDITIONS
