@@ -23,6 +23,20 @@ Primary workflow classification remains the selected `track`, persisted as `card
 In the current runtime model, `eaw next <CARD>` is the phase-driven entrypoint, while `eaw intake <CARD>`, `eaw analyze <CARD>`, and `eaw implement <CARD>` remain available as deprecated aggregated compatibility commands for prompt-oriented flows, with planned removal in `v1.0`.
 The current contract documents phase completion through `phase.completion` and the `eaw next <CARD>` transition gate. It does not define a public `eaw complete <CARD>` command in the current CLI surface, so callers should treat completion as part of the declarative phase contract rather than a separate command.
 
+### `eaw run`
+
+Syntax:
+`eaw run <CARD>`
+
+Behavior:
+- Uses `eaw next <CARD>` as the exclusive progression mechanism for advancing the card through the active declarative workflow.
+- Creates `out/<CARD>/runtime/run_state.yaml` and `out/<CARD>/runtime/execution.log` for run-level observability.
+- Writes `run_state.yaml` with the observed fields `card`, `attempt`, `status`, `track_id`, `current_phase`, `phase_status`, `stop_reason`, and `timestamp`.
+- Appends `runtime/execution.log` entries in the observed key-value format `attempt=N|status=<...>|card=<...>|...`.
+- Stops with named outcomes `COMPLETED`, `TRACK_CONSISTENCY_ERROR`, `CARD_STATE_INVALID`, `NO_FORWARD_PROGRESS`, or `PHASE_EXECUTION_FAILED`.
+- Treats the declared workflow as the source of truth: it validates `track_id` and `current_phase` before iterating and does not call `intake`, `analyze`, or `implement` directly.
+- Wave 1 scope is intentionally limited: `--resume`, `--from`, `--dry-run`, automatic retry, and extra metrics are out of scope.
+
 ### `eaw intake`
 
 Syntax:
@@ -79,6 +93,8 @@ Outputs
   - `investigations/40_next_steps.md` — next-steps stage scaffold
   - `prompts/<prompt_alias>.md` — phase-driven prompt file generated from `outputs.prompts`; the filename matches the declared alias exactly
   - `execution.log` — phase execution log with format `phase|status|duration_ms|note`
+  - `runtime/run_state.yaml` — run-level state snapshot written by `eaw run`, including `attempt`, `status`, `track_id`, `current_phase`, `phase_status`, `stop_reason`, and timestamp
+  - `runtime/execution.log` — run-level operational log appended by `eaw run`; entries include `attempt=N` and status markers for completion or named aborts
   - `execution_journal.jsonl` — structured Execution Journal in JSON Lines format; one event per phase execution with fields `card_id`, `track`, `phase`, `timestamp`, `agent`, `mode`, `status`, `duration_ms`; schema documented in `docs/EXECUTION_JOURNAL.md`
   - `TEST_PLAN_<CARD>.md` — placeholder test plan
   - `context/<repoKey>/` — **standby**: context engine is currently disabled; no `context/` artifacts are collected at runtime. This contract entry is reserved for future activation.

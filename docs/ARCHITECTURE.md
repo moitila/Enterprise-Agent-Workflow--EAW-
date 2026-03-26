@@ -24,11 +24,16 @@ The architecture is intentionally contract-first: internal modularization must n
 4. Outputs are written to `out/<CARD>/` according to the contract.
 5. `out/<CARD>/execution.log` records phase execution (`phase|status|duration_ms|note`).
 
+For full-card orchestration, `./scripts/eaw run <CARD>` adds a run-level control loop on top of the same declarative lifecycle. The command creates `out/<CARD>/runtime/run_state.yaml` and `out/<CARD>/runtime/execution.log`, validates the current card state before iterating, and advances only by delegating to `./scripts/eaw next <CARD>`. The runtime does not use `intake`, `analyze`, or `implement` as internal progression shortcuts.
+
 ## Phase Transition Semantics
 
 - `current_phase` is the declarative workflow position persisted in card state.
 - `track.transitions` defines the next valid state transition for the current phase.
 - `./scripts/eaw next <CARD>` updates workflow state and executes the destination phase in a phase-driven way using the phase YAML outputs and runtime prompt bindings.
+- `./scripts/eaw run <CARD>` re-reads `card_state`, checks whether the current phase already equals `final_phase`, and otherwise calls `./scripts/eaw next <CARD>` as the only forward-progress primitive.
+- `./scripts/eaw run <CARD>` persists `run_state.yaml` fields such as `attempt`, `status`, `track_id`, `current_phase`, `phase_status`, and `stop_reason`, and appends run-level audit lines to `runtime/execution.log`.
+- Named run termination states are part of the observed runtime behavior: `COMPLETED`, `TRACK_CONSISTENCY_ERROR`, `CARD_STATE_INVALID`, `NO_FORWARD_PROGRESS`, and `PHASE_EXECUTION_FAILED`.
 - Prompt-oriented commands such as `intake`, `analyze`, and `implement` remain the deprecated compatibility surface that materializes the aggregated prompt flow for the same lifecycle during the transition to the phase-driven model, with planned removal in `v1.0`.
 - In the current runtime model, phase completion is validated through the phase `completion` contract when `next` runs; the architecture does not rely on a separate public `complete` CLI command.
 - The current phase-driven executor is incremental: it scaffolds declared outputs, materializes any `phase.outputs.prompts` entries under `out/<CARD>/prompts/` using the declared alias as the filename, emits compatibility prompt artifacts for built-in prompt phases, and records execution in `execution.log`.
@@ -40,6 +45,7 @@ Public output surface:
 - staged investigations: `out/<CARD>/investigations/*.md`
 - contextual evidence: `out/<CARD>/context/<repoKey>/...` (**standby**: context engine disabled; not collected at runtime)
 - phase telemetry: `out/<CARD>/execution.log`
+- run telemetry: `out/<CARD>/runtime/run_state.yaml` and `out/<CARD>/runtime/execution.log`
 
 Compatibility rule:
 - Internal file/module reorganizations are allowed.

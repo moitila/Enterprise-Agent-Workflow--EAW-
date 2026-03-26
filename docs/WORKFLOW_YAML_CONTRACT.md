@@ -223,6 +223,8 @@ Rules:
 - When `eaw next <CARD>` runs, the runtime first materializes the current phase using that phase YAML.
 - If the current phase is incomplete after materialization, the runtime keeps the card on the same `current_phase`, reports the missing or unfilled required artifacts and does not apply `track.transitions`.
 - If the current phase is complete, the runtime updates `previous_phase`, `current_phase`, and `completed_phases` based on `track.transitions`.
+- When `eaw run <CARD>` runs, it consumes the same declarative contract instead of defining a second workflow model: it reads `card_state`, validates `track_id` and `current_phase` against the installed track, and uses `eaw next <CARD>` as its only progression mechanism.
+- For `eaw run <CARD>`, `current_phase`, `track.transitions`, and `phase.completion` remain the decisive declarative inputs for forward progress. The command adds run-level observability (`out/<CARD>/runtime/run_state.yaml` and `out/<CARD>/runtime/execution.log`) without changing the workflow YAML contract itself.
 - After the state transition, the current runtime materializes the destination phase in a phase-driven way.
 - Phase-driven execution uses the destination phase YAML to create declared directories and artifacts, materializes any declared `outputs.prompts` under `out/<CARD>/prompts/`, emits compatibility prompt artifacts for the built-in prompt phases, and records the execution in `execution.log`.
 - Legacy prompt artifacts under `investigations/` and `implementation/` may coexist with `out/<CARD>/prompts/` while compatibility with the aggregated prompt flow is preserved.

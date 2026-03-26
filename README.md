@@ -37,6 +37,7 @@ chmod +x scripts/eaw scripts/lib.sh
 ./scripts/eaw init
 ./scripts/eaw card 123 --track standard
 ./scripts/eaw card 124 --track bug "Fix race condition"
+./scripts/eaw run 123
 ./scripts/eaw next 123
 ./scripts/eaw intake 123    # deprecated compatibility wrapper; planned removal in v1.0
 ./scripts/eaw analyze 123   # deprecated compatibility wrapper; planned removal in v1.0
@@ -48,6 +49,8 @@ chmod +x scripts/eaw scripts/lib.sh
 `track` is the primary workflow classification for a card. The runtime stores the selected value in `card_state.track_id` and resolves the official workflow from `tracks/<track>/track.yaml`.
 
 The declarative lifecycle advances through `current_phase` and `track.transitions`. `./scripts/eaw card <CARD> --track <TRACK>` materializes the initial phase declared by the selected track as soon as the card is created. `./scripts/eaw next <CARD>` first materializes the current phase, then evaluates the declared `completion` contract for that same phase, remains in place when required artifacts are still missing or still contain only scaffold/template content, and only then applies `track.transitions` and materializes the destination phase. Phases may also declare prompt artifacts directly in `outputs.prompts`, which the runtime materializes under `out/<CARD>/prompts/` using the declared alias as the filename (`<alias>.md`) while preserving compatibility prompt artifacts. `intake`, `analyze`, and `implement` remain deprecated compatibility wrappers over the same lifecycle for transition and AI-assisted execution flows, with planned removal in `v1.0`.
+
+`./scripts/eaw run <CARD>` is the deterministic orchestration entrypoint for executing a card end-to-end through the declared workflow. It uses `./scripts/eaw next <CARD>` as the only progression mechanism, persists `out/<CARD>/runtime/run_state.yaml` and `out/<CARD>/runtime/execution.log`, and names terminal outcomes with `stop_reason`. Wave 1 is intentionally minimal: no `--resume`, `--from`, `--dry-run`, automatic retry, extra metrics, or new runtime architecture are part of the documented contract.
 
 Current phase semantics:
 - entering a phase means the card state now points to that declarative workflow phase;
@@ -93,6 +96,8 @@ bash ./scripts/eaw card 999999 --track bug "Smoke test"
 - `out/<CARD>/investigations/40_next_steps.md` — final diagnosis, risks, and action plan
 - `out/<CARD>/prompts/<prompt_alias>.md` — phase-driven prompt artifact generated from `outputs.prompts`; the file name matches the declared alias exactly
 - `out/<CARD>/execution.log` — deterministic phase execution log (`phase|status|duration_ms|note`)
+- `out/<CARD>/runtime/run_state.yaml` — `eaw run` state snapshot with `attempt`, `status`, `track_id`, `current_phase`, `phase_status`, `stop_reason`, and timestamp
+- `out/<CARD>/runtime/execution.log` — `eaw run` operational log with per-attempt entries such as `attempt=N|status=<...>|card=<...>|...`
 - `out/<CARD>/execution_journal.jsonl` — structured Execution Journal in JSON Lines; one event per phase with fields `card_id`, `track`, `phase`, `timestamp`, `agent`, `mode`, `status`, `duration_ms` (see `docs/EXECUTION_JOURNAL.md`)
 
 Decision note:
