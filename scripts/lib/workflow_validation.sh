@@ -168,7 +168,7 @@ eaw_validate_workflow_track() {
 	local -A phase_file_by_id=()
 	local -A transition_map=()
 
-	track_dir="$EAW_ROOT_DIR/tracks/$track_id"
+	track_dir="$EAW_TRACKS_DIR/$track_id"
 	if [[ -z "$track_id" || ! -d "$track_dir" ]]; then
 		eaw_validate_workflow_error "$track_id" "" "track" "track directory not found"
 		return 1

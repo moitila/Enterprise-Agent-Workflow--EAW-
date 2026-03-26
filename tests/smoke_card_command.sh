@@ -50,7 +50,7 @@ grep -Fq 'multiple tracks installed — specify with --track <TRACK>' <<<"$missi
 ! grep -Fq 'track_id: track_id:' <<<"$missing_output" || fail "missing --track message lists 'track_id:' instead of real track names (bug 575)"
 
 # auto-select with 1 track installed
-tracks_real="$REPO_ROOT/tracks/tracks.yaml"
+tracks_real="$workdir/tracks/tracks.yaml"
 tracks_backup="$(mktemp)"
 cp "$tracks_real" "$tracks_backup"
 trap 'cp "$tracks_backup" "$tracks_real"; rm -f "$tracks_backup"; rm -rf "$tmp_root"' EXIT

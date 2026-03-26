@@ -55,12 +55,14 @@ test -f "$EAW_WORKDIR/out/501/ingest/sources.md"
 test -d "$EAW_WORKDIR/out/501/intake"
 test -d "$EAW_WORKDIR/out/501/investigations"
 # feature ingest smoke must exercise `eaw next`
-"$REPO_ROOT/scripts/eaw" next 501 >/dev/null
+next_output="$("$REPO_ROOT/scripts/eaw" next 501 2>&1)"
+grep -F "phase 'ingest' is incomplete; unfilled required artifacts" <<<"$next_output" >/dev/null
+grep -F "CARD 501: ingest remains current; unfilled required artifacts" <<<"$next_output" >/dev/null
 feature_prompt="$EAW_WORKDIR/out/501/prompts/ingest.md"
 test -f "$feature_prompt"
 grep -F 'INGEST_DIR=`out/<CARD>/ingest/`' "$feature_prompt" >/dev/null
 grep -F "Ler \`$EAW_WORKDIR/out/501/ingest\` quando existir." "$feature_prompt" >/dev/null
-grep -F "Ler \`$EAW_WORKDIR/out/501/intake\` apenas como fallback compativel quando \`$EAW_WORKDIR/out/501/ingest\` nao existir." "$feature_prompt" >/dev/null
+grep -F "Consumir arquivos de texto \`.md\`, \`.txt\` e \`.log\`." "$feature_prompt" >/dev/null
 
 log_missing_md="$WORK_ROOT/validate_missing_md.log"
 mv "$md_file" "$md_backup"

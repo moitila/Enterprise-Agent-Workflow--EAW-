@@ -65,6 +65,31 @@ copy_workspace_nested_templates() {
 	)
 }
 
+copy_workspace_tracks() {
+	local default_tracks_dir="$1"
+	local tracks_dir="$2"
+	local overwrite="$3"
+	local rel src dst dst_parent
+	if [[ ! -d "$default_tracks_dir" ]]; then
+		return 0
+	fi
+	while IFS= read -r rel; do
+		src="$default_tracks_dir/$rel"
+		dst="$tracks_dir/$rel"
+		dst_parent="$(dirname "$dst")"
+		ensure_dir "$dst_parent"
+		if [[ -f "$dst" && "$overwrite" != "true" ]]; then
+			echo "$dst already exists; use --force to overwrite"
+		else
+			cp "$src" "$dst"
+			echo "Created $dst"
+		fi
+	done < <(
+		cd "$default_tracks_dir" &&
+			find . -type f | sed 's#^\./##' | LC_ALL=C sort
+	)
+}
+
 read_config_version() {
 	local conf="$1"
 	if [[ ! -f "$conf" ]]; then
@@ -164,14 +189,17 @@ init_workspace_workdir() {
 	local overwrite_templates="false"
 	local cfg="$workdir/config"
 	local tpl="$workdir/templates"
+	local tracks="$workdir/tracks"
 	local out="$workdir/out"
 	local repos_conf="$cfg/repos.conf"
 	local search_conf="$cfg/search.conf"
 	local default_search="$EAW_ROOT_DIR/config/search.example.conf"
 	local default_tpl_dir="$EAW_ROOT_DIR/templates"
+	local default_tracks_dir="$EAW_ROOT_DIR/tracks"
 
 	ensure_dir "$cfg"
 	ensure_dir "$tpl"
+	ensure_dir "$tracks"
 	ensure_dir "$out"
 
 	if [[ "$force" == "true" || "$upgrade" == "true" ]]; then
@@ -197,6 +225,7 @@ init_workspace_workdir() {
 	done < <(workspace_template_names)
 
 	copy_workspace_nested_templates "$default_tpl_dir" "$tpl" "$overwrite_templates"
+	copy_workspace_tracks "$default_tracks_dir" "$tracks" "$overwrite_templates"
 
 	if [[ -f "$default_search" ]]; then
 		if [[ -f "$search_conf" && "$force" != "true" ]]; then
@@ -712,7 +741,7 @@ phase_init_runtime() {
 	# This check must precede any conditional scaffold creation.
 	local track_has_ingest="false"
 	local _effective_track_id="${track_id_override:-${type,,}}"
-	local _check_track_file="$EAW_ROOT_DIR/tracks/${_effective_track_id}/track.yaml"
+		local _check_track_file="$EAW_TRACKS_DIR/${_effective_track_id}/track.yaml"
 	if [[ -f "$_check_track_file" ]] && grep -qE '^    - ingest[[:space:]]*$' "$_check_track_file"; then
 		track_has_ingest="true"
 	fi
@@ -729,11 +758,11 @@ phase_init_runtime() {
 	if [[ -z "$state_runtime_file" ]]; then
 		local track_id="${_effective_track_id}"
 		local state_file current_phase track_file phase_started_at
-		if [[ -z "$track_id" || ! -d "$EAW_ROOT_DIR/tracks/$track_id" ]]; then
-			echo "ERROR: track '$track_id' is invalid or not installed" >&2
-			return 1
-		fi
-		track_file="$EAW_ROOT_DIR/tracks/$track_id/track.yaml"
+			if [[ -z "$track_id" || ! -d "$EAW_TRACKS_DIR/$track_id" ]]; then
+				echo "ERROR: track '$track_id' is invalid or not installed" >&2
+				return 1
+			fi
+			track_file="$EAW_TRACKS_DIR/$track_id/track.yaml"
 		current_phase="intake"
 		if [[ -f "$track_file" ]]; then
 			current_phase="$(awk '

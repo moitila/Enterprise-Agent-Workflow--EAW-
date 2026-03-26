@@ -384,8 +384,8 @@ eaw_card_has_workflow_config() {
 
 eaw_official_track_dir() {
 	local track_id="${1:-}"
-	local track_dir="$EAW_ROOT_DIR/tracks/$track_id"
-	local tracks_registry="$EAW_ROOT_DIR/tracks/tracks.yaml"
+	local track_dir="$EAW_TRACKS_DIR/$track_id"
+	local tracks_registry="$EAW_TRACKS_DIR/tracks.yaml"
 
 	if [[ -z "$track_id" || ! -d "$track_dir" ]]; then
 		return 1
@@ -397,7 +397,7 @@ eaw_official_track_dir() {
 }
 
 cmd_tracks() {
-	local tracks_dir="$EAW_ROOT_DIR/tracks"
+	local tracks_dir="$EAW_TRACKS_DIR"
 	local track_dir track_file track_id track_dir_name
 	local -a track_ids=()
 	local -a phase_candidates=()
@@ -444,8 +444,8 @@ cmd_tracks() {
 }
 
 cmd_tracks_install() {
-	local tracks_dir="$EAW_ROOT_DIR/tracks"
-	local tracks_registry="$EAW_ROOT_DIR/tracks/tracks.yaml"
+	local tracks_dir="$EAW_TRACKS_DIR"
+	local tracks_registry="$EAW_TRACKS_DIR/tracks.yaml"
 	local track_dir track_dir_name
 	local -a discovered=()
 	local -a preserved=()
@@ -615,11 +615,11 @@ eaw_load_card_workflow_context() {
 		workflow_source="official"
 	else
 		if [[ ${#track_candidates[@]} -eq 0 ]]; then
-			echo "ERROR: card ${card_name} has declarative workflow artifacts but is missing track_*.yaml in $intake_dir and no official track '${state_track_id}' was found in $EAW_ROOT_DIR/tracks" >&2
+			echo "ERROR: card ${card_name} has declarative workflow artifacts but is missing track_*.yaml in $intake_dir and no official track '${state_track_id}' was found in $EAW_TRACKS_DIR" >&2
 			return 1
 		fi
 		if [[ ${#phase_candidates[@]} -eq 0 ]]; then
-			echo "ERROR: card ${card_name} has declarative workflow artifacts but is missing phase_*.yaml files in $intake_dir and no official track '${state_track_id}' was found in $EAW_ROOT_DIR/tracks" >&2
+			echo "ERROR: card ${card_name} has declarative workflow artifacts but is missing phase_*.yaml files in $intake_dir and no official track '${state_track_id}' was found in $EAW_TRACKS_DIR" >&2
 			return 1
 		fi
 		if [[ ${#track_candidates[@]} -ne 1 ]]; then
@@ -1118,7 +1118,7 @@ cmd_card_cli() {
 	done
 
 	if [[ -z "$track" ]]; then
-		local tracks_registry="$EAW_ROOT_DIR/tracks/tracks.yaml"
+		local tracks_registry="$EAW_TRACKS_DIR/tracks.yaml"
 		if [[ -f "$tracks_registry" ]]; then
 			local -a registered_tracks=()
 			while IFS= read -r _t; do
@@ -2031,7 +2031,7 @@ _cmd_run_find_state_file() {
 _cmd_run_find_track_file() {
 	local card_dir="$1"
 	local track_id="$2"
-	local official_track_file="$EAW_ROOT_DIR/tracks/$track_id/track.yaml"
+	local official_track_file="$EAW_TRACKS_DIR/$track_id/track.yaml"
 	if [[ -f "$official_track_file" ]]; then
 		printf "%s\n" "$official_track_file"
 		return 0

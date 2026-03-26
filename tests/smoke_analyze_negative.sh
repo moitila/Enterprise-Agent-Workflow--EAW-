@@ -66,7 +66,7 @@ grep -Fq "EAW_WORKDIR is set but workspace config is incomplete." <<<"$h5_output
 grep -Fq "./scripts/eaw init --workdir \"$missing_config_workdir\"" <<<"$h5_output" || fail "H5 missing corrective action"
 [[ ! -e "$missing_config_workdir/out/528" ]] || fail "H5 unexpected out residue for invalid workspace config"
 
-# Scenario H1: invalid runtime root context for analyze
+# Scenario H1: symlinked script path must still resolve the real repo root for analyze
 invalid_analyze_root="$tmpdir/invalid_analyze_root"
 mkdir -p "$invalid_analyze_root"
 ln -s "$REPO_ROOT/scripts" "$invalid_analyze_root/scripts"
@@ -77,8 +77,11 @@ h1_rc=$?
 set -e
 [[ $h1_rc -ne 0 ]] || fail "H1 expected non-zero exit code"
 grep -Fq "ERROR:" <<<"$h1_output" || fail "H1 missing ERROR prefix"
-grep -Fq "is missing canonical workflow YAMLs" <<<"$h1_output" || fail "H1 missing invalid root failure context"
-grep -Fq "$invalid_analyze_root/out/528/intake" <<<"$h1_output" || fail "H1 missing invalid root path context"
+grep -Fq "is missing canonical workflow YAMLs" <<<"$h1_output" || fail "H1 missing canonical workflow YAML context"
+grep -Fq "$REPO_ROOT/out/528/intake" <<<"$h1_output" || fail "H1 missing real repo root path context"
+if grep -Fq "$invalid_analyze_root/out/528/intake" <<<"$h1_output"; then
+	fail "H1 should not resolve analyze output against symlink wrapper root"
+fi
 [[ ! -e "$REPO_ROOT/out/528" ]] || fail "H1 unexpected residue in repo out dir"
 
 printf "OK\n"
