@@ -1315,6 +1315,238 @@ phase_resolve_repos() {
 	return 0
 }
 
+eaw_sha256_file() {
+	local file="$1"
+	if command -v sha256sum >/dev/null 2>&1; then
+		sha256sum "$file" | awk '{print $1}'
+	elif command -v shasum >/dev/null 2>&1; then
+		shasum -a 256 "$file" | awk '{print $1}'
+	else
+		cksum "$file" | awk '{print $1}'
+	fi
+}
+
+eaw_sha256_text() {
+	local text="$1"
+	if command -v sha256sum >/dev/null 2>&1; then
+		printf "%s" "$text" | sha256sum | awk '{print $1}'
+	elif command -v shasum >/dev/null 2>&1; then
+		printf "%s" "$text" | shasum -a 256 | awk '{print $1}'
+	else
+		printf "%s" "$text" | cksum | awk '{print $1}'
+	fi
+}
+
+eaw_onboarding_relpath_is_allowed() {
+	local rel_path="$1"
+	case "$rel_path" in
+	*.md | *.txt | *.yaml | *.yml | *.json)
+		return 0
+		;;
+	esac
+	return 1
+}
+
+eaw_onboarding_relpath_is_excluded() {
+	local rel_path="$1"
+	case "$rel_path" in
+	.git/* | node_modules/* | dist/* | build/* | target/*)
+		return 0
+		;;
+	esac
+	return 1
+}
+
+eaw_onboarding_file_is_text() {
+	local file="$1"
+	python3 - "$file" <<'PY'
+from pathlib import Path
+import sys
+
+data = Path(sys.argv[1]).read_bytes()
+sys.exit(1 if b"\x00" in data else 0)
+PY
+}
+
+eaw_onboarding_write_provenance() {
+	local provenance_file="$1"
+	local onboarding_tpl="$2"
+	local repo_key="$3"
+	local source_root="$4"
+	local source_status="$5"
+	local max_files_onboarding="$6"
+	local max_bytes_total_onboarding="$7"
+	local max_bytes_per_file_onboarding="$8"
+	local considered_file="$9"
+	local materialized_file="${10}"
+	local ignored_file="${11}"
+	local bytes_materialized="${12}"
+	local fingerprint="${13}"
+	local considered_count materialized_count ignored_count
+
+	considered_count=0
+	materialized_count=0
+	ignored_count=0
+	if [[ -f "$considered_file" ]]; then
+		considered_count=$(awk 'NF { count++ } END { print count + 0 }' "$considered_file")
+	fi
+	if [[ -f "$materialized_file" ]]; then
+		materialized_count=$(awk 'NF { count++ } END { print count + 0 }' "$materialized_file")
+	fi
+	if [[ -f "$ignored_file" ]]; then
+		ignored_count=$(awk 'NF { count++ } END { print count + 0 }' "$ignored_file")
+	fi
+
+	{
+		printf "# Onboarding Provenance\n\n"
+		printf -- "- onboarding_template: %s\n" "$onboarding_tpl"
+		printf -- "- repo_key: %s\n" "${repo_key:-unresolved}"
+		printf -- "- source_root: %s\n" "${source_root:-unresolved}"
+		printf -- "- source_status: %s\n" "$source_status"
+		printf -- "- max_files_onboarding: %s\n" "$max_files_onboarding"
+		printf -- "- max_bytes_total_onboarding: %s\n" "$max_bytes_total_onboarding"
+		printf -- "- max_bytes_per_file_onboarding: %s\n" "$max_bytes_per_file_onboarding"
+		printf -- "- files_considered: %s\n" "$considered_count"
+		printf -- "- files_materialized: %s\n" "$materialized_count"
+		printf -- "- files_ignored: %s\n" "$ignored_count"
+		printf -- "- bytes_materialized: %s\n" "$bytes_materialized"
+		printf -- "- fingerprint: %s\n" "$fingerprint"
+		printf "\n## Considered Files\n\n"
+		if [[ -s "$considered_file" ]]; then
+			sed 's/^/- /' "$considered_file"
+		else
+			printf -- "- (none)\n"
+		fi
+		printf "\n## Materialized Files\n\n"
+		if [[ -s "$materialized_file" ]]; then
+			sed 's/^/- /' "$materialized_file"
+		else
+			printf -- "- (none)\n"
+		fi
+		printf "\n## Ignored Files\n\n"
+		if [[ -s "$ignored_file" ]]; then
+			sed 's/^/- /' "$ignored_file"
+		else
+			printf -- "- (none)\n"
+		fi
+		printf "\n## Notes\n\n"
+		if [[ "$source_status" == "absent" ]]; then
+			printf -- "- onboarding source absent; execution continued without error.\n"
+		elif [[ "$source_status" == "unresolved" ]]; then
+			printf -- "- target repository key could not be resolved; onboarding remained observational only.\n"
+		else
+			printf -- "- onboarding materialized from governed workspace source with deterministic path ordering.\n"
+		fi
+	} >"$provenance_file"
+}
+
+eaw_onboarding_materialize() {
+	local card_dir="$1"
+	local onboarding_tpl="$2"
+	local onboarding_dir="$card_dir/context/onboarding"
+	local provenance_file="$onboarding_dir/provenance.md"
+	local repo_entry repo_key repo_path source_root source_status
+	local considered_tmp materialized_tmp ignored_tmp fingerprint_tmp
+	local rel_path source_file dest_file size_bytes bytes_materialized file_hash fingerprint
+	local max_files_onboarding max_bytes_total_onboarding max_bytes_per_file_onboarding materialized_count
+
+	# Keep limits local to this runtime path so provenance can report the
+	# effective values directly without depending on external resolution.
+	max_files_onboarding=10
+	max_bytes_total_onboarding=$((200 * 1024))
+	max_bytes_per_file_onboarding="$max_bytes_total_onboarding"
+	bytes_materialized=0
+	materialized_count=0
+	source_status="unresolved"
+	repo_key=""
+	repo_path=""
+	source_root=""
+
+	rm -rf "$onboarding_dir"
+	ensure_dir "$onboarding_dir"
+
+	considered_tmp="$(mktemp)"
+	materialized_tmp="$(mktemp)"
+	ignored_tmp="$(mktemp)"
+	fingerprint_tmp="$(mktemp)"
+
+	if repo_entry="$(eaw_dynamic_context_first_target_repo 2>/dev/null)"; then
+		IFS='|' read -r repo_key repo_path <<<"$repo_entry"
+		source_root="${EAW_WORKDIR:-}/context_sources/onboarding/$repo_key"
+		if [[ -d "$source_root" ]]; then
+			source_status="present"
+			while IFS= read -r rel_path; do
+				[[ -n "$rel_path" ]] || continue
+				source_file="$source_root/$rel_path"
+				printf "%s\n" "$rel_path" >>"$considered_tmp"
+				if eaw_onboarding_relpath_is_excluded "$rel_path"; then
+					printf "%s | reason=excluded_path\n" "$rel_path" >>"$ignored_tmp"
+					continue
+				fi
+				if ! eaw_onboarding_relpath_is_allowed "$rel_path"; then
+					printf "%s | reason=unsupported_extension\n" "$rel_path" >>"$ignored_tmp"
+					continue
+				fi
+				if ! eaw_onboarding_file_is_text "$source_file"; then
+					printf "%s | reason=binary_content\n" "$rel_path" >>"$ignored_tmp"
+					continue
+				fi
+				size_bytes=$(wc -c <"$source_file" | tr -d '[:space:]')
+				if (( size_bytes > max_bytes_per_file_onboarding )); then
+					printf "%s | reason=max_bytes_per_file_onboarding\n" "$rel_path" >>"$ignored_tmp"
+					continue
+				fi
+				if (( materialized_count >= max_files_onboarding )); then
+					printf "%s | reason=max_files_onboarding\n" "$rel_path" >>"$ignored_tmp"
+					continue
+				fi
+				if (( bytes_materialized + size_bytes > max_bytes_total_onboarding )); then
+					printf "%s | reason=max_bytes_total_onboarding\n" "$rel_path" >>"$ignored_tmp"
+					continue
+				fi
+				dest_file="$onboarding_dir/$rel_path"
+				ensure_dir "$(dirname "$dest_file")"
+				cp "$source_file" "$dest_file"
+				printf "%s\n" "$rel_path" >>"$materialized_tmp"
+				file_hash="$(eaw_sha256_file "$dest_file")"
+				printf "%s\t%s\n" "$rel_path" "$file_hash" >>"$fingerprint_tmp"
+				bytes_materialized=$((bytes_materialized + size_bytes))
+				materialized_count=$((materialized_count + 1))
+			done < <(
+				# Deterministic order: lexical ascending by relative path.
+				cd "$source_root" &&
+					find . -type f | sed 's#^\./##' | LC_ALL=C sort
+			)
+		else
+			source_status="absent"
+		fi
+	fi
+
+	if [[ -s "$fingerprint_tmp" ]]; then
+		fingerprint="$(eaw_sha256_text "$(cat "$fingerprint_tmp")")"
+	else
+		fingerprint="$(eaw_sha256_text "onboarding-empty")"
+	fi
+
+	eaw_onboarding_write_provenance \
+		"$provenance_file" \
+		"$onboarding_tpl" \
+		"$repo_key" \
+		"$source_root" \
+		"$source_status" \
+		"$max_files_onboarding" \
+		"$max_bytes_total_onboarding" \
+		"$max_bytes_per_file_onboarding" \
+		"$considered_tmp" \
+		"$materialized_tmp" \
+		"$ignored_tmp" \
+		"$bytes_materialized" \
+		"$fingerprint"
+
+	rm -f "$considered_tmp" "$materialized_tmp" "$ignored_tmp" "$fingerprint_tmp"
+	return 0
+}
+
 phase_collect_context() {
 	# Collect context for a card phase based on phase.context declarations.
 	# Conditions injection on materialization under out/<CARD>/context/.
@@ -1347,6 +1579,7 @@ phase_collect_context() {
 
 	if [[ -n "$onboarding_tpl" ]]; then
 		local onboarding_dir="$card_dir/context/onboarding"
+		eaw_onboarding_materialize "$card_dir" "$onboarding_tpl" || return 1
 		if [[ ! -d "$onboarding_dir" ]]; then
 			printf "ERROR: onboarding ausente: onboarding_template='%s' declarado mas artefato ausente em '%s'\n" \
 				"$onboarding_tpl" "$onboarding_dir" >&2
