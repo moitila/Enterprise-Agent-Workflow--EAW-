@@ -671,6 +671,419 @@ collect_repos_lists() {
 	rm -f "$target_tmp" "$excluded_tmp"
 }
 
+eaw_dynamic_context_list_ingest_files() {
+	local ingest_dir="$1"
+	[[ -d "$ingest_dir" ]] || return 0
+	find "$ingest_dir" -type f \( -name '*.md' -o -name '*.txt' -o -name '*.yaml' -o -name '*.yml' -o -name '*.json' \) | LC_ALL=C sort
+}
+
+eaw_dynamic_context_is_excluded_relpath() {
+	local rel_path="$1"
+	case "$rel_path" in
+	.git/* | node_modules/* | dist/* | build/* | target/*)
+		return 0
+		;;
+	esac
+	return 1
+}
+
+eaw_dynamic_context_is_minified_file() {
+	local file="$1"
+	awk 'length($0) > 400 { found=1; exit 0 } END { exit(found ? 0 : 1) }' "$file"
+}
+
+eaw_dynamic_context_first_target_repo() {
+	local line lineno normalized key path role
+	lineno=0
+	if [[ ! -f "$REPOS_CONF" ]]; then
+		return 1
+	fi
+	while IFS= read -r line; do
+		lineno=$((lineno + 1))
+		if normalized="$(parse_repos_conf_line "$line" "$lineno" 2>/dev/null)"; then
+			IFS='|' read -r key path role <<<"$normalized"
+			if [[ "$role" == "target" ]]; then
+				printf "%s|%s\n" "$key" "$path"
+				return 0
+			fi
+		fi
+	done <"$REPOS_CONF"
+	return 1
+}
+
+eaw_dynamic_context_extract_explicit_paths() {
+	local ingest_dir="$1"
+	local repo_path="$2"
+	local tmp_paths
+	local ingest_file candidate rel_path
+
+	tmp_paths="$(mktemp)"
+	while IFS= read -r ingest_file; do
+		awk '
+			{
+				for (i = 1; i <= NF; i++) {
+					token = $i
+					gsub(/^[^[:alnum:]_.\/-]+|[^[:alnum:]_.\/-]+$/, "", token)
+					if (token ~ /[[:alnum:]_.-]+\/[[:alnum:]_.\/-]+/ || token ~ /^[[:alnum:]_.-]+\.[[:alnum:]_.-]+$/) {
+						print token
+					}
+				}
+			}
+		' "$ingest_file" >>"$tmp_paths"
+	done < <(eaw_dynamic_context_list_ingest_files "$ingest_dir")
+
+	while IFS= read -r candidate; do
+		[[ -n "$candidate" ]] || continue
+		rel_path="${candidate#./}"
+		if [[ -f "$repo_path/$rel_path" ]] && ! eaw_dynamic_context_is_excluded_relpath "$rel_path" &&
+			eaw_is_probably_text_file "$repo_path/$rel_path" &&
+			! eaw_dynamic_context_is_minified_file "$repo_path/$rel_path"; then
+			printf "%s\n" "$rel_path"
+		fi
+	done <"$tmp_paths" | LC_ALL=C sort -u
+
+	rm -f "$tmp_paths"
+}
+
+eaw_dynamic_context_extract_tokens() {
+	local ingest_dir="$1"
+	local max_tokens="$2"
+	local warnings_ref="$3"
+	local tmp_tokens
+	local ingest_file token_count stopwords_pattern
+
+	tmp_tokens="$(mktemp)"
+	stopwords_pattern='^(a|an|and|are|as|at|com|como|da|das|de|do|dos|e|em|for|from|in|is|na|nas|no|nos|o|of|on|or|os|para|por|sem|the|to|um|uma)$'
+
+	while IFS= read -r ingest_file; do
+		tr -cs '[:alnum:]_./-' '\n' <"$ingest_file" >>"$tmp_tokens"
+	done < <(eaw_dynamic_context_list_ingest_files "$ingest_dir")
+
+	mapfile -t _all_tokens < <(
+		awk '{ print tolower($0) }' "$tmp_tokens" |
+			awk -v stopwords="$stopwords_pattern" '
+				length($0) >= 3 && $0 !~ /^[0-9]+$/ && $0 !~ stopwords {
+					print $0
+				}
+			' |
+			LC_ALL=C sort -u
+	)
+	token_count="${#_all_tokens[@]}"
+	if (( token_count > max_tokens )); then
+		eval "$warnings_ref+=(\"max_tokens_extraidos atingido: descartados $((token_count - max_tokens)) tokens\")"
+	fi
+
+	printf "%s\n" "${_all_tokens[@]:0:max_tokens}"
+	rm -f "$tmp_tokens"
+}
+
+eaw_dynamic_context_write_snippets() {
+	local repo_path="$1"
+	local candidate_file="$2"
+	local snippet_file="$3"
+	local warnings_ref="$4"
+	local max_snippets="$5"
+	local max_bytes_total="$6"
+	local manifest_file="$7"
+	local candidates_output="$8"
+	local snippet_count=0
+	local total_bytes current_bytes
+	local rel_path score line_no start_line end_line file_path snippet_block remaining_bytes
+
+	: >"$snippet_file"
+	total_bytes=$(wc -c <"$manifest_file")
+	total_bytes=$((total_bytes + $(wc -c <"$candidates_output")))
+
+	while IFS=$'\t' read -r score rel_path line_no; do
+		[[ -n "$rel_path" ]] || continue
+		if (( snippet_count >= max_snippets )); then
+			eval "$warnings_ref+=(\"max_snippets atingido: descartados candidatos adicionais\")"
+			break
+		fi
+		file_path="$repo_path/$rel_path"
+		[[ -f "$file_path" ]] || continue
+		if ! eaw_is_probably_text_file "$file_path"; then
+			continue
+		fi
+		if [[ -z "$line_no" || ! "$line_no" =~ ^[0-9]+$ || "$line_no" -lt 1 ]]; then
+			line_no=1
+		fi
+		start_line=$((line_no > 2 ? line_no - 2 : 1))
+		end_line=$((line_no + 2))
+		snippet_block="$(printf '## %s (score=%s, lines=%s-%s)\n\n```text\n%s\n```\n\n' \
+			"$rel_path" "$score" "$start_line" "$end_line" \
+			"$(awk -v start="$start_line" -v end="$end_line" 'NR >= start && NR <= end { print }' "$file_path")")"
+		current_bytes=$(printf "%s" "$snippet_block" | wc -c | tr -d '[:space:]')
+		if (( total_bytes + current_bytes > max_bytes_total )); then
+			remaining_bytes=$((max_bytes_total - total_bytes))
+			if (( remaining_bytes > 0 )); then
+				printf "%s" "$snippet_block" | head -c "$remaining_bytes" >>"$snippet_file"
+			fi
+			eval "$warnings_ref+=(\"max_bytes_total atingido: snippets truncados em $rel_path\")"
+			break
+		fi
+		printf "%s" "$snippet_block" >>"$snippet_file"
+		total_bytes=$((total_bytes + current_bytes))
+		snippet_count=$((snippet_count + 1))
+	done <"$candidate_file"
+
+	if [[ ! -s "$snippet_file" ]]; then
+		printf "# Target Snippets\n\nNenhum snippet selecionado.\n" >"$snippet_file"
+	fi
+}
+
+eaw_dynamic_context_materialize() {
+	local card_dir="$1"
+	local dynamic_dir="$card_dir/context/dynamic"
+	local manifest_file="$dynamic_dir/00_scope_manifest.md"
+	local candidates_output="$dynamic_dir/20_candidate_files.txt"
+	local snippets_output="$dynamic_dir/30_target_snippets.md"
+	local warnings_output="$dynamic_dir/40_warnings.md"
+	local repo_entry repo_key repo_path ingest_dir max_tokens max_hits max_candidates max_snippets max_bytes_total
+	local tmp_candidate_file tmp_scored_candidates tmp_delta tmp_explicit tmp_tokens
+	local -a warnings=()
+	local -a explicit_paths=()
+	local -a delta_files=()
+	local -a tokens=()
+	local rel_path score line_no
+	local file_path base_name candidate_dir explicit_dir
+	declare -A candidate_scores=()
+	declare -A candidate_line_numbers=()
+	declare -A explicit_seen=()
+	declare -A delta_seen=()
+
+	eaw_require_command git
+	eaw_require_command rg
+
+	if ! repo_entry="$(eaw_dynamic_context_first_target_repo)"; then
+		die "dynamic context requires at least one target repository in repos.conf"
+	fi
+	IFS='|' read -r repo_key repo_path <<<"$repo_entry"
+	if [[ ! -d "$repo_path" ]]; then
+		die "dynamic context target repository not found: $repo_path"
+	fi
+	if ! git -C "$repo_path" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+		die "dynamic context target is not a git repository: $repo_path"
+	fi
+
+	ingest_dir="$card_dir/ingest"
+	max_tokens=30
+	max_hits=20
+	max_candidates=50
+	max_snippets=10
+	max_bytes_total=$((200 * 1024))
+
+	ensure_dir "$dynamic_dir"
+
+	tmp_candidate_file="$(mktemp)"
+	tmp_scored_candidates="$(mktemp)"
+	tmp_delta="$(mktemp)"
+	tmp_explicit="$(mktemp)"
+	tmp_tokens="$(mktemp)"
+
+	mapfile -t explicit_paths < <(eaw_dynamic_context_extract_explicit_paths "$ingest_dir" "$repo_path")
+	printf "%s\n" "${explicit_paths[@]}" >"$tmp_explicit"
+	mapfile -t tokens < <(eaw_dynamic_context_extract_tokens "$ingest_dir" "$max_tokens" warnings)
+	printf "%s\n" "${tokens[@]}" >"$tmp_tokens"
+
+	while IFS= read -r rel_path; do
+		[[ -n "$rel_path" ]] || continue
+		if [[ -f "$repo_path/$rel_path" ]] && ! eaw_dynamic_context_is_excluded_relpath "$rel_path" &&
+			eaw_is_probably_text_file "$repo_path/$rel_path"; then
+			printf "%s\n" "$rel_path"
+		fi
+	done < <(
+		{
+			git -C "$repo_path" diff --name-only
+			git -C "$repo_path" status --porcelain | awk '{print $2}'
+		} | sed 's#^\./##'
+	) | LC_ALL=C sort -u >"$tmp_delta"
+	mapfile -t delta_files <"$tmp_delta"
+
+	for rel_path in "${explicit_paths[@]}"; do
+		[[ -n "$rel_path" ]] || continue
+		explicit_seen["$rel_path"]=1
+		candidate_scores["$rel_path"]=$(( ${candidate_scores["$rel_path"]:-0} + 4 ))
+		candidate_line_numbers["$rel_path"]="${candidate_line_numbers["$rel_path"]:-1}"
+	done
+
+	for rel_path in "${delta_files[@]}"; do
+		[[ -n "$rel_path" ]] || continue
+		delta_seen["$rel_path"]=1
+		candidate_scores["$rel_path"]=$(( ${candidate_scores["$rel_path"]:-0} + 3 ))
+		candidate_line_numbers["$rel_path"]="${candidate_line_numbers["$rel_path"]:-1}"
+	done
+
+	for token in "${tokens[@]}"; do
+		[[ -n "$token" ]] || continue
+		mapfile -t _token_hits < <(
+			rg -n -S \
+				--glob '!node_modules/**' \
+				--glob '!dist/**' \
+				--glob '!build/**' \
+				--glob '!target/**' \
+				--glob '!.git/**' \
+				-- "$token" "$repo_path" 2>/dev/null || true
+		)
+		if (( ${#_token_hits[@]} > max_hits )); then
+			warnings+=("max_hits_por_token atingido para '$token': descartados $(( ${#_token_hits[@]} - max_hits )) hits")
+		fi
+		declare -A _seen_files=()
+		local _hit_count=0
+		local hit_entry hit_path hit_line
+		for hit_entry in "${_token_hits[@]}"; do
+			_hit_count=$((_hit_count + 1))
+			if (( _hit_count > max_hits )); then
+				break
+			fi
+			hit_path="${hit_entry%%:*}"
+			hit_line="${hit_entry#*:}"
+			hit_line="${hit_line%%:*}"
+			rel_path="${hit_path#$repo_path/}"
+			if eaw_dynamic_context_is_excluded_relpath "$rel_path"; then
+				continue
+			fi
+			if [[ ! -f "$repo_path/$rel_path" ]] || ! eaw_is_probably_text_file "$repo_path/$rel_path" ||
+				eaw_dynamic_context_is_minified_file "$repo_path/$rel_path"; then
+				continue
+			fi
+			if [[ -z "${_seen_files["$rel_path"]:-}" ]]; then
+				candidate_scores["$rel_path"]=$(( ${candidate_scores["$rel_path"]:-0} + 2 ))
+				_seen_files["$rel_path"]=1
+			fi
+			if [[ -z "${candidate_line_numbers["$rel_path"]:-}" ]]; then
+				candidate_line_numbers["$rel_path"]="$hit_line"
+			fi
+		done
+		unset _seen_files
+	done
+
+	for rel_path in "${!candidate_scores[@]}"; do
+		candidate_dir="$(dirname "$rel_path")"
+		for explicit_dir in "${explicit_paths[@]}"; do
+			[[ -n "$explicit_dir" ]] || continue
+			if [[ "$candidate_dir" == "$(dirname "$explicit_dir")" && "$rel_path" != "$explicit_dir" ]]; then
+				candidate_scores["$rel_path"]=$(( ${candidate_scores["$rel_path"]:-0} + 1 ))
+				break
+			fi
+		done
+		base_name="$(basename "${rel_path%.*}")"
+		if [[ "$rel_path" == *test* || "$rel_path" == tests/* ]]; then
+			for file_path in "${explicit_paths[@]}" "${delta_files[@]}"; do
+				[[ -n "$file_path" ]] || continue
+				if [[ "$base_name" == "$(basename "${file_path%.*}")" || "$base_name" == "$(basename "${file_path%.*}")_test" ]]; then
+					candidate_scores["$rel_path"]=$(( ${candidate_scores["$rel_path"]:-0} + 1 ))
+					break
+				fi
+			done
+		fi
+		printf "%s\t%s\t%s\n" "${candidate_scores["$rel_path"]}" "$rel_path" "${candidate_line_numbers["$rel_path"]:-1}" >>"$tmp_scored_candidates"
+	done
+
+	if [[ -s "$tmp_scored_candidates" ]]; then
+		LC_ALL=C sort -t $'\t' -k1,1nr -k2,2 "$tmp_scored_candidates" | head -n "$max_candidates" >"$tmp_candidate_file"
+		if (( $(wc -l <"$tmp_scored_candidates") > max_candidates )); then
+			warnings+=("max_arquivos_candidatos atingido: descartados $(( $(wc -l <"$tmp_scored_candidates") - max_candidates )) candidatos")
+		fi
+	else
+		: >"$tmp_candidate_file"
+	fi
+
+	cat >"$manifest_file" <<EOF
+# Scope Manifest
+
+- baseline: deterministic_baseline_v1
+- repo_key: $repo_key
+- repo_path: $repo_path
+- max_tokens_extraidos: $max_tokens
+- max_hits_por_token: $max_hits
+- max_arquivos_candidatos: $max_candidates
+- max_snippets: $max_snippets
+- max_bytes_total: $max_bytes_total
+
+## Tokens
+EOF
+	if [[ ${#tokens[@]} -gt 0 ]]; then
+		printf '%s\n' "${tokens[@]}" | sed 's/^/- /' >>"$manifest_file"
+	else
+		printf -- "- none\n" >>"$manifest_file"
+	fi
+	cat >>"$manifest_file" <<'EOF'
+
+## Explicit Files
+EOF
+	if [[ ${#explicit_paths[@]} -gt 0 ]]; then
+		printf '%s\n' "${explicit_paths[@]}" | sed 's/^/- /' >>"$manifest_file"
+	else
+		printf -- "- none\n" >>"$manifest_file"
+	fi
+	cat >>"$manifest_file" <<'EOF'
+
+## Delta Files
+EOF
+	if [[ ${#delta_files[@]} -gt 0 ]]; then
+		printf '%s\n' "${delta_files[@]}" | sed 's/^/- /' >>"$manifest_file"
+	else
+		printf -- "- none\n" >>"$manifest_file"
+	fi
+	cat >>"$manifest_file" <<'EOF'
+
+## Truncamentos
+EOF
+	if [[ ${#warnings[@]} -gt 0 ]]; then
+		printf '%s\n' "${warnings[@]}" | sed 's/^/- /' >>"$manifest_file"
+	else
+		printf -- "- none\n" >>"$manifest_file"
+	fi
+
+	: >"$candidates_output"
+	while IFS=$'\t' read -r score rel_path line_no; do
+		[[ -n "$rel_path" ]] || continue
+		printf "score=%s path=%s\n" "$score" "$rel_path" >>"$candidates_output"
+	done <"$tmp_candidate_file"
+
+	eaw_dynamic_context_write_snippets "$repo_path" "$tmp_candidate_file" "$snippets_output" warnings "$max_snippets" "$max_bytes_total" "$manifest_file" "$candidates_output"
+
+	if [[ ${#warnings[@]} -gt 0 ]]; then
+		{
+			printf "# Warnings\n\n"
+			printf '%s\n' "${warnings[@]}" | sed 's/^/- /'
+		} >"$warnings_output"
+	else
+		rm -f "$warnings_output"
+	fi
+
+	rm -f "$tmp_candidate_file" "$tmp_scored_candidates" "$tmp_delta" "$tmp_explicit" "$tmp_tokens"
+}
+
+eaw_dynamic_context_prepare_for_workflow_phase() {
+	local phase="$1"
+	local card_dir="${OUTDIR:-}"
+	local previous_phase
+	local manifest_file
+
+	[[ "$phase" == workflow_phase_* ]] || return 0
+	[[ -n "$card_dir" && -d "$card_dir" ]] || return 0
+	[[ -n "${EAW_CARD_WORKFLOW_STATE_FILE:-}" && -f "${EAW_CARD_WORKFLOW_STATE_FILE:-}" ]] || return 0
+
+	previous_phase="$(eaw_normalize_phase_id "$(eaw_yaml_state_scalar "$EAW_CARD_WORKFLOW_STATE_FILE" "previous_phase")")"
+	manifest_file="$card_dir/context/dynamic/00_scope_manifest.md"
+	if [[ "${EAW_CARD_WORKFLOW_CURRENT_PHASE:-}" == "findings" && "$previous_phase" == "ingest" && ! -f "$manifest_file" ]]; then
+		eaw_dynamic_context_materialize "$card_dir"
+	fi
+	return 0
+}
+
+eaw_prepare_workflow_runtime_inputs() {
+	local phase="$1"
+
+	eaw_dynamic_context_prepare_for_workflow_phase "$phase" || return 1
+	if [[ "$phase" == workflow_phase_* && -n "${EAW_CARD_WORKFLOW_CURRENT_PHASE_FILE:-}" ]]; then
+		phase_collect_context "${OUTDIR:-}" "${EAW_CARD_WORKFLOW_CURRENT_PHASE_FILE:-}" || return 1
+	fi
+	return 0
+}
+
 run_phase() {
 	# run_phase <phase-name> <fatal:true|false> <fn> [args...]
 	local phase="$1"
@@ -684,7 +1097,7 @@ run_phase() {
 	# emit phase_started event (H3/H6)
 	eaw_journal_append "${EAW_CARD_WORKFLOW_CARD:-}" "${EAW_CARD_WORKFLOW_TRACK_ID:-}" "$phase" "STARTED" "0" "phase_started"
 	start=$(date +%s%3N)
-	if "$fn" "$@"; then
+	if eaw_prepare_workflow_runtime_inputs "$phase" && "$fn" "$@"; then
 		rc=0
 		status="OK"
 	else

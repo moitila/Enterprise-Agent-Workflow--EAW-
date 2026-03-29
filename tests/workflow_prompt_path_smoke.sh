@@ -312,4 +312,71 @@ set -e
 [[ "$context_invalid_rc" -ne 0 ]] || fail "expected invalid phase.context (extra field) to fail validate workflow"
 grep -Fq "unsupported context key" <<<"$context_invalid_output" || fail "missing unsupported context key error for extra field"
 
+# Runtime failure: dynamic_context_template declared without materialized context
+context_runtime_workdir="$tmp_root/workdir-context-runtime"
+init_workdir "$context_runtime_workdir"
+
+runtime_intake_dir="$context_runtime_workdir/out/545RUNTIME/intake"
+mkdir -p "$runtime_intake_dir"
+
+cat >"$runtime_intake_dir/track_runtime.yaml" <<'EOF'
+track:
+  id: ctx-runtime
+  initial_phase: no-context
+  final_phase: done
+  phases:
+    - no-context
+    - dynamic-only
+    - done
+  transitions:
+    no-context:
+      next: dynamic-only
+    dynamic-only:
+      next: done
+EOF
+
+cat >"$runtime_intake_dir/phase_no_context.yaml" <<'EOF'
+phase:
+  id: no-context
+  prompt:
+    path: templates/prompts/default/analyze_findings/prompt_v<active>.md
+EOF
+
+cat >"$runtime_intake_dir/phase_dynamic_only.yaml" <<'EOF'
+phase:
+  id: dynamic-only
+  prompt:
+    path: templates/prompts/default/analyze_findings/prompt_v<active>.md
+  context:
+    dynamic_context_template: repo-diff
+EOF
+
+cat >"$runtime_intake_dir/phase_done.yaml" <<'EOF'
+phase:
+  id: done
+  prompt:
+    path: templates/prompts/default/analyze_findings/prompt_v<active>.md
+EOF
+
+cat >"$runtime_intake_dir/state_card_runtime.yaml" <<'EOF'
+card_state:
+  track_id: ctx-runtime
+  previous_phase: no-context
+  current_phase: dynamic-only
+  completed_phases:
+    - no-context
+  phase_status: RUN
+  phase_started_at: 2026-03-29T00:00:00Z
+  phase_completed: false
+  phase_completed_at: null
+EOF
+
+set +e
+context_runtime_output="$(EAW_WORKDIR="$context_runtime_workdir" "$REPO_ROOT/scripts/eaw" next 545RUNTIME 2>&1)"
+context_runtime_rc=$?
+set -e
+
+[[ "$context_runtime_rc" -ne 0 ]] || fail "expected dynamic context runtime without materialization to fail"
+grep -Fq "context nao materializado" <<<"$context_runtime_output" || fail "missing deterministic runtime error for absent dynamic context"
+
 printf "workflow_prompt_path_smoke OK\n"

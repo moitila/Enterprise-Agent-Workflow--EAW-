@@ -21,6 +21,20 @@ die() {
 	exit 1
 }
 
+eaw_require_command() {
+	local cmd="$1"
+	command -v "$cmd" >/dev/null 2>&1 || die "missing required tool: $cmd"
+}
+
+eaw_is_probably_text_file() {
+	local file="$1"
+	[[ -f "$file" ]] || return 1
+	if [[ ! -s "$file" ]]; then
+		return 0
+	fi
+	LC_ALL=C grep -Iq . "$file" 2>/dev/null
+}
+
 ensure_dir() {
 	mkdir -p "$1"
 }
