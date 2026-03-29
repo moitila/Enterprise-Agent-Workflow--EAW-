@@ -380,6 +380,80 @@ prompt_resolve_active_metadata() {
 	printf "prompt_used=%s\n" "$prompt_used"
 }
 
+eaw_context_template_dir_from_root() {
+	local templates_root="$1"
+	local context_kind="$2"
+	local template_name="$3"
+	printf "%s/context/%s/%s\n" "$templates_root" "$context_kind" "$template_name"
+}
+
+eaw_context_template_resolve_active_metadata() {
+	local context_kind="$1"
+	local template_name="$2"
+	local workspace_dir root_templates_root root_dir dir source_root
+	local active_file raw_active active_value normalized_active md_file meta_file file_name template_used
+
+	workspace_dir="$(eaw_context_template_dir_from_root "$EAW_TEMPLATES_DIR" "$context_kind" "$template_name")"
+	root_templates_root="$EAW_ROOT_DIR/templates"
+	root_dir="$(eaw_context_template_dir_from_root "$root_templates_root" "$context_kind" "$template_name")"
+
+	if [[ -d "$workspace_dir" ]]; then
+		dir="$workspace_dir"
+		source_root="$EAW_TEMPLATES_DIR"
+	elif [[ -d "$root_dir" ]]; then
+		dir="$root_dir"
+		source_root="$root_templates_root"
+	else
+		echo "ERROR: template directory not found for context '$context_kind' template '$template_name': $workspace_dir (expected templates/context/$context_kind/$template_name resolved via ACTIVE)" >&2
+		return 1
+	fi
+
+	active_file="$dir/ACTIVE"
+	if [[ ! -f "$active_file" ]]; then
+		echo "ERROR: ACTIVE file not found for context '$context_kind' template '$template_name': $active_file" >&2
+		return 1
+	fi
+
+	raw_active="$(tr -d '\r' <"$active_file")"
+	active_value="$(trim_spaces "$raw_active")"
+	if [[ -z "$active_value" ]]; then
+		echo "ERROR: ACTIVE is empty for context '$context_kind' template '$template_name': $active_file" >&2
+		return 1
+	fi
+	if [[ "$active_value" =~ ^template_(v[0-9]+)\.md$ ]]; then
+		normalized_active="${BASH_REMATCH[1]}"
+	elif [[ "$active_value" =~ ^template_(v[0-9]+)$ ]]; then
+		normalized_active="${BASH_REMATCH[1]}"
+	elif ! normalized_active="$(normalize_prompt_candidate "$active_value")"; then
+		echo "ERROR: ACTIVE has invalid version '$active_value' for context '$context_kind' template '$template_name': $active_file" >&2
+		return 1
+	fi
+
+	md_file="$dir/template_${normalized_active}.md"
+	if [[ ! -f "$md_file" ]]; then
+		echo "ERROR: ACTIVE points to missing template file for context '$context_kind' template '$template_name' version '$normalized_active': $md_file" >&2
+		return 1
+	fi
+
+	meta_file="$dir/template_${normalized_active}.meta"
+	if [[ ! -f "$meta_file" ]]; then
+		echo "ERROR: ACTIVE points to missing template metadata for context '$context_kind' template '$template_name' version '$normalized_active': $meta_file" >&2
+		return 1
+	fi
+
+	file_name="${md_file##*/}"
+	template_used="${context_kind}_${template_name}_${normalized_active}"
+	printf "kind=%s\n" "$context_kind"
+	printf "template=%s\n" "$template_name"
+	printf "source_root=%s\n" "$source_root"
+	printf "template_dir=%s\n" "$dir"
+	printf "active=%s\n" "$normalized_active"
+	printf "file=%s\n" "$file_name"
+	printf "md_file=%s\n" "$md_file"
+	printf "meta_file=%s\n" "$meta_file"
+	printf "template_used=%s\n" "$template_used"
+}
+
 prompt_provenance_append() {
 	local card="$1"
 	local out_root="$2"
@@ -390,7 +464,7 @@ prompt_provenance_append() {
 	local active="$7"
 	local file_name="$8"
 	local prompt_used="$9"
-	local provenance_dir provenance_file tmp_entries tmp_dedup tmp_yaml
+	local provenance_dir provenance_file tmp_entries tmp_dedup tmp_context tmp_yaml
 
 	provenance_dir="$out_root/$card/provenance"
 	provenance_file="$provenance_dir/prompts_used.yaml"
@@ -398,6 +472,7 @@ prompt_provenance_append() {
 
 	tmp_entries="$(mktemp "$provenance_dir/prompts_used.entries.XXXXXX")"
 	tmp_dedup="$(mktemp "$provenance_dir/prompts_used.dedup.XXXXXX")"
+	tmp_context="$(mktemp "$provenance_dir/prompts_used.context.XXXXXX")"
 	tmp_yaml="$(mktemp "$provenance_dir/prompts_used.yaml.XXXXXX")"
 
 	if [[ -f "$provenance_file" ]]; then
@@ -407,7 +482,15 @@ prompt_provenance_append() {
 					printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\n", phase, track, source_root, phase_dir, active, file, prompt_used
 				}
 			}
-			/^  - phase: / {
+			/^prompts:[[:space:]]*$/ {
+				in_prompts=1
+				next
+			}
+			/^context:[[:space:]]*$/ {
+				in_prompts=0
+				exit
+			}
+			in_prompts && /^  - phase: / {
 				flush()
 				phase=$0
 				sub(/^  - phase: /, "", phase)
@@ -419,14 +502,18 @@ prompt_provenance_append() {
 				prompt_used=""
 				next
 			}
-			/^    track: / { track=$0; sub(/^    track: /, "", track); next }
-			/^    source_root: / { source_root=$0; sub(/^    source_root: /, "", source_root); next }
-			/^    phase_dir: / { phase_dir=$0; sub(/^    phase_dir: /, "", phase_dir); next }
-			/^    active: / { active=$0; sub(/^    active: /, "", active); next }
-			/^    file: / { file=$0; sub(/^    file: /, "", file); next }
-			/^    prompt_used: / { prompt_used=$0; sub(/^    prompt_used: /, "", prompt_used); next }
+			in_prompts && /^    track: / { track=$0; sub(/^    track: /, "", track); next }
+			in_prompts && /^    source_root: / { source_root=$0; sub(/^    source_root: /, "", source_root); next }
+			in_prompts && /^    phase_dir: / { phase_dir=$0; sub(/^    phase_dir: /, "", phase_dir); next }
+			in_prompts && /^    active: / { active=$0; sub(/^    active: /, "", active); next }
+			in_prompts && /^    file: / { file=$0; sub(/^    file: /, "", file); next }
+			in_prompts && /^    prompt_used: / { prompt_used=$0; sub(/^    prompt_used: /, "", prompt_used); next }
 			END { flush() }
 		' "$provenance_file" >>"$tmp_entries"
+		awk '
+			/^context:[[:space:]]*$/ { in_context=1 }
+			in_context { print }
+		' "$provenance_file" >>"$tmp_context"
 	fi
 
 	printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\n" "$phase" "$track" "$source_root" "$phase_dir" "$active" "$file_name" "$prompt_used" >>"$tmp_entries"
@@ -445,10 +532,106 @@ prompt_provenance_append() {
 			printf "    file: %s\n" "$entry_file"
 			printf "    prompt_used: %s\n" "$entry_prompt_used"
 		done <"$tmp_dedup"
+		if [[ -s "$tmp_context" ]]; then
+			cat "$tmp_context"
+		fi
 	} >"$tmp_yaml"
 
 	mv "$tmp_yaml" "$provenance_file"
-	rm -f "$tmp_entries" "$tmp_dedup"
+	rm -f "$tmp_entries" "$tmp_dedup" "$tmp_context"
+}
+
+eaw_context_provenance_append() {
+	local card="$1"
+	local out_root="$2"
+	local phase="$3"
+	local context_kind="$4"
+	local template_name="$5"
+	local source_root="$6"
+	local template_dir="$7"
+	local active="$8"
+	local file_name="$9"
+	local template_used="${10}"
+	local source_dir="${11}"
+	local provenance_dir provenance_file tmp_prompts tmp_context tmp_dedup tmp_yaml
+
+	provenance_dir="$out_root/$card/provenance"
+	provenance_file="$provenance_dir/prompts_used.yaml"
+	ensure_dir "$provenance_dir"
+
+	tmp_prompts="$(mktemp "$provenance_dir/prompts_used.prompts.XXXXXX")"
+	tmp_context="$(mktemp "$provenance_dir/prompts_used.context.XXXXXX")"
+	tmp_dedup="$(mktemp "$provenance_dir/prompts_used.context.dedup.XXXXXX")"
+	tmp_yaml="$(mktemp "$provenance_dir/prompts_used.yaml.XXXXXX")"
+
+	if [[ -f "$provenance_file" ]]; then
+		awk '
+			/^prompts:[[:space:]]*$/ { in_prompts=1; next }
+			/^context:[[:space:]]*$/ { in_prompts=0; next }
+			in_prompts { print }
+		' "$provenance_file" >>"$tmp_prompts"
+		awk '
+			function flush() {
+				if (phase != "") {
+					printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n", phase, kind, template, source_root, template_dir, active, file, template_used, source_dir
+				}
+			}
+			/^context:[[:space:]]*$/ {
+				in_context=1
+				next
+			}
+			in_context && /^  - phase: / {
+				flush()
+				phase=$0
+				sub(/^  - phase: /, "", phase)
+				kind=""
+				template=""
+				source_root=""
+				template_dir=""
+				active=""
+				file=""
+				template_used=""
+				source_dir=""
+				next
+			}
+			in_context && /^    kind: / { kind=$0; sub(/^    kind: /, "", kind); next }
+			in_context && /^    template: / { template=$0; sub(/^    template: /, "", template); next }
+			in_context && /^    source_root: / { source_root=$0; sub(/^    source_root: /, "", source_root); next }
+			in_context && /^    template_dir: / { template_dir=$0; sub(/^    template_dir: /, "", template_dir); next }
+			in_context && /^    active: / { active=$0; sub(/^    active: /, "", active); next }
+			in_context && /^    file: / { file=$0; sub(/^    file: /, "", file); next }
+			in_context && /^    template_used: / { template_used=$0; sub(/^    template_used: /, "", template_used); next }
+			in_context && /^    source_dir: / { source_dir=$0; sub(/^    source_dir: /, "", source_dir); next }
+			END { flush() }
+		' "$provenance_file" >>"$tmp_context"
+	fi
+
+	printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n" "$phase" "$context_kind" "$template_name" "$source_root" "$template_dir" "$active" "$file_name" "$template_used" "$source_dir" >>"$tmp_context"
+
+	awk -F'\t' 'NF >= 9 { rec[$1 FS $2]=$0 } END { for (k in rec) print rec[k] }' "$tmp_context" | LC_ALL=C sort -t$'\t' -k1,1 -k2,2 >"$tmp_dedup"
+
+	{
+		printf "prompts:\n"
+		if [[ -s "$tmp_prompts" ]]; then
+			cat "$tmp_prompts"
+		fi
+		printf "context:\n"
+		while IFS=$'\t' read -r entry_phase entry_kind entry_template entry_source_root entry_template_dir entry_active entry_file entry_template_used entry_source_dir; do
+			[[ -n "$entry_phase" ]] || continue
+			printf "  - phase: %s\n" "$entry_phase"
+			printf "    kind: %s\n" "$entry_kind"
+			printf "    template: %s\n" "$entry_template"
+			printf "    source_root: %s\n" "$entry_source_root"
+			printf "    template_dir: %s\n" "$entry_template_dir"
+			printf "    active: %s\n" "$entry_active"
+			printf "    file: %s\n" "$entry_file"
+			printf "    template_used: %s\n" "$entry_template_used"
+			printf "    source_dir: %s\n" "$entry_source_dir"
+		done <"$tmp_dedup"
+	} >"$tmp_yaml"
+
+	mv "$tmp_yaml" "$provenance_file"
+	rm -f "$tmp_prompts" "$tmp_context" "$tmp_dedup"
 }
 
 load_prompt() {
@@ -1569,6 +1752,7 @@ phase_collect_context() {
 	fi
 
 	if [[ -n "$dynamic_tpl" ]]; then
+		eaw_context_template_resolve_active_metadata "dynamic" "$dynamic_tpl" >/dev/null || return 1
 		local dynamic_context_dir="$card_dir/context/dynamic"
 		if [[ ! -d "$dynamic_context_dir" ]]; then
 			printf "ERROR: context nao materializado: dynamic_context_template='%s' declarado mas artefato ausente em '%s' (template inexistente ou coleta nao executada)\n" \
@@ -1578,6 +1762,7 @@ phase_collect_context() {
 	fi
 
 	if [[ -n "$onboarding_tpl" ]]; then
+		eaw_context_template_resolve_active_metadata "onboarding" "$onboarding_tpl" >/dev/null || return 1
 		local onboarding_dir="$card_dir/context/onboarding"
 		eaw_onboarding_materialize "$card_dir" "$onboarding_tpl" || return 1
 		if [[ ! -d "$onboarding_dir" ]]; then
@@ -1800,6 +1985,9 @@ eaw_yaml_phase_context_pack() {
 	local dynamic_tpl onboarding_tpl
 	dynamic_tpl="$(eaw_yaml_phase_dynamic_context_template "$phase_file")"
 	onboarding_tpl="$(eaw_yaml_phase_onboarding_template "$phase_file")"
+	if [[ -n "$dynamic_tpl" || -n "$onboarding_tpl" ]]; then
+		printf "context=true\n"
+	fi
 	if [[ -n "$dynamic_tpl" ]]; then
 		printf "dynamic_context_template=%s\n" "$dynamic_tpl"
 	fi

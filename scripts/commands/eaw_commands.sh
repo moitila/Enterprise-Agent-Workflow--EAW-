@@ -1461,6 +1461,156 @@ EOF
 	echo "RUNTIME: phase=$phase_id created_artifact=$rel_path"
 }
 
+eaw_context_prompt_block_from_dir() {
+	local label="$1"
+	local source_dir="$2"
+	local file rel_path
+	local found=0
+
+	[[ -d "$source_dir" ]] || return 0
+
+	case "$label" in
+	ONBOARDING)
+		printf "CONTEXT - ONBOARDING\n\n"
+		;;
+	DYNAMIC)
+		printf "CONTEXT - DYNAMIC\n\n"
+		;;
+	*)
+		printf "CONTEXT - %s\n\n" "$label"
+		;;
+	esac
+	while IFS= read -r file; do
+		[[ -n "$file" ]] || continue
+		if ! eaw_is_probably_text_file "$file"; then
+			continue
+		fi
+		rel_path="${file#$source_dir/}"
+		printf "### %s\n\n" "$rel_path"
+		cat "$file"
+		printf "\n\n"
+		found=1
+	done < <(find "$source_dir" -type f | LC_ALL=C sort)
+
+	if [[ "$found" -eq 0 ]]; then
+		return 1
+	fi
+	return 0
+}
+
+eaw_build_phase_context_block() {
+	local card="$1"
+	local card_dir="$2"
+	local phase_file="$3"
+	local context_line key value
+	local has_context=""
+	local dynamic_tpl=""
+	local onboarding_tpl=""
+	local onboarding_resolution=""
+	local dynamic_resolution=""
+	local onboarding_dir="$card_dir/context/onboarding"
+	local dynamic_dir="$card_dir/context/dynamic"
+	local block=""
+
+	[[ -n "$phase_file" && -f "$phase_file" ]] || return 0
+
+	while IFS= read -r context_line; do
+		[[ -n "$context_line" ]] || continue
+		IFS='=' read -r key value <<<"$context_line"
+		case "$key" in
+		context) has_context="$value" ;;
+		dynamic_context_template) dynamic_tpl="$value" ;;
+		onboarding_template) onboarding_tpl="$value" ;;
+		esac
+	done < <(eaw_yaml_phase_context_pack "$phase_file")
+
+	[[ -n "$has_context" ]] || return 0
+
+	if [[ -n "$onboarding_tpl" ]]; then
+		onboarding_resolution="$(eaw_context_template_resolve_active_metadata "onboarding" "$onboarding_tpl")" || return 1
+		if [[ -d "$onboarding_dir" ]]; then
+			block+="$(eaw_context_prompt_block_from_dir "ONBOARDING" "$onboarding_dir")"$'\n'
+			eaw_context_record_prompt_provenance "$card" "onboarding" "$onboarding_tpl" "${EAW_CARD_WORKFLOW_CURRENT_PHASE:-unknown}" "$onboarding_resolution" "$onboarding_dir" || return 1
+		fi
+	fi
+
+	if [[ -n "$dynamic_tpl" ]]; then
+		dynamic_resolution="$(eaw_context_template_resolve_active_metadata "dynamic" "$dynamic_tpl")" || return 1
+		if [[ -d "$dynamic_dir" ]]; then
+			block+="$(eaw_context_prompt_block_from_dir "DYNAMIC" "$dynamic_dir")"$'\n'
+			eaw_context_record_prompt_provenance "$card" "dynamic_context" "$dynamic_tpl" "${EAW_CARD_WORKFLOW_CURRENT_PHASE:-unknown}" "$dynamic_resolution" "$dynamic_dir" || return 1
+		fi
+	fi
+
+	printf "%s" "$block"
+}
+
+eaw_context_record_prompt_provenance() {
+	local card="$1"
+	local context_kind="$2"
+	local template_name="$3"
+	local phase_id="$4"
+	local resolution="$5"
+	local source_dir="$6"
+	local key value
+	local source_root="" template_dir="" active="" file_name="" template_used=""
+
+	while IFS='=' read -r key value; do
+		case "$key" in
+		source_root) source_root="$value" ;;
+		template_dir) template_dir="$value" ;;
+		active) active="$value" ;;
+		file) file_name="$value" ;;
+		template_used) template_used="$value" ;;
+		esac
+	done <<<"$resolution"
+
+	eaw_context_provenance_append "$card" "$EAW_OUT_DIR" "$phase_id" "$context_kind" "$template_name" "$source_root" "$template_dir" "$active" "$file_name" "$template_used" "$source_dir"
+}
+
+eaw_apply_context_block_to_prompt() {
+	local card="$1"
+	local card_dir="$2"
+	local phase_file="$3"
+	local output_file="$4"
+	local context_block tmp_file
+
+	context_block="$(eaw_build_phase_context_block "$card" "$card_dir" "$phase_file")" || return 1
+	[[ -n "$context_block" ]] || return 0
+
+	tmp_file="$(mktemp "${output_file}.XXXXXX")"
+	awk \
+		-v context_block="$context_block" \
+		'
+		BEGIN {
+			inserted=0
+		}
+		{
+			if ($0 == "{{CONTEXT_BLOCK}}") {
+				printf "%s", context_block
+				if (substr(context_block, length(context_block), 1) != "\n") {
+					printf "\n"
+				}
+				inserted=1
+				next
+			}
+			print
+		}
+		END {
+			if (!inserted) {
+				if (NR > 0) {
+					printf "\n"
+				}
+				printf "%s", context_block
+				if (substr(context_block, length(context_block), 1) != "\n") {
+					printf "\n"
+				}
+			}
+		}
+		' "$output_file" >"$tmp_file"
+	mv "$tmp_file" "$output_file"
+}
+
 eaw_render_phase_prompt_template() {
 	local template_file="$1"
 	local output_file="$2"
@@ -1547,6 +1697,7 @@ eaw_render_phase_prompt_template() {
 		}
 		' "$template_file" >"$output_file"
 
+	eaw_apply_context_block_to_prompt "$card" "$card_dir" "${EAW_CARD_WORKFLOW_CURRENT_PHASE_FILE:-}" "$output_file" || return 1
 	echo "RUNTIME: wrote_prompt=${output_file#$card_dir/}"
 }
 

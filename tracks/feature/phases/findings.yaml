@@ -9,6 +9,9 @@ phase:
     active: 4
     path: templates/prompts/feature/findings/prompt_v<active>.md
 
+  context:
+    onboarding_template: repo_discovery
+
   tooling_hints:
     - Ler somente `<CARD_DIR>` e TARGET_REPOS em modo read-only.
     - Quando `WORKDIR` estiver definido como `<WORKDIR>`, tratar `<OUTDIR>` como a saida base isolada do runtime.
