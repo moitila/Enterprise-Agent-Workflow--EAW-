@@ -9,18 +9,18 @@ RUNTIME_ENVIRONMENT
 - RUNTIME_ROOT: {{RUNTIME_ROOT}}
 - CONFIG_SOURCE: {{CONFIG_SOURCE}}
 - OUT_DIR: {{OUT_DIR}}
-- CARD_DIR: /home/user/dev/.eaw/out/<CARD>
+- CARD_DIR: /home/user/dev/.eaw/out/{{CARD}}
 - REQUIRED_ARTIFACTS:
-  - /home/user/dev/.eaw/out/<CARD>/investigations/00_intake.md
-  - /home/user/dev/.eaw/out/<CARD>/investigations/20_findings.md
-  - /home/user/dev/.eaw/out/<CARD>/investigations/30_hypotheses.md
-  - /home/user/dev/.eaw/out/<CARD>/investigations/40_next_steps.md
-  - /home/user/dev/.eaw/out/<CARD>/implementation/00_scope.lock.md
-  - /home/user/dev/.eaw/out/<CARD>/implementation/10_change_plan.md
+  - /home/user/dev/.eaw/out/{{CARD}}/investigations/00_intake.md
+  - /home/user/dev/.eaw/out/{{CARD}}/investigations/20_findings.md
+  - /home/user/dev/.eaw/out/{{CARD}}/investigations/30_hypotheses.md
+  - /home/user/dev/.eaw/out/{{CARD}}/investigations/40_next_steps.md
+  - /home/user/dev/.eaw/out/{{CARD}}/implementation/00_scope.lock.md
+  - /home/user/dev/.eaw/out/{{CARD}}/implementation/10_change_plan.md
 - WRITE_ALLOWLIST:
-  - codigo somente nos TARGET_REPOS autorizados por /home/user/dev/.eaw/out/<CARD>/implementation/00_scope.lock.md
-  - artefatos somente em /home/user/dev/.eaw/out/<CARD>/implementation/20_patch_notes.md
-  - artefatos somente em /home/user/dev/.eaw/out/<CARD>/implementation/_warnings.md
+  - codigo somente nos TARGET_REPOS autorizados por /home/user/dev/.eaw/out/{{CARD}}/implementation/00_scope.lock.md
+  - artefatos somente em /home/user/dev/.eaw/out/{{CARD}}/implementation/20_patch_notes.md
+  - artefatos somente em /home/user/dev/.eaw/out/{{CARD}}/implementation/_warnings.md
 - PRECHECK:
   - set -euo pipefail
   - cd "{{RUNTIME_ROOT}}"
