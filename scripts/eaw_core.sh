@@ -1896,13 +1896,12 @@ eaw_onboarding_relpath_is_excluded() {
 
 eaw_onboarding_file_is_text() {
 	local file="$1"
-	python3 - "$file" <<'PY'
-from pathlib import Path
-import sys
-
-data = Path(sys.argv[1]).read_bytes()
-sys.exit(1 if b"\x00" in data else 0)
-PY
+	# Use grep's binary sniffing to avoid requiring python3.
+	# Empty files should still count as text for onboarding purposes.
+	if [[ ! -s "$file" ]]; then
+		return 0
+	fi
+	LC_ALL=C grep -Iq . "$file"
 }
 
 eaw_onboarding_write_provenance() {
