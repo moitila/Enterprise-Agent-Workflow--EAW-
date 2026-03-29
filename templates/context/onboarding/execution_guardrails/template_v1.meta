@@ -1,0 +1,3 @@
+version=v1
+required_substrings=OBJECTIVE|INPUT|OUTPUT|READ_SCOPE|RULES
+forbidden_words=path direto|conteudo inventado|alterar runtime|alterar phase.yaml
