@@ -903,12 +903,52 @@ phase_resolve_repos() {
 }
 
 phase_collect_context() {
-	# context engine in standby: collection disabled
+	# Collect context for a card phase based on phase.context declarations.
+	# Conditions injection on materialization under out/<CARD>/context/.
+	# Fallback: no injection when context block or specific field is absent.
+	# Errors deterministically for template inexistente, onboarding ausente,
+	# and contexto nao materializado. Does not inject context not backed by a
+	# materialized artifact.
+	local card_dir="$1"
+	local phase_file="$2"
+	local dynamic_tpl onboarding_tpl errors=0
+
+	[[ -n "$phase_file" && -f "$phase_file" ]] || return 0
+
+	dynamic_tpl="$(eaw_yaml_phase_dynamic_context_template "$phase_file")"
+	onboarding_tpl="$(eaw_yaml_phase_onboarding_template "$phase_file")"
+
+	# Fallback: context block or all fields absent — no injection, preserve current behavior.
+	if [[ -z "$dynamic_tpl" && -z "$onboarding_tpl" ]]; then
+		return 0
+	fi
+
+	if [[ -n "$dynamic_tpl" ]]; then
+		local dynamic_context_dir="$card_dir/context/dynamic"
+		if [[ ! -d "$dynamic_context_dir" ]]; then
+			printf "ERROR: context nao materializado: dynamic_context_template='%s' declarado mas artefato ausente em '%s' (template inexistente ou coleta nao executada)\n" \
+				"$dynamic_tpl" "$dynamic_context_dir" >&2
+			errors=$((errors + 1))
+		fi
+	fi
+
+	if [[ -n "$onboarding_tpl" ]]; then
+		local onboarding_dir="$card_dir/context/onboarding"
+		if [[ ! -d "$onboarding_dir" ]]; then
+			printf "ERROR: onboarding ausente: onboarding_template='%s' declarado mas artefato ausente em '%s'\n" \
+				"$onboarding_tpl" "$onboarding_dir" >&2
+			errors=$((errors + 1))
+		fi
+	fi
+
+	if [[ "$errors" -gt 0 ]]; then
+		return 1
+	fi
 	return 0
 }
 
 phase_search_hits() {
-	# context engine in standby: search hits disabled
+	# search hit collection not yet implemented; context collection governed by phase_collect_context
 	return 0
 }
 
@@ -1056,7 +1096,68 @@ eaw_journal_append() {
 		>>"${OUTDIR}/execution_journal.jsonl"
 }
 
-# context engine in standby: context_pack parsing disabled
+# Parse phase.context.dynamic_context_template from phase YAML.
+# Returns the logical template identifier (string) or empty when absent.
+eaw_yaml_phase_dynamic_context_template() {
+	local file="$1"
+	awk '
+		function trim(s) {
+			sub(/^[[:space:]]+/, "", s)
+			sub(/[[:space:]]+$/, "", s)
+			sub(/^"/, "", s)
+			sub(/"$/, "", s)
+			return s
+		}
+		/^phase:[[:space:]]*$/ { in_phase=1; next }
+		in_phase && /^[^[:space:]]/ { in_phase=0; in_context=0 }
+		in_phase && /^  context:[[:space:]]*$/ { in_context=1; next }
+		in_context && /^  [^[:space:]]/ { in_context=0 }
+		in_context && /^    dynamic_context_template:[[:space:]]*/ {
+			line=$0
+			sub(/^    dynamic_context_template:[[:space:]]*/, "", line)
+			print trim(line)
+			exit
+		}
+	' "$file"
+}
+
+# Parse phase.context.onboarding_template from phase YAML.
+# Returns the logical template identifier (string) or empty when absent.
+eaw_yaml_phase_onboarding_template() {
+	local file="$1"
+	awk '
+		function trim(s) {
+			sub(/^[[:space:]]+/, "", s)
+			sub(/[[:space:]]+$/, "", s)
+			sub(/^"/, "", s)
+			sub(/"$/, "", s)
+			return s
+		}
+		/^phase:[[:space:]]*$/ { in_phase=1; next }
+		in_phase && /^[^[:space:]]/ { in_phase=0; in_context=0 }
+		in_phase && /^  context:[[:space:]]*$/ { in_context=1; next }
+		in_context && /^  [^[:space:]]/ { in_context=0 }
+		in_context && /^    onboarding_template:[[:space:]]*/ {
+			line=$0
+			sub(/^    onboarding_template:[[:space:]]*/, "", line)
+			print trim(line)
+			exit
+		}
+	' "$file"
+}
+
+# Parse the full context pack from phase YAML.
+# Outputs key=value lines for each declared context field.
+# Returns empty output when phase.context block is absent (fallback: no injection).
 eaw_yaml_phase_context_pack() {
-	return 0
+	local phase_file="$1"
+	local dynamic_tpl onboarding_tpl
+	dynamic_tpl="$(eaw_yaml_phase_dynamic_context_template "$phase_file")"
+	onboarding_tpl="$(eaw_yaml_phase_onboarding_template "$phase_file")"
+	if [[ -n "$dynamic_tpl" ]]; then
+		printf "dynamic_context_template=%s\n" "$dynamic_tpl"
+	fi
+	if [[ -n "$onboarding_tpl" ]]; then
+		printf "onboarding_template=%s\n" "$onboarding_tpl"
+	fi
 }

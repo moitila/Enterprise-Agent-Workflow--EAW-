@@ -157,6 +157,86 @@ eaw_validate_workflow_phase_tooling_hints() {
 	return "$errors"
 }
 
+eaw_validate_workflow_phase_context() {
+	# Validate phase.context block structure.
+	# Accepts only dynamic_context_template and onboarding_template as string identifiers.
+	# Rejects extra keys, non-string values, and path-style values (containing '/').
+	# Fallback: absent context block is valid (preserves legacy phase compatibility).
+	# Errors: emits "unsupported context key", "must be a logical identifier, not a path",
+	# and "must be a non-empty string" for template inexistente and invalid structure.
+	# nao materializado and onboarding ausente are runtime errors, not structural ones.
+	local track_id="$1"
+	local phase_id="$2"
+	local phase_file="$3"
+	local issue
+	local errors=0
+
+	while IFS= read -r issue; do
+		[[ -n "$issue" ]] || continue
+		errors=$((errors + 1))
+		eaw_validate_workflow_error "$track_id" "$phase_id" "context" "$issue"
+	done < <(
+		awk '
+			function ltrim(s) {
+				sub(/^[[:space:]]+/, "", s)
+				return s
+			}
+			function trim(s) {
+				sub(/^[[:space:]]+/, "", s)
+				sub(/[[:space:]]+$/, "", s)
+				sub(/^"/, "", s)
+				sub(/"$/, "", s)
+				return s
+			}
+			/^phase:[[:space:]]*$/ { in_phase=1; next }
+			in_phase && /^[^[:space:]]/ { in_phase=0; in_context=0 }
+			in_phase && /^  context:[[:space:]]*$/ { in_context=1; next }
+			in_phase && /^  context:[[:space:]]*\S/ {
+				printf "phase.context must be a mapping block, not an inline value\n"
+				in_context=0
+				next
+			}
+			in_context && /^  [^[:space:]]/ { in_context=0 }
+			!in_context { next }
+			/^[[:space:]]*$/ { next }
+			/^    dynamic_context_template:[[:space:]]*/ {
+				line=$0
+				sub(/^    dynamic_context_template:[[:space:]]*/, "", line)
+				val=trim(line)
+				if (val == "" || val ~ /^[-{[]/) {
+					printf "dynamic_context_template must be a non-empty string identifier\n"
+				} else if (val ~ /\//) {
+					printf "dynamic_context_template must be a logical identifier, not a path (template inexistente se path direto): '\''%s'\''\n", val
+				}
+				next
+			}
+			/^    onboarding_template:[[:space:]]*/ {
+				line=$0
+				sub(/^    onboarding_template:[[:space:]]*/, "", line)
+				val=trim(line)
+				if (val == "" || val ~ /^[-{[]/) {
+					printf "onboarding_template must be a non-empty string identifier\n"
+				} else if (val ~ /\//) {
+					printf "onboarding_template must be a logical identifier, not a path (template inexistente se path direto): '\''%s'\''\n", val
+				}
+				next
+			}
+			/^    [A-Za-z0-9_-]+:[[:space:]]*/ {
+				line=$0
+				sub(/^    /, "", line)
+				split(line, parts, ":")
+				printf "unsupported context key '\''%s'\''\n", parts[1]
+				next
+			}
+			{
+				printf "invalid context line: %s\n", ltrim($0)
+			}
+		' "$phase_file"
+	)
+
+	return "$errors"
+}
+
 eaw_validate_workflow_track() {
 	local track_id="$1"
 	local track_dir track_file initial_phase final_phase raw_phase normalized_phase phase_file phase_id prompt_path phase_errors
@@ -254,6 +334,11 @@ eaw_validate_workflow_track() {
 			errors=$((errors + phase_errors))
 		fi
 		eaw_validate_workflow_phase_tooling_hints "$track_id" "$phase_id" "$phase_file"
+		phase_errors=$?
+		if [[ "$phase_errors" -gt 0 ]]; then
+			errors=$((errors + phase_errors))
+		fi
+		eaw_validate_workflow_phase_context "$track_id" "$phase_id" "$phase_file"
 		phase_errors=$?
 		if [[ "$phase_errors" -gt 0 ]]; then
 			errors=$((errors + phase_errors))
