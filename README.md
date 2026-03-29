@@ -30,21 +30,32 @@ Ensure you have `bash`, `git`, `mktemp`, and optionally `rg` (ripgrep) installed
 chmod +x scripts/eaw scripts/lib.sh
 ```
 
-## Quickstart
+## Quickstart <!-- phase.yaml context ./scripts/eaw next 589 CONTEXT out/589/context/onboarding out/589/context/dynamic -->
 
 ```bash
 # from repo root
 ./scripts/eaw init
-./scripts/eaw card 123 --track standard
-./scripts/eaw card 124 --track bug "Fix race condition"
-./scripts/eaw run 123
-./scripts/eaw next 123
-./scripts/eaw intake 123    # deprecated compatibility wrapper; planned removal in v1.0
-./scripts/eaw analyze 123   # deprecated compatibility wrapper; planned removal in v1.0
-./scripts/eaw implement 123 # deprecated compatibility wrapper; planned removal in v1.0
+./scripts/eaw card 589 --track feature "Document context model adoption"
+cat > tracks/feature/phases/findings.yaml <<'EOF'
+id: findings
+description: Investigate the current card with bounded evidence.
+context:
+  dynamic_context_template: deterministic_baseline_v1
+  onboarding_template: repo_discovery
+tooling_hints:
+  execution_mode: deterministic
+EOF
+./scripts/eaw next 589
 ./scripts/eaw smoke
-./scripts/eaw test
 ```
+
+Quickstart minimo de contexto:
+
+- declare o bloco `context` em `phase.yaml` para ativar `dynamic_context`
+- trate onboarding como opcional; a fonte fica no workspace em `context_sources/onboarding/<repo_key>/`
+- depois de `./scripts/eaw next 589`, confirme no prompt os blocos `CONTEXT - ONBOARDING` e `CONTEXT - DYNAMIC`
+- valide os artefatos materializados em `out/589/context/onboarding/` e `out/589/context/dynamic/`
+- use `docs/CONTEXT_MODEL.md` como contrato canonico e `docs/CONCEPTUAL_MODEL.md` como guia de migracao copiavel diretamente
 
 `track` is the primary workflow classification for a card. The runtime stores the selected value in `card_state.track_id` and resolves the official workflow from `tracks/<track>/track.yaml`.
 
@@ -108,7 +119,9 @@ Decision note:
 
 ## Context Pack
 
-> **Standby**: the context engine is currently disabled. `context_pack` parsing is inactive and no `context/` artifacts are collected at runtime. The contract below describes the intended design and remains reserved for future activation.
+The context model is active and documented for incremental adoption.
+Use `context` in `phase.yaml` to declare runtime-collected evidence, keep onboarding optional, and verify the materialized artifacts under `out/<CARD>/context/onboarding/` and `out/<CARD>/context/dynamic/`.
+The canonical contract is `docs/CONTEXT_MODEL.md`; the migration path with examples copiaveis diretamente, checklist de migracao, track por track, fase por fase, sem bootstrap and bootstrap opcional lives in `docs/CONCEPTUAL_MODEL.md`.
 
 ## Config
 

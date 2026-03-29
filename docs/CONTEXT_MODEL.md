@@ -52,6 +52,71 @@ The injected context must be readable by an engineer, not only by the agent. If 
 - The runtime derives dynamic context from the current card and phase.
 - The EAW template layer renders and presents context without redefining it.
 
+## Operational Adoption Guide
+
+### onboarding
+
+Use `onboarding` for stable repository facts that would otherwise be rewritten card after card:
+
+- repository conventions that rarely change
+- domain vocabulary that helps the engineer read the repo
+- operating constraints needed across phases
+
+Configure onboarding in the EAW workspace under `context_sources/onboarding/<repo_key>/`.
+The runtime materializes what was accepted under `out/<CARD>/context/onboarding/` and records provenance even when the source is absent.
+Onboarding is optional. Absence must remain observable instead of being masked by fallback prose.
+
+### dynamic_context
+
+Use `dynamic_context` when the phase needs bounded, runtime-selected evidence from the current card.
+Declare it in `phase.yaml` through the `context` block so the runtime can materialize `out/<CARD>/context/dynamic/`.
+`dynamic_context` selects evidence and delimits files, snippets, and manifests. It does not interpret evidence, conclude, replace findings, or become a hidden analysis channel.
+
+### Keeping cost low in large repositories
+
+Keep context small and auditable through runtime limits, exclusions, and score-driven selection:
+
+- prefer narrow file scopes over broad repository sweeps
+- rely on limits and exclusions to avoid inflating context with irrelevant files
+- keep score-based selection focused on the evidence needed by the current phase
+- validate the materialized artifacts under `out/<CARD>/context/` instead of assuming the prompt received the right inputs
+
+Low cost matters because context is only useful when an engineer can still inspect it.
+
+### When to use `context_bootstrap`
+
+Use `context_bootstrap` when a track or phase needs a first controlled materialization pass before the regular phase flow depends on context artifacts.
+Treat it as a bootstrap opcional step for incremental adoption, not as a mandatory prerequisite for every track.
+
+Prefer sem `context_bootstrap` when:
+
+- the current phase already materializes the needed `dynamic_context`
+- onboarding can remain optional and be observed through `source_status: absent`
+- the migration is starting with a single phase and you want the smallest reversible change
+
+Prefer com `context_bootstrap` when:
+
+- you need an explicit first run to establish context artifacts before downstream steps
+- the team wants a dedicated rollout checkpoint for verifying provenance and determinism
+- the track is being expanded phase by phase and benefits from an isolated bootstrap gate
+
+### Boundary with `tooling_hints`
+
+`context` declares what evidence must be collected and injected.
+`tooling_hints` tells the executing agent how to operate inside the phase.
+If a `context` block starts carrying procedural instructions, responsibility drift has started and the contract is being violated.
+
+### anti-patterns
+
+Avoid these anti-patterns during adoption:
+
+- treating `dynamic_context` as pre-written findings or hidden conclusions
+- stuffing `tooling_hints` or free-form instructions into the `context` declaration
+- enabling context in every phase at once instead of migrating phase by phase
+- assuming onboarding is mandatory when the runtime explicitly supports an optional source
+- skipping inspection of `out/<CARD>/context/onboarding/` or `out/<CARD>/context/dynamic/` before trusting the prompt
+- expanding context volume without using limits, exclusions, and score to keep the evidence readable
+
 ## Non-Goals
 
 - Implementing collectors or parsers.
