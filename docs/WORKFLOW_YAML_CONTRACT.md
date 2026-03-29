@@ -169,7 +169,13 @@ Rules:
 - The runtime injects `RUNTIME_ENVIRONMENT` only into those agent prompt artifacts; non-agent phases that do not materialize prompts do not receive the header.
 - `phase.tooling_hints` is optional and, when present, must be declared as a YAML list of strings or as `[]`.
 - Each `phase.tooling_hints` entry is rendered as a textual hint inside a stable `## Tooling Hints` section in the final prompt only when the phase declares hints.
+- `context` is not free text; it declares what will be injected and must stay separate from execution hints.
+- Workspace-sourced onboarding context lives outside the target repository and is consumed by EAW before materialization.
+- Prompt injection must consume only context materialized under `out/<CARD>/context/`; `phase.yaml` must not imply direct contextual reads from the target repository.
 - Supported runtime placeholders inside `phase.tooling_hints` are normalized before prompt emission. The current deterministic tokens are `<CARD>`, `<WORKDIR>`, `<OUTDIR>`, `<CARD_DIR>`, `<TARGET_REPO>`, `{{CARD}}`, `{{EAW_WORKDIR}}`, `{{OUT_DIR}}`, `{{CARD_DIR}}`, and `{{TARGET_REPOS}}`.
+- The canonical model for stable repository context and runtime-derived operational context is documented in `docs/CONTEXT_MODEL.md`.
+- `context` and `tooling_hints` are separate contract surfaces: `tooling_hints` instruct execution, while `context` describes the evidence that must be collected and injected.
+- Free-form contextual prose must not be added to `phase.yaml` outside the approved contract fields for those surfaces.
 
 Card State Contract
 -------------------

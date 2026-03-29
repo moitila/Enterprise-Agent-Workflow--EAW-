@@ -76,9 +76,12 @@ This makes prompt selection observable and versioned instead of implicit.
 
 ### Context
 
-Context is collected from target repositories into `out/<CARD>/context/<repoKey>/`.
-This keeps AI inputs bounded and reviewable.
-> **Standby**: context collection is currently disabled. This section describes the intended design and is reserved for future activation.
+The canonical context model is documented in `docs/CONTEXT_MODEL.md`.
+That contract distinguishes workspace-sourced `onboarding` context from phase-derived `dynamic_context`.
+`onboarding` is maintained outside the target repository and consumed by EAW; `dynamic_context` is runtime-sourced and may vary by phase.
+When context is materialized, `onboarding` is collected under `out/<CARD>/context/onboarding/` and `dynamic_context` under `out/<CARD>/context/dynamic/` to keep AI inputs bounded and reviewable.
+Templates are versioned independently under `templates/context/<type>/<template_name>/` and rendered without redefining the origin of the context.
+Both remain separate from prompt rendering concerns and from `tooling_hints`.
 
 ### Artifacts
 
