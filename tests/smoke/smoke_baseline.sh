@@ -28,6 +28,9 @@ prime_feature_card_for_findings() {
 
 	EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" card "$card" --track feature "baseline smoke" >/dev/null
 	printf "%s\n" "$ingest_content" >"$workdir/out/$card/ingest/sources.md"
+	# Pre-cria context/onboarding/ para evitar falsa detecao de ausencia em
+	# eaw_materialize_context_contracts_for_completed_phases (bug runtime CARD-587)
+	mkdir -p "$workdir/out/$card/context/onboarding"
 	cat >"$workdir/out/$card/state_card_feature.yaml" <<EOF
 card_state:
   track_id: feature
