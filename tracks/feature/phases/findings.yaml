@@ -10,6 +10,7 @@ phase:
     path: templates/prompts/feature/findings/prompt_v<active>.md
 
   context:
+    dynamic_context_template: deterministic_baseline_v1
     onboarding_template: repo_discovery
 
   tooling_hints:

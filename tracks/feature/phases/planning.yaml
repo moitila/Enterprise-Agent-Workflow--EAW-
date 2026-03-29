@@ -9,6 +9,9 @@ phase:
     active: 3
     path: templates/prompts/feature/planning/prompt_v<active>.md
 
+  context:
+    dynamic_context_template: deterministic_baseline_v1
+
   outputs:
     create_directories:
       - prompts

@@ -387,6 +387,32 @@ eaw_context_template_dir_from_root() {
 	printf "%s/context/%s/%s\n" "$templates_root" "$context_kind" "$template_name"
 }
 
+eaw_context_template_is_builtin() {
+	local context_kind="$1"
+	local template_name="$2"
+
+	[[ "$context_kind" == "dynamic" && "$template_name" == "deterministic_baseline_v1" ]]
+}
+
+eaw_context_template_builtin_resolution() {
+	local context_kind="$1"
+	local template_name="$2"
+
+	if ! eaw_context_template_is_builtin "$context_kind" "$template_name"; then
+		return 1
+	fi
+
+	printf "kind=%s\n" "$context_kind"
+	printf "template=%s\n" "$template_name"
+	printf "source_root=%s\n" "${EAW_ROOT_DIR}/templates"
+	printf "template_dir=%s\n" "builtin://context/$context_kind/$template_name"
+	printf "active=%s\n" "builtin"
+	printf "file=%s\n" "builtin"
+	printf "md_file=%s\n" "builtin://context/$context_kind/$template_name"
+	printf "meta_file=%s\n" "builtin://context/$context_kind/$template_name.meta"
+	printf "template_used=%s\n" "${context_kind}_${template_name}_builtin"
+}
+
 eaw_context_template_resolve_active_metadata() {
 	local context_kind="$1"
 	local template_name="$2"
@@ -403,6 +429,9 @@ eaw_context_template_resolve_active_metadata() {
 	elif [[ -d "$root_dir" ]]; then
 		dir="$root_dir"
 		source_root="$root_templates_root"
+	elif eaw_context_template_is_builtin "$context_kind" "$template_name"; then
+		eaw_context_template_builtin_resolution "$context_kind" "$template_name"
+		return 0
 	else
 		echo "ERROR: template directory not found for context '$context_kind' template '$template_name': $workspace_dir (expected templates/context/$context_kind/$template_name resolved via ACTIVE)" >&2
 		return 1
@@ -1257,10 +1286,331 @@ eaw_dynamic_context_prepare_for_workflow_phase() {
 	return 0
 }
 
+eaw_metrics_sum_file_bytes() {
+	local target_dir="$1"
+
+	if [[ ! -d "$target_dir" ]]; then
+		printf "0\n"
+		return 0
+	fi
+
+	find "$target_dir" -type f -exec wc -c {} + 2>/dev/null | awk '
+		NF >= 2 && $2 != "total" { sum += $1 }
+		END { print sum + 0 }
+	'
+}
+
+eaw_metrics_count_files() {
+	local target_dir="$1"
+
+	if [[ ! -d "$target_dir" ]]; then
+		printf "0\n"
+		return 0
+	fi
+
+	find "$target_dir" -type f | awk 'END { print NR + 0 }'
+}
+
+eaw_metrics_count_lines() {
+	local file="$1"
+	local pattern="$2"
+
+	if [[ ! -f "$file" ]]; then
+		printf "0\n"
+		return 0
+	fi
+
+	awk -v pattern="$pattern" '$0 ~ pattern { count++ } END { print count + 0 }' "$file"
+}
+
+eaw_metrics_prompt_size_bytes() {
+	local card_dir="$1"
+	local prompt_file="$card_dir/prompts/implementation_executor.md"
+
+	if [[ ! -f "$prompt_file" && -n "${EAW_CARD_WORKFLOW_CURRENT_PHASE:-}" ]]; then
+		prompt_file="$card_dir/prompts/${EAW_CARD_WORKFLOW_CURRENT_PHASE}.md"
+	fi
+	if [[ ! -f "$prompt_file" ]]; then
+		printf "0\n"
+		return 0
+	fi
+
+	wc -c <"$prompt_file" | tr -d '[:space:]'
+}
+
+eaw_metrics_retry_count() {
+	local journal_file="$1"
+
+	if [[ ! -f "$journal_file" ]]; then
+		printf "0\n"
+		return 0
+	fi
+
+	awk '
+		match($0, /"phase":"workflow_phase_([^"]+)"/, phase_match) &&
+		match($0, /"event_type":"phase_completed"/) {
+			total++
+			seen[phase_match[1]] = 1
+		}
+		END {
+			unique = 0
+			for (phase_name in seen) {
+				unique++
+			}
+			retries = total - unique
+			if (retries < 0) {
+				retries = 0
+			}
+			print retries
+		}
+	' "$journal_file"
+}
+
+eaw_metrics_phase_duration_block() {
+	local journal_file="$1"
+
+	if [[ ! -f "$journal_file" ]]; then
+		printf -- "- sem eventos de fase registrados\n"
+		return 0
+	fi
+
+	awk '
+		match($0, /"phase":"workflow_phase_([^"]+)"/, phase_match) &&
+		match($0, /"duration_ms":([0-9]+)/, duration_match) &&
+		match($0, /"event_type":"phase_completed"/) {
+			sum[phase_match[1]] += duration_match[1]
+			count++
+		}
+		END {
+			if (count == 0) {
+				print "- sem eventos de fase registrados"
+				exit
+			}
+			for (phase_name in sum) {
+				printf "- %s: %sms\n", phase_name, sum[phase_name]
+			}
+		}
+	' "$journal_file" | LC_ALL=C sort
+}
+
+eaw_write_deterministic_baseline() {
+	local card_dir="$1"
+	local card="${2:-${EAW_CARD_WORKFLOW_CARD:-$(basename "$card_dir")}}"
+	local baseline_file="$card_dir/investigations/10_baseline.md"
+	local dynamic_dir="$card_dir/context/dynamic"
+	local onboarding_dir="$card_dir/context/onboarding"
+	local journal_file="$card_dir/execution_journal.jsonl"
+	local manifest_file="$dynamic_dir/00_scope_manifest.md"
+	local candidates_file="$dynamic_dir/20_candidate_files.txt"
+	local snippets_file="$dynamic_dir/30_target_snippets.md"
+	local context_bytes context_files snippet_count prompt_size retries
+	local phase_duration_block
+	local journal_status prompt_status snippets_status
+
+	ensure_dir "$(dirname "$baseline_file")"
+
+	context_bytes=$(( $(eaw_metrics_sum_file_bytes "$dynamic_dir") + $(eaw_metrics_sum_file_bytes "$onboarding_dir") ))
+	context_files=$(( $(eaw_metrics_count_files "$dynamic_dir") + $(eaw_metrics_count_files "$onboarding_dir") ))
+	snippet_count="$(eaw_metrics_count_lines "$snippets_file" "^### ")"
+	prompt_size="$(eaw_metrics_prompt_size_bytes "$card_dir")"
+	retries="$(eaw_metrics_retry_count "$journal_file")"
+	phase_duration_block="$(eaw_metrics_phase_duration_block "$journal_file")"
+	journal_status="$( [[ -f "$journal_file" ]] && printf "presente" || printf "ausente" )"
+	prompt_status="$( [[ -f "$card_dir/prompts/implementation_executor.md" || -n "${EAW_CARD_WORKFLOW_CURRENT_PHASE:-}" && -f "$card_dir/prompts/${EAW_CARD_WORKFLOW_CURRENT_PHASE}.md" ]] && printf "presente" || printf "ausente" )"
+	snippets_status="$( [[ -f "$snippets_file" ]] && printf "presente" || printf "ausente" )"
+
+	cat >"$baseline_file" <<EOF
+# Baseline - Card $card
+
+## Estado do Baseline
+
+- baseline: deterministic_baseline_v1
+- dynamic_context_dir: ${dynamic_dir#$card_dir/}
+- onboarding_dir: ${onboarding_dir#$card_dir/}
+
+## Artefatos Materializados
+
+- manifest: ${manifest_file#$card_dir/}
+- candidate_files: ${candidates_file#$card_dir/}
+- target_snippets: ${snippets_file#$card_dir/}
+
+## Metricas
+
+- tempo por fase:
+$phase_duration_block
+- tamanho do contexto: ${context_bytes} bytes
+- numero de arquivos: ${context_files}
+- numero de snippets: ${snippet_count}
+- tamanho final do prompt: ${prompt_size} bytes
+- numero de retries: ${retries}
+
+## Fontes das Metricas
+
+- execution_journal: ${journal_status}
+- prompt_final: ${prompt_status}
+- snippets_file: ${snippets_status}
+
+## Evidencias
+
+- manifest_exists: $( [[ -f "$manifest_file" ]] && printf "yes" || printf "no" )
+- candidate_files_exists: $( [[ -f "$candidates_file" ]] && printf "yes" || printf "no" )
+- target_snippets_exists: $( [[ -f "$snippets_file" ]] && printf "yes" || printf "no" )
+- journal_exists: $( [[ -f "$journal_file" ]] && printf "yes" || printf "no" )
+EOF
+}
+
+eaw_write_pilot_report() {
+	local card_dir="$1"
+	local card="${2:-${EAW_CARD_WORKFLOW_CARD:-$(basename "$card_dir")}}"
+	local track_id="${3:-${EAW_CARD_WORKFLOW_TRACK_ID:-unknown}}"
+	local current_phase="${4:-${EAW_CARD_WORKFLOW_CURRENT_PHASE:-unknown}}"
+	local report_file="$card_dir/pilot_report.md"
+	local baseline_file="$card_dir/investigations/10_baseline.md"
+	local dynamic_dir="$card_dir/context/dynamic"
+	local onboarding_dir="$card_dir/context/onboarding"
+	local context_bytes context_files snippet_count prompt_size retries
+	local phase_duration_block baseline_status
+	local journal_status prompt_status snippets_status
+
+	ensure_dir "$card_dir"
+	if [[ ! -f "$baseline_file" ]]; then
+		eaw_write_deterministic_baseline "$card_dir" "$card"
+	fi
+
+	context_bytes=$(( $(eaw_metrics_sum_file_bytes "$dynamic_dir") + $(eaw_metrics_sum_file_bytes "$onboarding_dir") ))
+	context_files=$(( $(eaw_metrics_count_files "$dynamic_dir") + $(eaw_metrics_count_files "$onboarding_dir") ))
+	snippet_count="$(eaw_metrics_count_lines "$dynamic_dir/30_target_snippets.md" "^### ")"
+	prompt_size="$(eaw_metrics_prompt_size_bytes "$card_dir")"
+	retries="$(eaw_metrics_retry_count "$card_dir/execution_journal.jsonl")"
+	phase_duration_block="$(eaw_metrics_phase_duration_block "$card_dir/execution_journal.jsonl")"
+	baseline_status="presente"
+	if [[ ! -d "$dynamic_dir" ]]; then
+		baseline_status="ausente"
+	fi
+	journal_status="$( [[ -f "$card_dir/execution_journal.jsonl" ]] && printf "presente" || printf "ausente" )"
+	prompt_status="$( [[ -f "$card_dir/prompts/implementation_executor.md" || -n "$current_phase" && -f "$card_dir/prompts/${current_phase}.md" ]] && printf "presente" || printf "ausente" )"
+	snippets_status="$( [[ -f "$dynamic_dir/30_target_snippets.md" ]] && printf "presente" || printf "ausente" )"
+
+	cat >"$report_file" <<EOF
+# Pilot Report - Card $card
+
+## Descricao do Card
+
+- card: $card
+- track: $track_id
+- fase_atual: $current_phase
+- baseline_status: $baseline_status
+
+## Configuracao da Track
+
+- findings.dynamic_context_template: deterministic_baseline_v1
+- planning.dynamic_context_template: deterministic_baseline_v1
+- findings.onboarding_template: repo_discovery
+- saida_final: pilot_report.md
+
+## Metricas Coletadas
+
+- tempo por fase:
+$phase_duration_block
+- tamanho do contexto: ${context_bytes} bytes
+- numero de arquivos: ${context_files}
+- numero de snippets: ${snippet_count}
+- tamanho final do prompt: ${prompt_size} bytes
+- numero de retries: ${retries}
+
+## Fontes das Metricas
+
+- execution_journal: ${journal_status}
+- prompt_final: ${prompt_status}
+- snippets_file: ${snippets_status}
+
+## Comparacao com Baseline
+
+- baseline_file: ${baseline_file#$card_dir/}
+- baseline_dynamic_context: $( [[ -d "$dynamic_dir" ]] && printf "materializado" || printf "nao materializado" )
+- baseline_onboarding: $( [[ -d "$onboarding_dir" ]] && printf "materializado" || printf "nao materializado" )
+
+## Observacoes do Runtime
+
+- baseline_status: ${baseline_status}
+- pilot_report_file: ${report_file#$card_dir/}
+- dynamic_context_dir: ${dynamic_dir#$card_dir/}
+- onboarding_dir: ${onboarding_dir#$card_dir/}
+EOF
+}
+
+eaw_materialize_context_contracts_for_completed_phases() {
+	local card_dir="$1"
+	local track_dir="$EAW_TRACKS_DIR/${EAW_CARD_WORKFLOW_TRACK_ID:-}"
+	local current_phase="${EAW_CARD_WORKFLOW_CURRENT_PHASE:-}"
+	local phase_id phase_file dynamic_tpl onboarding_tpl
+	local dynamic_missing_at_start=0
+	local onboarding_missing_at_start=0
+	local expected_dynamic_tpl=""
+	local expected_onboarding_tpl=""
+	local -a phases_to_check=()
+
+	[[ -n "${EAW_CARD_WORKFLOW_TRACK_ID:-}" && -d "$track_dir" ]] || return 0
+	case "$current_phase" in
+	findings | hypotheses)
+		phases_to_check=(findings)
+		;;
+	planning | implementation_planning | implementation_executor)
+		phases_to_check=(findings planning)
+		;;
+	*)
+		return 0
+		;;
+	esac
+
+	for phase_id in "${phases_to_check[@]}"; do
+		phase_file="$track_dir/phases/$phase_id.yaml"
+		[[ -f "$phase_file" ]] || continue
+		dynamic_tpl="$(eaw_yaml_phase_dynamic_context_template "$phase_file")"
+		onboarding_tpl="$(eaw_yaml_phase_onboarding_template "$phase_file")"
+		if [[ -n "$dynamic_tpl" && ! -d "$card_dir/context/dynamic" ]]; then
+			dynamic_missing_at_start=1
+			expected_dynamic_tpl="$dynamic_tpl"
+		fi
+		if [[ -n "$onboarding_tpl" && ! -d "$card_dir/context/onboarding" ]]; then
+			onboarding_missing_at_start=1
+			expected_onboarding_tpl="$onboarding_tpl"
+		fi
+	done
+
+	if [[ "$dynamic_missing_at_start" -eq 1 ]]; then
+		eaw_context_template_resolve_active_metadata "dynamic" "$expected_dynamic_tpl" >/dev/null || return 1
+		eaw_dynamic_context_materialize "$card_dir" || return 1
+		eaw_write_deterministic_baseline "$card_dir"
+	fi
+	if [[ "$onboarding_missing_at_start" -eq 1 ]]; then
+		eaw_onboarding_materialize "$card_dir" "$expected_onboarding_tpl" || return 1
+	fi
+
+	if [[ "$dynamic_missing_at_start" -eq 1 ]]; then
+		printf "ERROR: context nao materializado: dynamic_context_template='%s' declarado mas artefato ausente em '%s' no inicio da execucao\n" \
+			"$expected_dynamic_tpl" \
+			"$card_dir/context/dynamic" >&2
+		return 1
+	fi
+	if [[ "$onboarding_missing_at_start" -eq 1 ]]; then
+		printf "ERROR: onboarding ausente: onboarding_template='%s' declarado mas artefato ausente em '%s' no inicio da execucao\n" \
+			"$expected_onboarding_tpl" \
+			"$card_dir/context/onboarding" >&2
+		return 1
+	fi
+
+	if [[ -d "$card_dir/context/dynamic" ]]; then
+		eaw_write_deterministic_baseline "$card_dir"
+	fi
+	return 0
+}
+
 eaw_prepare_workflow_runtime_inputs() {
 	local phase="$1"
 
 	eaw_dynamic_context_prepare_for_workflow_phase "$phase" || return 1
+	eaw_materialize_context_contracts_for_completed_phases "${OUTDIR:-}" || return 1
 	if [[ "$phase" == workflow_phase_* && -n "${EAW_CARD_WORKFLOW_CURRENT_PHASE_FILE:-}" ]]; then
 		phase_collect_context "${OUTDIR:-}" "${EAW_CARD_WORKFLOW_CURRENT_PHASE_FILE:-}" || return 1
 	fi
@@ -1281,6 +1631,10 @@ run_phase() {
 	eaw_journal_append "${EAW_CARD_WORKFLOW_CARD:-}" "${EAW_CARD_WORKFLOW_TRACK_ID:-}" "$phase" "STARTED" "0" "phase_started"
 	start=$(date +%s%3N)
 	if eaw_prepare_workflow_runtime_inputs "$phase" && "$fn" "$@"; then
+		if [[ "$phase" == "workflow_phase_implementation_executor" ]]; then
+			eaw_write_deterministic_baseline "${OUTDIR:-}" || return 1
+			eaw_write_pilot_report "${OUTDIR:-}" "${EAW_CARD_WORKFLOW_CARD:-}" "${EAW_CARD_WORKFLOW_TRACK_ID:-}" "${EAW_CARD_WORKFLOW_CURRENT_PHASE:-}" || return 1
+		fi
 		rc=0
 		status="OK"
 	else

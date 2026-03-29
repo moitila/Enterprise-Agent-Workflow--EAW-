@@ -12,6 +12,12 @@ phase:
   outputs:
     create_directories:
       - prompts
+    create_artifacts:
+      - pilot_report.md
     prompts:
       - implementation_executor
 
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - pilot_report.md
