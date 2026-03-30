@@ -15,6 +15,7 @@ cmd_doctor() {
 	echo "  EAW_CONFIG_DIR=$EAW_CONFIG_DIR"
 	echo "  EAW_TEMPLATES_DIR=$EAW_TEMPLATES_DIR"
 	echo "  EAW_OUT_DIR=$EAW_OUT_DIR"
+	echo "  Tip: use 'eaw status <CARD>' for a single card or 'eaw status --all' for the global status list."
 
 	echo "Tools:"
 	if command -v git >/dev/null 2>&1; then echo "  git: OK"; else

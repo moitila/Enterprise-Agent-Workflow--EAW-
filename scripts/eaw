@@ -62,6 +62,8 @@ source "$SCRIPT_DIR/commands/cmd_validate.sh"
 # shellcheck disable=SC1091
 source "$SCRIPT_DIR/commands/cmd_doctor.sh"
 # shellcheck disable=SC1091
+source "$SCRIPT_DIR/commands/cmd_status.sh"
+# shellcheck disable=SC1091
 source "$SCRIPT_DIR/commands/cmd_doctor_hardening.sh"
 # shellcheck disable=SC1091
 source "$SCRIPT_DIR/commands/cmd_implement.sh"
@@ -224,6 +226,10 @@ main() {
 		else
 			exit $?
 		fi
+		;;
+	status)
+		validate_runtime_workdir
+		cmd_status "${@:2}"
 		;;
 	doctor)
 		cmd_doctor

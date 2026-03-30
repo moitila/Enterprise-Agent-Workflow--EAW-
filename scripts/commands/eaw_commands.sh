@@ -13,6 +13,7 @@ Example:
   eaw card <CARD> --track <TRACK> ["<TITLE>"]
   eaw run <CARD>
   eaw next <CARD>
+  eaw status <CARD> | eaw status --all
   eaw intake <CARD> [--round=N]   # deprecated compatibility wrapper; planned removal in v1.0
   eaw analyze <CARD>              # deprecated compatibility wrapper; planned removal in v1.0
   eaw implement <CARD>            # deprecated compatibility wrapper; planned removal in v1.0
