@@ -89,6 +89,7 @@ RULES
 - Executar somente os steps definidos no `10_change_plan.md`, sem enriquecer o plano.
 - Executar `bash -n` para qualquer arquivo `.sh` alterado.
 - Executar exatamente os comandos listados em `## Validacao Tecnica Obrigatoria` do `10_change_plan.md`.
+- Se `EAW_SMOKE_SH` estiver definida e executavel, executa-la; caso contrario registrar `SKIP: EAW_SMOKE_SH not set`.
 - Registrar em `20_patch_notes.md`:
   - arquivos alterados
   - resumo objetivo da alteracao por step

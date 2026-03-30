@@ -60,6 +60,13 @@ cmd_doctor() {
 		echo "  eaw.conf: $(eaw_conf_optional_formal_label) ($EAW_CONF missing; $(eaw_conf_optional_formal_contract_note))"
 	fi
 
+	if [[ -z "${EAW_SMOKE_SH:-}" ]]; then
+		echo "  EAW_SMOKE_SH: WARN (not set)"
+		warnings=$((warnings + 1))
+	else
+		echo "  EAW_SMOKE_SH: OK ($EAW_SMOKE_SH)"
+	fi
+
 	if [[ "$errors" -gt 0 ]]; then
 		status="ERROR"
 	elif [[ "$warnings" -gt 0 ]]; then

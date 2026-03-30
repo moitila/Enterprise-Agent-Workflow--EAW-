@@ -93,6 +93,13 @@ cmd_doctor_hardening() {
 		fi
 	done
 
+	if [[ -z "${EAW_SMOKE_SH:-}" ]]; then
+		emit_result "EAW_SMOKE_SH" "WARN" "not set"
+		warning_count=$((warning_count + 1))
+	else
+		emit_result "EAW_SMOKE_SH" "PASS" "$EAW_SMOKE_SH"
+	fi
+
 	run_optional_warning_check "TOOLS" "command -v rg (fallback to grep tolerated)" command -v rg
 
 	if [[ "${EAW_DOCTOR_HARDENING_FORCE_CRITICAL_FAIL:-0}" == "1" ]]; then
