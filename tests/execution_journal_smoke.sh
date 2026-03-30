@@ -8,6 +8,8 @@ fail() { printf "execution_journal smoke failed: %s\n" "$1" >&2; exit 1; }
 # shellcheck disable=SC1091
 source "$REPO_ROOT/scripts/eaw_core.sh"
 
+EAW_TRACKS_DIR="${EAW_TRACKS_DIR:-$REPO_ROOT/tracks}"
+
 tmpdir="$(mktemp -d)"
 trap 'rm -rf "$tmpdir"' EXIT
 
@@ -17,9 +19,6 @@ mkdir -p "$OUTDIR"
 # Simulate a real card context (H5: journal only written when card context is present)
 EAW_CARD_WORKFLOW_CARD="TEST_CARD"
 EAW_CARD_WORKFLOW_TRACK_ID="feature"
-
-# Initialise execution.log with the canonical 4-column header
-printf "#phase|status|duration_ms|note\n" >"$OUTDIR/execution.log"
 
 fn_success() { return 0; }
 fn_fail() { return 42; }
@@ -33,6 +32,9 @@ run_phase "test_phase_fail" false fn_fail || fail "expected non-fatal failure to
 # --- Assertion 2: at least one non-empty line ---
 line_count="$(grep -c '[^[:space:]]' "$OUTDIR/execution_journal.jsonl" || true)"
 [[ "$line_count" -ge 1 ]] || fail "execution_journal.jsonl has no valid lines"
+[[ -f "$OUTDIR/execution.log" ]] || fail "execution.log not derived from journal"
+header="$(sed -n '1p' "$OUTDIR/execution.log")"
+[[ "$header" == "phase|status|duration_ms|note" ]] || fail "unexpected execution.log header: $header"
 
 # --- Assertion 3: required fields present in at least one line ---
 grep -q '"card_id"' "$OUTDIR/execution_journal.jsonl" || fail "missing field card_id"
@@ -56,7 +58,6 @@ EAW_CARD_WORKFLOW_CARD="TEST_CARD"
 EAW_CARD_WORKFLOW_TRACK_ID="feature"
 EAW_AGENT="probe-agent"
 EAW_MODE="probe-mode"
-printf "#phase|status|duration_ms|note\n" >"$OUTDIR3/execution.log"
 run_phase "probe_phase" true fn_success || fail "expected probe phase to return 0"
 grep -q '"agent":"probe-agent"' "$OUTDIR3/execution_journal.jsonl" || fail "EAW_AGENT not reflected in agent field"
 grep -q '"mode":"probe-mode"' "$OUTDIR3/execution_journal.jsonl" || fail "EAW_MODE not reflected in mode field"
@@ -70,7 +71,6 @@ mkdir -p "$OUTDIR4"
 OUTDIR="$OUTDIR4"
 EAW_CARD_WORKFLOW_CARD="TEST_CARD"
 EAW_CARD_WORKFLOW_TRACK_ID="feature"
-printf "#phase|status|duration_ms|note\n" >"$OUTDIR4/execution.log"
 run_phase "fallback_phase" true fn_success || fail "expected fallback phase to return 0"
 grep -q '"agent":"runtime"' "$OUTDIR4/execution_journal.jsonl" || fail "agent fallback must be runtime when EAW_AGENT is unset"
 grep -q '"mode":"phase_driven"' "$OUTDIR4/execution_journal.jsonl" || fail "mode fallback must be phase_driven when EAW_MODE is unset"
@@ -92,7 +92,6 @@ OUTDIR="$OUTDIR2"
 # Unset card context
 EAW_CARD_WORKFLOW_CARD=""
 EAW_CARD_WORKFLOW_TRACK_ID=""
-printf "#phase|status|duration_ms|note\n" >"$OUTDIR2/execution.log"
 run_phase "no_card_phase" true fn_success || fail "expected no-card phase to return 0"
 [[ ! -f "$OUTDIR2/execution_journal.jsonl" ]] || fail "journal must not be created without card context (H5)"
 
@@ -104,7 +103,6 @@ mkdir -p "$OUTDIR5"
 OUTDIR="$OUTDIR5"
 EAW_CARD_WORKFLOW_CARD="TEST_CARD"
 EAW_CARD_WORKFLOW_TRACK_ID="feature"
-printf "#phase|status|duration_ms|note\n" >"$OUTDIR5/execution.log"
 run_phase "duration_phase" true fn_success || fail "expected duration_phase to return 0"
 grep -qE '"event_type":"phase_completed"' "$OUTDIR5/execution_journal.jsonl" || fail "no phase_completed events found"
 grep -qE '"duration_ms":[1-9][0-9]*' "$OUTDIR5/execution_journal.jsonl" || fail "duration_ms must be a positive integer in phase_completed"
@@ -121,7 +119,6 @@ mkdir -p "$OUTDIR_RETRY"
 OUTDIR="$OUTDIR_RETRY"
 EAW_CARD_WORKFLOW_CARD="TEST_CARD"
 EAW_CARD_WORKFLOW_TRACK_ID="feature"
-printf "#phase|status|duration_ms|note\n" >"$OUTDIR_RETRY/execution.log"
 run_phase "retry_phase" true fn_success || fail "expected first retry_phase run to return 0"
 run_phase "retry_phase" true fn_success || fail "expected second retry_phase run to return 0"
 line_count="$(wc -l <"$OUTDIR_RETRY/execution_journal.jsonl")"

@@ -4,7 +4,7 @@
 
 The Execution Journal is a structured, append-only log written by the EAW runtime for each phase execution within a card. It lives at `out/<CARD>/execution_journal.jsonl` and uses JSON Lines format (one JSON object per line).
 
-The `execution.log` (pipe-separated, 4-column) remains unchanged and continues to serve as the operational phase log. The Execution Journal is an additive structured layer, independent of `execution.log`.
+The journal is the single source of truth for phase execution. The legacy `execution.log` (pipe-separated, 4-column) is preserved as a compatibility view derived from `out/<CARD>/execution_journal.jsonl`; it is not an independent write path.
 
 ## Format
 
@@ -59,6 +59,14 @@ out/<CARD>/execution_journal.jsonl
 
 The file is created on demand the first time a phase is executed for a given card. Subsequent phase executions append to the existing file.
 
+## Derived Compatibility View
+
+```
+out/<CARD>/execution.log
+```
+
+`execution.log` is rebuilt from `execution_journal.jsonl` and keeps the historical `phase|status|duration_ms|note` shape for existing consumers. Only completion records are projected into the pipe log, so each phase contributes one operational line while the journal retains the full structured event stream.
+
 ## Compatibility Rules
 
 - New fields may be added to future events without breaking existing readers.
@@ -81,8 +89,10 @@ The file is created on demand the first time a phase is executed for a given car
 |-----------------|------------------------------------|------------------------------------|
 | Format          | Pipe-separated, 4 columns          | JSON Lines                         |
 | Fields          | `phase\|status\|duration_ms\|note` | All required fields above          |
-| Purpose         | Operational phase log              | Structured audit trail             |
-| Written by      | `run_phase()` in `eaw_core.sh`     | `eaw_journal_append()` in `eaw_core.sh` |
+| Purpose         | Operational compatibility view     | Structured audit trail and source of truth |
+| Written by      | `eaw_execution_log_from_journal()` in `eaw_core.sh` | `eaw_journal_append()` in `eaw_core.sh` |
+| Source          | Derived from `phase_completed` journal events | Primary append-only runtime record |
 | Events per phase | 1 (end only)                      | 2 (start + completion)             |
+| Independence    | No                                 | Yes                                |
 | Modified by 565 | No                                 | Created                            |
 | Modified by 566 | No                                 | `event_type` field added           |

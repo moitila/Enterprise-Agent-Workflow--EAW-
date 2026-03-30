@@ -1643,10 +1643,9 @@ run_phase() {
 	fi
 	end=$(date +%s%3N)
 	dur=$((end - start))
-	# record to execution log
-	printf "%s|%s|%s|%s\n" "$phase" "$status" "$dur" "$note" >>"$OUTDIR/execution.log"
 	# emit phase_completed event (H4/H6)
 	eaw_journal_append "${EAW_CARD_WORKFLOW_CARD:-}" "${EAW_CARD_WORKFLOW_TRACK_ID:-}" "$phase" "$status" "$dur" "phase_completed"
+	eaw_execution_log_from_journal "${OUTDIR:-}"
 	# print summary line
 	echo "[phase] $phase -> $status (${dur}ms)"
 	if [[ "$status" != "OK" && "$fatal" == "true" ]]; then
@@ -1798,9 +1797,7 @@ EOF
 			fi
 		fi
 	done < <(scaffold_template_names)
-	# initialize execution.log
-	: >"$outdir/execution.log"
-	printf "phase|status|duration_ms|note\n" >>"$outdir/execution.log"
+	eaw_execution_log_from_journal "$outdir"
 	return 0
 }
 
@@ -2258,8 +2255,54 @@ intake_has_section_headings() {
 	fi
 }
 
+# Rebuild the legacy execution.log view from the append-only journal.
+# The derived file preserves the historical 4-column pipe format for consumers.
+eaw_execution_log_from_journal() {
+	local outdir="${1:-${OUTDIR:-}}"
+	local journal_file log_file tmp_file
+
+	[[ -n "$outdir" ]] || return 0
+	journal_file="$outdir/execution_journal.jsonl"
+	log_file="$outdir/execution.log"
+	tmp_file="${log_file}.tmp.$$"
+
+	{
+		printf "phase|status|duration_ms|note\n"
+		if [[ -f "$journal_file" ]]; then
+			awk '
+				function extract_string(line, key,    value) {
+					value = line
+					sub(".*\"" key "\":\"", "", value)
+					sub("\".*", "", value)
+					return value
+				}
+				function extract_number(line, key,    value) {
+					value = line
+					sub(".*\"" key "\":", "", value)
+					sub(",.*", "", value)
+					sub("}.*", "", value)
+					return value
+				}
+				{
+					event_type = ""
+					if ($0 ~ /"event_type":"/) {
+						event_type = extract_string($0, "event_type")
+					}
+					if (event_type == "" || event_type == "phase_completed") {
+						printf "%s|%s|%s|\n",
+							extract_string($0, "phase"),
+							extract_string($0, "status"),
+							extract_number($0, "duration_ms")
+					}
+				}
+			' "$journal_file"
+		fi
+	} >"$tmp_file"
+	mv "$tmp_file" "$log_file"
+}
+
 # Append one JSON event to the Execution Journal for the current card.
-# H2: writes to ${OUTDIR}/execution_journal.jsonl (separate file, JSON Lines).
+# H2: writes to ${OUTDIR}/execution_journal.jsonl (single source, JSON Lines).
 # H3: centralised wrapper — all journal writes go through this function.
 # H5: no-op when OUTDIR or card_id is empty (safe in unit-test contexts).
 eaw_journal_append() {
