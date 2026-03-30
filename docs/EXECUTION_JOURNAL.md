@@ -96,3 +96,12 @@ out/<CARD>/execution.log
 | Independence    | No                                 | Yes                                |
 | Modified by 565 | No                                 | Created                            |
 | Modified by 566 | No                                 | `event_type` field added           |
+
+## Investigative Note - Card 595
+
+The investigation for card 595 confirmed an observable pattern of repeated phase executions in the journal, but it did not establish the origin of the retries reported for CARD 587.
+
+- Observed fact: `execution_journal.jsonl` is append-only and can contain repeated `phase_started` / `phase_completed` pairs for the same phase.
+- Remaining hypothesis set: external reexecution of the phase chain, possible supervisor or scheduler requeue, or agent reemission of the same phase.
+- Unresolved gap: the available evidence does not prove whether the retries came from the agent, the runtime, or an external condition.
+- Operational consequence: this document remains descriptive only; it does not authorize any retry-policy change, runtime gate change, or other behavioral modification.
