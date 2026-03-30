@@ -48,10 +48,6 @@ REOF
 	mkdir -p "$workdir/out/$card/ingest"
 	printf "bootstrap_token\n" >"$workdir/out/$card/ingest/sources.md"
 
-	# Pre-cria context/onboarding/ para evitar falsa detecao de ausencia em
-	# eaw_materialize_context_contracts_for_completed_phases (bug runtime CARD-587)
-	mkdir -p "$workdir/out/$card/context/onboarding"
-
 	cat >"$workdir/out/$card/state_card_feature.yaml" <<STEOF
 card_state:
   track_id: feature
@@ -161,9 +157,6 @@ REOF
 
 	mkdir -p "$workdir/out/$card/ingest"
 	printf "fixture\n" >"$workdir/out/$card/ingest/sources.md"
-
-	# Pre-cria context/onboarding/ para evitar falsa detecao de ausencia (bug runtime CARD-587)
-	mkdir -p "$workdir/out/$card/context/onboarding"
 
 	cat >"$workdir/out/$card/state_card_feature.yaml" <<STEOF
 card_state:

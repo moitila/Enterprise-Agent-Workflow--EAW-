@@ -36,10 +36,6 @@ EOF
 	mkdir -p "$workdir/out/$card/ingest"
 	printf "README fixture\n" >"$workdir/out/$card/ingest/sources.md"
 
-	# Pre-cria context/onboarding/ para evitar falsa detecao de ausencia em
-	# eaw_materialize_context_contracts_for_completed_phases (bug runtime CARD-587)
-	mkdir -p "$workdir/out/$card/context/onboarding"
-
 	# Prima estado diretamente para fase findings (previous_phase: ingest)
 	cat >"$workdir/out/$card/state_card_feature.yaml" <<STEOF
 card_state:

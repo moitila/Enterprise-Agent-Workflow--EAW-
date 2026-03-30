@@ -39,10 +39,6 @@ REOF
 	mkdir -p "$workdir/out/$card/ingest"
 	printf "%s\n" "$ingest_content" >"$workdir/out/$card/ingest/sources.md"
 
-	# Pre-cria context/onboarding/ para evitar falsa detecao de ausencia em
-	# eaw_materialize_context_contracts_for_completed_phases (bug runtime CARD-587)
-	mkdir -p "$workdir/out/$card/context/onboarding"
-
 	cat >"$workdir/out/$card/state_card_feature.yaml" <<STEOF
 card_state:
   track_id: feature
@@ -225,7 +221,6 @@ REOF
 	EAW_WORKDIR="$workdir1" "$REPO_ROOT/scripts/eaw" card "$card" --track feature "determinism run" >/dev/null
 	mkdir -p "$workdir1/out/$card/ingest"
 	printf "stable_token\n" >"$workdir1/out/$card/ingest/sources.md"
-	mkdir -p "$workdir1/out/$card/context/onboarding"
 	cat >"$workdir1/out/$card/state_card_feature.yaml" <<STEOF
 card_state:
   track_id: feature
@@ -249,7 +244,6 @@ REOF
 	EAW_WORKDIR="$workdir2" "$REPO_ROOT/scripts/eaw" card "$card" --track feature "determinism run" >/dev/null
 	mkdir -p "$workdir2/out/$card/ingest"
 	printf "stable_token\n" >"$workdir2/out/$card/ingest/sources.md"
-	mkdir -p "$workdir2/out/$card/context/onboarding"
 	cat >"$workdir2/out/$card/state_card_feature.yaml" <<STEOF
 card_state:
   track_id: feature

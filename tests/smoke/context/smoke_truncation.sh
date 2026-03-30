@@ -40,10 +40,6 @@ REOF
 	mkdir -p "$workdir/out/$card/ingest"
 	printf "fixture\n" >"$workdir/out/$card/ingest/sources.md"
 
-	# Pre-cria context/onboarding/ para evitar falsa detecao de ausencia em
-	# eaw_materialize_context_contracts_for_completed_phases (bug runtime CARD-587)
-	mkdir -p "$workdir/out/$card/context/onboarding"
-
 	cat >"$workdir/out/$card/state_card_feature.yaml" <<STEOF
 card_state:
   track_id: feature
@@ -123,7 +119,6 @@ REOF
 		EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" card "$card" --track feature "stable order" >/dev/null
 		mkdir -p "$workdir/out/$card/ingest"
 		printf "fixture\n" >"$workdir/out/$card/ingest/sources.md"
-		mkdir -p "$workdir/out/$card/context/onboarding"
 		cat >"$workdir/out/$card/state_card_feature.yaml" <<STEOF
 card_state:
   track_id: feature

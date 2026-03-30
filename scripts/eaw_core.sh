@@ -1593,7 +1593,7 @@ eaw_materialize_context_contracts_for_completed_phases() {
 			"$card_dir/context/dynamic" >&2
 		return 1
 	fi
-	if [[ "$onboarding_missing_at_start" -eq 1 ]]; then
+	if [[ "$onboarding_missing_at_start" -eq 1 && ! -d "$card_dir/context/onboarding" ]]; then
 		printf "ERROR: onboarding ausente: onboarding_template='%s' declarado mas artefato ausente em '%s' no inicio da execucao\n" \
 			"$expected_onboarding_tpl" \
 			"$card_dir/context/onboarding" >&2
