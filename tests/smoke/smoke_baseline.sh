@@ -3,6 +3,9 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 
+# Estabiliza stdout/stderr para comparacoes de diff entre execucoes equivalentes.
+exec > >(sed -u -E -e 's/\([0-9]+ms\)/(Nms)/g' -e 's/\|[0-9]+\|/|N|/g') 2>&1
+
 fail() {
 	printf "smoke_baseline failed: %s\n" "$1" >&2
 	exit 1
@@ -51,6 +54,10 @@ write_repos_conf() {
 	cat >"$workdir/config/repos.conf" <<EOF
 baseline-target|$repo_dir|target
 EOF
+}
+
+run_legacy_smoke_suite() {
+	env -u EAW_WORKDIR bash "$REPO_ROOT/tests/smoke.sh" "$@"
 }
 
 run_signal_scenario() {
@@ -152,7 +159,7 @@ run_hits_limit_scenario() {
 }
 
 printf "[smoke] running baseline suite\n"
-env -u EAW_WORKDIR bash "$REPO_ROOT/tests/smoke.sh" "$@"
+run_legacy_smoke_suite "$@"
 run_signal_scenario
 run_empty_scenario
 run_hits_limit_scenario
