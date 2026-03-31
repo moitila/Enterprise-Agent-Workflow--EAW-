@@ -1,0 +1,35 @@
+config_version: 1
+
+track:
+  id: repo_onboarding
+  name: Repository Onboarding Track
+  description: >
+    Canonical EAW track for creating reusable repository onboarding artifacts
+    from a repository request declared in the card input.
+  initial_phase: repo_discovery
+  final_phase: repo_handoff
+
+  initial_outputs:
+    create_directories:
+      - ingest
+      - investigations
+      - context
+      - onboarding
+    create_artifacts: []
+
+  phases:
+    - repo_discovery
+    - repo_analysis
+    - repo_handoff
+
+  transitions:
+    repo_discovery:
+      next: repo_analysis
+    repo_analysis:
+      next: repo_handoff
+
+  rules:
+    one_prompt_per_phase: true
+    generated_artifacts_of_each_phase_must_be_non_empty: true
+    allow_phase_skip: false
+    allow_manual_phase_skip: false
