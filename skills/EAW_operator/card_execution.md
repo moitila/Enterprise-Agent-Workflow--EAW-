@@ -31,7 +31,7 @@ Para executar um card:
    ./scripts/eaw next <CARD_ID>
 
 3. Localizar o prompt gerado da fase atual em:
-   $OUT_DIR/<CARD_ID>/investigations/
+   $OUT_DIR/<CARD_ID>/prompts/
 
 4. Ler o prompt da fase atual
 
