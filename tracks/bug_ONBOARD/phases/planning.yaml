@@ -6,7 +6,7 @@ phase:
   description: Define implementation steps.
 
   prompt:
-    active: 2
+    active: 4
     path: templates/prompts/bug_ONBOARD/planning/prompt_v<active>.md
 
   outputs:

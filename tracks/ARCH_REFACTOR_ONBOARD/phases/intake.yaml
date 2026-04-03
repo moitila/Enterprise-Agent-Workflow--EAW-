@@ -6,7 +6,7 @@ phase:
   description: Define the problem and pipeline signals from normalized ingest evidence.
 
   prompt:
-    active: 2
+    active: 1
     path: templates/prompts/ARCH_REFACTOR_ONBOARD/intake/prompt_v<active>.md
 
   outputs:

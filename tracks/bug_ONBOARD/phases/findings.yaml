@@ -6,7 +6,7 @@ phase:
   description: Analyze the intake information and identify key findings.
 
   prompt:
-    active: 2
+    active: 3
     path: templates/prompts/bug_ONBOARD/findings/prompt_v<active>.md
 
   outputs:

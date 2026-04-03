@@ -50,16 +50,8 @@ resolve_workdirs() {
 
 	if [[ -n "$EAW_WORKDIR" ]]; then
 		EAW_CONFIG_DIR="$EAW_WORKDIR/config"
-		if [[ -d "$EAW_WORKDIR/templates" ]]; then
-			EAW_TEMPLATES_DIR="$EAW_WORKDIR/templates"
-		else
-			EAW_TEMPLATES_DIR="$EAW_ROOT_DIR/templates"
-		fi
-		if [[ -d "$EAW_WORKDIR/tracks" ]]; then
-			EAW_TRACKS_DIR="$EAW_WORKDIR/tracks"
-		else
-			EAW_TRACKS_DIR="$EAW_ROOT_DIR/tracks"
-		fi
+		EAW_TEMPLATES_DIR="$EAW_ROOT_DIR/templates"
+		EAW_TRACKS_DIR="$EAW_ROOT_DIR/tracks"
 		EAW_OUT_DIR="${EAW_OUT_DIR:-$EAW_WORKDIR/out}"
 	else
 		EAW_CONFIG_DIR="$EAW_ROOT_DIR/config"

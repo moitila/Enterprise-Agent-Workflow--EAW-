@@ -27,69 +27,6 @@ scaffold_template_names() {
 		40_next_steps
 }
 
-workspace_template_names() {
-	printf '%s\n' \
-		feature \
-		bug \
-		spike \
-		intake_feature \
-		intake_bug \
-		intake_spike
-	scaffold_template_names
-}
-
-copy_workspace_nested_templates() {
-	local default_tpl_dir="$1"
-	local tpl_dir="$2"
-	local overwrite="$3"
-	local rel src dst dst_parent
-	while IFS= read -r rel; do
-		src="$default_tpl_dir/$rel"
-		dst="$tpl_dir/$rel"
-		if [[ ! -f "$src" ]]; then
-			continue
-		fi
-
-		dst_parent="$(dirname "$dst")"
-		ensure_dir "$dst_parent"
-		if [[ -f "$dst" && "$overwrite" != "true" ]]; then
-			echo "$dst already exists; use --force to overwrite"
-		else
-			cp "$src" "$dst"
-			echo "Created $dst"
-		fi
-	done < <(
-		cd "$default_tpl_dir" &&
-			find prompts/default -type f \( -name 'prompt_v*.md' -o -name 'prompt_v*.meta' -o -name 'ACTIVE' \) |
-			LC_ALL=C sort
-	)
-}
-
-copy_workspace_tracks() {
-	local default_tracks_dir="$1"
-	local tracks_dir="$2"
-	local overwrite="$3"
-	local rel src dst dst_parent
-	if [[ ! -d "$default_tracks_dir" ]]; then
-		return 0
-	fi
-	while IFS= read -r rel; do
-		src="$default_tracks_dir/$rel"
-		dst="$tracks_dir/$rel"
-		dst_parent="$(dirname "$dst")"
-		ensure_dir "$dst_parent"
-		if [[ -f "$dst" && "$overwrite" != "true" ]]; then
-			echo "$dst already exists; use --force to overwrite"
-		else
-			cp "$src" "$dst"
-			echo "Created $dst"
-		fi
-	done < <(
-		cd "$default_tracks_dir" &&
-			find . -type f | sed 's#^\./##' | LC_ALL=C sort
-	)
-}
-
 read_config_version() {
 	local conf="$1"
 	if [[ ! -f "$conf" ]]; then
@@ -186,46 +123,19 @@ init_workspace_workdir() {
 	local workdir="$1"
 	local force="$2"
 	local upgrade="$3"
-	local overwrite_templates="false"
 	local cfg="$workdir/config"
-	local tpl="$workdir/templates"
-	local tracks="$workdir/tracks"
 	local out="$workdir/out"
 	local repos_conf="$cfg/repos.conf"
 	local search_conf="$cfg/search.conf"
 	local default_search="$EAW_ROOT_DIR/config/search.example.conf"
-	local default_tpl_dir="$EAW_ROOT_DIR/templates"
-	local default_tracks_dir="$EAW_ROOT_DIR/tracks"
 
 	ensure_dir "$cfg"
-	ensure_dir "$tpl"
-	ensure_dir "$tracks"
 	ensure_dir "$out"
-
-	if [[ "$force" == "true" || "$upgrade" == "true" ]]; then
-		overwrite_templates="true"
-	fi
 
 	write_or_skip "$repos_conf" "$force" "# Format: key|path|role(optional)
 # Example:
 # backend|/absolute/path/to/repo|target
 # shared-infra|/absolute/path/to/infra|infra"
-
-	while IFS= read -r name; do
-		local src_tpl="$default_tpl_dir/$name.md"
-		local dst_tpl="$tpl/$name.md"
-		if [[ -f "$src_tpl" ]]; then
-			if [[ -f "$dst_tpl" && "$overwrite_templates" != "true" ]]; then
-				echo "$dst_tpl already exists; use --force to overwrite"
-			else
-				cp "$src_tpl" "$dst_tpl"
-				echo "Created $dst_tpl"
-			fi
-		fi
-	done < <(workspace_template_names)
-
-	copy_workspace_nested_templates "$default_tpl_dir" "$tpl" "$overwrite_templates"
-	copy_workspace_tracks "$default_tracks_dir" "$tracks" "$overwrite_templates"
 
 	if [[ -f "$default_search" ]]; then
 		if [[ -f "$search_conf" && "$force" != "true" ]]; then

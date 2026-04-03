@@ -94,10 +94,10 @@ run_dynamic_basic_scenario() {
 		|| fail "dynamic basic: artifact escaped outside context/"
 }
 
-# Cenario: template inexistente
-# Valida que configurar um onboarding_template inexistente produz erro observavel.
-run_template_inexistente_scenario() {
-	local tmpdir workdir repo_dir card err_output rc
+# Cenario: override de workflow no workspace e ignorado
+# Valida que patch local em workdir/tracks nao muda a resolucao core-only.
+run_workspace_override_ignored_scenario() {
+	local tmpdir workdir repo_dir card output rc
 
 	tmpdir="$(mktemp -d)"
 	trap 'rm -rf "$tmpdir"' RETURN
@@ -108,27 +108,26 @@ run_template_inexistente_scenario() {
 
 	init_findings_env "$workdir" "$repo_dir" "$card" "dynamic-target" "fixture context"
 
-	# Patch findings.yaml no workdir para usar onboarding_template inexistente
-	# (o workdir usa tracks do RUNTIME_ROOT pois nao tem tracks/ proprio;
-	#  copiamos e modificamos para o workdir)
+	# Tenta introduzir um override invalido no workspace. Em modo core-only,
+	# isso deve ser ignorado pelo runtime.
 	local tracks_src="$REPO_ROOT/tracks"
 	[[ -d "$tracks_src" ]] \
-		|| fail "template inexistente: tracks/ ausente em REPO_ROOT, impossivel aplicar patch"
+		|| fail "workspace override ignored: tracks/ ausente em REPO_ROOT, impossivel aplicar patch"
 	cp -r "$tracks_src" "$workdir/tracks"
-	# Substitui onboarding_template por valor inexistente
 	sed -i 's/onboarding_template: repo_discovery/onboarding_template: nonexistent_template_xyz/' \
 		"$workdir/tracks/feature/phases/findings.yaml"
 
 	set +e
-	err_output="$(EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" next "$card" 2>&1)"
+	output="$(EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" next "$card" 2>&1)"
 	rc=$?
 	set -e
 
-	# Validacao: eaw next deve falhar com erro observavel de template inexistente
-	[[ "$rc" -ne 0 ]] \
-		|| fail "template inexistente: expected failure but eaw next succeeded"
-	printf "%s\n" "$err_output" | grep -Fq "template directory not found" \
-		|| fail "template inexistente: error not observable in output: $err_output"
+	[[ "$rc" -eq 0 ]] \
+		|| fail "workspace override ignored: expected success with core-only resolution, rc=$rc, output: $output"
+	printf "%s\n" "$output" | grep -Fq "nonexistent_template_xyz" \
+		&& fail "workspace override ignored: workspace patch leaked into runtime output: $output"
+	test -f "$workdir/out/$card/prompts/findings.md" \
+		|| fail "workspace override ignored: findings prompt was not generated"
 }
 
 # Cenario: context nao materializado
@@ -277,8 +276,8 @@ STEOF
 
 printf "[smoke] dynamic context basico\n"
 run_dynamic_basic_scenario
-printf "[smoke] template inexistente\n"
-run_template_inexistente_scenario
+printf "[smoke] workspace override ignored\n"
+run_workspace_override_ignored_scenario
 printf "[smoke] context nao materializado\n"
 run_context_nao_materializado_scenario
 printf "[smoke] determinismo\n"

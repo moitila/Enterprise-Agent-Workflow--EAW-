@@ -6,7 +6,7 @@ phase:
   description: Capture and normalize the initial request for the card.
 
   prompt:
-    active: 2
+    active: 3
     path: templates/prompts/bug_ONBOARD/intake/prompt_v<active>.md
 
   outputs:

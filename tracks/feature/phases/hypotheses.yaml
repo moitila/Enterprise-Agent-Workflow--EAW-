@@ -6,7 +6,7 @@ phase:
   description: Generate possible causes or solution directions.
 
   prompt:
-    active: 2
+    active: 3
     path: templates/prompts/feature/hypotheses/prompt_v<active>.md
 
   outputs:
