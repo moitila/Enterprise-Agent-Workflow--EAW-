@@ -102,6 +102,9 @@ phase:
   id: <phase_id>
   name: <phase_name>
   description: <description>
+  context:
+    dynamic_context_template: <template_name_optional>
+    onboarding_template: <template_name_optional>
   prompt:
     active: <N>
     path: templates/prompts/<track>/<phase>/prompt_v<active>.md
@@ -126,12 +129,25 @@ Recommended for real tracks:
 
 - `phase.name`
 - `phase.description`
+- `phase.context.dynamic_context_template` when the phase depends on operational context materialized under `out/<CARD>/context/dynamic/`
+- `phase.context.onboarding_template` when the phase depends on stable repository context materialized under `out/<CARD>/context/onboarding/`
 - `phase.prompt.active`
 - `phase.tooling_hints`
 - `phase.outputs`
 - `phase.completion`
 - `phase.skills`
 - `phase.skills`
+
+## Context Contract You Must Teach
+
+When a phase depends on repository or card context, treat the `context` block as part of the real phase contract, not as optional commentary.
+
+- `phase.context.onboarding_template` binds stable repository context
+- `phase.context.dynamic_context_template` binds operational context generated from the card
+- onboarding is materialized under `out/<CARD>/context/onboarding/`
+- dynamic context is materialized under `out/<CARD>/context/dynamic/`
+- a phase must not rely on either context surface as implicit knowledge
+- if a phase declares context, prompt and completion expectations must stay consistent with that materialization
 
 ## Phase Skills Declaration
 
@@ -164,9 +180,10 @@ When creating a new track:
 6. Ensure every phase referenced by `track.phases` has a matching file in `phases/`.
 7. Ensure every non-final phase has `transitions.<phase>.next`.
 8. Ensure `track.id` exactly matches the directory name.
-9. Create the prompt directories and candidates expected by `phase.prompt.path`.
-10. Register the track with `eaw tracks install`.
-11. Validate the workflow with `eaw validate workflow --all` or the relevant command accepted by the runtime.
+9. Decide whether the phase needs stable onboarding context, dynamic context, both, or neither; declare that decision explicitly in `phase.context`.
+10. Create the prompt directories and candidates expected by `phase.prompt.path`.
+11. Register the track with `eaw tracks install`.
+12. Validate the workflow with `eaw validate workflow --all` or the relevant command accepted by the runtime.
 
 Before steps 1-11, resolve:
 
@@ -184,8 +201,9 @@ When creating a new phase:
 3. Define outputs before writing the prompt.
 4. Define completion based on required artifacts.
 5. Define `tooling_hints` only when they add operational value.
-6. Bind the phase to a real prompt path.
-7. Ensure the phase can hand off to the next phase using outputs and contract, not the previous phase name.
+6. Define `phase.context` explicitly whenever the phase depends on onboarding or dynamic context.
+7. Bind the phase to a real prompt path.
+8. Ensure the phase can hand off to the next phase using outputs and contract, not the previous phase name.
 
 ## Official CLI Lifecycle You Must Teach
 
@@ -306,6 +324,9 @@ Teach this correctly:
 - never define a non-final phase without `transitions.<phase>.next`
 - never define a final phase with `next`
 - never bind a phase prompt to a fake path
+- never omit the `context` block when the runtime behavior depends on onboarding or dynamic context
+- never describe onboarding and `dynamic_context` as interchangeable
+- never rely on context that is not declared and materialized under `out/<CARD>/context/onboarding/` or `out/<CARD>/context/dynamic/`
 - never teach prompt activation without validation
 - never confuse `tracks/` discovery with official registration lifecycle
 - never depend on phase name alone; use your design notes to map each phase to a semantic role

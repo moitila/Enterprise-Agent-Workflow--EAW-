@@ -24,6 +24,8 @@ Do not treat phase names as the source of truth.
 Always reason from:
 
 - `phase_role`
+- `phase.context.dynamic_context_template`
+- `phase.context.onboarding_template`
 - required artifacts
 - `read_scope`
 - `write_scope`
@@ -60,6 +62,8 @@ Always reason from:
    - `phase_id`
    - `phase_name`
    - `phase_role`
+   - `phase.context.dynamic_context_template` when the phase depends on operational context materialized by the runtime
+   - `phase.context.onboarding_template` when the phase depends on stable repository context
    - `objective`
    - `inputs`
    - `required_artifacts`
@@ -74,6 +78,12 @@ Always reason from:
 5. Check the prompt against the semantic obligations of the chosen `phase_role`.
 
 6. Check whether the next phase can operate from outputs and contract alone, without depending on the previous phase name.
+
+7. When a phase declares runtime context, verify the prompt treats context as observable, materialized input:
+   - `onboarding` is stable repository context materialized under `out/<CARD>/context/onboarding/`
+   - `dynamic_context` is operational context derived from the card and materialized under `out/<CARD>/context/dynamic/`
+   - never describe either context source as implicit, ambient, or assumed
+   - never ask a phase to inject context that has not been materialized yet
 
 ## Output Style
 
@@ -101,6 +111,9 @@ When reviewing, produce:
 - never let the next phase require an artifact not produced earlier
 - never mix planning and implementation unless the contract explicitly allows it
 - never expand repo access without declaring it in contract
+- never leave `phase.context.*` implicit when the runtime behavior depends on onboarding or dynamic context
+- never treat onboarding and `dynamic_context` as the same surface
+- never reference context as available unless its materialization path under `out/<CARD>/context/` is explicit and auditable
 
 ## EAW-Specific Notes
 
@@ -109,6 +122,10 @@ When reviewing, produce:
 - Treat `WORKDIR`, `EAW_WORKDIR`, `RUNTIME_ROOT`, and similar values as execution-time context, never as constants.
 - Never hardcode workspace-specific paths, repository aliases, or runtime variable values.
 - Always resolve track, templates, docs, and repos from the active runtime and current workspace.
+- When reviewing a phase that depends on context, require explicit alignment with the runtime context contract:
+  - `phase.context.onboarding_template` selects stable repository context
+  - `phase.context.dynamic_context_template` selects operational context generated from the card
+  - both are runtime-governed and must be reflected in the prompt as materialized artifacts, not informal assumptions
 - Prefer phase prompts that are explicit about artifacts, validation, and fail-fast behavior.
 - For onboarding tracks, start from repository identity and output reusable repository understanding artifacts.
 
@@ -122,3 +139,4 @@ Before finalizing any prompt or phase, confirm:
 - forbidden actions match the phase role
 - transition dependencies are covered by prior outputs
 - the prompt can be reviewed without relying on informal context
+- if context is required, `phase.context.*` is explicit and the prompt names the expected materialization under `out/<CARD>/context/onboarding/` and/or `out/<CARD>/context/dynamic/`
