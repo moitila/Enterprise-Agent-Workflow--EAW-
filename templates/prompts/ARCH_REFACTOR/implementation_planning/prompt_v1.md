@@ -72,7 +72,14 @@ RULES
 
 - Executar obrigatoriamente o PRECHECK em fail-fast.
 - Bloquear se `40_next_steps.md` estiver ausente, vazio ou inconsistente com hipoteses selecionadas.
+- Se `{{CARD_DIR}}/ingest/raw_card_explication.md` exigir auditoria previa com artefatos mandatarios de analise, confirmar a existencia de:
+  - `{{CARD_DIR}}/analysis/00_track_audit.md`
+  - `{{CARD_DIR}}/analysis/10_issues_detected.md`
+  - `{{CARD_DIR}}/analysis/20_refactor_plan.md`
+- Se qualquer artefato obrigatorio de analise estiver ausente, falhar fechado e registrar `auditoria mandatoria ausente; execucao corretiva bloqueada por contrato`.
 - Nao introduzir nova decisao arquitetural.
+- Nao reduzir o objetivo soberano do card para um ajuste local apenas porque existe uma hipotese dominante ou um drift mais facil.
+- Se houver bloqueio real, registrar evidencia objetiva, classificar impacto, propor fatiamento explicito e rastreavel e preservar o escopo remanescente ainda nao executado.
 - Nao nomear componente, classe, interface, pacote ou arquivo novo que nao esteja sustentado pelo planning e pelas evidencias confirmadas.
 - Produzir `00_scope.lock.md` com pelo menos:
   - `# Scope Lock - Card {{CARD}}`
@@ -97,7 +104,11 @@ RULES
   - aparecer em pelo menos um Step do `10_change_plan.md`
   - pertencer a TARGET_REPOS autorizados para a execucao
 - Nenhum arquivo pode entrar na allowlist se nao estiver rastreado a um desvio confirmado e a um step do plano.
+- A allowlist soberana deve derivar do plano minimo completo aprovado para o card, e nao de uma unica hipotese dominante.
+- Se o objetivo do card for amplo e multiarquivo, e proibido gerar allowlist de arquivo unico sem justificativa explicita de fatiamento.
 - `10_change_plan.md` deve listar steps numerados, deterministicos e reversiveis quando aplicavel.
+- O plano deve cobrir integralmente o objetivo definido em `raw_card_explication.md`, salvo quando houver bloqueio objetivo documentado.
+- E proibido transformar auditoria ampla em patch local, revisao estrutural em correcao documental isolada ou objetivo do card em allowlist derivada de um unico achado.
 - A allowlist desta fase governa apenas os artefatos de planning; a allowlist soberana produzida em `00_scope.lock.md` governa a fase executor.
 - Confirmar ao final que somente os arquivos da allowlist foram escritos.
 
@@ -107,6 +118,7 @@ FORBIDDEN
 - Nao expandir escopo.
 - Nao propor nova solucao.
 - Nao criar patch.
+- Nao reduzir o objetivo soberano do card para um subproblema local sem justificativa evidencial e rastreavel.
 - Nao incluir placeholders literais nao resolvidos no conteudo final.
 - Nao escrever fora da WRITE_ALLOWLIST.
 
@@ -114,8 +126,10 @@ FAIL_CONDITIONS
 
 - Falhar se qualquer item do PRECHECK falhar.
 - Falhar se qualquer artefato obrigatorio estiver ausente.
+- Falhar se `raw_card_explication.md` exigir auditoria previa e qualquer artefato obrigatorio em `{{CARD_DIR}}/analysis/` estiver ausente.
 - Falhar se `00_scope.lock.md` ou `10_change_plan.md` nao existirem ao final.
 - Falhar se a allowlist contiver glob, item sem rastreabilidade ou item fora de TARGET_REPOS.
+- Falhar se houver divergencia sem justificativa rastreavel entre o objetivo soberano do card e o escopo operacional gerado.
 - Falhar se houver leitura fora de `{{CARD_DIR}}`, `{{CARD_DIR}}/investigations` e `{{CARD_DIR}}/context`.
 - Falhar se houver escrita fora da WRITE_ALLOWLIST.
 - Falhar se o implementation planning introduzir decisao de design ou expansao de escopo.

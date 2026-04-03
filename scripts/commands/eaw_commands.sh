@@ -241,10 +241,12 @@ eaw_yaml_phase_completion_required_artifacts() {
 }
 
 eaw_validate_phase_completion() {
+	eaw_card_enforce_mandatory_analysis_audit "$1" "$2" "$3" || return 1
 	eaw_phase_completion_evaluate "$1" "$2" "$3" "$4"
 }
 
 eaw_validate_phase_completion_strict() {
+	eaw_card_enforce_mandatory_analysis_audit "$1" "$2" "$3" || return 1
 	eaw_phase_completion_evaluate_strict "$1" "$2" "$3" "$4"
 }
 

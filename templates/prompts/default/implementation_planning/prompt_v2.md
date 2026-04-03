@@ -60,19 +60,29 @@ RULES
   - Bloquear se `40_next_steps.md` estiver ausente ou vazio.
   - Bloquear se `40_next_steps.md` nao contiver referencia explicita a `H[0-9]+` ou nao indicar hipotese(s) selecionada(s).
   - Bloquear se houver inconsistencia entre hipoteses listadas e plano descrito.
+  - Se `{{CARD_DIR}}/ingest/raw_card_explication.md` exigir auditoria previa com artefatos mandatarios de analise, confirmar a existencia de:
+    - `{{CARD_DIR}}/analysis/00_track_audit.md`
+    - `{{CARD_DIR}}/analysis/10_issues_detected.md`
+    - `{{CARD_DIR}}/analysis/20_refactor_plan.md`
+  - Se qualquer artefato obrigatorio de analise estiver ausente, falhar fechado e registrar `auditoria mandatoria ausente; execucao corretiva bloqueada por contrato`.
+  - Nao reduzir o objetivo soberano do card para um ajuste local apenas porque existe uma hipotese dominante ou um drift mais facil.
+  - Se houver bloqueio real, registrar evidencia objetiva, classificar impacto, propor fatiamento explicito e rastreavel e preservar o escopo remanescente ainda nao executado.
 - PASSO 2 - GERAR 10_change_plan.md:
   - Incluir `# Change Plan - Card {{CARD}}`, `## Objetivo de Execucao`, `## Hipotese(s) Selecionada(s)`, `## Assuncoes Explicitas`, `## Steps`, `## Validacao Tecnica Obrigatoria` e `## Rollback`.
   - Em cada Step numerado, incluir objetivo, tipo, arquivos envolvidos, justificativa referenciando `40_next_steps.md` e hipoteses `H[0-9]+`, e validacao tecnica obrigatoria.
+  - O plano deve cobrir integralmente o objetivo definido em `raw_card_explication.md`, salvo quando houver bloqueio objetivo documentado.
+  - E proibido transformar auditoria ampla em patch local, revisao estrutural em correcao documental isolada ou objetivo do card em allowlist derivada de um unico achado.
 - PASSO 3 - GERAR 00_scope.lock.md:
   - Incluir `# Scope Lock - Card {{CARD}}`, `## Base Obrigatoria`, `## Hipotese(s) Base`, `## Contexto`, `## In Scope`, `## Out of Scope`, `## Allowlist de Escrita` e `## Regra de Escrita`.
   - Preencher `## Allowlist de Escrita` com paths explicitos, fechados e sem glob dos arquivos reais em TARGET_REPOS autorizados para a implementacao.
-  - Derivar a allowlist soberana exclusivamente de `40_next_steps.md` e dos `arquivos envolvidos` definidos no `10_change_plan.md`.
+  - Derivar a allowlist soberana do plano minimo completo aprovado para o card, usando `40_next_steps.md` e os `arquivos envolvidos` definidos no `10_change_plan.md`.
   - A allowlist deve conter apenas o subconjunto minimo necessario de arquivos.
   - Nenhum path pode ser incluido na allowlist se nao estiver listado em `arquivos envolvidos` no `10_change_plan.md`.
   - Cada path da allowlist deve aparecer explicitamente em pelo menos um Step do `10_change_plan.md`.
   - Paths devem ser absolutos ou resolvidos dentro de TARGET_REPOS.
   - Nao permitir glob (`*`, `**`) na allowlist.
   - Nao incluir arquivos de `out/{{CARD}}/**` na allowlist soberana; estes artefatos pertencem apenas a fase planning.
+  - Se o objetivo do card for amplo e multiarquivo, e proibido gerar allowlist de arquivo unico sem justificativa explicita de fatiamento.
 - VALIDACOES FINAIS:
   - Garantir que os artefatos finais nao contenham placeholders literais de template como `<CARD>`, `{{CARD}}`, `{{TYPE}}`, `{{OUT_DIR}}` ou equivalentes.
   - Substituir referencias genericas ao diretorio do card pelo path concreto do card atual sempre que elas aparecerem no conteudo final.
@@ -93,14 +103,17 @@ FORBIDDEN
 - Nao propor nova solucao.
 - Nao violar a fronteira operacional da fase (detalhada em FAIL_CONDITIONS).
 - Nao produzir patch ou codigo nesta fase.
+- Nao reduzir o objetivo soberano do card para um subproblema local sem justificativa evidencial e rastreavel.
 
 FAIL_CONDITIONS
 - Falhar em qualquer erro de pre-check ou comando critico (fail-fast).
 - Falhar se `./scripts/eaw` nao existir em `{{RUNTIME_ROOT}}`.
 - Falhar se `{{CONFIG_SOURCE}}` nao existir.
 - Falhar se qualquer artefato obrigatorio estiver ausente.
+- Falhar se `raw_card_explication.md` exigir auditoria previa e qualquer artefato obrigatorio em `{{CARD_DIR}}/analysis/` estiver ausente.
 - Falhar se `40_next_steps.md` nao referenciar hipoteses no formato `H[0-9]+`.
 - Falhar se qualquer verificacao de consistencia entre allowlist e `arquivos envolvidos` falhar.
+- Falhar se houver divergencia sem justificativa rastreavel entre o objetivo soberano do card e o escopo operacional gerado.
 - Falhar em qualquer tentativa de leitura fora de `{{CARD_DIR}}`, `{{CARD_DIR}}/investigations` e `{{CARD_DIR}}/context`.
 - Falhar em qualquer tentativa de escrita fora de `out/{{CARD}}/implementation/00_scope.lock.md` e `out/{{CARD}}/implementation/10_change_plan.md`.
 - Falhar se `out/{{CARD}}/implementation/00_scope.lock.md` nao existir ao final.

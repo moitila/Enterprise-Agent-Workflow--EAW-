@@ -44,7 +44,7 @@ Seu proposito e:
 
 - Executar o pre-check com `cd "$EAW_ROOT_DIR"`, `test -f ./scripts/eaw` e `test -f "$CONFIG_SOURCE"`.
 - Confirmar a existencia de `investigations/00_intake.md`; se faltar, bloquear a subfase.
-- Executar baseline com `EAW_WORKDIR` apontando para o workspace ativo, seguido de `./scripts/eaw doctor` e `./scripts/eaw validate`.
+- Nao executar `./scripts/eaw doctor` ou `./scripts/eaw validate` como requisito da subfase Findings.
 - Produzir `20_findings.md` com estrutura equivalente ao template e ao prompt ativos, preservando as secoes observadas para contexto confirmado, evidencias coletadas, criterios de aceite identificados, comportamentos observados, divergencias identificadas e lacunas de informacao.
 - Em cada evidencia, registrar arquivo, comando executado, trecho relevante e interpretacao objetiva.
 - Retornar rastreabilidade de execucao com arquivos lidos, arquivos alterados, saida literal dos testes e confirmacao de que nenhuma hipotese ou plano foi criado.
