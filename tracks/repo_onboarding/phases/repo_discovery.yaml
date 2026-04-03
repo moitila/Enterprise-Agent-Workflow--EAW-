@@ -12,6 +12,7 @@ phase:
   tooling_hints:
     - Tratar `out/<CARD>/ingest/` como a origem primaria do pedido de onboarding.
     - Resolver a identidade do repositorio a partir do ambiente atual e dos artefatos do card, sem inventar mapeamentos.
+    - Nao analisar codigo do repositorio nesta fase.
 
   outputs:
     create_directories:

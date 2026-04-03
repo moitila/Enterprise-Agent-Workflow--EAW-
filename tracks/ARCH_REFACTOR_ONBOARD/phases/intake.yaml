@@ -1,0 +1,24 @@
+config_version: 1
+
+phase:
+  id: intake
+  name: Intake
+  description: Define the problem and pipeline signals from normalized ingest evidence.
+
+  prompt:
+    active: 2
+    path: templates/prompts/ARCH_REFACTOR_ONBOARD/intake/prompt_v<active>.md
+
+  outputs:
+    create_directories:
+      - investigations
+      - context
+    create_artifacts:
+      - investigations/00_intake.md
+      - investigations/_intake_provenance.md
+
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - investigations/00_intake.md
+      - investigations/_intake_provenance.md

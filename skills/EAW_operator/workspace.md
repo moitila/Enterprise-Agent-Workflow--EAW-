@@ -133,3 +133,32 @@ Se:
 - houver tentativa de inferir papel de repositorio por nome e nao por mapeamento/validacao
 
 → parar imediatamente
+
+## Validação de repos.conf contra o filesystem
+
+Após ler `repos.conf`, verificar que cada repositório mapeado existe localmente:
+
+- Para cada entrada `<name>|<path>|<role>`:
+  - verificar que `<path>` existe como diretório
+  - verificar que é um repositório válido (`test -d <path>/.git`)
+- Se um repositório declarado não existir localmente:
+  - reportar ao executor com nome e path esperado
+  - não inventar path alternativo
+  - não prosseguir com operações que dependam desse repo
+
+Esta validação é simples e deve ser feita toda vez que `repos.conf` é lido para uma operação.
+
+## Branch awareness
+
+O EAW não impõe padrão de nomes de branch — isso varia por equipe, repo e desenvolvedor.
+
+Porém, quando o executor trabalha num card multi-repo, o agente pode:
+
+- listar os branches ativos em cada repo do `repos.conf` (via `git branch --show-current` em cada `<path>`)
+- **sugerir** padronização se os nomes divergem significativamente (ex: um repo com `688419` e outro com `feature/688419_v2`)
+- a sugestão é consultiva, nunca mandatória — o executor decide
+
+O agente nunca deve:
+- trocar de branch sem instrução explícita do executor
+- assumir que todos os repos usam o mesmo nome de branch
+- criar branches automaticamente
