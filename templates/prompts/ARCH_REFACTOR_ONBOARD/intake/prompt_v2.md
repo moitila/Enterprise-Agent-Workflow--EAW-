@@ -37,17 +37,22 @@ OBJECTIVE
 
 MANDATORY CONTEXT CONSUMPTION
 
-You MUST read and use the repository onboarding located at:
+You MUST read and use the materialized repository onboarding located at:
 
-{{EAW_WORKDIR}}/context_sources/onboarding/<resolved_repo_key>/
+{{CARD_DIR}}/context/onboarding/
 
 Priority reading order:
 
-1. INDEX.md
-2. 81_agent_quickstart.md
-3. 80_execution_contract.md
+1. README.md
+2. boundaries.md
+3. commands.md
+4. provenance.md
 
-Then, depending on the task:
+If additional onboarding files are materialized for the card, they may also be consulted when relevant.
+
+Do NOT require unpublished conventional filenames such as `INDEX.md` or `80_execution_contract.md` when they are absent from `{{CARD_DIR}}/context/onboarding/`.
+
+Then, depending on the task and the files actually published:
 
 Architecture:
 - 10_architecture.md
@@ -94,24 +99,7 @@ If deviating:
 
 EXECUTION CONTRACT (MANDATORY)
 
-Follow:
-
-{{EAW_WORKDIR}}/context_sources/onboarding/<resolved_repo_key>/80_execution_contract.md
-
-Including:
-
-Before:
-- Validate entrypoints and flow
-- Confirm affected layers
-
-During:
-- Follow repository patterns
-- Respect local conventions
-- Respect global constraints (Checkstyle / IntelliJ)
-
-After:
-- Ensure consistency
-- Avoid structural inconsistencies
+Follow the execution constraints and repository boundaries actually published in the materialized onboarding for the card.
 
 ---
 
@@ -154,7 +142,7 @@ READ_SCOPE
 
 - Ler apenas `{{CARD_DIR}}/ingest`
 - Ler `TARGET_REPOS` apenas em modo read-only para resolver exatamente um `resolved_repo_key` do card antes de consultar onboarding
-- Ler `{{EAW_WORKDIR}}/context_sources/onboarding/<resolved_repo_key>/` somente apos resolver exatamente um `resolved_repo_key`
+- Ler `{{CARD_DIR}}/context/onboarding/` somente apos resolver exatamente um `resolved_repo_key`
 - Priorizar `review_evidence.normalized.md` como fonte principal quando existir
 - Usar `review_evidence.raw.md` apenas para fidelidade, nunca para reinterpretar classificacoes ja consolidadas
 - Nao ler codigo
@@ -219,6 +207,6 @@ FAIL_CONDITIONS
 - Falhar se `00_intake.md` misturar problema com plano ou solucao.
 - Falhar se direcao global for tratada como trabalho executavel do card.
 - Falhar se o repositorio alvo do card nao puder ser resolvido de forma unica contra `TARGET_REPOS`.
-- Falhar se qualquer arquivo for lido fora de `{{CARD_DIR}}/ingest`, `TARGET_REPOS` e `{{EAW_WORKDIR}}/context_sources/onboarding/<resolved_repo_key>/`.
+- Falhar se qualquer arquivo for lido fora de `{{CARD_DIR}}/ingest`, `{{CARD_DIR}}/context/onboarding/` e `TARGET_REPOS`.
 - Falhar se qualquer arquivo for escrito fora da WRITE_ALLOWLIST.
 - Falhar se `00_intake.md` ou `_intake_provenance.md` nao existirem ao final.

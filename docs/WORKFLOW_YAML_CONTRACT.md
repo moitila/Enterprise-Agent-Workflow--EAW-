@@ -191,6 +191,8 @@ Free-form text, inline values, and extra keys are not permitted.
 
 Materialization rule: any context field declared in `phase.yaml` must produce a materialized artifact before injection. `dynamic_context_template` requires an artifact under `out/<CARD>/context/dynamic/`; `onboarding_template` requires an artifact under `out/<CARD>/context/onboarding/`. Contexto nao materializado nao pode ser injetado no prompt.
 
+Prompt consumption rule: when a phase declares `phase.context.onboarding_template`, the prompt must consume the materialized onboarding artifact under `out/<CARD>/context/onboarding/`. Workspace publication sources such as `context_sources/onboarding/<repo_key>/` may exist as publication inputs, but they are not the sovereign prompt-consumption surface once materialization exists.
+
 Compatibility: phases that do not declare `phase.context` preserve the current behavior without any context injection (fallback: ausencia do bloco nao altera o comportamento da fase).
 
 Valid examples:

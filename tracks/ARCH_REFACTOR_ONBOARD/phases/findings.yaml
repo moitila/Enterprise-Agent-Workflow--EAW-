@@ -15,6 +15,7 @@ phase:
   tooling_hints:
     - Ler somente `<CARD_DIR>` e TARGET_REPOS em modo read-only.
     - Registrar a saida relevante de `doctor` e `validate`.
+    - Quando `phase.context.onboarding_template` estiver declarado, consumir onboarding a partir de `out/<CARD>/context/onboarding/`.
 
   outputs:
     create_directories:

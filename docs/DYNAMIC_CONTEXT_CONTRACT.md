@@ -10,6 +10,8 @@
 
 **Dependência de materialização:** `dynamic_context_template` requer a presença do artefato em `out/<CARD>/context/dynamic/` antes da injeção no prompt. Contexto não materializado não pode ser injetado. O enforcement já está presente em `docs/WORKFLOW_YAML_CONTRACT.md` e em `scripts/eaw_core.sh` e permanece fora de escopo de alteração nesta iteração.
 
+**Precedência de consumo:** quando o contexto dinâmico estiver materializado em `out/<CARD>/context/dynamic/`, essa superfície é a fonte soberana para consumo em prompt. Fontes de coleta, publicação ou preparação fora do card não substituem o artefato materializado no momento da injeção.
+
 ---
 
 ## Entradas

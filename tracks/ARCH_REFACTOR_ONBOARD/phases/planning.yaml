@@ -12,6 +12,9 @@ phase:
   context:
     onboarding_template: architecture_first
 
+  tooling_hints:
+    - Quando `phase.context.onboarding_template` estiver declarado, consumir onboarding a partir de `out/<CARD>/context/onboarding/`.
+
   outputs:
     create_directories:
       - prompts

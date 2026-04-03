@@ -15,6 +15,7 @@ phase:
   tooling_hints:
     - Tratar `out/<CARD>/ingest/` como a origem primaria dos insumos brutos.
     - Nao acessar TARGET_REPOS durante a fase de ingest.
+    - Quando `phase.context.onboarding_template` estiver declarado, consumir onboarding a partir de `out/<CARD>/context/onboarding/`.
 
   outputs:
     create_directories:

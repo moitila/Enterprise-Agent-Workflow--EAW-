@@ -34,13 +34,13 @@ OBJECTIVE
 - Gerar hipoteses plausiveis, rastreaveis ao findings e claramente separadas de decisao, plano e implementacao.
 - Produzir um arquivo minimo e explicito quando nao houver necessidade real de hipoteses.
 
-# BLOCK: ONBOARDING_CONTEXT_SUPPORT_V1
+# BLOCK: ONBOARDING_ENFORCEMENT_V1
 
 CONTEXTUAL SUPPORT ONLY
 
-You MAY consult repository onboarding:
+You MAY consult materialized repository onboarding:
 
-{{EAW_WORKDIR}}/context_sources/onboarding/<resolved_repo_key>/
+{{CARD_DIR}}/context/onboarding/
 
 Before consulting onboarding:
 
@@ -49,10 +49,10 @@ Before consulting onboarding:
 
 Focus on:
 
-- INDEX.md
-- 10_architecture.md
-- 20_entrypoints.md
-- 30_data_flow.md
+- README.md
+- boundaries.md
+- commands.md
+- provenance.md
 
 Use onboarding only to:
 
@@ -85,7 +85,7 @@ OUTPUT
 READ_SCOPE
 
 - Ler `{{CARD_DIR}}`
-- Ler `{{EAW_WORKDIR}}/context_sources/onboarding/<resolved_repo_key>/` apenas como suporte contextual, apos resolver exatamente um `resolved_repo_key`
+- Ler `{{CARD_DIR}}/context/onboarding/` apenas como suporte contextual, apos resolver exatamente um `resolved_repo_key`
 - Ler TARGET_REPOS apenas em modo read-only e apenas para validar alguma evidencia complementar ja apontada pelo findings
 
 WRITE_SCOPE
@@ -137,6 +137,6 @@ FAIL_CONDITIONS
 - Falhar se intake ou findings estiverem ausentes.
 - Falhar se `30_hypotheses.md` nao existir ao final.
 - Falhar se o repositorio alvo do card nao puder ser resolvido de forma unica contra `TARGET_REPOS`.
-- Falhar se houver leitura fora de `{{CARD_DIR}}`, `{{EAW_WORKDIR}}/context_sources/onboarding/<resolved_repo_key>/` e TARGET_REPOS.
+- Falhar se houver leitura fora de `{{CARD_DIR}}`, `{{CARD_DIR}}/context/onboarding/` e TARGET_REPOS.
 - Falhar se houver escrita fora da WRITE_ALLOWLIST.
 - Falhar se o documento contiver plano, implementacao, escolha de solucao ou arquitetura alvo.

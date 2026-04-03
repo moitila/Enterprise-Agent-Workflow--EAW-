@@ -32,13 +32,13 @@ OBJECTIVE
 - Confirmar se o comportamento investigado adere ao padrao esperado, diverge dele ou permanece ambiguo com a evidencia atual.
 - Validar direcao arquitetural explicita quando ela tiver sido registrada no intake.
 
-# BLOCK: ONBOARDING_VALIDATION_V1
+# BLOCK: ONBOARDING_ENFORCEMENT_V1
 
 CONTEXTUAL ONBOARDING USAGE
 
-You MUST consult the repository onboarding located at:
+You MUST consult the materialized repository onboarding located at:
 
-{{EAW_WORKDIR}}/context_sources/onboarding/<resolved_repo_key>/
+{{CARD_DIR}}/context/onboarding/
 
 Before consulting onboarding:
 
@@ -47,10 +47,12 @@ Before consulting onboarding:
 
 Priority:
 
-1. INDEX.md
-2. 10_architecture.md
-3. 20_entrypoints.md
-4. 30_data_flow.md
+1. README.md
+2. boundaries.md
+3. commands.md
+4. provenance.md
+
+If additional onboarding files are materialized for the card, they may also be consulted when relevant.
 
 If relevant:
 
@@ -110,7 +112,7 @@ OUTPUT
 READ_SCOPE
 
 - Ler `{{CARD_DIR}}`
-- Ler `{{EAW_WORKDIR}}/context_sources/onboarding/<resolved_repo_key>/` apenas para validacao contextual, apos resolver exatamente um `resolved_repo_key`
+- Ler `{{CARD_DIR}}/context/onboarding/` apenas para validacao contextual, apos resolver exatamente um `resolved_repo_key`
 - Ler TARGET_REPOS apenas em modo read-only
 - Coletar evidencias factuais, contratos, trechos curtos de codigo, logs relevantes e padroes comparaveis
 
@@ -173,7 +175,7 @@ FAIL_CONDITIONS
 - Falhar se qualquer item do PRECHECK falhar.
 - Falhar se `{{CARD_DIR}}/investigations/00_intake.md` nao existir.
 - Falhar se o repositorio alvo do card nao puder ser resolvido de forma unica contra `TARGET_REPOS`.
-- Falhar se houver leitura fora de `{{CARD_DIR}}`, `{{EAW_WORKDIR}}/context_sources/onboarding/<resolved_repo_key>/` e TARGET_REPOS.
+- Falhar se houver leitura fora de `{{CARD_DIR}}`, `{{CARD_DIR}}/context/onboarding/` e TARGET_REPOS.
 - Falhar se houver escrita fora da WRITE_ALLOWLIST.
 - Falhar se `20_findings.md` nao existir ao final.
 - Falhar se `20_findings.md` contiver hipotese, plano, sugestao de implementacao ou decisao arquitetural nova.

@@ -41,17 +41,22 @@ OBJECTIVE
 
 MANDATORY CONTEXT CONSUMPTION
 
-You MUST read and use the repository onboarding located at:
+You MUST read and use the materialized repository onboarding located at:
 
-{{EAW_WORKDIR}}/context_sources/onboarding/<resolved_repo_key>/
+{{CARD_DIR}}/context/onboarding/
 
 Priority reading order:
 
-1. INDEX.md
-2. 81_agent_quickstart.md
-3. 80_execution_contract.md
+1. README.md
+2. boundaries.md
+3. commands.md
+4. provenance.md
 
-Then, depending on the task:
+If additional onboarding files are materialized for the card, they may also be consulted when relevant.
+
+Do NOT require unpublished conventional filenames such as `INDEX.md` or `80_execution_contract.md` when they are absent from `{{CARD_DIR}}/context/onboarding/`.
+
+Then, depending on the task and the files actually published:
 
 Architecture:
 - 10_architecture.md
@@ -98,24 +103,7 @@ If deviating:
 
 EXECUTION CONTRACT (MANDATORY)
 
-Follow:
-
-{{EAW_WORKDIR}}/context_sources/onboarding/<resolved_repo_key>/80_execution_contract.md
-
-Including:
-
-Before:
-- Validate entrypoints and flow
-- Confirm affected layers
-
-During:
-- Follow repository patterns
-- Respect local conventions
-- Respect global constraints (Checkstyle / IntelliJ)
-
-After:
-- Ensure consistency
-- Avoid structural inconsistencies
+Follow the execution constraints and repository boundaries actually published in the materialized onboarding for the card.
 
 ---
 
@@ -153,7 +141,7 @@ OUTPUT
 READ_SCOPE
 
 - Ler `{{CARD_DIR}}`
-- Ler `{{EAW_WORKDIR}}/context_sources/onboarding/<resolved_repo_key>/` para aplicar a governanca obrigatoria do template, apos resolver exatamente um `resolved_repo_key`
+- Ler `{{CARD_DIR}}/context/onboarding/` para aplicar a governanca obrigatoria do template, apos resolver exatamente um `resolved_repo_key`
 - Ler TARGET_REPOS apenas em modo read-only quando uma checagem factual minima for indispensavel para eliminar contradicao do planejamento
 
 WRITE_SCOPE
@@ -213,6 +201,6 @@ FAIL_CONDITIONS
 - Falhar se `40_next_steps.md` nao existir ao final.
 - Falhar se nao houver secao `Hipoteses Selecionadas`.
 - Falhar se o repositorio alvo do card nao puder ser resolvido de forma unica contra `TARGET_REPOS`.
-- Falhar se houver leitura fora de `{{CARD_DIR}}`, `{{EAW_WORKDIR}}/context_sources/onboarding/<resolved_repo_key>/` e TARGET_REPOS.
+- Falhar se houver leitura fora de `{{CARD_DIR}}`, `{{CARD_DIR}}/context/onboarding/` e TARGET_REPOS.
 - Falhar se houver escrita fora da WRITE_ALLOWLIST.
 - Falhar se o plano introduzir implementacao, arquitetura nova ou arquivos/classes nao confirmados.
