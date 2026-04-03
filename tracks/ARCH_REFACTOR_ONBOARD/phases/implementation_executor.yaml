@@ -9,6 +9,9 @@ phase:
     active: 2
     path: templates/prompts/ARCH_REFACTOR_ONBOARD/implementation_executor/prompt_v<active>.md
 
+  context:
+    onboarding_template: execution_guardrails
+
   outputs:
     create_directories:
       - prompts

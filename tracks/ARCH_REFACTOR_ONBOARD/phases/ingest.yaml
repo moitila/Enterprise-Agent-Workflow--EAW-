@@ -6,8 +6,11 @@ phase:
   description: Collect and normalize raw review evidence before intake.
 
   prompt:
-    active: 1
+    active: 2
     path: templates/prompts/ARCH_REFACTOR_ONBOARD/ingest/prompt_v<active>.md
+
+  context:
+    onboarding_template: architecture_first
 
   tooling_hints:
     - Tratar `out/<CARD>/ingest/` como a origem primaria dos insumos brutos.
