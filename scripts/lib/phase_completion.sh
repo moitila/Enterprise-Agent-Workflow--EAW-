@@ -263,17 +263,6 @@ eaw_phase_completion_evaluate_strict() {
 	esac
 }
 
-eaw_card_requires_mandatory_analysis_audit() {
-	local card_dir="$1"
-	local raw_card_explication="$card_dir/ingest/raw_card_explication.md"
-
-	[[ -f "$raw_card_explication" ]] || return 1
-	grep -Fq 'analysis/00_track_audit.md' "$raw_card_explication" || return 1
-	grep -Fq 'analysis/10_issues_detected.md' "$raw_card_explication" || return 1
-	grep -Fq 'analysis/20_refactor_plan.md' "$raw_card_explication" || return 1
-	return 0
-}
-
 eaw_card_enforce_mandatory_analysis_audit() {
 	local card="$1"
 	local card_dir="$2"
@@ -289,21 +278,27 @@ eaw_card_enforce_mandatory_analysis_audit() {
 		;;
 	esac
 
-	if ! eaw_card_requires_mandatory_analysis_audit "$card_dir"; then
-		return 0
-	fi
-
 	for rel_path in \
-		analysis/00_track_audit.md \
-		analysis/10_issues_detected.md \
-		analysis/20_refactor_plan.md; do
+		investigations/20_findings.md \
+		investigations/30_hypotheses.md \
+		investigations/40_next_steps.md; do
 		if [[ ! -s "$card_dir/$rel_path" ]]; then
 			missing_artifacts+=("$rel_path")
 		fi
 	done
 
+	if [[ "$phase_id" == "implementation_executor" ]]; then
+		for rel_path in \
+			implementation/00_scope.lock.md \
+			implementation/10_change_plan.md; do
+			if [[ ! -s "$card_dir/$rel_path" ]]; then
+				missing_artifacts+=("$rel_path")
+			fi
+		done
+	fi
+
 	if [[ ${#missing_artifacts[@]} -gt 0 ]]; then
-		printf "ERROR: card %s phase '%s' blocked; auditoria mandatoria ausente; execucao corretiva bloqueada por contrato:" "$card" "$phase_id" >&2
+		printf "ERROR: card %s phase '%s' blocked; desvio de escopo: artefatos obrigatorios ausentes ou vazios:" "$card" "$phase_id" >&2
 		printf " %s" "${missing_artifacts[@]}" >&2
 		printf "\n" >&2
 		return 1

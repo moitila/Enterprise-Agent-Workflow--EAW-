@@ -93,7 +93,7 @@ Nenhuma etapa fora desta sequencia pode ser adicionada pelo prompt.
 | Artefato obrigatorio | `implementation/00_scope.lock.md` | Define in scope, out of scope e allowlist soberana |
 | Artefato obrigatorio | `implementation/10_change_plan.md` | Define steps numerados, hipoteses `H[0-9]+` selecionadas e validacao obrigatoria |
 | Artefato obrigatorio | `implementation/20_patch_notes.md` | Permanece parte do layout oficial da fase |
-| Gate condicional | `analysis/00_track_audit.md`, `analysis/10_issues_detected.md`, `analysis/20_refactor_plan.md` | Obrigatorios quando `raw_card_explication.md` exigir auditoria previa antes de execucao corretiva |
+| Gate obrigatorio | `investigations/20_findings.md`, `investigations/30_hypotheses.md`, `investigations/40_next_steps.md`, `implementation/00_scope.lock.md`, `implementation/10_change_plan.md` | Devem, em conjunto, cobrir o objetivo soberano do card antes da execucao corretiva |
 | Boundary de escrita | `implementation/` | Artefatos da fase ficam confinados a este diretorio |
 | Dependencia runtime | `/home/user/dev/EAW-tool/scripts/commands/cmd_implement.sh` | Fonte de verdade de execucao no runtime |
 | Espelho no repositorio | `scripts/commands/cmd_implement.sh` | Espelho versionado em `EAW-dev`, atualmente identico ao runtime |
@@ -111,8 +111,8 @@ O prompt de Implementation deve:
 - Exigir rastreabilidade explicita entre hipoteses `H[0-9]+` selecionadas, `40_next_steps.md` e `implementation/10_change_plan.md`
 - Exigir que `implementation/00_scope.lock.md` contenha allowlist de escrita e regra de escrita
 - Preservar a existencia de `implementation/20_patch_notes.md` no layout oficial da fase
-- Exigir que prompts e runtime bloqueiem `implementation_planning` e `implementation_executor` quando `raw_card_explication.md` demandar auditoria previa e os artefatos obrigatorios em `analysis/` nao existirem
-- Exigir que a allowlist soberana derive do plano minimo completo aprovado para o card, ou de fatiamento explicitamente justificado e rastreavel
+- Exigir que prompts e runtime bloqueiem `implementation_planning` e `implementation_executor` quando `investigations/*` e `implementation/*` nao cobrirem integralmente o objetivo soberano do card
+- Exigir que a allowlist soberana derive de `investigations/40_next_steps.md`, `implementation/00_scope.lock.md` e `implementation/10_change_plan.md`, ou de fatiamento explicitamente justificado e rastreavel
 
 ## 7. Principios Obrigatorios
 
@@ -127,7 +127,7 @@ O prompt de Implementation deve:
 Fail conditions bloqueantes da fase:
 
 - Ausencia de `investigations/40_next_steps.md`
-- Ausencia de artefatos obrigatorios em `analysis/` quando `raw_card_explication.md` exigir auditoria previa antes da execucao corretiva
+- Cobertura insuficiente do objetivo do card por `investigations/*` e `implementation/*`
 - `RUNTIME_ROOT` invalido ou sem `./scripts/eaw`
 - `CONFIG_SOURCE` ausente
 - Ausencia de `implementation/00_scope.lock.md` ou `implementation/10_change_plan.md` quando exigidos pelo fluxo

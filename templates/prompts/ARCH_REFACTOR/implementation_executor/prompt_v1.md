@@ -85,11 +85,13 @@ RULES
 - Executar obrigatoriamente o PRECHECK em fail-fast.
 - Validar estruturalmente `00_scope.lock.md` e `10_change_plan.md` antes de alterar qualquer arquivo.
 - Tratar a `Allowlist de Escrita` do `00_scope.lock.md` como contrato soberano para qualquer alteracao de codigo.
-- Se `{{CARD_DIR}}/ingest/raw_card_explication.md` exigir auditoria previa com artefatos mandatarios de analise, confirmar a existencia de:
-  - `{{CARD_DIR}}/analysis/00_track_audit.md`
-  - `{{CARD_DIR}}/analysis/10_issues_detected.md`
-  - `{{CARD_DIR}}/analysis/20_refactor_plan.md`
-- Se qualquer artefato obrigatorio de analise estiver ausente, falhar fechado e registrar `auditoria mandatoria ausente; execucao corretiva bloqueada por contrato`.
+- Antes de permitir escrita no repositorio alvo, e obrigatorio que:
+  - `20_findings.md` contenha inconsistencias evidenciadas
+  - `30_hypotheses.md` contenha interpretacao estruturada dos problemas
+  - `40_next_steps.md` esteja coerente com o objetivo do card
+  - `00_scope.lock.md` reflita o escopo completo derivado do card
+  - `10_change_plan.md` esteja alinhado ao objetivo soberano do card
+- Se esses artefatos nao cobrirem integralmente o objetivo do card, falhar fechado por desvio de escopo.
 - Bloquear se houver divergencia sem justificativa rastreavel entre o objetivo soberano do card e o escopo operacional recebido.
 - Nao aceitar `00_scope.lock.md` ou `10_change_plan.md` que reduzam auditoria ampla a patch local sem justificativa de fatiamento.
 - Bloquear execucao se houver ambiguidade sobre nome, localizacao, comportamento, ordem de execucao ou abrangencia da mudanca.
@@ -124,7 +126,7 @@ FAIL_CONDITIONS
 - Falhar se qualquer item do PRECHECK falhar.
 - Falhar se qualquer artefato obrigatorio estiver ausente.
 - Falhar se a validacao estrutural pre-execucao falhar.
-- Falhar se `raw_card_explication.md` exigir auditoria previa e qualquer artefato obrigatorio em `{{CARD_DIR}}/analysis/` estiver ausente.
+- Falhar se `20_findings.md`, `30_hypotheses.md`, `40_next_steps.md`, `00_scope.lock.md` ou `10_change_plan.md` nao cobrirem integralmente o objetivo do card.
 - Falhar se houver divergencia sem justificativa rastreavel entre o objetivo soberano do card e o escopo operacional recebido.
 - Falhar se houver leitura fora de `{{CARD_DIR}}` e dos TARGET_REPOS necessarios aos steps.
 - Falhar se qualquer escrita ocorrer fora da allowlist soberana ou fora dos artefatos permitidos da fase.
