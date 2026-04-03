@@ -25,6 +25,8 @@ INPUT
 - MODE: quando `EAW_WORKDIR` estiver vazio, saida em `OUT_DIR`; quando definido, saida isolada em `EAW_WORKDIR`.
 - EXECUTION_STRUCTURE: `RUNTIME_ROOT` nunca deve ser modificado; `TARGET_REPOS` somente leitura; `CARD_DIR` e o limite unico de escrita da fase.
 
+{{CONTEXT_BLOCK}}
+
 OUTPUT
 - Escrever somente `{{CARD_DIR}}/investigations/20_findings.md`.
 - Escrever `{{CARD_DIR}}/investigations/_warnings.md` somente se necessario.
@@ -76,6 +78,7 @@ OUTPUT_STRUCTURE
 
 READ_SCOPE
 - Ler `{{CARD_DIR}}`.
+- Ler `{{CARD_DIR}}/context/onboarding/` e `{{CARD_DIR}}/context/dynamic/` quando materializados pelo runtime.
 - Ler TARGET_REPOS em modo read-only.
 - Extrair evidencias factuais, logs relevantes, trechos de codigo apenas para leitura e criterios de aceite mencionados no intake.
 
@@ -97,6 +100,8 @@ RULES
   - Considerar a consistencia de execucao garantida pelo `eaw next`.
 - PASSO 2 - INVESTIGACAO CONTROLADA:
   - Investigar apenas `{{CARD_DIR}}` e TARGET_REPOS em read-only.
+  - Inspecionar primeiro os artefatos materializados em `{{CARD_DIR}}/context/onboarding/` e `{{CARD_DIR}}/context/dynamic/` antes de confiar em pressupostos sobre o repositorio.
+  - Usar onboarding apenas como contexto estavel de repositorio e validacao de convencoes; nao tratar onboarding como implementacao obrigatoria nem como substituto da evidencia observada.
   - Extrair evidencias factuais.
   - Extrair logs relevantes.
   - Extrair trechos de codigo somente leitura.

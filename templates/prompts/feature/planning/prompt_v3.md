@@ -28,6 +28,8 @@ INPUT
 - MODE: quando `EAW_WORKDIR` estiver vazio, saida em `OUT_DIR`; quando definido, saida isolada em `EAW_WORKDIR`.
 - EXECUTION_STRUCTURE: `RUNTIME_ROOT` nunca deve ser modificado; `TARGET_REPOS` somente leitura; `CARD_DIR` e o limite unico de escrita da fase.
 
+{{CONTEXT_BLOCK}}
+
 OUTPUT
 - Escrever somente `{{CARD_DIR}}/investigations/40_next_steps.md`.
 - Escrever `{{CARD_DIR}}/investigations/_warnings.md` somente se necessario.
@@ -52,6 +54,7 @@ WARNINGS_POLICY
 
 READ_SCOPE
 - Ler `{{CARD_DIR}}`.
+- Ler `{{CARD_DIR}}/context/onboarding/` e `{{CARD_DIR}}/context/dynamic/` quando materializados pelo runtime.
 - Ler TARGET_REPOS somente em modo read-only quando estritamente necessario para checagens factuais.
 
 WRITE_SCOPE
@@ -68,6 +71,7 @@ RULES
 - Se `WARNINGS` contiver entradas diferentes de `none`, aplicar `WARNINGS_POLICY`.
 - PASSO 1 - ESTRUTURAR 40_next_steps.md:
   - Produzir `40_next_steps.md` com as secoes `# 40_next_steps`, `## Hipotese(s) Selecionada(s)`, `## Objetivo da Iteracao`, `## Estrategia`, `## Plano Atomico`, `## Criterios de Aceite`, `## Riscos e Mitigacao` e `## Rollback`.
+  - Inspecionar primeiro os artefatos materializados em `{{CARD_DIR}}/context/onboarding/` e `{{CARD_DIR}}/context/dynamic/` para capturar convencoes, entrypoints e restricoes operacionais do repositorio antes de estruturar o plano.
 - PASSO 2 - SELECIONAR HIPOTESES:
   - Em `Hipotese(s) Selecionada(s)`, listar explicitamente identificadores `H[0-9]+` extraidos de `30_hypotheses.md`.
   - Incluir obrigatoriamente a hipotese dominante identificada em `30_hypotheses.md`.
@@ -79,6 +83,7 @@ RULES
   - Cada passo do plano atomico deve ligar diretamente uma hipotese `H[0-9]+` a um unico verbo de controle: `valida`, `implementa` ou `mitiga`.
 - PASSO 4 - DEFINIR ACEITE FORTE:
   - Garantir que cada passo do plano atomico seja deterministico, executavel e reversivel quando aplicavel.
+  - Quando o onboarding materializado trouxer convencoes, entrypoints, comandos canonicos ou guardrails operacionais, refleti-los explicitamente na estrategia, no plano atomico e nos criterios de aceite.
   - Garantir que os criterios de aceite tenham comando executavel, exit code esperado, artefato esperado e comportamento esperado do sistema.
   - Quando aplicavel, incluir caso de falha esperada e validacao de nao-regressao.
   - Se as hipoteses selecionadas incluirem cenarios de debugging, falhas de runtime ou mudancas estruturais, garantir que o plano atomico e os criterios de aceite cubram esses cenarios de forma verificavel.

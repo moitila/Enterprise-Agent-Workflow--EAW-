@@ -6,8 +6,11 @@ phase:
   description: Execute the planned implementation tasks.
 
   prompt:
-    active: 2
+    active: 3
     path: templates/prompts/feature/implementation_executor/prompt_v<active>.md
+
+  context:
+    onboarding_template: repo_discovery
 
   outputs:
     create_directories:
