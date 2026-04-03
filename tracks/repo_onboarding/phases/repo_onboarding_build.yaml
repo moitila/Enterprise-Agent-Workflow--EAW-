@@ -1,0 +1,34 @@
+config_version: 1
+
+phase:
+  id: repo_onboarding_build
+  name: Repository Onboarding Build
+  description: Analyze the selected repository in read-only mode and publish reusable onboarding artifacts into the EAW workspace.
+
+  prompt:
+    active: 1
+    path: templates/prompts/repo_onboarding/repo_onboarding_build/prompt_v<active>.md
+
+  tooling_hints:
+    - Ler o repositorio alvo somente em modo read-only.
+    - Priorizar README, docs, manifests, configs de build e scripts de automacao.
+    - Publicar o onboarding em `<EAW_WORKDIR>/context_sources/onboarding/<repo_key>/`.
+    - Nao materializar onboarding dentro do repositorio alvo.
+    - Nao usar `out/<CARD>/context/onboarding/` como destino final.
+
+  outputs:
+    create_directories:
+      - context
+      - investigations
+      - prompts
+    create_artifacts:
+      - context/onboarding_source_manifest.md
+      - investigations/20_repo_onboarding_build.md
+    prompts:
+      - repo_onboarding_build
+
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - context/onboarding_source_manifest.md
+      - investigations/20_repo_onboarding_build.md

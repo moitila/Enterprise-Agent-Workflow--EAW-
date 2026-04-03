@@ -1,0 +1,33 @@
+config_version: 1
+
+phase:
+  id: repo_onboarding_refine
+  name: Repository Onboarding Refine
+  description: Validate and refine the onboarding published in the workspace, generating operational assets for agent consumption.
+
+  prompt:
+    active: 1
+    path: templates/prompts/repo_onboarding/repo_onboarding_refine/prompt_v<active>.md
+
+  tooling_hints:
+    - Consolidar a partir dos artefatos do card e da fonte estavel publicada no workspace.
+    - Gerar `80_execution_contract.md` e `81_agent_quickstart.md` no onboarding publicado.
+    - Nao materializar onboarding em `out/<CARD>/context/onboarding/`.
+    - Produzir handoff conciso no card apontando para a fonte do workspace.
+
+  outputs:
+    create_directories:
+      - context
+      - investigations
+      - prompts
+    create_artifacts:
+      - context/onboarding_handoff.md
+      - investigations/40_repo_onboarding_refine.md
+    prompts:
+      - repo_onboarding_refine
+
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - context/onboarding_handoff.md
+      - investigations/40_repo_onboarding_refine.md

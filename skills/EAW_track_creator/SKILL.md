@@ -130,6 +130,27 @@ Recommended for real tracks:
 - `phase.tooling_hints`
 - `phase.outputs`
 - `phase.completion`
+- `phase.skills`
+- `phase.skills`
+
+## Phase Skills Declaration
+
+Phases podem declarar quais skills o agente isolado precisa ao executar a fase:
+
+```yaml
+phase:
+  id: post_review
+  skills:
+    - workspace
+    - reviewer
+```
+
+- `skills` é uma lista de nomes de skills disponíveis no workspace
+- Se omitido, o executor assume `[workspace]` como fallback
+- `workspace` é sempre incluída automaticamente pelo executor, mesmo se não listada
+- As skills não aparecem no prompt da fase — só equipam o agente que vai executar
+- Skills disponíveis no EAW: `workspace`, `reviewer`, `delivery`, `prompt_creator`, `track_creator`
+- Ao criar phases de review pós-execução, declarar `reviewer`; ao criar phases de entrega (PR, CI), declarar `delivery`
 
 ## Creation Workflow
 

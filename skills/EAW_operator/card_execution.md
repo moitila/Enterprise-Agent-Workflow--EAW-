@@ -5,6 +5,7 @@ Executar um card no EAW corretamente usando o comando `next`, respeitando o flux
 
 ## Core rule
 
+- **`EAW_WORKDIR` deve estar exportado antes de qualquer `next`.** Sem isso, o runtime opera em `eaw/out/` (repo tool) em vez do workspace real. Verificar com `echo $EAW_WORKDIR` antes da primeira execução.
 - O agente NÃO executa múltiplas fases ao mesmo tempo
 - O agente NÃO pula fases
 - O agente NÃO valida formalmente a conclusão da fase
@@ -34,22 +35,55 @@ Para executar um card:
 
 4. Ler o prompt da fase atual
 
-5. Criar explicitamente um agente isolado para a fase atual
+5. Ler `phase.skills` do YAML da fase atual (ver Skill Routing)
 
-6. Entregar o prompt integralmente a esse agente isolado
+6. Criar explicitamente um agente isolado para a fase atual, equipando-o com:
+   - o prompt integral da fase
+   - as skills declaradas em `phase.skills` (+ `workspace` sempre)
+   - o contexto de `repos.conf` do workspace
 
-7. Executar o prompt usando esse agente isolado, e nao no contexto do orquestrador
+8. Executar o prompt usando esse agente isolado, e nao no contexto do orquestrador
 
-8. Apos concluir a execucao da fase, chamar novamente:
+9. Apos concluir a execucao da fase, chamar novamente:
    ./scripts/eaw next <CARD_ID>
 
-9. Se o `next` avancar:
+10. Se o `next` avancar:
    - seguir para a próxima fase
 
-10. Se o `next` nao avancar:
+11. Se o `next` nao avancar:
    - considerar a fase não concluída
    - reportar bloqueio do runtime
    - não forçar avanço manual
+
+## Skill Routing
+
+O orquestrador é responsável por equipar cada agente isolado com as skills declaradas na fase.
+O prompt da fase não menciona skills — ele fala de artefatos e validações.
+As skills necessárias são declaradas no `phase.yaml`, não inferidas pelo orquestrador.
+
+### Declaração no phase.yaml
+
+Cada phase pode declarar quais skills o agente isolado precisa:
+
+```yaml
+phase:
+  id: post_review
+  skills:
+    - workspace
+    - reviewer
+```
+
+O campo `skills` é uma lista de nomes de skills disponíveis no workspace.
+
+### Regras de routing
+
+- O orquestrador lê `phase.skills` do YAML da fase atual
+- Se `phase.skills` não estiver declarado, fallback para `[workspace]` apenas
+- `workspace` é sempre incluída — se o YAML declarar skills sem `workspace`, o orquestrador adiciona automaticamente
+- O orquestrador não inventa skills além das declaradas + `workspace`
+- O prompt continua sendo a autoridade sobre **o que fazer**; as skills dão ao agente **como fazer**
+- O orquestrador não altera o prompt para mencionar skills — as skills são contexto operacional do agente, não conteúdo do prompt
+- Se uma skill declarada não existir no workspace, o orquestrador avisa o executor e prossegue sem ela
 
 ## Rules
 
@@ -111,6 +145,21 @@ Para executar um card:
 - Tentar validar manualmente a conclusão da fase
 - Inspecionar artefatos para decidir avanço no lugar do `next`
 - Forçar interpretação local de sucesso quando o runtime ainda não avançou
+- Spawnar agente isolado sem ler `phase.skills` do YAML
+- Inferir skills pelo `phase_role` quando `phase.skills` está declarado
+- Mencionar skills dentro do prompt da fase (skills são contexto do agente, não conteúdo do prompt)
+- Deixar de incluir `workspace` no agente isolado
+
+## Operational Traps (learned)
+
+Estas armadilhas foram identificadas em execuções reais e devem ser conhecidas pelo executor:
+
+- `repos.conf` deve ser injetado no contexto do prompt da fase; se ausente, o agente isolado vai inventar caminhos de repositório
+- Artefatos vazios (0 bytes ou contendo apenas template/scaffold) não devem passar phase completion; se o runtime aceitar, registrar como bug do runtime
+- Erros de `awk`/`sed` nos scripts do runtime podem ser silenciosos; verificar exit codes após cada comando do runtime
+- Quando CI falha por dependência não publicada (ex: classes do framework não disponíveis no maven), classificar como "expected dependency gap" e não como regressão
+- Cards multi-repo exigem ordem explícita de merge; nunca assumir merge paralelo sem verificar o grafo de dependências
+- Se o prompt da fase referencia repos que não estão em `repos.conf`, o agente isolado deve falhar, não improvisar
 
 ## Fail-fast
 
