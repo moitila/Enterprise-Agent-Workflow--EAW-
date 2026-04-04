@@ -43,6 +43,7 @@ track:
       next: implementation_executor
 
   rules:
+    # These are orchestration invariants of the track; phase prompts still need a visible contract of their own.
     one_prompt_per_phase: true
     generated_artifacts_of_each_phase_must_be_non_empty: true
     allow_phase_skip: false
