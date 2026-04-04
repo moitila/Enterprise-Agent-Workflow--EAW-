@@ -6,7 +6,7 @@ phase:
   description: Plan the implementation tasks.
 
   prompt:
-    active: 3
+    active: 4
     path: templates/prompts/feature/implementation_planning/prompt_v<active>.md
 
   outputs:
