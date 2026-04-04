@@ -30,8 +30,8 @@ OUTPUT
 
 OUTPUT_STRUCTURE
 - `00_scope_manifest.md`: objetivo do recorte, repositorios consultados, caminhos elegiveis e exclusoes objetivas.
-- `20_candidate_files.txt`: caminhos candidatos em ordem deterministica.
-- `30_target_snippets.md`: snippets ou referencias objetivas que sustentam o recorte.
+- `20_candidate_files.txt`: caminhos candidatos em ordem deterministica, ordenados por `score desc` e, em caso de empate, por `path asc`.
+- `30_target_snippets.md`: snippets ou referencias objetivas que sustentam o recorte, sempre com `linha inicial` e `linha final` desde a origem do snippet.
 - `40_warnings.md`: warnings nao bloqueantes e lacunas observadas.
 
 READ_SCOPE
@@ -45,8 +45,9 @@ WRITE_SCOPE
 
 RULES
 - Executar o pre-check: `cd "{{RUNTIME_ROOT}}"`, `test -f ./scripts/eaw`, `test -f "{{CONFIG_SOURCE}}"`, `test -f "{{CARD_DIR}}/investigations/00_intake.md"` e `test -f "{{CARD_DIR}}/investigations/_intake_provenance.md"`.
+- Interpretar qualquer tensao entre a redacao desta fase e o contrato/runtime apenas como contraste contratual, sem promover mudanca de comportamento ou contrato.
 - Materializar `context/dynamic/` apenas nesta fase governada.
-- Preservar ordem deterministica e registrar warnings sem promovelos automaticamente a erro.
+- Preservar ordem deterministica com `score desc` e desempate por `path asc`, e registrar warnings sem promovelos automaticamente a erro.
 - Nao alterar `investigations/` nem escrever fora de `{{CARD_DIR}}/context/dynamic/`.
 
 FORBIDDEN

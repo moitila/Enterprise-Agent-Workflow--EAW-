@@ -74,24 +74,27 @@ run_dynamic_basic_scenario() {
 	dynamic_dir="$workdir/out/$card/context/dynamic"
 
 	# Validacao: artefatos obrigatorios de baseline dynamic
-	test -f "$dynamic_dir/00_scope_manifest.md" \
-		|| fail "dynamic basic: missing 00_scope_manifest.md"
-	test -f "$dynamic_dir/20_candidate_files.txt" \
-		|| fail "dynamic basic: missing 20_candidate_files.txt"
-	test -f "$dynamic_dir/30_target_snippets.md" \
-		|| fail "dynamic basic: missing 30_target_snippets.md"
-	grep -Fq "deterministic_baseline_v1" "$dynamic_dir/00_scope_manifest.md" \
-		|| fail "dynamic basic: manifest missing baseline identifier"
-	grep -Fq "max_hits_por_token" "$dynamic_dir/00_scope_manifest.md" \
-		|| fail "dynamic basic: manifest missing runtime limits"
+	test -f "$dynamic_dir/00_scope_manifest.md" ||
+		fail "dynamic basic: missing 00_scope_manifest.md"
+	test -f "$dynamic_dir/20_candidate_files.txt" ||
+		fail "dynamic basic: missing 20_candidate_files.txt"
+	test -f "$dynamic_dir/30_target_snippets.md" ||
+		fail "dynamic basic: missing 30_target_snippets.md"
+	grep -Fq "deterministic_baseline_v1" "$dynamic_dir/00_scope_manifest.md" ||
+		fail "dynamic basic: manifest missing baseline identifier"
+	grep -Fq "max_hits_por_token" "$dynamic_dir/00_scope_manifest.md" ||
+		fail "dynamic basic: manifest missing runtime limits"
+	grep -Eq '^## src/widget\.sh \(score=[0-9]+, lines=[0-9]+-[0-9]+\)$' \
+		"$dynamic_dir/30_target_snippets.md" ||
+		fail "dynamic basic: snippet reference missing exact lines=start-end format"
 
 	# Validacao: referencia de template no manifest (oracle: referencia de template)
-	grep -Fq "deterministic_baseline_v1" "$dynamic_dir/00_scope_manifest.md" \
-		|| fail "dynamic basic: template reference missing in manifest"
+	grep -Fq "deterministic_baseline_v1" "$dynamic_dir/00_scope_manifest.md" ||
+		fail "dynamic basic: template reference missing in manifest"
 
 	# Validacao: sem conteudo fora de context/
-	test ! -f "$workdir/out/$card/dynamic_context.md" \
-		|| fail "dynamic basic: artifact escaped outside context/"
+	test ! -f "$workdir/out/$card/dynamic_context.md" ||
+		fail "dynamic basic: artifact escaped outside context/"
 }
 
 # Cenario: override de workflow no workspace e ignorado
@@ -111,8 +114,8 @@ run_workspace_override_ignored_scenario() {
 	# Tenta introduzir um override invalido no workspace. Em modo core-only,
 	# isso deve ser ignorado pelo runtime.
 	local tracks_src="$REPO_ROOT/tracks"
-	[[ -d "$tracks_src" ]] \
-		|| fail "workspace override ignored: tracks/ ausente em REPO_ROOT, impossivel aplicar patch"
+	[[ -d "$tracks_src" ]] ||
+		fail "workspace override ignored: tracks/ ausente em REPO_ROOT, impossivel aplicar patch"
 	cp -r "$tracks_src" "$workdir/tracks"
 	sed -i 's/onboarding_template: repo_discovery/onboarding_template: nonexistent_template_xyz/' \
 		"$workdir/tracks/feature/phases/findings.yaml"
@@ -122,12 +125,12 @@ run_workspace_override_ignored_scenario() {
 	rc=$?
 	set -e
 
-	[[ "$rc" -eq 0 ]] \
-		|| fail "workspace override ignored: expected success with core-only resolution, rc=$rc, output: $output"
-	printf "%s\n" "$output" | grep -Fq "nonexistent_template_xyz" \
-		&& fail "workspace override ignored: workspace patch leaked into runtime output: $output"
-	test -f "$workdir/out/$card/prompts/findings.md" \
-		|| fail "workspace override ignored: findings prompt was not generated"
+	[[ "$rc" -eq 0 ]] ||
+		fail "workspace override ignored: expected success with core-only resolution, rc=$rc, output: $output"
+	printf "%s\n" "$output" | grep -Fq "nonexistent_template_xyz" &&
+		fail "workspace override ignored: workspace patch leaked into runtime output: $output"
+	test -f "$workdir/out/$card/prompts/findings.md" ||
+		fail "workspace override ignored: findings prompt was not generated"
 }
 
 # Cenario: context nao materializado
@@ -183,10 +186,10 @@ STEOF
 	rc=$?
 	set -e
 
-	[[ "$rc" -ne 0 ]] \
-		|| fail "context nao materializado: expected failure but eaw next succeeded"
-	printf "%s\n" "$err_output" | grep -Fq "context nao materializado" \
-		|| fail "context nao materializado: error not observable in output: $err_output"
+	[[ "$rc" -ne 0 ]] ||
+		fail "context nao materializado: expected failure but eaw next succeeded"
+	printf "%s\n" "$err_output" | grep -Fq "context nao materializado" ||
+		fail "context nao materializado: error not observable in output: $err_output"
 }
 
 # Cenario: determinismo - mesma entrada produz mesma saida
@@ -260,18 +263,18 @@ STEOF
 	# Validacao: artefatos identicos entre as duas execucoes
 	diff "$workdir1/out/$card/context/dynamic/20_candidate_files.txt" \
 		"$workdir2/out/$card/context/dynamic/20_candidate_files.txt" \
-		>/dev/null 2>&1 \
-		|| fail "determinism: candidate_files.txt differs between runs"
+		>/dev/null 2>&1 ||
+		fail "determinism: candidate_files.txt differs between runs"
 	diff "$workdir1/out/$card/context/dynamic/30_target_snippets.md" \
 		"$workdir2/out/$card/context/dynamic/30_target_snippets.md" \
-		>/dev/null 2>&1 \
-		|| fail "determinism: target_snippets.md differs between runs"
+		>/dev/null 2>&1 ||
+		fail "determinism: target_snippets.md differs between runs"
 
 	# Validacao: ordenacao estavel - manifest identico
 	diff "$workdir1/out/$card/context/dynamic/00_scope_manifest.md" \
 		"$workdir2/out/$card/context/dynamic/00_scope_manifest.md" \
-		>/dev/null 2>&1 \
-		|| fail "determinism: scope_manifest.md differs between runs (unstable ordering)"
+		>/dev/null 2>&1 ||
+		fail "determinism: scope_manifest.md differs between runs (unstable ordering)"
 }
 
 printf "[smoke] dynamic context basico\n"
