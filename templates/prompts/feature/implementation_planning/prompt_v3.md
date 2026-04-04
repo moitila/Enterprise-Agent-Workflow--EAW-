@@ -43,7 +43,7 @@ OUTPUT_STRUCTURE
 
 READ_SCOPE
 - Ler somente `{{CARD_DIR}}`, `{{CARD_DIR}}/investigations` e `{{CARD_DIR}}/context`.
-- Consumir `{{CARD_DIR}}/context/onboarding/` quando materializado pelo runtime para derivar convencoes, entrypoints, restricoes e comandos canonicos do repositorio.
+- Consumir onboarding por referencia via `{{CONTEXT_BLOCK}}` para derivar convencoes, entrypoints, restricoes e comandos canonicos do repositorio.
 - Nao alterar codigo nesta fase.
 
 WRITE_SCOPE

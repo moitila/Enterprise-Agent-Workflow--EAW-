@@ -1308,7 +1308,6 @@ eaw_write_deterministic_baseline() {
 	local card="${2:-${EAW_CARD_WORKFLOW_CARD:-$(basename "$card_dir")}}"
 	local baseline_file="$card_dir/investigations/10_baseline.md"
 	local dynamic_dir="$card_dir/context/dynamic"
-	local onboarding_dir="$card_dir/context/onboarding"
 	local journal_file="$card_dir/execution_journal.jsonl"
 	local manifest_file="$dynamic_dir/00_scope_manifest.md"
 	local candidates_file="$dynamic_dir/20_candidate_files.txt"
@@ -1319,8 +1318,8 @@ eaw_write_deterministic_baseline() {
 
 	ensure_dir "$(dirname "$baseline_file")"
 
-	context_bytes=$(( $(eaw_metrics_sum_file_bytes "$dynamic_dir") + $(eaw_metrics_sum_file_bytes "$onboarding_dir") ))
-	context_files=$(( $(eaw_metrics_count_files "$dynamic_dir") + $(eaw_metrics_count_files "$onboarding_dir") ))
+	context_bytes=$(($(eaw_metrics_sum_file_bytes "$dynamic_dir")))
+	context_files=$(($(eaw_metrics_count_files "$dynamic_dir")))
 	snippet_count="$(eaw_metrics_count_lines "$snippets_file" "^### ")"
 	prompt_size="$(eaw_metrics_prompt_size_bytes "$card_dir")"
 	retries="$(eaw_metrics_retry_count "$journal_file")"
@@ -1336,7 +1335,6 @@ eaw_write_deterministic_baseline() {
 
 - baseline: deterministic_baseline_v1
 - dynamic_context_dir: ${dynamic_dir#$card_dir/}
-- onboarding_dir: ${onboarding_dir#$card_dir/}
 
 ## Artefatos Materializados
 
@@ -1377,7 +1375,6 @@ eaw_write_pilot_report() {
 	local report_file="$card_dir/pilot_report.md"
 	local baseline_file="$card_dir/investigations/10_baseline.md"
 	local dynamic_dir="$card_dir/context/dynamic"
-	local onboarding_dir="$card_dir/context/onboarding"
 	local context_bytes context_files snippet_count prompt_size retries
 	local phase_duration_block baseline_status
 	local journal_status prompt_status snippets_status
@@ -1387,8 +1384,8 @@ eaw_write_pilot_report() {
 		eaw_write_deterministic_baseline "$card_dir" "$card"
 	fi
 
-	context_bytes=$(( $(eaw_metrics_sum_file_bytes "$dynamic_dir") + $(eaw_metrics_sum_file_bytes "$onboarding_dir") ))
-	context_files=$(( $(eaw_metrics_count_files "$dynamic_dir") + $(eaw_metrics_count_files "$onboarding_dir") ))
+	context_bytes=$(($(eaw_metrics_sum_file_bytes "$dynamic_dir")))
+	context_files=$(($(eaw_metrics_count_files "$dynamic_dir")))
 	snippet_count="$(eaw_metrics_count_lines "$dynamic_dir/30_target_snippets.md" "^### ")"
 	prompt_size="$(eaw_metrics_prompt_size_bytes "$card_dir")"
 	retries="$(eaw_metrics_retry_count "$card_dir/execution_journal.jsonl")"
@@ -1415,7 +1412,6 @@ eaw_write_pilot_report() {
 
 - findings.dynamic_context_template: deterministic_baseline_v1
 - planning.dynamic_context_template: deterministic_baseline_v1
-- findings.onboarding_template: repo_discovery
 - saida_final: pilot_report.md
 
 ## Metricas Coletadas
@@ -1438,14 +1434,12 @@ $phase_duration_block
 
 - baseline_file: ${baseline_file#$card_dir/}
 - baseline_dynamic_context: $( [[ -d "$dynamic_dir" ]] && printf "materializado" || printf "nao materializado" )
-- baseline_onboarding: $( [[ -d "$onboarding_dir" ]] && printf "materializado" || printf "nao materializado" )
 
 ## Observacoes do Runtime
 
 - baseline_status: ${baseline_status}
 - pilot_report_file: ${report_file#$card_dir/}
 - dynamic_context_dir: ${dynamic_dir#$card_dir/}
-- onboarding_dir: ${onboarding_dir#$card_dir/}
 EOF
 }
 
@@ -1453,11 +1447,9 @@ eaw_materialize_context_contracts_for_completed_phases() {
 	local card_dir="$1"
 	local track_dir="$EAW_TRACKS_DIR/${EAW_CARD_WORKFLOW_TRACK_ID:-}"
 	local current_phase="${EAW_CARD_WORKFLOW_CURRENT_PHASE:-}"
-	local phase_id phase_file dynamic_tpl onboarding_tpl
+	local phase_id phase_file dynamic_tpl
 	local dynamic_missing_at_start=0
-	local onboarding_missing_at_start=0
 	local expected_dynamic_tpl=""
-	local expected_onboarding_tpl=""
 	local -a phases_to_check=()
 
 	[[ -n "${EAW_CARD_WORKFLOW_TRACK_ID:-}" && -d "$track_dir" ]] || return 0
@@ -1477,14 +1469,9 @@ eaw_materialize_context_contracts_for_completed_phases() {
 		phase_file="$track_dir/phases/$phase_id.yaml"
 		[[ -f "$phase_file" ]] || continue
 		dynamic_tpl="$(eaw_yaml_phase_dynamic_context_template "$phase_file")"
-		onboarding_tpl="$(eaw_yaml_phase_onboarding_template "$phase_file")"
 		if [[ -n "$dynamic_tpl" && ! -d "$card_dir/context/dynamic" ]]; then
 			dynamic_missing_at_start=1
 			expected_dynamic_tpl="$dynamic_tpl"
-		fi
-		if [[ -n "$onboarding_tpl" && ! -d "$card_dir/context/onboarding" ]]; then
-			onboarding_missing_at_start=1
-			expected_onboarding_tpl="$onboarding_tpl"
 		fi
 	done
 
@@ -1493,20 +1480,10 @@ eaw_materialize_context_contracts_for_completed_phases() {
 		eaw_dynamic_context_materialize "$card_dir" || return 1
 		eaw_write_deterministic_baseline "$card_dir"
 	fi
-	if [[ "$onboarding_missing_at_start" -eq 1 ]]; then
-		eaw_onboarding_materialize "$card_dir" "$expected_onboarding_tpl" || return 1
-	fi
-
 	if [[ "$dynamic_missing_at_start" -eq 1 ]]; then
 		printf "ERROR: context nao materializado: dynamic_context_template='%s' declarado mas artefato ausente em '%s' no inicio da execucao\n" \
 			"$expected_dynamic_tpl" \
 			"$card_dir/context/dynamic" >&2
-		return 1
-	fi
-	if [[ "$onboarding_missing_at_start" -eq 1 && ! -d "$card_dir/context/onboarding" ]]; then
-		printf "ERROR: onboarding ausente: onboarding_template='%s' declarado mas artefato ausente em '%s' no inicio da execucao\n" \
-			"$expected_onboarding_tpl" \
-			"$card_dir/context/onboarding" >&2
 		return 1
 	fi
 
@@ -1883,112 +1860,6 @@ eaw_onboarding_write_provenance() {
 	} >"$provenance_file"
 }
 
-eaw_onboarding_materialize() {
-	local card_dir="$1"
-	local onboarding_tpl="$2"
-	local onboarding_dir="$card_dir/context/onboarding"
-	local provenance_file="$onboarding_dir/provenance.md"
-	local repo_entry repo_key repo_path source_root source_status
-	local considered_tmp materialized_tmp ignored_tmp fingerprint_tmp
-	local rel_path source_file dest_file size_bytes bytes_materialized file_hash fingerprint
-	local max_files_onboarding max_bytes_total_onboarding max_bytes_per_file_onboarding materialized_count
-
-	# Keep limits local to this runtime path so provenance can report the
-	# effective values directly without depending on external resolution.
-	max_files_onboarding=10
-	max_bytes_total_onboarding=$((200 * 1024))
-	max_bytes_per_file_onboarding="$max_bytes_total_onboarding"
-	bytes_materialized=0
-	materialized_count=0
-	source_status="unresolved"
-	repo_key=""
-	repo_path=""
-	source_root=""
-
-	rm -rf "$onboarding_dir"
-	ensure_dir "$onboarding_dir"
-
-	considered_tmp="$(mktemp)"
-	materialized_tmp="$(mktemp)"
-	ignored_tmp="$(mktemp)"
-	fingerprint_tmp="$(mktemp)"
-
-	if repo_entry="$(eaw_dynamic_context_first_target_repo 2>/dev/null)"; then
-		IFS='|' read -r repo_key repo_path <<<"$repo_entry"
-		source_root="${EAW_WORKDIR:-}/context_sources/onboarding/$repo_key"
-		if [[ -d "$source_root" ]]; then
-			source_status="present"
-			while IFS= read -r rel_path; do
-				[[ -n "$rel_path" ]] || continue
-				source_file="$source_root/$rel_path"
-				printf "%s\n" "$rel_path" >>"$considered_tmp"
-				if eaw_onboarding_relpath_is_excluded "$rel_path"; then
-					printf "%s | reason=excluded_path\n" "$rel_path" >>"$ignored_tmp"
-					continue
-				fi
-				if ! eaw_onboarding_relpath_is_allowed "$rel_path"; then
-					printf "%s | reason=unsupported_extension\n" "$rel_path" >>"$ignored_tmp"
-					continue
-				fi
-				if ! eaw_onboarding_file_is_text "$source_file"; then
-					printf "%s | reason=binary_content\n" "$rel_path" >>"$ignored_tmp"
-					continue
-				fi
-				size_bytes=$(wc -c <"$source_file" | tr -d '[:space:]')
-				if (( size_bytes > max_bytes_per_file_onboarding )); then
-					printf "%s | reason=max_bytes_per_file_onboarding\n" "$rel_path" >>"$ignored_tmp"
-					continue
-				fi
-				if (( materialized_count >= max_files_onboarding )); then
-					printf "%s | reason=max_files_onboarding\n" "$rel_path" >>"$ignored_tmp"
-					continue
-				fi
-				if (( bytes_materialized + size_bytes > max_bytes_total_onboarding )); then
-					printf "%s | reason=max_bytes_total_onboarding\n" "$rel_path" >>"$ignored_tmp"
-					continue
-				fi
-				dest_file="$onboarding_dir/$rel_path"
-				ensure_dir "$(dirname "$dest_file")"
-				cp "$source_file" "$dest_file"
-				printf "%s\n" "$rel_path" >>"$materialized_tmp"
-				file_hash="$(eaw_sha256_file "$dest_file")"
-				printf "%s\t%s\n" "$rel_path" "$file_hash" >>"$fingerprint_tmp"
-				bytes_materialized=$((bytes_materialized + size_bytes))
-				materialized_count=$((materialized_count + 1))
-			done < <(
-				# Deterministic order: lexical ascending by relative path.
-				cd "$source_root" &&
-					find . -type f | sed 's#^\./##' | LC_ALL=C sort
-			)
-		else
-			source_status="absent"
-		fi
-	fi
-
-	if [[ -s "$fingerprint_tmp" ]]; then
-		fingerprint="$(eaw_sha256_text "$(cat "$fingerprint_tmp")")"
-	else
-		fingerprint="$(eaw_sha256_text "onboarding-empty")"
-	fi
-
-	eaw_onboarding_write_provenance \
-		"$provenance_file" \
-		"$onboarding_tpl" \
-		"$repo_key" \
-		"$source_root" \
-		"$source_status" \
-		"$max_files_onboarding" \
-		"$max_bytes_total_onboarding" \
-		"$max_bytes_per_file_onboarding" \
-		"$considered_tmp" \
-		"$materialized_tmp" \
-		"$ignored_tmp" \
-		"$bytes_materialized" \
-		"$fingerprint"
-
-	rm -f "$considered_tmp" "$materialized_tmp" "$ignored_tmp" "$fingerprint_tmp"
-	return 0
-}
 
 phase_collect_context() {
 	# Collect context for a card phase based on phase.context declarations.
@@ -1999,15 +1870,14 @@ phase_collect_context() {
 	# materialized artifact.
 	local card_dir="$1"
 	local phase_file="$2"
-	local dynamic_tpl onboarding_tpl errors=0
+	local dynamic_tpl errors=0
 
 	[[ -n "$phase_file" && -f "$phase_file" ]] || return 0
 
 	dynamic_tpl="$(eaw_yaml_phase_dynamic_context_template "$phase_file")"
-	onboarding_tpl="$(eaw_yaml_phase_onboarding_template "$phase_file")"
 
 	# Fallback: context block or all fields absent — no injection, preserve current behavior.
-	if [[ -z "$dynamic_tpl" && -z "$onboarding_tpl" ]]; then
+	if [[ -z "$dynamic_tpl" ]]; then
 		return 0
 	fi
 
@@ -2017,17 +1887,6 @@ phase_collect_context() {
 		if [[ ! -d "$dynamic_context_dir" ]]; then
 			printf "ERROR: context nao materializado: dynamic_context_template='%s' declarado mas artefato ausente em '%s' (template inexistente ou coleta nao executada)\n" \
 				"$dynamic_tpl" "$dynamic_context_dir" >&2
-			errors=$((errors + 1))
-		fi
-	fi
-
-	if [[ -n "$onboarding_tpl" ]]; then
-		eaw_context_template_resolve_active_metadata "onboarding" "$onboarding_tpl" >/dev/null || return 1
-		local onboarding_dir="$card_dir/context/onboarding"
-		eaw_onboarding_materialize "$card_dir" "$onboarding_tpl" || return 1
-		if [[ ! -d "$onboarding_dir" ]]; then
-			printf "ERROR: onboarding ausente: onboarding_template='%s' declarado mas artefato ausente em '%s'\n" \
-				"$onboarding_tpl" "$onboarding_dir" >&2
 			errors=$((errors + 1))
 		fi
 	fi

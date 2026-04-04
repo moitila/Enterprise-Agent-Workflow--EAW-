@@ -184,14 +184,14 @@ The optional `phase.context` block declares which context templates the phase re
 
 Permitted fields (both optional):
 - `phase.context.dynamic_context_template` — logical identifier for a dynamic context template
-- `phase.context.onboarding_template` — logical identifier for an onboarding context template
+- `phase.context.onboarding_template` — logical identifier for an onboarding context template (consumed by reference; not materialized per card)
 
 Values are logical identifiers, not paths. Path-style values (containing `/`) are invalid.
 Free-form text, inline values, and extra keys are not permitted.
 
-Materialization rule: any context field declared in `phase.yaml` must produce a materialized artifact before injection. `dynamic_context_template` requires an artifact under `out/<CARD>/context/dynamic/`; `onboarding_template` requires an artifact under `out/<CARD>/context/onboarding/`. Contexto nao materializado nao pode ser injetado no prompt.
+Materialization rule: `dynamic_context_template` requires a materialized artifact under `out/<CARD>/context/dynamic/` before injection. `onboarding_template` is consumed by reference via the context block from the workspace source; it does not require per-card materialization. Contexto nao materializado nao pode ser injetado no prompt.
 
-Prompt consumption rule: when a phase declares `phase.context.onboarding_template`, the prompt must consume the materialized onboarding artifact under `out/<CARD>/context/onboarding/`. Workspace publication sources such as `context_sources/onboarding/<repo_key>/` may exist as publication inputs, but they are not the sovereign prompt-consumption surface once materialization exists.
+Prompt consumption rule: when a phase declares `phase.context.onboarding_template`, the prompt must consume onboarding by reference via the context block sourced from the workspace source. Per-card artifact directories are not the consumption surface for onboarding.
 
 Compatibility: phases that do not declare `phase.context` preserve the current behavior without any context injection (fallback: ausencia do bloco nao altera o comportamento da fase).
 
@@ -249,8 +249,8 @@ phase:
 
 Error rules and fallbacks:
 - Template inexistente: `dynamic_context_template` ou `onboarding_template` declarado com path direto falha com erro estrutural no validador.
-- Contexto nao materializado: template declarado mas artefato ausente em `out/<CARD>/context/dynamic/` ou `out/<CARD>/context/onboarding/` falha em runtime com mensagem deterministica.
-- Onboarding ausente: `onboarding_template` declarado mas diretorio `out/<CARD>/context/onboarding/` ausente no workspace falha com mensagem observavel.
+- Contexto nao materializado: `dynamic_context_template` declarado mas artefato ausente em `out/<CARD>/context/dynamic/` falha em runtime com mensagem deterministica.
+- Onboarding ausente: quando `onboarding_template` e declarado e a fonte workspace estiver ausente, a ausencia deve permanecer observavel sem abortar o fluxo.
 - Fallback: ausencia do bloco `context` ou de campo especifico preserva o comportamento atual sem injecao adicional.
 
 Card State Contract

@@ -12,17 +12,15 @@ Resolution rules:
 - If more than one candidate remains, STOP.
 - After resolving the repository, derive `resolved_repo_key` from the single matching entry in `TARGET_REPOS`.
 
-You MUST read and use the repository onboarding located at:
+You MUST read and use the repository onboarding provided via the context block for this phase.
 
-{{EAW_WORKDIR}}/context_sources/onboarding/<resolved_repo_key>/
+Priority reading order (when available in the context block):
 
-Priority reading order:
+1. INDEX.md or overview file
+2. Architecture and entrypoints files
+3. Patterns, conventions, and constraints files
 
-1. INDEX.md
-2. 81_agent_quickstart.md
-3. 80_execution_contract.md
-
-Then, depending on the task:
+Depending on the task:
 
 Architecture:
 - 10_architecture.md
@@ -69,9 +67,7 @@ If deviating:
 
 EXECUTION CONTRACT (MANDATORY)
 
-Follow:
-
-{{EAW_WORKDIR}}/context_sources/onboarding/<resolved_repo_key>/80_execution_contract.md
+Follow the execution contract provided in the onboarding context block when available.
 
 Including:
 

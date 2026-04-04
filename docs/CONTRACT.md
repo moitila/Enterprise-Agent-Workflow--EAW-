@@ -137,10 +137,10 @@ Prompt provenance
 - Runtime records resolved prompt bindings in `out/<CARD>/provenance/prompts_used.yaml`.
 - This provenance file is part of deterministic observability for prompt lifecycle execution.
 - The canonical context model is documented in `docs/CONTEXT_MODEL.md`.
-- Workspace-sourced onboarding context is maintained for the repository under `<EAW_WORKDIR>/context_sources/onboarding/<repo_key>/` and only becomes available to governed execution after materialization under `out/<CARD>/context/onboarding/`.
+- Workspace-sourced onboarding context is maintained for the repository under `<EAW_WORKDIR>/context_sources/onboarding/<repo_key>/` and consumed by reference via the context block; it is not materialized per card.
 - Runtime-derived dynamic context is materialized under `out/<CARD>/context/dynamic/` on a per-card basis.
 - Context templates are versioned in the EAW tree under `templates/context/<type>/<template_name>/` and rendered without changing the physical origin of the context they present.
-- Context traceability must identify the source type (`onboarding`, `dynamic`, or `template`), the template applied, and the source artifact location under `out/<CARD>/context/onboarding/` or `out/<CARD>/context/dynamic/` when context is materialized.
+- Context traceability must identify the source type (`onboarding`, `dynamic`, or `template`), the template applied, and the source artifact location under `out/<CARD>/context/dynamic/` when dynamic context is materialized.
 - Workspace-sourced onboarding context and runtime-derived dynamic context are distinct responsibilities and must remain legible to an engineer reading the generated artifacts.
 
 Tolerances & Observability

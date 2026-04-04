@@ -78,7 +78,7 @@ OUTPUT_STRUCTURE
 
 READ_SCOPE
 - Ler `{{CARD_DIR}}`.
-- Ler `{{CARD_DIR}}/context/onboarding/` e `{{CARD_DIR}}/context/dynamic/` quando materializados pelo runtime.
+- Ler `{{CARD_DIR}}/context/dynamic/` quando materializado pelo runtime.
 - Ler TARGET_REPOS em modo read-only.
 - Extrair evidencias factuais, logs relevantes, trechos de codigo apenas para leitura e criterios de aceite mencionados no intake.
 
@@ -100,7 +100,7 @@ RULES
   - Considerar a consistencia de execucao garantida pelo `eaw next`.
 - PASSO 2 - INVESTIGACAO CONTROLADA:
   - Investigar apenas `{{CARD_DIR}}` e TARGET_REPOS em read-only.
-  - Inspecionar primeiro os artefatos materializados em `{{CARD_DIR}}/context/onboarding/` e `{{CARD_DIR}}/context/dynamic/` antes de confiar em pressupostos sobre o repositorio.
+  - Inspecionar primeiro os artefatos materializados em `{{CARD_DIR}}/context/dynamic/` antes de confiar em pressupostos sobre o repositorio.
   - Usar onboarding apenas como contexto estavel de repositorio e validacao de convencoes; nao tratar onboarding como implementacao obrigatoria nem como substituto da evidencia observada.
   - Extrair evidencias factuais.
   - Extrair logs relevantes.

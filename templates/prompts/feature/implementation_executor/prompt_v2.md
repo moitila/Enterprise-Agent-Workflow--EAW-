@@ -45,7 +45,7 @@ OUTPUT_STRUCTURE
 
 READ_SCOPE
 - Ler exclusivamente os artefatos do card e os TARGET_REPOS em modo necessario para os Steps do change plan.
-- Ler `{{CARD_DIR}}/context/onboarding/` quando materializado pelo runtime e tratar esse artefato como a fonte governada de convencoes, entrypoints e restricoes do repositorio.
+- Consumir onboarding por referencia via `{{CONTEXT_BLOCK}}` e tratar esse contexto como a fonte governada de convencoes, entrypoints e restricoes do repositorio.
 - Tratar `Planning v4`, hipoteses selecionadas no formato `H[0-9]+` e allowlist como fonte de verdade.
 
 WRITE_SCOPE

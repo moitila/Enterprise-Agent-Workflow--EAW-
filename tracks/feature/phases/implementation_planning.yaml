@@ -9,9 +9,6 @@ phase:
     active: 3
     path: templates/prompts/feature/implementation_planning/prompt_v<active>.md
 
-  context:
-    onboarding_template: repo_discovery
-
   outputs:
     create_directories:
       - prompts

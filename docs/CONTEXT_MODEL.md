@@ -25,7 +25,7 @@ If a context element cannot be inspected in artifact form, it is not considered 
 ## Physical Location of Context Sources
 
 - `onboarding` source: `<EAW_WORKDIR>/context_sources/onboarding/<repo_key>/`
-- `onboarding` materialized: `out/<CARD>/context/onboarding/`
+- `onboarding` consumed: by reference via context block; not materialized per card
 - `dynamic_context` materialized: `out/<CARD>/context/dynamic/`
 - `templates`: `templates/context/<type>/<template_name>/`, versioned through `ACTIVE`
 
@@ -42,7 +42,7 @@ Every injected context artifact must identify:
 
 - its source (`onboarding`, `dynamic`, or `template`)
 - the template applied
-- the source artifact location under `out/<CARD>/context/onboarding/` or `out/<CARD>/context/dynamic/`
+- the source artifact location under `out/<CARD>/context/dynamic/` when dynamic context is materialized, or the onboarding workspace source when consumed by reference
 
 The injected context must be readable by an engineer, not only by the agent. If a prompt artifact cannot explain what was injected and why, the audit trail is incomplete.
 
@@ -63,7 +63,7 @@ Use `onboarding` for stable repository facts that would otherwise be rewritten c
 - operating constraints needed across phases
 
 Configure onboarding in the EAW workspace under `context_sources/onboarding/<repo_key>/`.
-The runtime materializes what was accepted under `out/<CARD>/context/onboarding/` and records provenance even when the source is absent.
+Onboarding is consumed by reference via the context block; it is not materialized per card.
 Onboarding is optional. Absence must remain observable instead of being masked by fallback prose.
 
 ### dynamic_context
@@ -114,7 +114,7 @@ Avoid these anti-patterns during adoption:
 - stuffing `tooling_hints` or free-form instructions into the `context` declaration
 - enabling context in every phase at once instead of migrating phase by phase
 - assuming onboarding is mandatory when the runtime explicitly supports an optional source
-- skipping inspection of `out/<CARD>/context/onboarding/` or `out/<CARD>/context/dynamic/` before trusting the prompt
+- skipping inspection of `out/<CARD>/context/dynamic/` or the onboarding context block before trusting the prompt
 - expanding context volume without using limits, exclusions, and score to keep the evidence readable
 
 ## Non-Goals

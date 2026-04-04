@@ -79,7 +79,7 @@ This makes prompt selection observable and versioned instead of implicit.
 The canonical context model is documented in `docs/CONTEXT_MODEL.md`.
 That contract distinguishes workspace-sourced `onboarding` context from phase-derived `dynamic_context`.
 `onboarding` is maintained outside the target repository and consumed by EAW; `dynamic_context` is runtime-sourced and may vary by phase.
-When context is materialized, `onboarding` is collected under `out/<CARD>/context/onboarding/` and `dynamic_context` under `out/<CARD>/context/dynamic/` to keep AI inputs bounded and reviewable.
+When context is materialized, `dynamic_context` is collected under `out/<CARD>/context/dynamic/` to keep AI inputs bounded and reviewable. `onboarding` is consumed by reference from the workspace source via the context block; it is not materialized per card.
 Templates are versioned independently under `templates/context/<type>/<template_name>/` and rendered without redefining the origin of the context.
 Both remain separate from prompt rendering concerns and from `tooling_hints`.
 
@@ -191,7 +191,7 @@ Use this path when the team wants an explicit first pass for context artifacts:
 1. Add a bootstrap opcional step before the phase that depends on the new context.
 2. Materialize onboarding if a stable source exists under `context_sources/onboarding/<repo_key>/`.
 3. Run `./scripts/eaw next 589`.
-4. Check `out/589/context/onboarding/provenance.md` and `out/589/context/dynamic/00_scope_manifest.md`.
+4. Check `out/589/context/dynamic/00_scope_manifest.md` and confirm the onboarding context block was injected via reference.
 5. Run `./scripts/eaw smoke` before expanding the rollout.
 
 The bootstrap path is still incremental: first verify determinism and provenance, then expand track por track and fase por fase.

@@ -5,7 +5,7 @@ OBJECTIVE
 
 INPUT
 - Source onboarding material from `<EAW_WORKDIR>/context_sources/onboarding/<repo_key>/`.
-- Materialized artifact target under `out/<CARD>/context/onboarding/`.
+- Consumed by reference via context block; not materialized per card.
 
 OUTPUT
 - Produce a readable onboarding artifact for engineers and agents.

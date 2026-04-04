@@ -54,7 +54,7 @@ WARNINGS_POLICY
 
 READ_SCOPE
 - Ler `{{CARD_DIR}}`.
-- Ler `{{CARD_DIR}}/context/onboarding/` e `{{CARD_DIR}}/context/dynamic/` quando materializados pelo runtime.
+- Ler `{{CARD_DIR}}/context/dynamic/` quando materializado pelo runtime.
 - Ler TARGET_REPOS somente em modo read-only quando estritamente necessario para checagens factuais.
 
 WRITE_SCOPE
@@ -71,7 +71,7 @@ RULES
 - Se `WARNINGS` contiver entradas diferentes de `none`, aplicar `WARNINGS_POLICY`.
 - PASSO 1 - ESTRUTURAR 40_next_steps.md:
   - Produzir `40_next_steps.md` com as secoes `# 40_next_steps`, `## Hipotese(s) Selecionada(s)`, `## Objetivo da Iteracao`, `## Estrategia`, `## Plano Atomico`, `## Criterios de Aceite`, `## Riscos e Mitigacao` e `## Rollback`.
-  - Inspecionar primeiro os artefatos materializados em `{{CARD_DIR}}/context/onboarding/` e `{{CARD_DIR}}/context/dynamic/` para capturar convencoes, entrypoints e restricoes operacionais do repositorio antes de estruturar o plano.
+  - Inspecionar primeiro os artefatos materializados em `{{CARD_DIR}}/context/dynamic/` para capturar convencoes, entrypoints e restricoes operacionais do repositorio antes de estruturar o plano.
 - PASSO 2 - SELECIONAR HIPOTESES:
   - Em `Hipotese(s) Selecionada(s)`, listar explicitamente identificadores `H[0-9]+` extraidos de `30_hypotheses.md`.
   - Incluir obrigatoriamente a hipotese dominante identificada em `30_hypotheses.md`.
