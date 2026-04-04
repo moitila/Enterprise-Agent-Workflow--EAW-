@@ -18,6 +18,8 @@ track:
 
   phases:
     - ingest
+    - intake
+    - dynamic_context
     - findings
     - hypotheses
     - planning
@@ -26,6 +28,10 @@ track:
 
   transitions:
     ingest:
+      next: intake
+    intake:
+      next: dynamic_context
+    dynamic_context:
       next: findings
     findings:
       next: hypotheses

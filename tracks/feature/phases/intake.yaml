@@ -3,16 +3,19 @@ config_version: 1
 phase:
   id: intake
   name: Intake
-  description: Build the structured intake artifact from ingest evidence and compatibility fallback inputs.
+  description: Materialize the structured intake evidence from ingest before the formal dynamic context phase.
 
   prompt:
     active: 2
     path: templates/prompts/feature/intake/prompt_v<active>.md
 
+  tooling_hints:
+    - Nao materializar `out/<CARD>/context/dynamic/` nesta fase; essa responsabilidade pertence a `dynamic_context`.
+    - Consumir `out/<CARD>/ingest/` como origem primaria e preservar compatibilidade com fallback legado quando existir.
+
   outputs:
     create_directories:
       - investigations
-      - context
     create_artifacts:
       - investigations/00_intake.md
       - investigations/_intake_provenance.md

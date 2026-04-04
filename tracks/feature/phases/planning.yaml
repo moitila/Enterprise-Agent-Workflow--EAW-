@@ -13,11 +13,13 @@ phase:
     dynamic_context_template: deterministic_baseline_v1
     onboarding_template: repo_discovery
 
+  tooling_hints:
+    - Ler `out/<CARD>/context/dynamic/` apenas depois da fase formal `dynamic_context`.
+    - Nao tratar placeholder, scaffold vazio ou artefato futuro preexistente como progresso governado.
+
   outputs:
     create_directories:
       - prompts
-    create_artifacts:
-      - investigations/40_next_steps.md
     prompts:
       - planning
 

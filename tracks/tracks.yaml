@@ -1,17 +1,17 @@
 tracks:
   - track_id: ARCH_REFACTOR
     status: installed
+  - track_id: ARCH_REFACTOR_ONBOARD
+    status: installed
   - track_id: bug
     status: installed
+  - track_id: bug_ONBOARD
+    status: installed
   - track_id: feature
+    status: installed
+  - track_id: repo_onboarding
     status: installed
   - track_id: spike
     status: installed
   - track_id: standard
-    status: installed
-  - track_id: ARCH_REFACTOR_ONBOARD
-    status: installed
-  - track_id: bug_ONBOARD
-    status: installed
-  - track_id: repo_onboarding
     status: installed
