@@ -65,6 +65,7 @@ source "$SCRIPT_DIR/commands/cmd_doctor.sh"
 source "$SCRIPT_DIR/commands/cmd_status.sh"
 # shellcheck disable=SC1091
 source "$SCRIPT_DIR/commands/cmd_doctor_hardening.sh"
+# shellcheck disable=SC1091
 source "$SCRIPT_DIR/commands/cmd_validate_prompt.sh"
 # shellcheck disable=SC1091
 source "$SCRIPT_DIR/commands/cmd_apply_prompt.sh"
