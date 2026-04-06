@@ -80,6 +80,8 @@ run_dynamic_basic_scenario() {
 		fail "dynamic basic: missing 20_candidate_files.txt"
 	test -f "$dynamic_dir/30_target_snippets.md" ||
 		fail "dynamic basic: missing 30_target_snippets.md"
+	test ! -f "$dynamic_dir/40_warnings.md" ||
+		fail "dynamic basic: unexpected 40_warnings.md for clean baseline"
 	grep -Fq "deterministic_baseline_v1" "$dynamic_dir/00_scope_manifest.md" ||
 		fail "dynamic basic: manifest missing baseline identifier"
 	grep -Fq "max_hits_por_token" "$dynamic_dir/00_scope_manifest.md" ||
@@ -275,6 +277,62 @@ STEOF
 		"$workdir2/out/$card/context/dynamic/00_scope_manifest.md" \
 		>/dev/null 2>&1 ||
 		fail "determinism: scope_manifest.md differs between runs (unstable ordering)"
+
+	# Validacao: warnings sao estaveis quando presentes, ou ausentes nas duas execucoes.
+	if [[ -f "$workdir1/out/$card/context/dynamic/40_warnings.md" || -f "$workdir2/out/$card/context/dynamic/40_warnings.md" ]]; then
+		test -f "$workdir1/out/$card/context/dynamic/40_warnings.md" ||
+			fail "determinism: warnings present only in run2"
+		test -f "$workdir2/out/$card/context/dynamic/40_warnings.md" ||
+			fail "determinism: warnings present only in run1"
+		diff "$workdir1/out/$card/context/dynamic/40_warnings.md" \
+			"$workdir2/out/$card/context/dynamic/40_warnings.md" \
+			>/dev/null 2>&1 ||
+			fail "determinism: warnings.md differs between runs"
+	else
+		test ! -f "$workdir1/out/$card/context/dynamic/40_warnings.md" ||
+			fail "determinism: warnings unexpectedly present in run1"
+		test ! -f "$workdir2/out/$card/context/dynamic/40_warnings.md" ||
+			fail "determinism: warnings unexpectedly present in run2"
+	fi
+}
+
+# Cenario: warnings de truncamento e limites
+# Valida que `40_warnings.md` e materializado quando o limite de hits e atingido.
+run_hits_limit_scenario() {
+	local tmpdir repo_dir workdir card dynamic_dir i
+
+	tmpdir="$(mktemp -d)"
+	trap 'rm -rf "$tmpdir"' RETURN
+
+	repo_dir="$tmpdir/repo-hits"
+	workdir="$tmpdir/workdir-hits"
+	card="588DYN5"
+
+	mkdir -p "$repo_dir/src"
+	git -C "$repo_dir" init -q
+	git -C "$repo_dir" config user.email "smoke@dynamic.test"
+	git -C "$repo_dir" config user.name "smoke"
+	for i in $(seq 1 25); do
+		printf "needle_token_%02d\nshared_limit_token\n" "$i" >"$repo_dir/src/file_$i.txt"
+	done
+	git -C "$repo_dir" add .
+	git -C "$repo_dir" commit -q -m "fixture hits"
+
+	init_findings_env "$workdir" "$repo_dir" "$card" "dynamic-target" "shared_limit_token"
+
+	EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" next "$card" >/dev/null
+
+	dynamic_dir="$workdir/out/$card/context/dynamic"
+	test -f "$dynamic_dir/00_scope_manifest.md" ||
+		fail "hits limit: missing 00_scope_manifest.md"
+	test -f "$dynamic_dir/20_candidate_files.txt" ||
+		fail "hits limit: missing 20_candidate_files.txt"
+	test -f "$dynamic_dir/30_target_snippets.md" ||
+		fail "hits limit: missing 30_target_snippets.md"
+	test -f "$dynamic_dir/40_warnings.md" ||
+		fail "hits limit: expected 40_warnings.md"
+	grep -Fq "max_hits_por_token" "$dynamic_dir/40_warnings.md" ||
+		fail "hits limit: warning missing max_hits_por_token"
 }
 
 printf "[smoke] dynamic context basico\n"
@@ -285,4 +343,6 @@ printf "[smoke] context nao materializado\n"
 run_context_nao_materializado_scenario
 printf "[smoke] determinismo\n"
 run_determinism_scenario
+printf "[smoke] warnings e limites\n"
+run_hits_limit_scenario
 printf "[smoke] dynamic OK\n"
