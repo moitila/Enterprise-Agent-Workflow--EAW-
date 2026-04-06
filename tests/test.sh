@@ -9,32 +9,55 @@ fail() {
 }
 
 prepare_feature_planning_with_onboarding() {
-	local workdir="$1"
-	local phase_file="$workdir/tracks/feature/phases/planning.yaml"
+	local runtime_root="$1"
+	local phase_file="$runtime_root/tracks/feature/phases/planning.yaml"
 	python3 - "$phase_file" <<'PY'
 from pathlib import Path
 import sys
 
 path = Path(sys.argv[1])
 text = path.read_text()
-needle = "  prompt:\n    active: 3\n    path: templates/prompts/feature/planning/prompt_v<active>.md\n"
-replacement = needle + "\n  context:\n    onboarding_template: workspace-onboarding\n"
-if needle not in text:
+if "onboarding_template: repo_discovery" in text:
+    raise SystemExit(0)
+
+if "  context:\n" in text:
+    marker = "  context:\n"
+    replacement = marker + "    onboarding_template: repo_discovery\n"
+    path.write_text(text.replace(marker, replacement, 1))
+    raise SystemExit(0)
+
+needle = "  prompt:\n"
+idx = text.find(needle)
+if idx == -1:
     raise SystemExit("planning prompt block not found")
-path.write_text(text.replace(needle, replacement, 1))
+
+prompt_end = text.find("\n\n", idx)
+if prompt_end == -1:
+    raise SystemExit("planning prompt block terminator not found")
+
+insertion = "\n  context:\n    onboarding_template: repo_discovery"
+path.write_text(text[:prompt_end] + insertion + text[prompt_end:])
 PY
 }
 
 run_onboarding_runtime_suite() {
-	local tmp_root workdir card provenance_file
+	local tmp_root runtime_root eaw_bin workdir card prompt_file
 
 	tmp_root="$(mktemp -d)"
 	trap 'rm -rf "$tmp_root"' RETURN
 
+	runtime_root="$tmp_root/runtime"
+	mkdir -p "$runtime_root"
+	cp -R "$REPO_ROOT/scripts" "$runtime_root/"
+	cp -R "$REPO_ROOT/templates" "$runtime_root/"
+	cp -R "$REPO_ROOT/tracks" "$runtime_root/"
+	cp -R "$REPO_ROOT/config" "$runtime_root/"
+	eaw_bin="$runtime_root/scripts/eaw"
+
 	workdir="$tmp_root/workdir"
-	EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" init --workdir "$workdir" --force >/dev/null
+	EAW_WORKDIR="$workdir" "$eaw_bin" init --workdir "$workdir" --force >/dev/null
 	printf 'local-main|/home/user/dev/EAW-dev|target\n' >"$workdir/config/repos.conf"
-	prepare_feature_planning_with_onboarding "$workdir"
+	prepare_feature_planning_with_onboarding "$runtime_root"
 
 	mkdir -p "$workdir/context_sources/onboarding/local-main/docs"
 	printf 'alpha\n' >"$workdir/context_sources/onboarding/local-main/README.md"
@@ -42,39 +65,35 @@ run_onboarding_runtime_suite() {
 	printf 'ignored\n' >"$workdir/context_sources/onboarding/local-main/image.bin"
 
 	card="585ACC"
-	EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" card "$card" --track feature "onboarding acceptance" >/dev/null
-	EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" analyze "$card" >/dev/null
-	test -f "$workdir/out/$card/context/onboarding/README.md" || fail "missing onboarding README materialization"
-	test -f "$workdir/out/$card/context/onboarding/docs/info.txt" || fail "missing onboarding nested materialization"
-	grep -Fqx 'alpha' "$workdir/out/$card/context/onboarding/README.md" || fail "materialized README content changed"
-	test ! -e "$workdir/out/$card/context/onboarding/image.bin" || fail "unsupported onboarding file should not materialize"
-	provenance_file="$workdir/out/$card/context/onboarding/provenance.md"
-	test -f "$provenance_file" || fail "missing onboarding provenance for materialized source"
-	grep -Fq 'context_sources/onboarding/local-main' "$provenance_file" || fail "provenance missing source root"
-	grep -Fq 'README.md' "$provenance_file" || fail "provenance missing considered file"
-	grep -Fq 'max_files_onboarding' "$provenance_file" || fail "provenance missing max_files_onboarding"
-	grep -Fq 'max_bytes_total_onboarding' "$provenance_file" || fail "provenance missing max_bytes_total_onboarding"
+	EAW_WORKDIR="$workdir" "$eaw_bin" card "$card" --track feature "onboarding acceptance" >/dev/null
+	EAW_WORKDIR="$workdir" "$eaw_bin" analyze "$card" >/dev/null
+	test ! -e "$workdir/out/$card/context/onboarding" || fail "repo_discovery should not materialize onboarding into card context"
+	prompt_file="$workdir/out/$card/prompts/planning.md"
+	test -f "$prompt_file" || fail "missing planning prompt for onboarding-by-reference validation"
+	grep -Fq 'Interpretar consumo de onboarding por referencia como uso exclusivo da superficie de contexto injetada pelo runtime' "$prompt_file" \
+		|| fail "planning prompt missing onboarding-by-reference contract"
+	grep -Fq 'sem exigir copia para `out/<CARD>/`' "$prompt_file" \
+		|| fail "planning prompt missing no-materialization rule"
 
 	rm -rf "$workdir/context_sources/onboarding/local-main"
 	card="585ABS"
-	EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" card "$card" --track feature "onboarding absent" >/dev/null
-	EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" analyze "$card" >/dev/null
-	provenance_file="$workdir/out/$card/context/onboarding/provenance.md"
-	test -f "$provenance_file" || fail "missing provenance when onboarding source is absent"
-	grep -Fq 'source_status: absent' "$provenance_file" || fail "absent onboarding source should be recorded"
+	EAW_WORKDIR="$workdir" "$eaw_bin" card "$card" --track feature "onboarding absent" >/dev/null
+	EAW_WORKDIR="$workdir" "$eaw_bin" analyze "$card" >/dev/null
+	test ! -e "$workdir/out/$card/context/onboarding" || fail "absent repo_discovery source should still avoid card onboarding materialization"
+	prompt_file="$workdir/out/$card/prompts/planning.md"
+	test -f "$prompt_file" || fail "missing planning prompt when onboarding source is absent"
+	grep -Fq 'Interpretar consumo de onboarding por referencia como uso exclusivo da superficie de contexto injetada pelo runtime' "$prompt_file" \
+		|| fail "absent source should preserve onboarding-by-reference contract"
 
 	mkdir -p "$workdir/context_sources/onboarding/local-main"
 	printf 'stale\n' >"$workdir/context_sources/onboarding/local-main/a.md"
 	card="585IDEMP"
-	EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" card "$card" --track feature "onboarding idempotence" >/dev/null
-	EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" analyze "$card" >/dev/null
-	printf 'residue\n' >"$workdir/out/$card/context/onboarding/obsolete.txt"
+	EAW_WORKDIR="$workdir" "$eaw_bin" card "$card" --track feature "onboarding idempotence" >/dev/null
+	EAW_WORKDIR="$workdir" "$eaw_bin" analyze "$card" >/dev/null
 	rm "$workdir/context_sources/onboarding/local-main/a.md"
 	printf 'fresh\n' >"$workdir/context_sources/onboarding/local-main/b.md"
-	EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" analyze "$card" >/dev/null
-	test ! -e "$workdir/out/$card/context/onboarding/obsolete.txt" || fail "stale onboarding artifact should be removed"
-	test ! -e "$workdir/out/$card/context/onboarding/a.md" || fail "removed source file should not persist after rerun"
-	test -f "$workdir/out/$card/context/onboarding/b.md" || fail "new source file should materialize after rerun"
+	EAW_WORKDIR="$workdir" "$eaw_bin" analyze "$card" >/dev/null
+	test ! -e "$workdir/out/$card/context/onboarding" || fail "rerun should keep repo_discovery onboarding non-materialized"
 
 	rm -rf "$workdir/context_sources/onboarding/local-main"
 	mkdir -p "$workdir/context_sources/onboarding/local-main"
@@ -90,14 +109,9 @@ payload = {"blob": "x" * 205000}
 Path(sys.argv[1]).write_text(json.dumps(payload))
 PY
 	card="585LIMIT"
-	EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" card "$card" --track feature "onboarding limits" >/dev/null
-	EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" analyze "$card" >/dev/null
-	provenance_file="$workdir/out/$card/context/onboarding/provenance.md"
-	test -f "$workdir/out/$card/context/onboarding/file_01.md" || fail "first ordered onboarding file missing"
-	test -f "$workdir/out/$card/context/onboarding/file_10.md" || fail "tenth ordered onboarding file missing"
-	test ! -e "$workdir/out/$card/context/onboarding/file_11.md" || fail "max_files_onboarding should truncate materialization"
-	grep -Fq 'file_11.md | reason=max_files_onboarding' "$provenance_file" || fail "max_files truncation should be recorded"
-	grep -Fq 'large.json | reason=max_bytes_per_file_onboarding' "$provenance_file" || fail "per-file limit should be recorded"
+	EAW_WORKDIR="$workdir" "$eaw_bin" card "$card" --track feature "onboarding limits" >/dev/null
+	EAW_WORKDIR="$workdir" "$eaw_bin" analyze "$card" >/dev/null
+	test ! -e "$workdir/out/$card/context/onboarding" || fail "repo_discovery should not create onboarding artifacts even with oversized source trees"
 }
 
 printf "[test] smoke scope\n"
