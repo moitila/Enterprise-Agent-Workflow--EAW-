@@ -6,7 +6,7 @@ phase:
   description: Materialize the governed dynamic context after intake and before findings.
 
   prompt:
-    active: 1
+    active: 2
     path: templates/prompts/feature/dynamic_context/prompt_v<active>.md
 
   tooling_hints:

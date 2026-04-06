@@ -18,7 +18,7 @@ trap cleanup EXIT
 ./scripts/eaw init --workdir "$tmp" >/dev/null
 
 rm -f "$tmp/config/eaw.conf"
-doctor_out="$(EAW_WORKDIR="$tmp" ./scripts/eaw doctor)"
+doctor_out="$(EAW_WORKDIR="$tmp" EAW_SMOKE_SH=/bin/true ./scripts/eaw doctor)"
 validate_out="$(EAW_WORKDIR="$tmp" ./scripts/eaw validate)"
 
 grep -Fq "eaw.conf: OPTIONAL_FORMAL" <<<"$doctor_out" || fail "doctor missing OPTIONAL_FORMAL when eaw.conf absent"

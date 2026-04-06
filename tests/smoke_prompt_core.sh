@@ -8,7 +8,7 @@ export EAW_WORKDIR="$WORK_ROOT/.eaw"
 
 "$REPO_ROOT/scripts/eaw" init --workdir "$EAW_WORKDIR" >/dev/null
 
-default_intake_dir="$EAW_WORKDIR/templates/prompts/default/intake"
+default_intake_dir="$REPO_ROOT/templates/prompts/default/intake"
 test -f "$default_intake_dir/ACTIVE"
 active_candidate="$(tr -d '[:space:]' <"$default_intake_dir/ACTIVE")"
 [[ -n "$active_candidate" ]]

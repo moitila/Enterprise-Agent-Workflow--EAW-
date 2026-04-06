@@ -28,6 +28,8 @@ state_file="$workdir/out/$feature_card/state_card_feature.yaml"
 ingest_input_file="$workdir/out/$feature_card/ingest/sources.md"
 ingest_prompt_phase="$workdir/out/$feature_card/prompts/ingest.md"
 intake_file="$workdir/out/$feature_card/investigations/00_intake.md"
+dynamic_context_manifest="$workdir/out/$feature_card/context/dynamic/00_scope_manifest.md"
+dynamic_context_prompt_phase="$workdir/out/$feature_card/prompts/dynamic_context.md"
 findings_file="$workdir/out/$feature_card/investigations/20_findings.md"
 findings_prompt_phase="$workdir/out/$feature_card/prompts/findings.md"
 execution_log="$workdir/out/$feature_card/execution.log"
@@ -64,19 +66,48 @@ EOF
 
 next_output="$(EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" next "$feature_card" 2>&1)" || fail "feature next command failed after ingest artifacts were filled"
 
-grep -Fq "current_phase: findings" "$state_file" || fail "feature card did not advance to findings"
+grep -Fq "current_phase: intake" "$state_file" || fail "feature card did not advance to intake"
 grep -Fq "previous_phase: ingest" "$state_file" || fail "feature card previous_phase not updated"
 grep -Eq '^  phase_started_at: [0-9]{4}-[0-9]{2}-[0-9]{2}T' "$state_file" || fail "feature next should stamp destination phase_started_at"
 grep -Fq "phase_completed: false" "$state_file" || fail "feature next should reset phase_completed to false"
 grep -Fq "phase_completed_at: null" "$state_file" || fail "feature next should reset phase_completed_at"
 grep -Fq "phase_status: RUN" "$state_file" || fail "feature next should set destination phase_status to RUN"
 grep -Fq "    - ingest" "$state_file" || fail "feature card completed_phases missing ingest"
-[[ -f "$findings_file" ]] || fail "missing findings artifact after next"
-[[ -f "$findings_prompt_phase" ]] || fail "missing phase-driven findings prompt after next"
+test ! -f "$findings_prompt_phase" || fail "phase-driven findings prompt should not exist before dynamic_context completes"
+test ! -f "$dynamic_context_prompt_phase" || fail "phase-driven dynamic_context prompt should not exist before intake advances"
+grep -Fq "CARD $feature_card: ingest -> intake" <<<"$next_output" || fail "next output missing ingest->intake transition summary"
+grep -Fq "RUNTIME: phase=intake action=phase_driven_execution" <<<"$next_output" || fail "next output missing intake phase execution summary"
+
+next_output="$(EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" next "$feature_card" 2>&1)" || fail "feature next command failed after intake was filled"
+
+grep -Fq "current_phase: dynamic_context" "$state_file" || fail "feature card did not advance to dynamic_context"
+grep -Fq "previous_phase: intake" "$state_file" || fail "feature card previous_phase not updated to intake"
+grep -Fq "    - intake" "$state_file" || fail "feature card completed_phases missing intake"
+[[ -f "$dynamic_context_manifest" ]] || fail "missing dynamic context scope manifest after next"
+[[ -f "$dynamic_context_prompt_phase" ]] || fail "missing phase-driven dynamic_context prompt after next"
 test ! -f "$workdir/out/$feature_card/investigations/findings_agent_prompt.md" || fail "legacy findings prompt should not be mirrored into investigations"
+grep -Eq '^workflow_phase_dynamic_context\|OK\|' "$execution_log" || fail "execution log missing workflow phase entry for dynamic_context"
+grep -Fq "CARD $feature_card: intake -> dynamic_context" <<<"$next_output" || fail "next output missing intake->dynamic_context transition summary"
+grep -Fq "RUNTIME: phase=dynamic_context action=phase_driven_execution" <<<"$next_output" || fail "next output missing dynamic_context phase execution summary"
+
+next_output="$(EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" next "$feature_card" 2>&1)" || fail "feature next command should keep dynamic_context current while required artifacts are unfilled"
+grep -Fq "unfilled required artifacts: context/dynamic/00_scope_manifest.md" <<<"$next_output" || fail "feature next output missing dynamic_context content gate"
+grep -Fq "current_phase: dynamic_context" "$state_file" || fail "feature card should remain in dynamic_context while required artifacts are unfilled"
+
+cat >>"$dynamic_context_manifest" <<'EOF'
+
+Dynamic context preenchido para teste.
+EOF
+
+next_output="$(EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" next "$feature_card" 2>&1)" || fail "feature next command failed after dynamic_context was filled"
+grep -Fq "current_phase: findings" "$state_file" || fail "feature card did not advance to findings after dynamic_context fill"
+grep -Fq "previous_phase: dynamic_context" "$state_file" || fail "feature card previous_phase not updated to dynamic_context"
+grep -Fq "    - dynamic_context" "$state_file" || fail "feature card completed_phases missing dynamic_context"
+[[ -f "$findings_file" ]] || fail "missing findings artifact after dynamic_context completion"
+[[ -f "$findings_prompt_phase" ]] || fail "missing phase-driven findings prompt after dynamic_context completion"
 grep -Eq '^workflow_phase_findings\|OK\|' "$execution_log" || fail "execution log missing workflow phase entry for findings"
-grep -Fq "CARD $feature_card: ingest -> findings" <<<"$next_output" || fail "next output missing transition summary"
-grep -Fq "RUNTIME: phase=findings action=phase_driven_execution" <<<"$next_output" || fail "next output missing phase execution summary"
+grep -Fq "CARD $feature_card: dynamic_context -> findings" <<<"$next_output" || fail "next output missing dynamic_context->findings transition summary"
+grep -Fq "RUNTIME: phase=findings action=phase_driven_execution" <<<"$next_output" || fail "next output missing findings phase execution summary"
 
 next_output="$(EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" next "$feature_card" 2>&1)" || fail "feature next command should keep findings current while findings is unfilled"
 grep -Fq "unfilled required artifacts: investigations/20_findings.md" <<<"$next_output" || fail "feature next output missing findings content gate"

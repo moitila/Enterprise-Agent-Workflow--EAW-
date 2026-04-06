@@ -15,7 +15,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-expected_output=$'ARCH_REFACTOR\nbug\nfeature\nspike\nstandard'
+expected_output=$'ARCH_REFACTOR\nARCH_REFACTOR_ONBOARD\nbug\nbug_ONBOARD\nfeature\nrepo_onboarding\nspike\nstandard'
 actual_output="$(./scripts/eaw tracks)"
 [[ "$actual_output" == "$expected_output" ]] || fail "unexpected output for current repository"
 
