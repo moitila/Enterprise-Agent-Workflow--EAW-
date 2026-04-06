@@ -218,4 +218,165 @@ set -e
 [[ "$missing_track_rc" -ne 0 ]] || fail "expected missing official track validate to fail"
 grep -Fq "no official track 'ghost' was found" <<<"$missing_track_output" || fail "missing actionable missing official track error"
 
+# --- phase.context validation tests (H5) ---
+# Tests structural validation of phase.context via eaw validate workflow.
+# Covers: phase without context, phase with dynamic_context_template only,
+# phase with both fields, and phase with invalid context configuration.
+
+context_valid_workdir="$tmp_root/workdir-context-valid"
+context_invalid_workdir="$tmp_root/workdir-context-invalid"
+
+init_workdir "$context_valid_workdir"
+
+ctx_valid_track_dir="$context_valid_workdir/tracks/ctx-test/phases"
+mkdir -p "$ctx_valid_track_dir"
+
+cat >"$context_valid_workdir/tracks/ctx-test/track.yaml" <<'EOF'
+track:
+  id: ctx-test
+  initial_phase: no-context
+  final_phase: both-fields
+  phases:
+    - no-context
+    - dynamic-only
+    - both-fields
+  transitions:
+    no-context:
+      next: dynamic-only
+    dynamic-only:
+      next: both-fields
+EOF
+
+# Fase sem context — fallback: comportamento legado preservado
+cat >"$ctx_valid_track_dir/no-context.yaml" <<'EOF'
+phase:
+  id: no-context
+  prompt:
+    path: templates/prompts/default/analyze_findings/prompt_v<active>.md
+EOF
+
+# Fase com apenas dynamic_context_template
+cat >"$ctx_valid_track_dir/dynamic-only.yaml" <<'EOF'
+phase:
+  id: dynamic-only
+  prompt:
+    path: templates/prompts/default/analyze_findings/prompt_v<active>.md
+  context:
+    dynamic_context_template: repo-diff
+EOF
+
+# Fase com ambos os campos (dynamic_context_template e onboarding_template)
+cat >"$ctx_valid_track_dir/both-fields.yaml" <<'EOF'
+phase:
+  id: both-fields
+  prompt:
+    path: templates/prompts/default/analyze_findings/prompt_v<active>.md
+  context:
+    dynamic_context_template: repo-diff
+    onboarding_template: workspace-onboarding
+EOF
+
+context_valid_output="$(EAW_WORKDIR="$context_valid_workdir" "$REPO_ROOT/scripts/eaw" validate workflow --track ctx-test 2>&1)" || fail "expected valid phase.context to pass validate workflow"
+grep -Fq "OK track=ctx-test" <<<"$context_valid_output" || fail "missing OK for valid context track"
+
+# Phase with invalid context (extra field) — should fail validate workflow
+init_workdir "$context_invalid_workdir"
+
+ctx_invalid_track_dir="$context_invalid_workdir/tracks/ctx-invalid/phases"
+mkdir -p "$ctx_invalid_track_dir"
+
+cat >"$context_invalid_workdir/tracks/ctx-invalid/track.yaml" <<'EOF'
+track:
+  id: ctx-invalid
+  initial_phase: bad-context
+  final_phase: bad-context
+  phases:
+    - bad-context
+EOF
+
+cat >"$ctx_invalid_track_dir/bad-context.yaml" <<'EOF'
+phase:
+  id: bad-context
+  prompt:
+    path: templates/prompts/default/analyze_findings/prompt_v<active>.md
+  context:
+    dynamic_context_template: repo-diff
+    unsupported_field: bad-value
+EOF
+
+set +e
+context_invalid_output="$(EAW_WORKDIR="$context_invalid_workdir" "$REPO_ROOT/scripts/eaw" validate workflow --track ctx-invalid 2>&1)"
+context_invalid_rc=$?
+set -e
+
+[[ "$context_invalid_rc" -ne 0 ]] || fail "expected invalid phase.context (extra field) to fail validate workflow"
+grep -Fq "unsupported context key" <<<"$context_invalid_output" || fail "missing unsupported context key error for extra field"
+
+# Runtime failure: dynamic_context_template declared without materialized context
+context_runtime_workdir="$tmp_root/workdir-context-runtime"
+init_workdir "$context_runtime_workdir"
+
+runtime_intake_dir="$context_runtime_workdir/out/545RUNTIME/intake"
+mkdir -p "$runtime_intake_dir"
+
+cat >"$runtime_intake_dir/track_runtime.yaml" <<'EOF'
+track:
+  id: ctx-runtime
+  initial_phase: no-context
+  final_phase: done
+  phases:
+    - no-context
+    - dynamic-only
+    - done
+  transitions:
+    no-context:
+      next: dynamic-only
+    dynamic-only:
+      next: done
+EOF
+
+cat >"$runtime_intake_dir/phase_no_context.yaml" <<'EOF'
+phase:
+  id: no-context
+  prompt:
+    path: templates/prompts/default/analyze_findings/prompt_v<active>.md
+EOF
+
+cat >"$runtime_intake_dir/phase_dynamic_only.yaml" <<'EOF'
+phase:
+  id: dynamic-only
+  prompt:
+    path: templates/prompts/default/analyze_findings/prompt_v<active>.md
+  context:
+    dynamic_context_template: repo-diff
+EOF
+
+cat >"$runtime_intake_dir/phase_done.yaml" <<'EOF'
+phase:
+  id: done
+  prompt:
+    path: templates/prompts/default/analyze_findings/prompt_v<active>.md
+EOF
+
+cat >"$runtime_intake_dir/state_card_runtime.yaml" <<'EOF'
+card_state:
+  track_id: ctx-runtime
+  previous_phase: no-context
+  current_phase: dynamic-only
+  completed_phases:
+    - no-context
+  phase_status: RUN
+  phase_started_at: 2026-03-29T00:00:00Z
+  phase_completed: false
+  phase_completed_at: null
+EOF
+
+set +e
+context_runtime_output="$(EAW_WORKDIR="$context_runtime_workdir" "$REPO_ROOT/scripts/eaw" next 545RUNTIME 2>&1)"
+context_runtime_rc=$?
+set -e
+
+[[ "$context_runtime_rc" -ne 0 ]] || fail "expected dynamic context runtime without materialization to fail"
+grep -Fq "context nao materializado" <<<"$context_runtime_output" || fail "missing deterministic runtime error for absent dynamic context"
+
 printf "workflow_prompt_path_smoke OK\n"

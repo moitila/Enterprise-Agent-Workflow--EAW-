@@ -31,6 +31,8 @@ INPUT
 - MODE: quando `EAW_WORKDIR` estiver vazio, saida em `OUT_DIR`; quando definido, saida isolada em `EAW_WORKDIR`.
 - EXECUTION_STRUCTURE: `RUNTIME_ROOT` nunca deve ser modificado; codigo apenas em TARGET_REPOS; artefatos apenas dentro de `CARD_DIR`; allowlist do `00_scope.lock.md` e soberana para implementacao real nos TARGET_REPOS.
 
+{{CONTEXT_BLOCK}}
+
 OUTPUT
 - Alterar somente codigo nos TARGET_REPOS e artefatos dentro de `CARD_DIR`, respeitando a allowlist soberana.
 - Fornecer diff completo, lista de arquivos alterados, confirmacao explicita dos criterios de aceite e outputs relevantes dos testes.
@@ -43,6 +45,7 @@ OUTPUT_STRUCTURE
 
 READ_SCOPE
 - Ler exclusivamente os artefatos do card e os TARGET_REPOS em modo necessario para os Steps do change plan.
+- Consumir onboarding por referencia via `{{CONTEXT_BLOCK}}` e tratar esse contexto como a fonte governada de convencoes, entrypoints e restricoes do repositorio.
 - Tratar `Planning v4`, hipoteses selecionadas no formato `H[0-9]+` e allowlist como fonte de verdade.
 
 WRITE_SCOPE
@@ -65,6 +68,7 @@ RULES
 - PASSO 2 - CONTEXTO E HIPOTESE DE EXECUCAO:
   - Resumir o objetivo do card em ate 3 linhas.
   - Confirmar In Scope, allowlist e hipoteses `H[0-9]+` selecionadas.
+  - Inspecionar o onboarding materializado antes de alterar codigo e aplicar suas convencoes e restricoes ao plano aprovado, sem reler `context_sources` diretamente.
   - Registrar hipotese de execucao sem adicionar estrategia nova.
   - Identificar explicitamente se o plano envolve cenarios de debugging, verificacao de runtime ou mudancas estruturais, e registrar como condicoes de validacao adicionais.
 - PASSO 3 - EXECUCAO EM MICRO-PASSOS:

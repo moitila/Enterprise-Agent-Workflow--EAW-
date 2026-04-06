@@ -157,6 +157,170 @@ eaw_validate_workflow_phase_tooling_hints() {
 	return "$errors"
 }
 
+eaw_yaml_phase_prompt_active() {
+	local file="$1"
+	awk '
+		function trim(s) {
+			sub(/^[[:space:]]+/, "", s)
+			sub(/[[:space:]]+$/, "", s)
+			sub(/^"/, "", s)
+			sub(/"$/, "", s)
+			return s
+		}
+		/^phase:[[:space:]]*$/ { in_phase=1; next }
+		in_phase && /^[^[:space:]]/ { in_phase=0 }
+		in_phase && /^  prompt:[[:space:]]*$/ { in_prompt=1; next }
+		in_prompt && /^  [^[:space:]]/ { in_prompt=0 }
+		in_prompt && /^    active:[[:space:]]*/ {
+			line=$0
+			sub(/^    active:[[:space:]]*/, "", line)
+			print trim(line)
+			exit
+		}
+	' "$file"
+}
+
+eaw_validate_workflow_phase_prompt_sync() {
+	local track_id="$1"
+	local phase_id="$2"
+	local phase_file="$3"
+	local prompt_path="$4"
+	local prompt_binding="$5"
+	local yaml_active raw_yaml_active active_resolution active_from_active key value prompt_track="" prompt_phase=""
+	local errors=0
+
+	raw_yaml_active="$(eaw_yaml_phase_prompt_active "$phase_file")"
+	if [[ -z "$raw_yaml_active" ]]; then
+		errors=$((errors + 1))
+		eaw_validate_workflow_error "$track_id" "$phase_id" "prompt.active" "missing phase.prompt.active; ACTIVE remains the operational authority and phase.prompt.active must mirror it for validation"
+		return "$errors"
+	fi
+
+	if ! yaml_active="$(normalize_prompt_candidate "$raw_yaml_active" 2>/dev/null)"; then
+		errors=$((errors + 1))
+		eaw_validate_workflow_error "$track_id" "$phase_id" "prompt.active" "invalid phase.prompt.active '$raw_yaml_active'; expected a prompt version like '3' or 'v3'"
+		return "$errors"
+	fi
+
+	while IFS='=' read -r key value; do
+		case "$key" in
+		track) prompt_track="$value" ;;
+		phase) prompt_phase="$value" ;;
+		esac
+	done <<<"$prompt_binding"
+
+	if [[ -z "$prompt_track" || -z "$prompt_phase" ]]; then
+		errors=$((errors + 1))
+		eaw_validate_workflow_error "$track_id" "$phase_id" "prompt.active" "could not derive prompt binding from prompt.path '$prompt_path' for ACTIVE validation"
+		return "$errors"
+	fi
+
+	if ! active_resolution="$(prompt_resolve_active_metadata "$prompt_track" "$prompt_phase" 2>&1)"; then
+		errors=$((errors + 1))
+		eaw_validate_workflow_error "$track_id" "$phase_id" "prompt.active" "could not resolve ACTIVE for prompt.path '$prompt_path': $active_resolution"
+		return "$errors"
+	fi
+
+	while IFS='=' read -r key value; do
+		case "$key" in
+		active) active_from_active="$value" ;;
+		esac
+	done <<<"$active_resolution"
+
+	if [[ -z "$active_from_active" ]]; then
+		errors=$((errors + 1))
+		eaw_validate_workflow_error "$track_id" "$phase_id" "prompt.active" "could not read ACTIVE version for prompt.path '$prompt_path'"
+		return "$errors"
+	fi
+
+	if [[ "$yaml_active" != "$active_from_active" ]]; then
+		errors=$((errors + 1))
+		eaw_validate_workflow_error "$track_id" "$phase_id" "prompt.active" "phase.prompt.active '$yaml_active' diverges from ACTIVE '$active_from_active' for prompt.path '$prompt_path'; ACTIVE is the operational authority"
+	fi
+
+	return "$errors"
+}
+
+eaw_validate_workflow_phase_context() {
+	# Validate phase.context block structure.
+	# Accepts only dynamic_context_template and onboarding_template as string identifiers.
+	# Rejects extra keys, non-string values, and path-style values (containing '/').
+	# Fallback: absent context block is valid (preserves legacy phase compatibility).
+	# Errors: emits "unsupported context key", "must be a logical identifier, not a path",
+	# and "must be a non-empty string" for template inexistente and invalid structure.
+	# nao materializado and onboarding ausente are runtime errors, not structural ones.
+	local track_id="$1"
+	local phase_id="$2"
+	local phase_file="$3"
+	local issue
+	local errors=0
+
+	while IFS= read -r issue; do
+		[[ -n "$issue" ]] || continue
+		errors=$((errors + 1))
+		eaw_validate_workflow_error "$track_id" "$phase_id" "context" "$issue"
+	done < <(
+		awk '
+			function ltrim(s) {
+				sub(/^[[:space:]]+/, "", s)
+				return s
+			}
+			function trim(s) {
+				sub(/^[[:space:]]+/, "", s)
+				sub(/[[:space:]]+$/, "", s)
+				sub(/^"/, "", s)
+				sub(/"$/, "", s)
+				return s
+			}
+			/^phase:[[:space:]]*$/ { in_phase=1; next }
+			in_phase && /^[^[:space:]]/ { in_phase=0; in_context=0 }
+			in_phase && /^  context:[[:space:]]*$/ { in_context=1; next }
+			in_phase && /^  context:[[:space:]]*\S/ {
+				printf "phase.context must be a mapping block, not an inline value\n"
+				in_context=0
+				next
+			}
+			in_context && /^  [^[:space:]]/ { in_context=0 }
+			!in_context { next }
+			/^[[:space:]]*$/ { next }
+			/^    dynamic_context_template:[[:space:]]*/ {
+				line=$0
+				sub(/^    dynamic_context_template:[[:space:]]*/, "", line)
+				val=trim(line)
+				if (val == "" || val ~ /^[-{[]/) {
+					printf "dynamic_context_template must be a non-empty string identifier\n"
+				} else if (val ~ /\//) {
+					printf "dynamic_context_template must be a logical identifier, not a path (template inexistente se path direto): '\''%s'\''\n", val
+				}
+				next
+			}
+			/^    onboarding_template:[[:space:]]*/ {
+				line=$0
+				sub(/^    onboarding_template:[[:space:]]*/, "", line)
+				val=trim(line)
+				if (val == "" || val ~ /^[-{[]/) {
+					printf "onboarding_template must be a non-empty string identifier\n"
+				} else if (val ~ /\//) {
+					printf "onboarding_template must be a logical identifier, not a path (template inexistente se path direto): '\''%s'\''\n", val
+				}
+				next
+			}
+			/^    [A-Za-z0-9_-]+:[[:space:]]*/ {
+				line=$0
+				sub(/^    /, "", line)
+				split(line, parts, ":")
+				printf "unsupported context key '\''%s'\''\n", parts[1]
+				next
+			}
+			{
+				printf "invalid context line: %s\n", ltrim($0)
+			}
+		' "$phase_file"
+	)
+
+	return "$errors"
+}
+
 eaw_validate_workflow_track() {
 	local track_id="$1"
 	local track_dir track_file initial_phase final_phase raw_phase normalized_phase phase_file phase_id prompt_path phase_errors
@@ -242,6 +406,12 @@ eaw_validate_workflow_track() {
 		elif ! prompt_binding="$(eaw_resolve_prompt_binding_from_path "$phase_file" "$prompt_path" 2>&1)"; then
 			errors=$((errors + 1))
 			eaw_validate_workflow_error "$track_id" "$phase_id" "prompt.path" "$prompt_binding"
+		else
+			eaw_validate_workflow_phase_prompt_sync "$track_id" "$phase_id" "$phase_file" "$prompt_path" "$prompt_binding"
+			phase_errors=$?
+			if [[ "$phase_errors" -gt 0 ]]; then
+				errors=$((errors + phase_errors))
+			fi
 		fi
 		eaw_validate_workflow_phase_outputs "$track_id" "$phase_id" "$phase_file"
 		phase_errors=$?
@@ -254,6 +424,11 @@ eaw_validate_workflow_track() {
 			errors=$((errors + phase_errors))
 		fi
 		eaw_validate_workflow_phase_tooling_hints "$track_id" "$phase_id" "$phase_file"
+		phase_errors=$?
+		if [[ "$phase_errors" -gt 0 ]]; then
+			errors=$((errors + phase_errors))
+		fi
+		eaw_validate_workflow_phase_context "$track_id" "$phase_id" "$phase_file"
 		phase_errors=$?
 		if [[ "$phase_errors" -gt 0 ]]; then
 			errors=$((errors + phase_errors))

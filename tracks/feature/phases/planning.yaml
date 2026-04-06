@@ -6,14 +6,19 @@ phase:
   description: Define implementation steps.
 
   prompt:
-    active: 3
+    active: 5
     path: templates/prompts/feature/planning/prompt_v<active>.md
+
+  context:
+    dynamic_context_template: deterministic_baseline_v1
+
+  tooling_hints:
+    - Ler `out/<CARD>/context/dynamic/` apenas depois da fase formal `dynamic_context`.
+    - Nao tratar placeholder, scaffold vazio ou artefato futuro preexistente como progresso governado.
 
   outputs:
     create_directories:
       - prompts
-    create_artifacts:
-      - investigations/40_next_steps.md
     prompts:
       - planning
 

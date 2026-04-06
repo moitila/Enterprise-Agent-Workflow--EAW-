@@ -3,7 +3,7 @@ config_version: 1
 phase:
   id: ingest
   name: Ingest
-  description: Collect and normalize raw card inputs before the structured intake phase.
+  description: Collect and normalize raw card inputs before the explicit intake phase materializes structured context.
 
   prompt:
     active: 2
@@ -11,13 +11,14 @@ phase:
 
   tooling_hints:
     - Tratar `out/<CARD>/ingest/` como a origem primaria de insumos brutos quando existir.
+    - Nao materializar `context/dynamic/` nesta fase; essa responsabilidade pertence a `intake`.
 
   outputs:
     create_directories:
       - ingest
       - investigations
       - context
-    create_artifacts: 
+    create_artifacts:
       - investigations/00_intake.md
       - investigations/_intake_provenance.md
 

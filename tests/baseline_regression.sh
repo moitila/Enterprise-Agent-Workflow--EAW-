@@ -6,6 +6,8 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 printf "[baseline] running smoke suite\n"
 env -u EAW_WORKDIR bash "$REPO_ROOT/tests/smoke/smoke_baseline.sh"
 
+printf "[baseline] dynamic context coverage enabled in smoke suite\n"
+
 printf "[baseline] running integration suite\n"
 bash "$REPO_ROOT/tests/integration/integration_suite.sh"
 

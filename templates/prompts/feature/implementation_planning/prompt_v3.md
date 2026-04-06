@@ -29,6 +29,8 @@ INPUT
 - MODE: quando `EAW_WORKDIR` estiver vazio, saida em `OUT_DIR`; quando definido, saida isolada em `EAW_WORKDIR`.
 - EXECUTION_STRUCTURE: `RUNTIME_ROOT` nunca deve ser modificado; `TARGET_REPOS` somente leitura; `CARD_DIR` e o limite unico de escrita da fase.
 
+{{CONTEXT_BLOCK}}
+
 OUTPUT
 - Escrever somente `out/{{CARD}}/implementation/00_scope.lock.md`.
 - Escrever somente `out/{{CARD}}/implementation/10_change_plan.md`.
@@ -41,6 +43,7 @@ OUTPUT_STRUCTURE
 
 READ_SCOPE
 - Ler somente `{{CARD_DIR}}`, `{{CARD_DIR}}/investigations` e `{{CARD_DIR}}/context`.
+- Consumir onboarding por referencia via `{{CONTEXT_BLOCK}}` para derivar convencoes, entrypoints, restricoes e comandos canonicos do repositorio.
 - Nao alterar codigo nesta fase.
 
 WRITE_SCOPE
@@ -62,9 +65,11 @@ RULES
   - Bloquear se houver inconsistencia entre hipoteses listadas e plano descrito.
 - PASSO 2 - GERAR 10_change_plan.md:
   - Incluir `# Change Plan - Card {{CARD}}`, `## Objetivo de Execucao`, `## Hipotese(s) Selecionada(s)`, `## Assuncoes Explicitas`, `## Steps`, `## Validacao Tecnica Obrigatoria` e `## Rollback`.
+  - Usar onboarding materializado para fundamentar assumptions explicitas, sequencia de execucao, comandos de validacao e dependencias reais do repositorio.
   - Em cada Step numerado, incluir objetivo, tipo, arquivos envolvidos, justificativa referenciando `40_next_steps.md` e hipoteses `H[0-9]+`, e validacao tecnica obrigatoria.
 - PASSO 3 - GERAR 00_scope.lock.md:
   - Incluir `# Scope Lock - Card {{CARD}}`, `## Base Obrigatoria`, `## Hipotese(s) Base`, `## Contexto`, `## In Scope`, `## Out of Scope`, `## Allowlist de Escrita` e `## Regra de Escrita`.
+  - Refletir no `## Contexto` as restricoes e convencoes relevantes vindas do onboarding materializado, sem citar `context_sources` diretamente.
   - Preencher `## Allowlist de Escrita` com paths explicitos, fechados e sem glob dos arquivos reais em TARGET_REPOS autorizados para a implementacao.
   - Derivar a allowlist soberana exclusivamente de `40_next_steps.md` e dos `arquivos envolvidos` definidos no `10_change_plan.md`.
   - A allowlist deve conter apenas o subconjunto minimo necessario de arquivos.

@@ -43,7 +43,7 @@ For full-card orchestration, `./scripts/eaw run <CARD>` adds a run-level control
 Public output surface:
 - dossier: `out/<CARD>/<type>_<CARD>.md` (deterministic compatibility filename; primary workflow classification remains `track` / `card_state.track_id`)
 - staged investigations: `out/<CARD>/investigations/*.md`
-- contextual evidence: `out/<CARD>/context/<repoKey>/...` (**standby**: context engine disabled; not collected at runtime)
+- contextual evidence: `out/<CARD>/context/dynamic/` with runtime-selected artifacts and snippets materialized per card
 - phase telemetry: `out/<CARD>/execution.log`
 - run telemetry: `out/<CARD>/runtime/run_state.yaml` and `out/<CARD>/runtime/execution.log`
 
@@ -54,7 +54,7 @@ Compatibility rule:
 ## Operational Constraints
 
 - `repos.conf` defines repositories and roles (`target`/`infra`).
-- Only `target` repos are collected under `context/` (**standby**: collection currently disabled).
+- Only `target` repos are collected under `context/dynamic/` when the phase declares dynamic context materialization.
 - Best-effort collector failures are logged in `_warnings.txt` and do not fail the full run by default.
 - Fatal errors remain explicit and non-zero.
 

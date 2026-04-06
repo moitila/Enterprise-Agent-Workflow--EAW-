@@ -27,69 +27,6 @@ scaffold_template_names() {
 		40_next_steps
 }
 
-workspace_template_names() {
-	printf '%s\n' \
-		feature \
-		bug \
-		spike \
-		intake_feature \
-		intake_bug \
-		intake_spike
-	scaffold_template_names
-}
-
-copy_workspace_nested_templates() {
-	local default_tpl_dir="$1"
-	local tpl_dir="$2"
-	local overwrite="$3"
-	local rel src dst dst_parent
-	while IFS= read -r rel; do
-		src="$default_tpl_dir/$rel"
-		dst="$tpl_dir/$rel"
-		if [[ ! -f "$src" ]]; then
-			continue
-		fi
-
-		dst_parent="$(dirname "$dst")"
-		ensure_dir "$dst_parent"
-		if [[ -f "$dst" && "$overwrite" != "true" ]]; then
-			echo "$dst already exists; use --force to overwrite"
-		else
-			cp "$src" "$dst"
-			echo "Created $dst"
-		fi
-	done < <(
-		cd "$default_tpl_dir" &&
-			find prompts/default -type f \( -name 'prompt_v*.md' -o -name 'prompt_v*.meta' -o -name 'ACTIVE' \) |
-			LC_ALL=C sort
-	)
-}
-
-copy_workspace_tracks() {
-	local default_tracks_dir="$1"
-	local tracks_dir="$2"
-	local overwrite="$3"
-	local rel src dst dst_parent
-	if [[ ! -d "$default_tracks_dir" ]]; then
-		return 0
-	fi
-	while IFS= read -r rel; do
-		src="$default_tracks_dir/$rel"
-		dst="$tracks_dir/$rel"
-		dst_parent="$(dirname "$dst")"
-		ensure_dir "$dst_parent"
-		if [[ -f "$dst" && "$overwrite" != "true" ]]; then
-			echo "$dst already exists; use --force to overwrite"
-		else
-			cp "$src" "$dst"
-			echo "Created $dst"
-		fi
-	done < <(
-		cd "$default_tracks_dir" &&
-			find . -type f | sed 's#^\./##' | LC_ALL=C sort
-	)
-}
-
 read_config_version() {
 	local conf="$1"
 	if [[ ! -f "$conf" ]]; then
@@ -186,46 +123,19 @@ init_workspace_workdir() {
 	local workdir="$1"
 	local force="$2"
 	local upgrade="$3"
-	local overwrite_templates="false"
 	local cfg="$workdir/config"
-	local tpl="$workdir/templates"
-	local tracks="$workdir/tracks"
 	local out="$workdir/out"
 	local repos_conf="$cfg/repos.conf"
 	local search_conf="$cfg/search.conf"
 	local default_search="$EAW_ROOT_DIR/config/search.example.conf"
-	local default_tpl_dir="$EAW_ROOT_DIR/templates"
-	local default_tracks_dir="$EAW_ROOT_DIR/tracks"
 
 	ensure_dir "$cfg"
-	ensure_dir "$tpl"
-	ensure_dir "$tracks"
 	ensure_dir "$out"
-
-	if [[ "$force" == "true" || "$upgrade" == "true" ]]; then
-		overwrite_templates="true"
-	fi
 
 	write_or_skip "$repos_conf" "$force" "# Format: key|path|role(optional)
 # Example:
 # backend|/absolute/path/to/repo|target
 # shared-infra|/absolute/path/to/infra|infra"
-
-	while IFS= read -r name; do
-		local src_tpl="$default_tpl_dir/$name.md"
-		local dst_tpl="$tpl/$name.md"
-		if [[ -f "$src_tpl" ]]; then
-			if [[ -f "$dst_tpl" && "$overwrite_templates" != "true" ]]; then
-				echo "$dst_tpl already exists; use --force to overwrite"
-			else
-				cp "$src_tpl" "$dst_tpl"
-				echo "Created $dst_tpl"
-			fi
-		fi
-	done < <(workspace_template_names)
-
-	copy_workspace_nested_templates "$default_tpl_dir" "$tpl" "$overwrite_templates"
-	copy_workspace_tracks "$default_tracks_dir" "$tracks" "$overwrite_templates"
 
 	if [[ -f "$default_search" ]]; then
 		if [[ -f "$search_conf" && "$force" != "true" ]]; then
@@ -380,6 +290,109 @@ prompt_resolve_active_metadata() {
 	printf "prompt_used=%s\n" "$prompt_used"
 }
 
+eaw_context_template_dir_from_root() {
+	local templates_root="$1"
+	local context_kind="$2"
+	local template_name="$3"
+	printf "%s/context/%s/%s\n" "$templates_root" "$context_kind" "$template_name"
+}
+
+eaw_context_template_is_builtin() {
+	local context_kind="$1"
+	local template_name="$2"
+
+	[[ "$context_kind" == "dynamic" && "$template_name" == "deterministic_baseline_v1" ]]
+}
+
+eaw_context_template_builtin_resolution() {
+	local context_kind="$1"
+	local template_name="$2"
+
+	if ! eaw_context_template_is_builtin "$context_kind" "$template_name"; then
+		return 1
+	fi
+
+	printf "kind=%s\n" "$context_kind"
+	printf "template=%s\n" "$template_name"
+	printf "source_root=%s\n" "${EAW_ROOT_DIR}/templates"
+	printf "template_dir=%s\n" "builtin://context/$context_kind/$template_name"
+	printf "active=%s\n" "builtin"
+	printf "file=%s\n" "builtin"
+	printf "md_file=%s\n" "builtin://context/$context_kind/$template_name"
+	printf "meta_file=%s\n" "builtin://context/$context_kind/$template_name.meta"
+	printf "template_used=%s\n" "${context_kind}_${template_name}_builtin"
+}
+
+eaw_context_template_resolve_active_metadata() {
+	local context_kind="$1"
+	local template_name="$2"
+	local workspace_dir root_templates_root root_dir dir source_root
+	local active_file raw_active active_value normalized_active md_file meta_file file_name template_used
+
+	workspace_dir="$(eaw_context_template_dir_from_root "$EAW_TEMPLATES_DIR" "$context_kind" "$template_name")"
+	root_templates_root="$EAW_ROOT_DIR/templates"
+	root_dir="$(eaw_context_template_dir_from_root "$root_templates_root" "$context_kind" "$template_name")"
+
+	if [[ -d "$workspace_dir" ]]; then
+		dir="$workspace_dir"
+		source_root="$EAW_TEMPLATES_DIR"
+	elif [[ -d "$root_dir" ]]; then
+		dir="$root_dir"
+		source_root="$root_templates_root"
+	elif eaw_context_template_is_builtin "$context_kind" "$template_name"; then
+		eaw_context_template_builtin_resolution "$context_kind" "$template_name"
+		return 0
+	else
+		echo "ERROR: template directory not found for context '$context_kind' template '$template_name': $workspace_dir (expected templates/context/$context_kind/$template_name resolved via ACTIVE)" >&2
+		return 1
+	fi
+
+	active_file="$dir/ACTIVE"
+	if [[ ! -f "$active_file" ]]; then
+		echo "ERROR: ACTIVE file not found for context '$context_kind' template '$template_name': $active_file" >&2
+		return 1
+	fi
+
+	raw_active="$(tr -d '\r' <"$active_file")"
+	active_value="$(trim_spaces "$raw_active")"
+	if [[ -z "$active_value" ]]; then
+		echo "ERROR: ACTIVE is empty for context '$context_kind' template '$template_name': $active_file" >&2
+		return 1
+	fi
+	if [[ "$active_value" =~ ^template_(v[0-9]+)\.md$ ]]; then
+		normalized_active="${BASH_REMATCH[1]}"
+	elif [[ "$active_value" =~ ^template_(v[0-9]+)$ ]]; then
+		normalized_active="${BASH_REMATCH[1]}"
+	elif ! normalized_active="$(normalize_prompt_candidate "$active_value")"; then
+		echo "ERROR: ACTIVE has invalid version '$active_value' for context '$context_kind' template '$template_name': $active_file" >&2
+		return 1
+	fi
+
+	md_file="$dir/template_${normalized_active}.md"
+	if [[ ! -f "$md_file" ]]; then
+		echo "ERROR: ACTIVE points to missing template file for context '$context_kind' template '$template_name' version '$normalized_active': $md_file" >&2
+		return 1
+	fi
+
+	meta_file="$dir/template_${normalized_active}.meta"
+	if [[ ! -f "$meta_file" ]]; then
+		echo "ERROR: ACTIVE points to missing template metadata for context '$context_kind' template '$template_name' version '$normalized_active': $meta_file" >&2
+		return 1
+	fi
+
+	file_name="${md_file##*/}"
+	template_used="${context_kind}_${template_name}_${normalized_active}"
+	printf "kind=%s\n" "$context_kind"
+	printf "template=%s\n" "$template_name"
+	printf "source_root=%s\n" "$source_root"
+	printf "template_dir=%s\n" "$dir"
+	printf "active=%s\n" "$normalized_active"
+	printf "file=%s\n" "$file_name"
+	printf "md_file=%s\n" "$md_file"
+	printf "meta_file=%s\n" "$meta_file"
+	printf "template_used=%s\n" "$template_used"
+}
+
 prompt_provenance_append() {
 	local card="$1"
 	local out_root="$2"
@@ -390,7 +403,7 @@ prompt_provenance_append() {
 	local active="$7"
 	local file_name="$8"
 	local prompt_used="$9"
-	local provenance_dir provenance_file tmp_entries tmp_dedup tmp_yaml
+	local provenance_dir provenance_file tmp_entries tmp_dedup tmp_context tmp_yaml
 
 	provenance_dir="$out_root/$card/provenance"
 	provenance_file="$provenance_dir/prompts_used.yaml"
@@ -398,6 +411,7 @@ prompt_provenance_append() {
 
 	tmp_entries="$(mktemp "$provenance_dir/prompts_used.entries.XXXXXX")"
 	tmp_dedup="$(mktemp "$provenance_dir/prompts_used.dedup.XXXXXX")"
+	tmp_context="$(mktemp "$provenance_dir/prompts_used.context.XXXXXX")"
 	tmp_yaml="$(mktemp "$provenance_dir/prompts_used.yaml.XXXXXX")"
 
 	if [[ -f "$provenance_file" ]]; then
@@ -407,7 +421,15 @@ prompt_provenance_append() {
 					printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\n", phase, track, source_root, phase_dir, active, file, prompt_used
 				}
 			}
-			/^  - phase: / {
+			/^prompts:[[:space:]]*$/ {
+				in_prompts=1
+				next
+			}
+			/^context:[[:space:]]*$/ {
+				in_prompts=0
+				exit
+			}
+			in_prompts && /^  - phase: / {
 				flush()
 				phase=$0
 				sub(/^  - phase: /, "", phase)
@@ -419,14 +441,18 @@ prompt_provenance_append() {
 				prompt_used=""
 				next
 			}
-			/^    track: / { track=$0; sub(/^    track: /, "", track); next }
-			/^    source_root: / { source_root=$0; sub(/^    source_root: /, "", source_root); next }
-			/^    phase_dir: / { phase_dir=$0; sub(/^    phase_dir: /, "", phase_dir); next }
-			/^    active: / { active=$0; sub(/^    active: /, "", active); next }
-			/^    file: / { file=$0; sub(/^    file: /, "", file); next }
-			/^    prompt_used: / { prompt_used=$0; sub(/^    prompt_used: /, "", prompt_used); next }
+			in_prompts && /^    track: / { track=$0; sub(/^    track: /, "", track); next }
+			in_prompts && /^    source_root: / { source_root=$0; sub(/^    source_root: /, "", source_root); next }
+			in_prompts && /^    phase_dir: / { phase_dir=$0; sub(/^    phase_dir: /, "", phase_dir); next }
+			in_prompts && /^    active: / { active=$0; sub(/^    active: /, "", active); next }
+			in_prompts && /^    file: / { file=$0; sub(/^    file: /, "", file); next }
+			in_prompts && /^    prompt_used: / { prompt_used=$0; sub(/^    prompt_used: /, "", prompt_used); next }
 			END { flush() }
 		' "$provenance_file" >>"$tmp_entries"
+		awk '
+			/^context:[[:space:]]*$/ { in_context=1 }
+			in_context { print }
+		' "$provenance_file" >>"$tmp_context"
 	fi
 
 	printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\n" "$phase" "$track" "$source_root" "$phase_dir" "$active" "$file_name" "$prompt_used" >>"$tmp_entries"
@@ -445,10 +471,106 @@ prompt_provenance_append() {
 			printf "    file: %s\n" "$entry_file"
 			printf "    prompt_used: %s\n" "$entry_prompt_used"
 		done <"$tmp_dedup"
+		if [[ -s "$tmp_context" ]]; then
+			cat "$tmp_context"
+		fi
 	} >"$tmp_yaml"
 
 	mv "$tmp_yaml" "$provenance_file"
-	rm -f "$tmp_entries" "$tmp_dedup"
+	rm -f "$tmp_entries" "$tmp_dedup" "$tmp_context"
+}
+
+eaw_context_provenance_append() {
+	local card="$1"
+	local out_root="$2"
+	local phase="$3"
+	local context_kind="$4"
+	local template_name="$5"
+	local source_root="$6"
+	local template_dir="$7"
+	local active="$8"
+	local file_name="$9"
+	local template_used="${10}"
+	local source_dir="${11}"
+	local provenance_dir provenance_file tmp_prompts tmp_context tmp_dedup tmp_yaml
+
+	provenance_dir="$out_root/$card/provenance"
+	provenance_file="$provenance_dir/prompts_used.yaml"
+	ensure_dir "$provenance_dir"
+
+	tmp_prompts="$(mktemp "$provenance_dir/prompts_used.prompts.XXXXXX")"
+	tmp_context="$(mktemp "$provenance_dir/prompts_used.context.XXXXXX")"
+	tmp_dedup="$(mktemp "$provenance_dir/prompts_used.context.dedup.XXXXXX")"
+	tmp_yaml="$(mktemp "$provenance_dir/prompts_used.yaml.XXXXXX")"
+
+	if [[ -f "$provenance_file" ]]; then
+		awk '
+			/^prompts:[[:space:]]*$/ { in_prompts=1; next }
+			/^context:[[:space:]]*$/ { in_prompts=0; next }
+			in_prompts { print }
+		' "$provenance_file" >>"$tmp_prompts"
+		awk '
+			function flush() {
+				if (phase != "") {
+					printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n", phase, kind, template, source_root, template_dir, active, file, template_used, source_dir
+				}
+			}
+			/^context:[[:space:]]*$/ {
+				in_context=1
+				next
+			}
+			in_context && /^  - phase: / {
+				flush()
+				phase=$0
+				sub(/^  - phase: /, "", phase)
+				kind=""
+				template=""
+				source_root=""
+				template_dir=""
+				active=""
+				file=""
+				template_used=""
+				source_dir=""
+				next
+			}
+			in_context && /^    kind: / { kind=$0; sub(/^    kind: /, "", kind); next }
+			in_context && /^    template: / { template=$0; sub(/^    template: /, "", template); next }
+			in_context && /^    source_root: / { source_root=$0; sub(/^    source_root: /, "", source_root); next }
+			in_context && /^    template_dir: / { template_dir=$0; sub(/^    template_dir: /, "", template_dir); next }
+			in_context && /^    active: / { active=$0; sub(/^    active: /, "", active); next }
+			in_context && /^    file: / { file=$0; sub(/^    file: /, "", file); next }
+			in_context && /^    template_used: / { template_used=$0; sub(/^    template_used: /, "", template_used); next }
+			in_context && /^    source_dir: / { source_dir=$0; sub(/^    source_dir: /, "", source_dir); next }
+			END { flush() }
+		' "$provenance_file" >>"$tmp_context"
+	fi
+
+	printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n" "$phase" "$context_kind" "$template_name" "$source_root" "$template_dir" "$active" "$file_name" "$template_used" "$source_dir" >>"$tmp_context"
+
+	awk -F'\t' 'NF >= 9 { rec[$1 FS $2]=$0 } END { for (k in rec) print rec[k] }' "$tmp_context" | LC_ALL=C sort -t$'\t' -k1,1 -k2,2 >"$tmp_dedup"
+
+	{
+		printf "prompts:\n"
+		if [[ -s "$tmp_prompts" ]]; then
+			cat "$tmp_prompts"
+		fi
+		printf "context:\n"
+		while IFS=$'\t' read -r entry_phase entry_kind entry_template entry_source_root entry_template_dir entry_active entry_file entry_template_used entry_source_dir; do
+			[[ -n "$entry_phase" ]] || continue
+			printf "  - phase: %s\n" "$entry_phase"
+			printf "    kind: %s\n" "$entry_kind"
+			printf "    template: %s\n" "$entry_template"
+			printf "    source_root: %s\n" "$entry_source_root"
+			printf "    template_dir: %s\n" "$entry_template_dir"
+			printf "    active: %s\n" "$entry_active"
+			printf "    file: %s\n" "$entry_file"
+			printf "    template_used: %s\n" "$entry_template_used"
+			printf "    source_dir: %s\n" "$entry_source_dir"
+		done <"$tmp_dedup"
+	} >"$tmp_yaml"
+
+	mv "$tmp_yaml" "$provenance_file"
+	rm -f "$tmp_prompts" "$tmp_context" "$tmp_dedup"
 }
 
 load_prompt() {
@@ -671,6 +793,717 @@ collect_repos_lists() {
 	rm -f "$target_tmp" "$excluded_tmp"
 }
 
+eaw_dynamic_context_list_ingest_files() {
+	local ingest_dir="$1"
+	[[ -d "$ingest_dir" ]] || return 0
+	find "$ingest_dir" -type f \( -name '*.md' -o -name '*.txt' -o -name '*.yaml' -o -name '*.yml' -o -name '*.json' \) | LC_ALL=C sort
+}
+
+eaw_dynamic_context_is_excluded_relpath() {
+	local rel_path="$1"
+	case "$rel_path" in
+	.git/* | node_modules/* | dist/* | build/* | target/*)
+		return 0
+		;;
+	esac
+	return 1
+}
+
+eaw_dynamic_context_is_minified_file() {
+	local file="$1"
+	awk 'length($0) > 400 { found=1; exit 0 } END { exit(found ? 0 : 1) }' "$file"
+}
+
+eaw_dynamic_context_first_target_repo() {
+	local line lineno normalized key path role
+	lineno=0
+	if [[ ! -f "$REPOS_CONF" ]]; then
+		return 1
+	fi
+	while IFS= read -r line; do
+		lineno=$((lineno + 1))
+		if normalized="$(parse_repos_conf_line "$line" "$lineno" 2>/dev/null)"; then
+			IFS='|' read -r key path role <<<"$normalized"
+			if [[ "$role" == "target" ]]; then
+				printf "%s|%s\n" "$key" "$path"
+				return 0
+			fi
+		fi
+	done <"$REPOS_CONF"
+	return 1
+}
+
+eaw_dynamic_context_extract_explicit_paths() {
+	local ingest_dir="$1"
+	local repo_path="$2"
+	local tmp_paths
+	local ingest_file candidate rel_path
+
+	tmp_paths="$(mktemp)"
+	while IFS= read -r ingest_file; do
+		awk '
+			{
+				for (i = 1; i <= NF; i++) {
+					token = $i
+					gsub(/^[^[:alnum:]_.\/-]+|[^[:alnum:]_.\/-]+$/, "", token)
+					if (token ~ /[[:alnum:]_.-]+\/[[:alnum:]_.\/-]+/ || token ~ /^[[:alnum:]_.-]+\.[[:alnum:]_.-]+$/) {
+						print token
+					}
+				}
+			}
+		' "$ingest_file" >>"$tmp_paths"
+	done < <(eaw_dynamic_context_list_ingest_files "$ingest_dir")
+
+	while IFS= read -r candidate; do
+		[[ -n "$candidate" ]] || continue
+		rel_path="${candidate#./}"
+		if [[ -f "$repo_path/$rel_path" ]] && ! eaw_dynamic_context_is_excluded_relpath "$rel_path" &&
+			eaw_is_probably_text_file "$repo_path/$rel_path" &&
+			! eaw_dynamic_context_is_minified_file "$repo_path/$rel_path"; then
+			printf "%s\n" "$rel_path"
+		fi
+	done <"$tmp_paths" | LC_ALL=C sort -u
+
+	rm -f "$tmp_paths"
+}
+
+eaw_dynamic_context_extract_tokens() {
+	local ingest_dir="$1"
+	local max_tokens="$2"
+	local warnings_ref="$3"
+	local tmp_tokens
+	local ingest_file token_count stopwords_pattern
+
+	tmp_tokens="$(mktemp)"
+	stopwords_pattern='^(a|an|and|are|as|at|com|como|da|das|de|do|dos|e|em|for|from|in|is|na|nas|no|nos|o|of|on|or|os|para|por|sem|the|to|um|uma)$'
+
+	while IFS= read -r ingest_file; do
+		tr -cs '[:alnum:]_./-' '\n' <"$ingest_file" >>"$tmp_tokens"
+	done < <(eaw_dynamic_context_list_ingest_files "$ingest_dir")
+
+	mapfile -t _all_tokens < <(
+		awk '{ print tolower($0) }' "$tmp_tokens" |
+			awk -v stopwords="$stopwords_pattern" '
+				length($0) >= 3 && $0 !~ /^[0-9]+$/ && $0 !~ stopwords {
+					print $0
+				}
+			' |
+			LC_ALL=C sort -u
+	)
+	token_count="${#_all_tokens[@]}"
+	if (( token_count > max_tokens )); then
+		eval "$warnings_ref+=(\"max_tokens_extraidos atingido: descartados $((token_count - max_tokens)) tokens\")"
+	fi
+
+	printf "%s\n" "${_all_tokens[@]:0:max_tokens}"
+	rm -f "$tmp_tokens"
+}
+
+eaw_dynamic_context_write_snippets() {
+	local repo_path="$1"
+	local candidate_file="$2"
+	local snippet_file="$3"
+	local warnings_ref="$4"
+	local max_snippets="$5"
+	local max_bytes_total="$6"
+	local manifest_file="$7"
+	local candidates_output="$8"
+	local snippet_count=0
+	local total_bytes current_bytes
+	local rel_path score line_no start_line end_line file_path snippet_block remaining_bytes
+
+	: >"$snippet_file"
+	total_bytes=$(wc -c <"$manifest_file")
+	total_bytes=$((total_bytes + $(wc -c <"$candidates_output")))
+
+	while IFS=$'\t' read -r score rel_path line_no; do
+		[[ -n "$rel_path" ]] || continue
+		if (( snippet_count >= max_snippets )); then
+			eval "$warnings_ref+=(\"max_snippets atingido: descartados candidatos adicionais\")"
+			break
+		fi
+		file_path="$repo_path/$rel_path"
+		[[ -f "$file_path" ]] || continue
+		if ! eaw_is_probably_text_file "$file_path"; then
+			continue
+		fi
+		if [[ -z "$line_no" || ! "$line_no" =~ ^[0-9]+$ || "$line_no" -lt 1 ]]; then
+			line_no=1
+		fi
+		start_line=$((line_no > 2 ? line_no - 2 : 1))
+		end_line=$((line_no + 2))
+		snippet_block="$(printf '## %s (score=%s, lines=%s-%s)\n\n```text\n%s\n```\n\n' \
+			"$rel_path" "$score" "$start_line" "$end_line" \
+			"$(awk -v start="$start_line" -v end="$end_line" 'NR >= start && NR <= end { print }' "$file_path")")"
+		current_bytes=$(printf "%s" "$snippet_block" | wc -c | tr -d '[:space:]')
+		if (( total_bytes + current_bytes > max_bytes_total )); then
+			remaining_bytes=$((max_bytes_total - total_bytes))
+			if (( remaining_bytes > 0 )); then
+				printf "%s" "$snippet_block" | head -c "$remaining_bytes" >>"$snippet_file"
+			fi
+			eval "$warnings_ref+=(\"max_bytes_total atingido: snippets truncados em $rel_path\")"
+			break
+		fi
+		printf "%s" "$snippet_block" >>"$snippet_file"
+		total_bytes=$((total_bytes + current_bytes))
+		snippet_count=$((snippet_count + 1))
+	done <"$candidate_file"
+
+	if [[ ! -s "$snippet_file" ]]; then
+		printf "# Target Snippets\n\nNenhum snippet selecionado.\n" >"$snippet_file"
+	fi
+}
+
+eaw_dynamic_context_materialize() {
+	local card_dir="$1"
+	local dynamic_dir="$card_dir/context/dynamic"
+	local manifest_file="$dynamic_dir/00_scope_manifest.md"
+	local candidates_output="$dynamic_dir/20_candidate_files.txt"
+	local snippets_output="$dynamic_dir/30_target_snippets.md"
+	local warnings_output="$dynamic_dir/40_warnings.md"
+	local repo_entry repo_key repo_path ingest_dir max_tokens max_hits max_candidates max_snippets max_bytes_total
+	local tmp_candidate_file tmp_scored_candidates tmp_delta tmp_explicit tmp_tokens
+	local -a warnings=()
+	local -a explicit_paths=()
+	local -a delta_files=()
+	local -a tokens=()
+	local rel_path score line_no
+	local file_path base_name candidate_dir explicit_dir
+	declare -A candidate_scores=()
+	declare -A candidate_line_numbers=()
+	declare -A explicit_seen=()
+	declare -A delta_seen=()
+
+	eaw_require_command git
+	eaw_require_command rg
+
+	if ! repo_entry="$(eaw_dynamic_context_first_target_repo)"; then
+		die "dynamic context requires at least one target repository in repos.conf"
+	fi
+	IFS='|' read -r repo_key repo_path <<<"$repo_entry"
+	if [[ ! -d "$repo_path" ]]; then
+		die "dynamic context target repository not found: $repo_path"
+	fi
+	if ! git -C "$repo_path" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+		die "dynamic context target is not a git repository: $repo_path"
+	fi
+
+	ingest_dir="$card_dir/ingest"
+	max_tokens=30
+	max_hits=20
+	max_candidates=50
+	max_snippets=10
+	max_bytes_total=$((200 * 1024))
+
+	ensure_dir "$dynamic_dir"
+
+	tmp_candidate_file="$(mktemp)"
+	tmp_scored_candidates="$(mktemp)"
+	tmp_delta="$(mktemp)"
+	tmp_explicit="$(mktemp)"
+	tmp_tokens="$(mktemp)"
+
+	mapfile -t explicit_paths < <(eaw_dynamic_context_extract_explicit_paths "$ingest_dir" "$repo_path")
+	printf "%s\n" "${explicit_paths[@]}" >"$tmp_explicit"
+	mapfile -t tokens < <(eaw_dynamic_context_extract_tokens "$ingest_dir" "$max_tokens" warnings)
+	printf "%s\n" "${tokens[@]}" >"$tmp_tokens"
+
+	while IFS= read -r rel_path; do
+		[[ -n "$rel_path" ]] || continue
+		if [[ -f "$repo_path/$rel_path" ]] && ! eaw_dynamic_context_is_excluded_relpath "$rel_path" &&
+			eaw_is_probably_text_file "$repo_path/$rel_path"; then
+			printf "%s\n" "$rel_path"
+		fi
+	done < <(
+		{
+			git -C "$repo_path" diff --name-only
+			git -C "$repo_path" status --porcelain | awk '{print $2}'
+		} | sed 's#^\./##'
+	) | LC_ALL=C sort -u >"$tmp_delta"
+	mapfile -t delta_files <"$tmp_delta"
+
+	for rel_path in "${explicit_paths[@]}"; do
+		[[ -n "$rel_path" ]] || continue
+		explicit_seen["$rel_path"]=1
+		candidate_scores["$rel_path"]=$(( ${candidate_scores["$rel_path"]:-0} + 4 ))
+		candidate_line_numbers["$rel_path"]="${candidate_line_numbers["$rel_path"]:-1}"
+	done
+
+	for rel_path in "${delta_files[@]}"; do
+		[[ -n "$rel_path" ]] || continue
+		delta_seen["$rel_path"]=1
+		candidate_scores["$rel_path"]=$(( ${candidate_scores["$rel_path"]:-0} + 3 ))
+		candidate_line_numbers["$rel_path"]="${candidate_line_numbers["$rel_path"]:-1}"
+	done
+
+	for token in "${tokens[@]}"; do
+		[[ -n "$token" ]] || continue
+		mapfile -t _token_hits < <(
+			rg -n -S \
+				--glob '!node_modules/**' \
+				--glob '!dist/**' \
+				--glob '!build/**' \
+				--glob '!target/**' \
+				--glob '!.git/**' \
+				-- "$token" "$repo_path" 2>/dev/null || true
+		)
+		if (( ${#_token_hits[@]} > max_hits )); then
+			warnings+=("max_hits_por_token atingido para '$token': descartados $(( ${#_token_hits[@]} - max_hits )) hits")
+		fi
+		declare -A _seen_files=()
+		local _hit_count=0
+		local hit_entry hit_path hit_line
+		for hit_entry in "${_token_hits[@]}"; do
+			_hit_count=$((_hit_count + 1))
+			if (( _hit_count > max_hits )); then
+				break
+			fi
+			hit_path="${hit_entry%%:*}"
+			hit_line="${hit_entry#*:}"
+			hit_line="${hit_line%%:*}"
+			rel_path="${hit_path#$repo_path/}"
+			if eaw_dynamic_context_is_excluded_relpath "$rel_path"; then
+				continue
+			fi
+			if [[ ! -f "$repo_path/$rel_path" ]] || ! eaw_is_probably_text_file "$repo_path/$rel_path" ||
+				eaw_dynamic_context_is_minified_file "$repo_path/$rel_path"; then
+				continue
+			fi
+			if [[ -z "${_seen_files["$rel_path"]:-}" ]]; then
+				candidate_scores["$rel_path"]=$(( ${candidate_scores["$rel_path"]:-0} + 2 ))
+				_seen_files["$rel_path"]=1
+			fi
+			if [[ -z "${candidate_line_numbers["$rel_path"]:-}" ]]; then
+				candidate_line_numbers["$rel_path"]="$hit_line"
+			fi
+		done
+		unset _seen_files
+	done
+
+	for rel_path in "${!candidate_scores[@]}"; do
+		candidate_dir="$(dirname "$rel_path")"
+		for explicit_dir in "${explicit_paths[@]}"; do
+			[[ -n "$explicit_dir" ]] || continue
+			if [[ "$candidate_dir" == "$(dirname "$explicit_dir")" && "$rel_path" != "$explicit_dir" ]]; then
+				candidate_scores["$rel_path"]=$(( ${candidate_scores["$rel_path"]:-0} + 1 ))
+				break
+			fi
+		done
+		base_name="$(basename "${rel_path%.*}")"
+		if [[ "$rel_path" == *test* || "$rel_path" == tests/* ]]; then
+			for file_path in "${explicit_paths[@]}" "${delta_files[@]}"; do
+				[[ -n "$file_path" ]] || continue
+				if [[ "$base_name" == "$(basename "${file_path%.*}")" || "$base_name" == "$(basename "${file_path%.*}")_test" ]]; then
+					candidate_scores["$rel_path"]=$(( ${candidate_scores["$rel_path"]:-0} + 1 ))
+					break
+				fi
+			done
+		fi
+		printf "%s\t%s\t%s\n" "${candidate_scores["$rel_path"]}" "$rel_path" "${candidate_line_numbers["$rel_path"]:-1}" >>"$tmp_scored_candidates"
+	done
+
+	if [[ -s "$tmp_scored_candidates" ]]; then
+		LC_ALL=C sort -t $'\t' -k1,1nr -k2,2 "$tmp_scored_candidates" | head -n "$max_candidates" >"$tmp_candidate_file"
+		if (( $(wc -l <"$tmp_scored_candidates") > max_candidates )); then
+			warnings+=("max_arquivos_candidatos atingido: descartados $(( $(wc -l <"$tmp_scored_candidates") - max_candidates )) candidatos")
+		fi
+	else
+		: >"$tmp_candidate_file"
+	fi
+
+	cat >"$manifest_file" <<EOF
+# Scope Manifest
+
+- baseline: deterministic_baseline_v1
+- repo_key: $repo_key
+- repo_path: $repo_path
+- max_tokens_extraidos: $max_tokens
+- max_hits_por_token: $max_hits
+- max_arquivos_candidatos: $max_candidates
+- max_snippets: $max_snippets
+- max_bytes_total: $max_bytes_total
+
+## Tokens
+EOF
+	if [[ ${#tokens[@]} -gt 0 ]]; then
+		printf '%s\n' "${tokens[@]}" | sed 's/^/- /' >>"$manifest_file"
+	else
+		printf -- "- none\n" >>"$manifest_file"
+	fi
+	cat >>"$manifest_file" <<'EOF'
+
+## Explicit Files
+EOF
+	if [[ ${#explicit_paths[@]} -gt 0 ]]; then
+		printf '%s\n' "${explicit_paths[@]}" | sed 's/^/- /' >>"$manifest_file"
+	else
+		printf -- "- none\n" >>"$manifest_file"
+	fi
+	cat >>"$manifest_file" <<'EOF'
+
+## Delta Files
+EOF
+	if [[ ${#delta_files[@]} -gt 0 ]]; then
+		printf '%s\n' "${delta_files[@]}" | sed 's/^/- /' >>"$manifest_file"
+	else
+		printf -- "- none\n" >>"$manifest_file"
+	fi
+	cat >>"$manifest_file" <<'EOF'
+
+## Truncamentos
+EOF
+	if [[ ${#warnings[@]} -gt 0 ]]; then
+		printf '%s\n' "${warnings[@]}" | sed 's/^/- /' >>"$manifest_file"
+	else
+		printf -- "- none\n" >>"$manifest_file"
+	fi
+
+	: >"$candidates_output"
+	while IFS=$'\t' read -r score rel_path line_no; do
+		[[ -n "$rel_path" ]] || continue
+		printf "score=%s path=%s\n" "$score" "$rel_path" >>"$candidates_output"
+	done <"$tmp_candidate_file"
+
+	eaw_dynamic_context_write_snippets "$repo_path" "$tmp_candidate_file" "$snippets_output" warnings "$max_snippets" "$max_bytes_total" "$manifest_file" "$candidates_output"
+
+	if [[ ${#warnings[@]} -gt 0 ]]; then
+		{
+			printf "# Warnings\n\n"
+			printf '%s\n' "${warnings[@]}" | sed 's/^/- /'
+		} >"$warnings_output"
+	else
+		rm -f "$warnings_output"
+	fi
+
+	rm -f "$tmp_candidate_file" "$tmp_scored_candidates" "$tmp_delta" "$tmp_explicit" "$tmp_tokens"
+}
+
+eaw_dynamic_context_prepare_for_workflow_phase() {
+	local phase="$1"
+	local card_dir="${OUTDIR:-}"
+	local previous_phase
+	local manifest_file
+
+	[[ "$phase" == workflow_phase_* ]] || return 0
+	[[ -n "$card_dir" && -d "$card_dir" ]] || return 0
+	[[ -n "${EAW_CARD_WORKFLOW_STATE_FILE:-}" && -f "${EAW_CARD_WORKFLOW_STATE_FILE:-}" ]] || return 0
+
+	previous_phase="$(eaw_normalize_phase_id "$(eaw_yaml_state_scalar "$EAW_CARD_WORKFLOW_STATE_FILE" "previous_phase")")"
+	manifest_file="$card_dir/context/dynamic/00_scope_manifest.md"
+	if [[ "${EAW_CARD_WORKFLOW_CURRENT_PHASE:-}" == "findings" && "$previous_phase" == "ingest" && ! -f "$manifest_file" ]]; then
+		eaw_dynamic_context_materialize "$card_dir"
+	fi
+	return 0
+}
+
+eaw_metrics_sum_file_bytes() {
+	local target_dir="$1"
+
+	if [[ ! -d "$target_dir" ]]; then
+		printf "0\n"
+		return 0
+	fi
+
+	find "$target_dir" -type f -exec wc -c {} + 2>/dev/null | awk '
+		NF >= 2 && $2 != "total" { sum += $1 }
+		END { print sum + 0 }
+	'
+}
+
+eaw_metrics_count_files() {
+	local target_dir="$1"
+
+	if [[ ! -d "$target_dir" ]]; then
+		printf "0\n"
+		return 0
+	fi
+
+	find "$target_dir" -type f | awk 'END { print NR + 0 }'
+}
+
+eaw_metrics_count_lines() {
+	local file="$1"
+	local pattern="$2"
+
+	if [[ ! -f "$file" ]]; then
+		printf "0\n"
+		return 0
+	fi
+
+	awk -v pattern="$pattern" '$0 ~ pattern { count++ } END { print count + 0 }' "$file"
+}
+
+eaw_metrics_prompt_size_bytes() {
+	local card_dir="$1"
+	local prompt_file="$card_dir/prompts/implementation_executor.md"
+
+	if [[ ! -f "$prompt_file" && -n "${EAW_CARD_WORKFLOW_CURRENT_PHASE:-}" ]]; then
+		prompt_file="$card_dir/prompts/${EAW_CARD_WORKFLOW_CURRENT_PHASE}.md"
+	fi
+	if [[ ! -f "$prompt_file" ]]; then
+		printf "0\n"
+		return 0
+	fi
+
+	wc -c <"$prompt_file" | tr -d '[:space:]'
+}
+
+eaw_metrics_retry_count() {
+	local journal_file="$1"
+
+	if [[ ! -f "$journal_file" ]]; then
+		printf "0\n"
+		return 0
+	fi
+
+	awk '
+		match($0, /"phase":"workflow_phase_([^"]+)"/, phase_match) &&
+		match($0, /"event_type":"phase_completed"/) {
+			total++
+			seen[phase_match[1]] = 1
+		}
+		END {
+			unique = 0
+			for (phase_name in seen) {
+				unique++
+			}
+			retries = total - unique
+			if (retries < 0) {
+				retries = 0
+			}
+			print retries
+		}
+	' "$journal_file"
+}
+
+eaw_metrics_phase_duration_block() {
+	local journal_file="$1"
+
+	if [[ ! -f "$journal_file" ]]; then
+		printf -- "- sem eventos de fase registrados\n"
+		return 0
+	fi
+
+	awk '
+		match($0, /"phase":"workflow_phase_([^"]+)"/, phase_match) &&
+		match($0, /"duration_ms":([0-9]+)/, duration_match) &&
+		match($0, /"event_type":"phase_completed"/) {
+			sum[phase_match[1]] += duration_match[1]
+			count++
+		}
+		END {
+			if (count == 0) {
+				print "- sem eventos de fase registrados"
+				exit
+			}
+			for (phase_name in sum) {
+				printf "- %s: %sms\n", phase_name, sum[phase_name]
+			}
+		}
+	' "$journal_file" | LC_ALL=C sort
+}
+
+eaw_write_deterministic_baseline() {
+	local card_dir="$1"
+	local card="${2:-${EAW_CARD_WORKFLOW_CARD:-$(basename "$card_dir")}}"
+	local baseline_file="$card_dir/investigations/10_baseline.md"
+	local dynamic_dir="$card_dir/context/dynamic"
+	local journal_file="$card_dir/execution_journal.jsonl"
+	local manifest_file="$dynamic_dir/00_scope_manifest.md"
+	local candidates_file="$dynamic_dir/20_candidate_files.txt"
+	local snippets_file="$dynamic_dir/30_target_snippets.md"
+	local context_bytes context_files snippet_count prompt_size retries
+	local phase_duration_block
+	local journal_status prompt_status snippets_status
+
+	ensure_dir "$(dirname "$baseline_file")"
+
+	context_bytes=$(($(eaw_metrics_sum_file_bytes "$dynamic_dir")))
+	context_files=$(($(eaw_metrics_count_files "$dynamic_dir")))
+	snippet_count="$(eaw_metrics_count_lines "$snippets_file" "^### ")"
+	prompt_size="$(eaw_metrics_prompt_size_bytes "$card_dir")"
+	retries="$(eaw_metrics_retry_count "$journal_file")"
+	phase_duration_block="$(eaw_metrics_phase_duration_block "$journal_file")"
+	journal_status="$( [[ -f "$journal_file" ]] && printf "presente" || printf "ausente" )"
+	prompt_status="$( [[ -f "$card_dir/prompts/implementation_executor.md" || -n "${EAW_CARD_WORKFLOW_CURRENT_PHASE:-}" && -f "$card_dir/prompts/${EAW_CARD_WORKFLOW_CURRENT_PHASE}.md" ]] && printf "presente" || printf "ausente" )"
+	snippets_status="$( [[ -f "$snippets_file" ]] && printf "presente" || printf "ausente" )"
+
+	cat >"$baseline_file" <<EOF
+# Baseline - Card $card
+
+## Estado do Baseline
+
+- baseline: deterministic_baseline_v1
+- dynamic_context_dir: ${dynamic_dir#$card_dir/}
+
+## Artefatos Materializados
+
+- manifest: ${manifest_file#$card_dir/}
+- candidate_files: ${candidates_file#$card_dir/}
+- target_snippets: ${snippets_file#$card_dir/}
+
+## Metricas
+
+- tempo por fase:
+$phase_duration_block
+- tamanho do contexto: ${context_bytes} bytes
+- numero de arquivos: ${context_files}
+- numero de snippets: ${snippet_count}
+- tamanho final do prompt: ${prompt_size} bytes
+- numero de retries: ${retries}
+
+## Fontes das Metricas
+
+- execution_journal: ${journal_status}
+- prompt_final: ${prompt_status}
+- snippets_file: ${snippets_status}
+
+## Evidencias
+
+- manifest_exists: $( [[ -f "$manifest_file" ]] && printf "yes" || printf "no" )
+- candidate_files_exists: $( [[ -f "$candidates_file" ]] && printf "yes" || printf "no" )
+- target_snippets_exists: $( [[ -f "$snippets_file" ]] && printf "yes" || printf "no" )
+- journal_exists: $( [[ -f "$journal_file" ]] && printf "yes" || printf "no" )
+EOF
+}
+
+eaw_write_pilot_report() {
+	local card_dir="$1"
+	local card="${2:-${EAW_CARD_WORKFLOW_CARD:-$(basename "$card_dir")}}"
+	local track_id="${3:-${EAW_CARD_WORKFLOW_TRACK_ID:-unknown}}"
+	local current_phase="${4:-${EAW_CARD_WORKFLOW_CURRENT_PHASE:-unknown}}"
+	local report_file="$card_dir/pilot_report.md"
+	local baseline_file="$card_dir/investigations/10_baseline.md"
+	local dynamic_dir="$card_dir/context/dynamic"
+	local context_bytes context_files snippet_count prompt_size retries
+	local phase_duration_block baseline_status
+	local journal_status prompt_status snippets_status
+
+	ensure_dir "$card_dir"
+	if [[ ! -f "$baseline_file" ]]; then
+		eaw_write_deterministic_baseline "$card_dir" "$card"
+	fi
+
+	context_bytes=$(($(eaw_metrics_sum_file_bytes "$dynamic_dir")))
+	context_files=$(($(eaw_metrics_count_files "$dynamic_dir")))
+	snippet_count="$(eaw_metrics_count_lines "$dynamic_dir/30_target_snippets.md" "^### ")"
+	prompt_size="$(eaw_metrics_prompt_size_bytes "$card_dir")"
+	retries="$(eaw_metrics_retry_count "$card_dir/execution_journal.jsonl")"
+	phase_duration_block="$(eaw_metrics_phase_duration_block "$card_dir/execution_journal.jsonl")"
+	baseline_status="presente"
+	if [[ ! -d "$dynamic_dir" ]]; then
+		baseline_status="ausente"
+	fi
+	journal_status="$( [[ -f "$card_dir/execution_journal.jsonl" ]] && printf "presente" || printf "ausente" )"
+	prompt_status="$( [[ -f "$card_dir/prompts/implementation_executor.md" || -n "$current_phase" && -f "$card_dir/prompts/${current_phase}.md" ]] && printf "presente" || printf "ausente" )"
+	snippets_status="$( [[ -f "$dynamic_dir/30_target_snippets.md" ]] && printf "presente" || printf "ausente" )"
+
+	cat >"$report_file" <<EOF
+# Pilot Report - Card $card
+
+## Descricao do Card
+
+- card: $card
+- track: $track_id
+- fase_atual: $current_phase
+- baseline_status: $baseline_status
+
+## Configuracao da Track
+
+- findings.dynamic_context_template: deterministic_baseline_v1
+- planning.dynamic_context_template: deterministic_baseline_v1
+- saida_final: pilot_report.md
+
+## Metricas Coletadas
+
+- tempo por fase:
+$phase_duration_block
+- tamanho do contexto: ${context_bytes} bytes
+- numero de arquivos: ${context_files}
+- numero de snippets: ${snippet_count}
+- tamanho final do prompt: ${prompt_size} bytes
+- numero de retries: ${retries}
+
+## Fontes das Metricas
+
+- execution_journal: ${journal_status}
+- prompt_final: ${prompt_status}
+- snippets_file: ${snippets_status}
+
+## Comparacao com Baseline
+
+- baseline_file: ${baseline_file#$card_dir/}
+- baseline_dynamic_context: $( [[ -d "$dynamic_dir" ]] && printf "materializado" || printf "nao materializado" )
+
+## Observacoes do Runtime
+
+- baseline_status: ${baseline_status}
+- pilot_report_file: ${report_file#$card_dir/}
+- dynamic_context_dir: ${dynamic_dir#$card_dir/}
+EOF
+}
+
+eaw_materialize_context_contracts_for_completed_phases() {
+	local card_dir="$1"
+	local track_dir="$EAW_TRACKS_DIR/${EAW_CARD_WORKFLOW_TRACK_ID:-}"
+	local current_phase="${EAW_CARD_WORKFLOW_CURRENT_PHASE:-}"
+	local phase_id phase_file dynamic_tpl
+	local dynamic_missing_at_start=0
+	local expected_dynamic_tpl=""
+	local -a phases_to_check=()
+
+	[[ -n "${EAW_CARD_WORKFLOW_TRACK_ID:-}" && -d "$track_dir" ]] || return 0
+	case "$current_phase" in
+	findings | hypotheses)
+		phases_to_check=(findings)
+		;;
+	planning | implementation_planning | implementation_executor)
+		phases_to_check=(findings planning)
+		;;
+	*)
+		return 0
+		;;
+	esac
+
+	for phase_id in "${phases_to_check[@]}"; do
+		phase_file="$track_dir/phases/$phase_id.yaml"
+		[[ -f "$phase_file" ]] || continue
+		dynamic_tpl="$(eaw_yaml_phase_dynamic_context_template "$phase_file")"
+		if [[ -n "$dynamic_tpl" && ! -d "$card_dir/context/dynamic" ]]; then
+			dynamic_missing_at_start=1
+			expected_dynamic_tpl="$dynamic_tpl"
+		fi
+	done
+
+	if [[ "$dynamic_missing_at_start" -eq 1 ]]; then
+		eaw_context_template_resolve_active_metadata "dynamic" "$expected_dynamic_tpl" >/dev/null || return 1
+		eaw_dynamic_context_materialize "$card_dir" || return 1
+		eaw_write_deterministic_baseline "$card_dir"
+	fi
+	if [[ "$dynamic_missing_at_start" -eq 1 ]]; then
+		printf "ERROR: context nao materializado: dynamic_context_template='%s' declarado mas artefato ausente em '%s' no inicio da execucao\n" \
+			"$expected_dynamic_tpl" \
+			"$card_dir/context/dynamic" >&2
+		return 1
+	fi
+
+	if [[ -d "$card_dir/context/dynamic" ]]; then
+		eaw_write_deterministic_baseline "$card_dir"
+	fi
+	return 0
+}
+
+eaw_prepare_workflow_runtime_inputs() {
+	local phase="$1"
+
+	eaw_dynamic_context_prepare_for_workflow_phase "$phase" || return 1
+	eaw_materialize_context_contracts_for_completed_phases "${OUTDIR:-}" || return 1
+	if [[ "$phase" == workflow_phase_* && -n "${EAW_CARD_WORKFLOW_CURRENT_PHASE_FILE:-}" ]]; then
+		phase_collect_context "${OUTDIR:-}" "${EAW_CARD_WORKFLOW_CURRENT_PHASE_FILE:-}" || return 1
+	fi
+	return 0
+}
+
 run_phase() {
 	# run_phase <phase-name> <fatal:true|false> <fn> [args...]
 	local phase="$1"
@@ -684,7 +1517,11 @@ run_phase() {
 	# emit phase_started event (H3/H6)
 	eaw_journal_append "${EAW_CARD_WORKFLOW_CARD:-}" "${EAW_CARD_WORKFLOW_TRACK_ID:-}" "$phase" "STARTED" "0" "phase_started"
 	start=$(date +%s%3N)
-	if "$fn" "$@"; then
+	if eaw_prepare_workflow_runtime_inputs "$phase" && "$fn" "$@"; then
+		if [[ "$phase" == "workflow_phase_implementation_executor" ]]; then
+			eaw_write_deterministic_baseline "${OUTDIR:-}" || return 1
+			eaw_write_pilot_report "${OUTDIR:-}" "${EAW_CARD_WORKFLOW_CARD:-}" "${EAW_CARD_WORKFLOW_TRACK_ID:-}" "${EAW_CARD_WORKFLOW_CURRENT_PHASE:-}" || return 1
+		fi
 		rc=0
 		status="OK"
 	else
@@ -693,10 +1530,9 @@ run_phase() {
 	fi
 	end=$(date +%s%3N)
 	dur=$((end - start))
-	# record to execution log
-	printf "%s|%s|%s|%s\n" "$phase" "$status" "$dur" "$note" >>"$OUTDIR/execution.log"
 	# emit phase_completed event (H4/H6)
 	eaw_journal_append "${EAW_CARD_WORKFLOW_CARD:-}" "${EAW_CARD_WORKFLOW_TRACK_ID:-}" "$phase" "$status" "$dur" "phase_completed"
+	eaw_execution_log_from_journal "${OUTDIR:-}"
 	# print summary line
 	echo "[phase] $phase -> $status (${dur}ms)"
 	if [[ "$status" != "OK" && "$fatal" == "true" ]]; then
@@ -848,9 +1684,7 @@ EOF
 			fi
 		fi
 	done < <(scaffold_template_names)
-	# initialize execution.log
-	: >"$outdir/execution.log"
-	printf "phase|status|duration_ms|note\n" >>"$outdir/execution.log"
+	eaw_execution_log_from_journal "$outdir"
 	return 0
 }
 
@@ -902,13 +1736,169 @@ phase_resolve_repos() {
 	return 0
 }
 
+eaw_sha256_file() {
+	local file="$1"
+	if command -v sha256sum >/dev/null 2>&1; then
+		sha256sum "$file" | awk '{print $1}'
+	elif command -v shasum >/dev/null 2>&1; then
+		shasum -a 256 "$file" | awk '{print $1}'
+	else
+		cksum "$file" | awk '{print $1}'
+	fi
+}
+
+eaw_sha256_text() {
+	local text="$1"
+	if command -v sha256sum >/dev/null 2>&1; then
+		printf "%s" "$text" | sha256sum | awk '{print $1}'
+	elif command -v shasum >/dev/null 2>&1; then
+		printf "%s" "$text" | shasum -a 256 | awk '{print $1}'
+	else
+		printf "%s" "$text" | cksum | awk '{print $1}'
+	fi
+}
+
+eaw_onboarding_relpath_is_allowed() {
+	local rel_path="$1"
+	case "$rel_path" in
+	*.md | *.txt | *.yaml | *.yml | *.json)
+		return 0
+		;;
+	esac
+	return 1
+}
+
+eaw_onboarding_relpath_is_excluded() {
+	local rel_path="$1"
+	case "$rel_path" in
+	.git/* | node_modules/* | dist/* | build/* | target/*)
+		return 0
+		;;
+	esac
+	return 1
+}
+
+eaw_onboarding_file_is_text() {
+	local file="$1"
+	# Use grep's binary sniffing to avoid requiring python3.
+	# Empty files should still count as text for onboarding purposes.
+	if [[ ! -s "$file" ]]; then
+		return 0
+	fi
+	LC_ALL=C grep -Iq . "$file"
+}
+
+eaw_onboarding_write_provenance() {
+	local provenance_file="$1"
+	local onboarding_tpl="$2"
+	local repo_key="$3"
+	local source_root="$4"
+	local source_status="$5"
+	local max_files_onboarding="$6"
+	local max_bytes_total_onboarding="$7"
+	local max_bytes_per_file_onboarding="$8"
+	local considered_file="$9"
+	local materialized_file="${10}"
+	local ignored_file="${11}"
+	local bytes_materialized="${12}"
+	local fingerprint="${13}"
+	local considered_count materialized_count ignored_count
+
+	considered_count=0
+	materialized_count=0
+	ignored_count=0
+	if [[ -f "$considered_file" ]]; then
+		considered_count=$(awk 'NF { count++ } END { print count + 0 }' "$considered_file")
+	fi
+	if [[ -f "$materialized_file" ]]; then
+		materialized_count=$(awk 'NF { count++ } END { print count + 0 }' "$materialized_file")
+	fi
+	if [[ -f "$ignored_file" ]]; then
+		ignored_count=$(awk 'NF { count++ } END { print count + 0 }' "$ignored_file")
+	fi
+
+	{
+		printf "# Onboarding Provenance\n\n"
+		printf -- "- onboarding_template: %s\n" "$onboarding_tpl"
+		printf -- "- repo_key: %s\n" "${repo_key:-unresolved}"
+		printf -- "- source_root: %s\n" "${source_root:-unresolved}"
+		printf -- "- source_status: %s\n" "$source_status"
+		printf -- "- max_files_onboarding: %s\n" "$max_files_onboarding"
+		printf -- "- max_bytes_total_onboarding: %s\n" "$max_bytes_total_onboarding"
+		printf -- "- max_bytes_per_file_onboarding: %s\n" "$max_bytes_per_file_onboarding"
+		printf -- "- files_considered: %s\n" "$considered_count"
+		printf -- "- files_materialized: %s\n" "$materialized_count"
+		printf -- "- files_ignored: %s\n" "$ignored_count"
+		printf -- "- bytes_materialized: %s\n" "$bytes_materialized"
+		printf -- "- fingerprint: %s\n" "$fingerprint"
+		printf "\n## Considered Files\n\n"
+		if [[ -s "$considered_file" ]]; then
+			sed 's/^/- /' "$considered_file"
+		else
+			printf -- "- (none)\n"
+		fi
+		printf "\n## Materialized Files\n\n"
+		if [[ -s "$materialized_file" ]]; then
+			sed 's/^/- /' "$materialized_file"
+		else
+			printf -- "- (none)\n"
+		fi
+		printf "\n## Ignored Files\n\n"
+		if [[ -s "$ignored_file" ]]; then
+			sed 's/^/- /' "$ignored_file"
+		else
+			printf -- "- (none)\n"
+		fi
+		printf "\n## Notes\n\n"
+		if [[ "$source_status" == "absent" ]]; then
+			printf -- "- onboarding source absent; execution continued without error.\n"
+		elif [[ "$source_status" == "unresolved" ]]; then
+			printf -- "- target repository key could not be resolved; onboarding remained observational only.\n"
+		else
+			printf -- "- onboarding materialized from governed workspace source with deterministic path ordering.\n"
+		fi
+	} >"$provenance_file"
+}
+
+
 phase_collect_context() {
-	# context engine in standby: collection disabled
+	# Collect context for a card phase based on phase.context declarations.
+	# Conditions injection on materialization under out/<CARD>/context/.
+	# Fallback: no injection when context block or specific field is absent.
+	# Errors deterministically for template inexistente, onboarding ausente,
+	# and contexto nao materializado. Does not inject context not backed by a
+	# materialized artifact.
+	local card_dir="$1"
+	local phase_file="$2"
+	local dynamic_tpl errors=0
+
+	[[ -n "$phase_file" && -f "$phase_file" ]] || return 0
+
+	dynamic_tpl="$(eaw_yaml_phase_dynamic_context_template "$phase_file")"
+
+	# Fallback: context block or all fields absent — no injection, preserve current behavior.
+	if [[ -z "$dynamic_tpl" ]]; then
+		return 0
+	fi
+
+	if [[ -n "$dynamic_tpl" ]]; then
+		eaw_context_template_resolve_active_metadata "dynamic" "$dynamic_tpl" >/dev/null || return 1
+		local dynamic_context_dir="$card_dir/context/dynamic"
+		if [[ ! -d "$dynamic_context_dir" ]]; then
+			printf "ERROR: context nao materializado: dynamic_context_template='%s' declarado mas artefato ausente em '%s' (template inexistente ou coleta nao executada)\n" \
+				"$dynamic_tpl" "$dynamic_context_dir" >&2
+			errors=$((errors + 1))
+		fi
+	fi
+
+	if [[ "$errors" -gt 0 ]]; then
+		return 1
+	fi
 	return 0
 }
 
 phase_search_hits() {
-	# context engine in standby: search hits disabled
+	# search hit collection not yet implemented; context collection governed by phase_collect_context
 	return 0
 }
 
@@ -1034,8 +2024,54 @@ intake_has_section_headings() {
 	fi
 }
 
+# Rebuild the legacy execution.log view from the append-only journal.
+# The derived file preserves the historical 4-column pipe format for consumers.
+eaw_execution_log_from_journal() {
+	local outdir="${1:-${OUTDIR:-}}"
+	local journal_file log_file tmp_file
+
+	[[ -n "$outdir" ]] || return 0
+	journal_file="$outdir/execution_journal.jsonl"
+	log_file="$outdir/execution.log"
+	tmp_file="${log_file}.tmp.$$"
+
+	{
+		printf "phase|status|duration_ms|note\n"
+		if [[ -f "$journal_file" ]]; then
+			awk '
+				function extract_string(line, key,    value) {
+					value = line
+					sub(".*\"" key "\":\"", "", value)
+					sub("\".*", "", value)
+					return value
+				}
+				function extract_number(line, key,    value) {
+					value = line
+					sub(".*\"" key "\":", "", value)
+					sub(",.*", "", value)
+					sub("}.*", "", value)
+					return value
+				}
+				{
+					event_type = ""
+					if ($0 ~ /"event_type":"/) {
+						event_type = extract_string($0, "event_type")
+					}
+					if (event_type == "" || event_type == "phase_completed") {
+						printf "%s|%s|%s|\n",
+							extract_string($0, "phase"),
+							extract_string($0, "status"),
+							extract_number($0, "duration_ms")
+					}
+				}
+			' "$journal_file"
+		fi
+	} >"$tmp_file"
+	mv "$tmp_file" "$log_file"
+}
+
 # Append one JSON event to the Execution Journal for the current card.
-# H2: writes to ${OUTDIR}/execution_journal.jsonl (separate file, JSON Lines).
+# H2: writes to ${OUTDIR}/execution_journal.jsonl (single source, JSON Lines).
 # H3: centralised wrapper — all journal writes go through this function.
 # H5: no-op when OUTDIR or card_id is empty (safe in unit-test contexts).
 eaw_journal_append() {
@@ -1056,7 +2092,71 @@ eaw_journal_append() {
 		>>"${OUTDIR}/execution_journal.jsonl"
 }
 
-# context engine in standby: context_pack parsing disabled
+# Parse phase.context.dynamic_context_template from phase YAML.
+# Returns the logical template identifier (string) or empty when absent.
+eaw_yaml_phase_dynamic_context_template() {
+	local file="$1"
+	awk '
+		function trim(s) {
+			sub(/^[[:space:]]+/, "", s)
+			sub(/[[:space:]]+$/, "", s)
+			sub(/^"/, "", s)
+			sub(/"$/, "", s)
+			return s
+		}
+		/^phase:[[:space:]]*$/ { in_phase=1; next }
+		in_phase && /^[^[:space:]]/ { in_phase=0; in_context=0 }
+		in_phase && /^  context:[[:space:]]*$/ { in_context=1; next }
+		in_context && /^  [^[:space:]]/ { in_context=0 }
+		in_context && /^    dynamic_context_template:[[:space:]]*/ {
+			line=$0
+			sub(/^    dynamic_context_template:[[:space:]]*/, "", line)
+			print trim(line)
+			exit
+		}
+	' "$file"
+}
+
+# Parse phase.context.onboarding_template from phase YAML.
+# Returns the logical template identifier (string) or empty when absent.
+eaw_yaml_phase_onboarding_template() {
+	local file="$1"
+	awk '
+		function trim(s) {
+			sub(/^[[:space:]]+/, "", s)
+			sub(/[[:space:]]+$/, "", s)
+			sub(/^"/, "", s)
+			sub(/"$/, "", s)
+			return s
+		}
+		/^phase:[[:space:]]*$/ { in_phase=1; next }
+		in_phase && /^[^[:space:]]/ { in_phase=0; in_context=0 }
+		in_phase && /^  context:[[:space:]]*$/ { in_context=1; next }
+		in_context && /^  [^[:space:]]/ { in_context=0 }
+		in_context && /^    onboarding_template:[[:space:]]*/ {
+			line=$0
+			sub(/^    onboarding_template:[[:space:]]*/, "", line)
+			print trim(line)
+			exit
+		}
+	' "$file"
+}
+
+# Parse the full context pack from phase YAML.
+# Outputs key=value lines for each declared context field.
+# Returns empty output when phase.context block is absent (fallback: no injection).
 eaw_yaml_phase_context_pack() {
-	return 0
+	local phase_file="$1"
+	local dynamic_tpl onboarding_tpl
+	dynamic_tpl="$(eaw_yaml_phase_dynamic_context_template "$phase_file")"
+	onboarding_tpl="$(eaw_yaml_phase_onboarding_template "$phase_file")"
+	if [[ -n "$dynamic_tpl" || -n "$onboarding_tpl" ]]; then
+		printf "context=true\n"
+	fi
+	if [[ -n "$dynamic_tpl" ]]; then
+		printf "dynamic_context_template=%s\n" "$dynamic_tpl"
+	fi
+	if [[ -n "$onboarding_tpl" ]]; then
+		printf "onboarding_template=%s\n" "$onboarding_tpl"
+	fi
 }

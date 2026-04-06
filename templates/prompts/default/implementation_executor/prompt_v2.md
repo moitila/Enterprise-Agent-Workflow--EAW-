@@ -62,6 +62,13 @@ RULES
   - Validar que a allowlist de escrita esta fechada (sem glob aberto).
   - Validar que `10_change_plan.md` contem `Objetivo de Execucao`, `Hipotese(s) Selecionada(s)`, Steps numerados, justificativas referenciando `40_next_steps.md` e secao `Rollback`.
   - Validar rastreabilidade minima: `40_next_steps.md` com hipoteses `H[0-9]+`, `10_change_plan.md` com hipoteses `H[0-9]+` selecionadas e referencia explicita a `40_next_steps.md`.
+  - Se `{{CARD_DIR}}/ingest/raw_card_explication.md` exigir auditoria previa com artefatos mandatarios de analise, confirmar a existencia de:
+    - `{{CARD_DIR}}/analysis/00_track_audit.md`
+    - `{{CARD_DIR}}/analysis/10_issues_detected.md`
+    - `{{CARD_DIR}}/analysis/20_refactor_plan.md`
+  - Se qualquer artefato obrigatorio de analise estiver ausente, falhar fechado e registrar `auditoria mandatoria ausente; execucao corretiva bloqueada por contrato`.
+  - Bloquear se houver divergencia sem justificativa rastreavel entre o objetivo soberano do card e o escopo operacional recebido.
+  - Nao aceitar `00_scope.lock.md` ou `10_change_plan.md` que reduzam auditoria ampla a patch local sem justificativa de fatiamento.
 - PASSO 2 - CONTEXTO E HIPOTESE DE EXECUCAO:
   - Resumir o objetivo do card em ate 3 linhas.
   - Confirmar In Scope, allowlist e hipoteses `H[0-9]+` selecionadas.
@@ -89,11 +96,14 @@ FORBIDDEN
 - Nao executar automacoes destrutivas.
 - Nao criar ou alterar `20_patch_notes.md` fora do fluxo aprovado da fase; preservar quando ja existir.
 - Nao tentar solucao alternativa em caso de falha.
+- Nao reduzir o objetivo soberano do card para um subproblema local sem justificativa evidencial e rastreavel.
 
 FAIL_CONDITIONS
 - Falhar em qualquer erro de pre-check ou comando critico (fail-fast).
 - Falhar se qualquer arquivo obrigatorio estiver ausente.
 - Falhar se a validacao estrutural pre-execucao falhar.
+- Falhar se `raw_card_explication.md` exigir auditoria previa e qualquer artefato obrigatorio em `{{CARD_DIR}}/analysis/` estiver ausente.
+- Falhar se houver divergencia sem justificativa rastreavel entre o objetivo soberano do card e o escopo operacional recebido.
 - Falhar em qualquer tentativa de leitura fora de `{{CARD_DIR}}` e TARGET_REPOS necessarios para os Steps.
 - Falhar se qualquer escrita ocorrer fora da allowlist.
 - Falhar se `bash -n` ou qualquer comando de validacao obrigatoria falhar.

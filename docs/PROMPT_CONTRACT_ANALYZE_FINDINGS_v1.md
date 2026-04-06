@@ -3,7 +3,7 @@ Enterprise Agent Workflow (EAW)
 
 Status: OFFICIAL
 Scope: Analyze subphase `findings`
-Applies to: `eaw analyze` -> `investigations/findings_agent_prompt.md`
+Applies to: `track feature` -> `templates/prompts/feature/findings/prompt_v4.md`
 
 ---
 
@@ -23,7 +23,8 @@ Seu proposito e:
 | Categoria | Caminho | Regra |
 | --- | --- | --- |
 | Entrada obrigatoria | `investigations/00_intake.md` | Deve existir antes do inicio da subfase |
-| Artefato runtime | `investigations/findings_agent_prompt.md` | Prompt auxiliar emitido por `eaw analyze` |
+| Superficie canonica da fase | `templates/prompts/feature/findings/prompt_v4.md` | Prompt ativo da fase `findings`, resolvido pelo binding operacional da track |
+| Artefato runtime auxiliar | `investigations/findings_agent_prompt.md` | Materializacao opcional do prompt da fase para auditoria, sem autoridade separada |
 | Saida obrigatoria | `investigations/20_findings.md` | Consolida contexto confirmado, evidencias, criterios, comportamentos, divergencias e lacunas |
 | Saida opcional | `investigations/_warnings.md` | Permitida somente se a subfase precisar registrar warnings |
 
@@ -42,11 +43,12 @@ Seu proposito e:
 
 ## 5. Regras Obrigatorias
 
-- Executar o pre-check com `cd "$EAW_ROOT_DIR"`, `test -f ./scripts/eaw` e `test -f "$CONFIG_SOURCE"`.
+- Executar o pre-check com `cd "$RUNTIME_ROOT"`, `test -f ./scripts/eaw` e `test -f "$CONFIG_SOURCE"`.
 - Confirmar a existencia de `investigations/00_intake.md`; se faltar, bloquear a subfase.
-- Executar baseline com `EAW_WORKDIR` apontando para o workspace ativo, seguido de `./scripts/eaw doctor` e `./scripts/eaw validate`.
+- Nao executar doctor ou validate como requisito da subfase Findings.
 - Produzir `20_findings.md` com estrutura equivalente ao template e ao prompt ativos, preservando as secoes observadas para contexto confirmado, evidencias coletadas, criterios de aceite identificados, comportamentos observados, divergencias identificadas e lacunas de informacao.
 - Em cada evidencia, registrar arquivo, comando executado, trecho relevante e interpretacao objetiva.
+- A consistencia de execucao e garantida pelo eaw next como regra de orquestracao, sem substituir o contrato visivel desta fase.
 - Retornar rastreabilidade de execucao com arquivos lidos, arquivos alterados, saida literal dos testes e confirmacao de que nenhuma hipotese ou plano foi criado.
 
 ## 6. Condicoes de Falha
@@ -62,7 +64,8 @@ Seu proposito e:
 
 - Runtime root: `EAW-tool/scripts/eaw`
 - Implementacao observada da fase: `scripts/commands/cmd_analyze.sh`
-- Template efetivo da subfase: `templates/prompts/default/analyze_findings/prompt_v{ACTIVE}.md` (resolvido via `ACTIVE`)
+- Binding operacional da fase: `tracks/feature/phases/findings.yaml` com `active: 4`
+- Template efetivo da subfase: `templates/prompts/feature/findings/prompt_v4.md`
 - Contrato consolidado complementar: `docs/PROMPT_CONTRACT_ANALYZE_v1.md`
 
 ## 8. Limitacoes Conhecidas
@@ -73,8 +76,8 @@ Seu proposito e:
 
 ## 9. Relacao com o Contrato Consolidado
 
-Este documento complementa `PROMPT_CONTRACT_ANALYZE_v1.md` com o detalhamento exclusivo da subfase Findings. Em caso de conflito com o comportamento real do runtime, prevalece a evidencia observada em `cmd_analyze.sh` e no prompt gerado `findings_agent_prompt.md`.
+Este documento complementa `PROMPT_CONTRACT_ANALYZE_v1.md` com o detalhamento exclusivo da subfase Findings. O prompt materializado `findings_agent_prompt.md`, quando existir, deve refletir a mesma superficie canonica descrita aqui e nao define autoridade paralela. A orquestracao via `eaw next` garante a sequencia de execucao, mas nao substitui o contrato visivel da fase.
 
 ## 10. Status
 
-`PROMPT_CONTRACT_ANALYZE_FINDINGS_v1` define o contrato observavel da subfase Findings na fase Analyze.
+`PROMPT_CONTRACT_ANALYZE_FINDINGS_v1` define o contrato observavel da subfase Findings para a superficie canonica vinculada ao prompt ativo da track feature.

@@ -1,0 +1,29 @@
+config_version: 1
+
+phase:
+  id: hypotheses
+  name: Hypotheses
+  description: Explain only residual uncertainty that remains after findings.
+
+  prompt:
+    active: 2
+    path: templates/prompts/ARCH_REFACTOR_ONBOARD/hypotheses/prompt_v<active>.md
+
+  context:
+    onboarding_template: architecture_first
+
+  tooling_hints:
+    - Quando `phase.context.onboarding_template` estiver declarado, consumir onboarding a partir de `out/<CARD>/context/onboarding/`.
+
+  outputs:
+    create_directories:
+      - prompts
+    create_artifacts:
+      - investigations/30_hypotheses.md
+    prompts:
+      - hypotheses
+
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - investigations/30_hypotheses.md

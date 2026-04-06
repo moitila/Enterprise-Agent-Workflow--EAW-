@@ -3,17 +3,21 @@ config_version: 1
 phase:
   id: findings
   name: Findings
-  description: Analyze the intake information and identify key findings.
+  description: Analyze the intake information and identify key findings using the canonical prompt contract for this phase.
 
   prompt:
+    # Canonical prompt surface currently resolves to templates/prompts/feature/findings/prompt_v4.md.
     active: 4
     path: templates/prompts/feature/findings/prompt_v<active>.md
+
+  context:
+    dynamic_context_template: deterministic_baseline_v1
 
   tooling_hints:
     - Ler somente `<CARD_DIR>` e TARGET_REPOS em modo read-only.
     - Quando `WORKDIR` estiver definido como `<WORKDIR>`, tratar `<OUTDIR>` como a saida base isolada do runtime.
-    - Nao executar `doctor` ou `validate` nesta fase.
-    - A consistencia de execucao e garantida pelo `eaw next`, usando `<TARGET_REPO>` apenas como referencia do repositorio alvo listado no ambiente.
+    - Nao executar doctor ou validate nesta fase.
+    - A consistencia de execucao e garantida pelo eaw next como regra de orquestracao; a fase continua vinculada ao contrato visivel do prompt ativo, usando `<TARGET_REPO>` apenas como referencia do repositorio alvo listado no ambiente.
 
   outputs:
     create_directories:

@@ -1,0 +1,20 @@
+config_version: 1
+
+phase:
+  id: findings
+  name: Findings
+  description: Analyze the intake information and identify key findings.
+
+  prompt:
+    active: 3
+    path: templates/prompts/bug_ONBOARD/findings/prompt_v<active>.md
+
+  outputs:
+    create_directories: []
+    create_artifacts:
+      - investigations/20_findings.md
+
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - investigations/20_findings.md

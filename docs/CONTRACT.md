@@ -97,7 +97,7 @@ Outputs
   - `runtime/execution.log` — run-level operational log appended by `eaw run`; entries include `attempt=N` and status markers for completion or named aborts
   - `execution_journal.jsonl` — structured Execution Journal in JSON Lines format; one event per phase execution with fields `card_id`, `track`, `phase`, `timestamp`, `agent`, `mode`, `status`, `duration_ms`; schema documented in `docs/EXECUTION_JOURNAL.md`
   - `TEST_PLAN_<CARD>.md` — placeholder test plan
-  - `context/<repoKey>/` — **standby**: context engine is currently disabled; no `context/` artifacts are collected at runtime. This contract entry is reserved for future activation.
+  - `context/` — governed context artifacts materialized under `context/onboarding/` and `context/dynamic/` when the context model is active.
 
 Prompt declaration rule
 -----------------------
@@ -117,7 +117,7 @@ Determinism
 Notes on `_warnings.txt`
 -----------------------
 
-- **Standby**: `_warnings.txt` under `context/<repoKey>/` is not produced while the context engine is disabled. This section is reserved for future activation.
+- `_warnings.txt` is not part of the context materialization contract. Context artifacts are governed through `context/`, including `context/onboarding/` and `context/dynamic/`.
 
 
 Operational rules / invariants
@@ -136,6 +136,12 @@ Prompt provenance
 -----------------
 - Runtime records resolved prompt bindings in `out/<CARD>/provenance/prompts_used.yaml`.
 - This provenance file is part of deterministic observability for prompt lifecycle execution.
+- The canonical context model is documented in `docs/CONTEXT_MODEL.md`.
+- Workspace-sourced onboarding context is maintained for the repository under `<EAW_WORKDIR>/context_sources/onboarding/<repo_key>/` and consumed by reference via the context block; it is not materialized per card.
+- Runtime-derived dynamic context is materialized under `out/<CARD>/context/dynamic/` on a per-card basis.
+- Context templates are versioned in the EAW tree under `templates/context/<type>/<template_name>/` and rendered without changing the physical origin of the context they present.
+- Context traceability must identify the source type (`onboarding`, `dynamic`, or `template`), the template applied, and the source artifact location under `out/<CARD>/context/dynamic/` when dynamic context is materialized.
+- Workspace-sourced onboarding context and runtime-derived dynamic context are distinct responsibilities and must remain legible to an engineer reading the generated artifacts.
 
 Tolerances & Observability
 --------------------------

@@ -150,6 +150,7 @@ Optional fields:
 - `phase.description`
 - `phase.prompt.active`
 - `phase.tooling_hints`
+- `phase.context`
 - `phase.outputs`
 - `phase.completion`
 
@@ -169,7 +170,88 @@ Rules:
 - The runtime injects `RUNTIME_ENVIRONMENT` only into those agent prompt artifacts; non-agent phases that do not materialize prompts do not receive the header.
 - `phase.tooling_hints` is optional and, when present, must be declared as a YAML list of strings or as `[]`.
 - Each `phase.tooling_hints` entry is rendered as a textual hint inside a stable `## Tooling Hints` section in the final prompt only when the phase declares hints.
+- `context` is not free text; it declares what will be injected and must stay separate from execution hints.
+- Workspace-sourced onboarding context lives outside the target repository and is consumed by EAW before materialization.
+- Prompt injection must consume only context materialized under `out/<CARD>/context/`; `phase.yaml` must not imply direct contextual reads from the target repository.
 - Supported runtime placeholders inside `phase.tooling_hints` are normalized before prompt emission. The current deterministic tokens are `<CARD>`, `<WORKDIR>`, `<OUTDIR>`, `<CARD_DIR>`, `<TARGET_REPO>`, `{{CARD}}`, `{{EAW_WORKDIR}}`, `{{OUT_DIR}}`, `{{CARD_DIR}}`, and `{{TARGET_REPOS}}`.
+- The canonical model for stable repository context and runtime-derived operational context is documented in `docs/CONTEXT_MODEL.md`.
+- `context` and `tooling_hints` are separate contract surfaces: `tooling_hints` instruct execution, while `context` describes the evidence that must be collected and injected.
+- Free-form contextual prose must not be added to `phase.yaml` outside the approved contract fields for those surfaces.
+
+Phase Context Block
+-------------------
+The optional `phase.context` block declares which context templates the phase requires. It is separate from `tooling_hints`: `tooling_hints` instruct execution, while `context` describes evidence that must be collected and injected.
+
+Permitted fields (both optional):
+- `phase.context.dynamic_context_template` — logical identifier for a dynamic context template
+- `phase.context.onboarding_template` — logical identifier for an onboarding context template (consumed by reference; not materialized per card)
+
+Values are logical identifiers, not paths. Path-style values (containing `/`) are invalid.
+Free-form text, inline values, and extra keys are not permitted.
+
+Materialization rule: `dynamic_context_template` requires a materialized artifact under `out/<CARD>/context/dynamic/` before injection. `onboarding_template` is consumed by reference via the context block from the workspace source; it does not require per-card materialization. Contexto nao materializado nao pode ser injetado no prompt.
+
+Prompt consumption rule: when a phase declares `phase.context.onboarding_template`, the prompt must consume onboarding by reference via the context block sourced from the workspace source. Per-card artifact directories are not the consumption surface for onboarding.
+
+Compatibility: phases that do not declare `phase.context` preserve the current behavior without any context injection (fallback: ausencia do bloco nao altera o comportamento da fase).
+
+Valid examples:
+
+```yaml
+# Fase sem context — comportamento legado preservado
+phase:
+  id: findings
+  prompt:
+    path: templates/prompts/feature/findings/prompt_v<active>.md
+
+# Fase com apenas dynamic_context_template
+phase:
+  id: implementation_executor
+  prompt:
+    path: templates/prompts/feature/implementation_executor/prompt_v<active>.md
+  context:
+    dynamic_context_template: repo-diff
+
+# Fase com ambos os campos
+phase:
+  id: implementation_executor
+  prompt:
+    path: templates/prompts/feature/implementation_executor/prompt_v<active>.md
+  context:
+    dynamic_context_template: repo-diff
+    onboarding_template: workspace-onboarding
+```
+
+Invalid examples:
+
+```yaml
+# Invalido: path direto (template inexistente se path direto for usado)
+phase:
+  context:
+    dynamic_context_template: templates/context/repo-diff.md
+
+# Invalido: campo extra nao suportado
+phase:
+  context:
+    dynamic_context_template: repo-diff
+    extra_field: some-value
+
+# Invalido: valor nao-string
+phase:
+  context:
+    dynamic_context_template:
+      - item
+
+# Invalido: valor inline (nao e mapping block)
+phase:
+  context: repo-diff
+```
+
+Error rules and fallbacks:
+- Template inexistente: `dynamic_context_template` ou `onboarding_template` declarado com path direto falha com erro estrutural no validador.
+- Contexto nao materializado: `dynamic_context_template` declarado mas artefato ausente em `out/<CARD>/context/dynamic/` falha em runtime com mensagem deterministica.
+- Onboarding ausente: quando `onboarding_template` e declarado e a fonte workspace estiver ausente, a ausencia deve permanecer observavel sem abortar o fluxo.
+- Fallback: ausencia do bloco `context` ou de campo especifico preserva o comportamento atual sem injecao adicional.
 
 Card State Contract
 -------------------

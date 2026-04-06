@@ -21,6 +21,20 @@ die() {
 	exit 1
 }
 
+eaw_require_command() {
+	local cmd="$1"
+	command -v "$cmd" >/dev/null 2>&1 || die "missing required tool: $cmd"
+}
+
+eaw_is_probably_text_file() {
+	local file="$1"
+	[[ -f "$file" ]] || return 1
+	if [[ ! -s "$file" ]]; then
+		return 0
+	fi
+	LC_ALL=C grep -Iq . "$file" 2>/dev/null
+}
+
 ensure_dir() {
 	mkdir -p "$1"
 }
@@ -36,16 +50,8 @@ resolve_workdirs() {
 
 	if [[ -n "$EAW_WORKDIR" ]]; then
 		EAW_CONFIG_DIR="$EAW_WORKDIR/config"
-		if [[ -d "$EAW_WORKDIR/templates" ]]; then
-			EAW_TEMPLATES_DIR="$EAW_WORKDIR/templates"
-		else
-			EAW_TEMPLATES_DIR="$EAW_ROOT_DIR/templates"
-		fi
-		if [[ -d "$EAW_WORKDIR/tracks" ]]; then
-			EAW_TRACKS_DIR="$EAW_WORKDIR/tracks"
-		else
-			EAW_TRACKS_DIR="$EAW_ROOT_DIR/tracks"
-		fi
+		EAW_TEMPLATES_DIR="$EAW_ROOT_DIR/templates"
+		EAW_TRACKS_DIR="$EAW_ROOT_DIR/tracks"
 		EAW_OUT_DIR="${EAW_OUT_DIR:-$EAW_WORKDIR/out}"
 	else
 		EAW_CONFIG_DIR="$EAW_ROOT_DIR/config"

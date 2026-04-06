@@ -15,6 +15,7 @@ cmd_doctor() {
 	echo "  EAW_CONFIG_DIR=$EAW_CONFIG_DIR"
 	echo "  EAW_TEMPLATES_DIR=$EAW_TEMPLATES_DIR"
 	echo "  EAW_OUT_DIR=$EAW_OUT_DIR"
+	echo "  Tip: use 'eaw status <CARD>' for a single card or 'eaw status --all' for the global status list."
 
 	echo "Tools:"
 	if command -v git >/dev/null 2>&1; then echo "  git: OK"; else
@@ -58,6 +59,13 @@ cmd_doctor() {
 		fi
 	else
 		echo "  eaw.conf: $(eaw_conf_optional_formal_label) ($EAW_CONF missing; $(eaw_conf_optional_formal_contract_note))"
+	fi
+
+	if [[ -z "${EAW_SMOKE_SH:-}" ]]; then
+		echo "  EAW_SMOKE_SH: WARN (not set)"
+		warnings=$((warnings + 1))
+	else
+		echo "  EAW_SMOKE_SH: OK ($EAW_SMOKE_SH)"
 	fi
 
 	if [[ "$errors" -gt 0 ]]; then

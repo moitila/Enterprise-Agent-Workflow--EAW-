@@ -73,6 +73,8 @@ eaw_phase_completion_detect_card_template_type() {
 		printf "bug\n"
 	elif [[ -f "$card_dir/spike_${card}.md" ]]; then
 		printf "spike\n"
+	elif compgen -G "$card_dir/state_card_repo_onboarding.yaml" > /dev/null 2>&1; then
+		printf "repo_onboarding\n"
 	else
 		printf "feature\n"
 	fi
@@ -259,4 +261,48 @@ eaw_phase_completion_evaluate_strict() {
 		eaw_phase_completion_evaluate "$card" "$card_dir" "$phase_id" "$phase_file"
 		;;
 	esac
+}
+
+eaw_card_enforce_mandatory_analysis_audit() {
+	local card="$1"
+	local card_dir="$2"
+	local phase_id="$3"
+	local rel_path
+	local -a missing_artifacts=()
+
+	case "$phase_id" in
+	implementation_planning | implementation_executor)
+		;;
+	*)
+		return 0
+		;;
+	esac
+
+	for rel_path in \
+		investigations/20_findings.md \
+		investigations/30_hypotheses.md \
+		investigations/40_next_steps.md; do
+		if [[ ! -s "$card_dir/$rel_path" ]]; then
+			missing_artifacts+=("$rel_path")
+		fi
+	done
+
+	if [[ "$phase_id" == "implementation_executor" ]]; then
+		for rel_path in \
+			implementation/00_scope.lock.md \
+			implementation/10_change_plan.md; do
+			if [[ ! -s "$card_dir/$rel_path" ]]; then
+				missing_artifacts+=("$rel_path")
+			fi
+		done
+	fi
+
+	if [[ ${#missing_artifacts[@]} -gt 0 ]]; then
+		printf "ERROR: card %s phase '%s' blocked; desvio de escopo: artefatos obrigatorios ausentes ou vazios:" "$card" "$phase_id" >&2
+		printf " %s" "${missing_artifacts[@]}" >&2
+		printf "\n" >&2
+		return 1
+	fi
+
+	return 0
 }

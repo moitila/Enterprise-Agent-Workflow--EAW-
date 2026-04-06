@@ -1,0 +1,15 @@
+# Reference template only.
+# The runtime does not read card state from tracks/<track>/card_state.yaml.
+# Real execution state is per-card in out/<CARD>/state_card_*.yaml.
+# Legacy cards may still resolve out/<CARD>/intake/state_card_*.yaml as fallback.
+config_version: 1
+
+card_state:
+  card_id: CARD_TEMPLATE
+  track_id: ARCH_REFACTOR_ONBOARD
+  current_phase: ingest
+  previous_phase: null
+  phase_status: in_progress
+  completed_phases: []
+  created_at: "2026-03-24T00:00:00Z"
+  updated_at: "2026-03-24T00:00:00Z"

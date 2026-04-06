@@ -1,0 +1,27 @@
+config_version: 1
+
+phase:
+  id: implementation_executor
+  name: Implementation Executor
+  description: Execute the approved architectural refactor under controlled scope.
+
+  prompt:
+    active: 2
+    path: templates/prompts/ARCH_REFACTOR_ONBOARD/implementation_executor/prompt_v<active>.md
+
+  context:
+    onboarding_template: execution_guardrails
+
+  outputs:
+    create_directories:
+      - prompts
+      - implementation
+    create_artifacts:
+      - implementation/20_patch_notes.md
+    prompts:
+      - implementation_executor
+
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - implementation/20_patch_notes.md

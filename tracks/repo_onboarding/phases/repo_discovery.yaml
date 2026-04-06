@@ -1,0 +1,37 @@
+config_version: 1
+
+phase:
+  id: repo_discovery
+  name: Repository Discovery
+  description: Resolve the repository request from raw card input and normalize repository identity.
+
+  prompt:
+    active: 1
+    path: templates/prompts/repo_onboarding/repo_discovery/prompt_v<active>.md
+
+  tooling_hints:
+    - Tratar `out/<CARD>/ingest/` como a origem primaria do pedido de onboarding.
+    - Resolver a identidade do repositorio a partir do ambiente atual e dos artefatos do card, sem inventar mapeamentos.
+    - Nao analisar codigo do repositorio nesta fase.
+
+  outputs:
+    create_directories:
+      - ingest
+      - investigations
+      - context
+      - prompts
+    create_artifacts:
+      - ingest/sources.md
+      - context/repository_identity.md
+      - investigations/00_repo_discovery.md
+      - investigations/_repo_discovery_provenance.md
+    prompts:
+      - repo_discovery
+
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - ingest/sources.md
+      - context/repository_identity.md
+      - investigations/00_repo_discovery.md
+      - investigations/_repo_discovery_provenance.md

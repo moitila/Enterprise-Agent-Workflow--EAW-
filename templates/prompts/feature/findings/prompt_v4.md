@@ -25,11 +25,13 @@ INPUT
 - MODE: quando `EAW_WORKDIR` estiver vazio, saida em `OUT_DIR`; quando definido, saida isolada em `EAW_WORKDIR`.
 - EXECUTION_STRUCTURE: `RUNTIME_ROOT` nunca deve ser modificado; `TARGET_REPOS` somente leitura; `CARD_DIR` e o limite unico de escrita da fase.
 
+{{CONTEXT_BLOCK}}
+
 OUTPUT
 - Escrever somente `{{CARD_DIR}}/investigations/20_findings.md`.
 - Escrever `{{CARD_DIR}}/investigations/_warnings.md` somente se necessario.
-- Nao executar `doctor` ou `validate` nesta fase.
-- A consistencia de execucao e garantida pelo `eaw next`.
+- Nao executar doctor ou validate nesta fase.
+- A consistencia de execucao e garantida pelo eaw next como regra de orquestracao, sem substituir o contrato visivel desta fase.
 
 OUTPUT_STRUCTURE
 - `20_findings.md` deve conter obrigatoriamente: `# 20_findings`, `## 1. Contexto Confirmado`, `## 2. Evidencias Coletadas`, `## 3. Criterios de Aceite Identificados`, `## 4. Comportamentos Observados`, `## 5. Divergencias Identificadas`, `## 6. Lacunas de Informacao`.
@@ -76,6 +78,7 @@ OUTPUT_STRUCTURE
 
 READ_SCOPE
 - Ler `{{CARD_DIR}}`.
+- Ler `{{CARD_DIR}}/context/dynamic/` quando materializado pelo runtime.
 - Ler TARGET_REPOS em modo read-only.
 - Extrair evidencias factuais, logs relevantes, trechos de codigo apenas para leitura e criterios de aceite mencionados no intake.
 
@@ -93,10 +96,12 @@ RULES
   - `test -f "{{CONFIG_SOURCE}}"`
 - Confirmar existencia de `{{CARD_DIR}}/investigations/00_intake.md`; se faltar, abortar.
 - PASSO 1 - BASELINE:
-  - Nao executar `doctor` ou `validate` nesta fase.
-  - Considerar a consistencia de execucao garantida pelo `eaw next`.
+  - Nao executar doctor ou validate nesta fase.
+  - Considerar a consistencia de execucao garantida pelo eaw next como dependencia de orquestracao, nao como substituto do contrato visivel desta fase.
 - PASSO 2 - INVESTIGACAO CONTROLADA:
   - Investigar apenas `{{CARD_DIR}}` e TARGET_REPOS em read-only.
+  - Inspecionar primeiro os artefatos materializados em `{{CARD_DIR}}/context/dynamic/` antes de confiar em pressupostos sobre o repositorio.
+  - Usar onboarding apenas como contexto estavel de repositorio e validacao de convencoes; nao tratar onboarding como implementacao obrigatoria nem como substituto da evidencia observada.
   - Extrair evidencias factuais.
   - Extrair logs relevantes.
   - Extrair trechos de codigo somente leitura.
@@ -121,9 +126,8 @@ RULES
   - Cada item deve terminar com um problema identificado ou com uma confirmacao de conformidade.
   - Ao final do documento, produzir:
     - `## Ranking de Problemas`
-    - `- Problema 1 (CRITICAL): ...`
-    - `- Problema 2 (HIGH): ...`
-    - `- Problema 3 (MEDIUM): ...`
+    - listar apenas os problemas efetivamente encontrados, em ordem de severidade derivada da evidencia
+    - declarar explicitamente a severidade usada em cada item do ranking
   - Se existir qualquer problema `CRITICAL`, declarar explicitamente ao final se o card pode ou nao ser executado no estado atual.
 - Retornar lista de arquivos lidos, lista de arquivos alterados, saida literal dos testes executados, confirmacao de que nenhuma hipotese foi criada e confirmacao de que nenhum plano foi definido.
 - VALIDACOES FINAIS:

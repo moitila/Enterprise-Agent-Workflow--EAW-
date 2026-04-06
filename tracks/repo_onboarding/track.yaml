@@ -1,0 +1,37 @@
+config_version: 1
+
+track:
+  id: repo_onboarding
+  name: Repository Onboarding Track
+  description: >
+    Canonical EAW track for resolving a repository from card input, generating
+    reusable onboarding artifacts in the EAW workspace, and refining them into
+    operational onboarding assets for use by other tracks.
+
+  initial_phase: repo_discovery
+  final_phase: repo_onboarding_refine
+
+  initial_outputs:
+    create_directories:
+      - ingest
+      - investigations
+      - context
+    create_artifacts: []
+
+  phases:
+    - repo_discovery
+    - repo_onboarding_build
+    - repo_onboarding_refine
+
+  transitions:
+    repo_discovery:
+      next: repo_onboarding_build
+
+    repo_onboarding_build:
+      next: repo_onboarding_refine
+
+  rules:
+    one_prompt_per_phase: true
+    generated_artifacts_of_each_phase_must_be_non_empty: true
+    allow_phase_skip: false
+    allow_manual_phase_skip: false

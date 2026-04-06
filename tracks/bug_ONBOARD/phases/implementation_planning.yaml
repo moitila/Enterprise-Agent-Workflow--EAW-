@@ -1,0 +1,23 @@
+config_version: 1
+
+phase:
+  id: implementation_planning
+  name: Implementation Planning
+  description: Plan the implementation tasks.
+
+  prompt:
+    active: 4
+    path: templates/prompts/bug_ONBOARD/implementation_planning/prompt_v<active>.md
+
+  outputs:
+    create_directories:
+      - implementation
+    create_artifacts:
+      - implementation/00_scope.lock.md
+      - implementation/10_change_plan.md
+
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - implementation/00_scope.lock.md
+      - implementation/10_change_plan.md

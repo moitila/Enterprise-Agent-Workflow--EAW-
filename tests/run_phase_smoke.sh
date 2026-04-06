@@ -13,9 +13,9 @@ trap 'rm -rf "$tmpdir"' EXIT
 
 OUTDIR="$tmpdir/out"
 mkdir -p "$OUTDIR"
-
-# include header so format is stable and visible
-printf "#phase|status|duration_ms|note\n" >"$OUTDIR/execution.log"
+EAW_TRACKS_DIR="${EAW_TRACKS_DIR:-$REPO_ROOT/tracks}"
+EAW_CARD_WORKFLOW_CARD="TEST_CARD"
+EAW_CARD_WORKFLOW_TRACK_ID="feature"
 
 fn_success() { return 0; }
 fn_fail() { return 42; }
@@ -28,6 +28,10 @@ run_phase "phase_fail_fatal" true fn_fail
 fatal_rc=$?
 set -e
 [[ "$fatal_rc" -eq 42 ]] || fail "expected fatal failure rc=42, got rc=${fatal_rc}"
+[[ -f "$OUTDIR/execution.log" ]] || fail "execution.log was not derived"
+[[ -f "$OUTDIR/execution_journal.jsonl" ]] || fail "execution_journal.jsonl was not created"
+header="$(sed -n '1p' "$OUTDIR/execution.log")"
+[[ "$header" == "phase|status|duration_ms|note" ]] || fail "unexpected execution.log header: $header"
 
 # Validate 4 columns, allow any note content
 assert_line() {

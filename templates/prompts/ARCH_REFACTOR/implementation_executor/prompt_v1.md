@@ -9,18 +9,18 @@ RUNTIME_ENVIRONMENT
 - RUNTIME_ROOT: {{RUNTIME_ROOT}}
 - CONFIG_SOURCE: {{CONFIG_SOURCE}}
 - OUT_DIR: {{OUT_DIR}}
-- CARD_DIR: /home/user/dev/.eaw/out/<CARD>
+- CARD_DIR: /home/user/dev/.eaw/out/{{CARD}}
 - REQUIRED_ARTIFACTS:
-  - /home/user/dev/.eaw/out/<CARD>/investigations/00_intake.md
-  - /home/user/dev/.eaw/out/<CARD>/investigations/20_findings.md
-  - /home/user/dev/.eaw/out/<CARD>/investigations/30_hypotheses.md
-  - /home/user/dev/.eaw/out/<CARD>/investigations/40_next_steps.md
-  - /home/user/dev/.eaw/out/<CARD>/implementation/00_scope.lock.md
-  - /home/user/dev/.eaw/out/<CARD>/implementation/10_change_plan.md
+  - /home/user/dev/.eaw/out/{{CARD}}/investigations/00_intake.md
+  - /home/user/dev/.eaw/out/{{CARD}}/investigations/20_findings.md
+  - /home/user/dev/.eaw/out/{{CARD}}/investigations/30_hypotheses.md
+  - /home/user/dev/.eaw/out/{{CARD}}/investigations/40_next_steps.md
+  - /home/user/dev/.eaw/out/{{CARD}}/implementation/00_scope.lock.md
+  - /home/user/dev/.eaw/out/{{CARD}}/implementation/10_change_plan.md
 - WRITE_ALLOWLIST:
-  - codigo somente nos TARGET_REPOS autorizados por /home/user/dev/.eaw/out/<CARD>/implementation/00_scope.lock.md
-  - artefatos somente em /home/user/dev/.eaw/out/<CARD>/implementation/20_patch_notes.md
-  - artefatos somente em /home/user/dev/.eaw/out/<CARD>/implementation/_warnings.md
+  - codigo somente nos TARGET_REPOS autorizados por /home/user/dev/.eaw/out/{{CARD}}/implementation/00_scope.lock.md
+  - artefatos somente em /home/user/dev/.eaw/out/{{CARD}}/implementation/20_patch_notes.md
+  - artefatos somente em /home/user/dev/.eaw/out/{{CARD}}/implementation/_warnings.md
 - PRECHECK:
   - set -euo pipefail
   - cd "{{RUNTIME_ROOT}}"
@@ -85,10 +85,20 @@ RULES
 - Executar obrigatoriamente o PRECHECK em fail-fast.
 - Validar estruturalmente `00_scope.lock.md` e `10_change_plan.md` antes de alterar qualquer arquivo.
 - Tratar a `Allowlist de Escrita` do `00_scope.lock.md` como contrato soberano para qualquer alteracao de codigo.
+- Antes de permitir escrita no repositorio alvo, e obrigatorio que:
+  - `20_findings.md` contenha inconsistencias evidenciadas
+  - `30_hypotheses.md` contenha interpretacao estruturada dos problemas
+  - `40_next_steps.md` esteja coerente com o objetivo do card
+  - `00_scope.lock.md` reflita o escopo completo derivado do card
+  - `10_change_plan.md` esteja alinhado ao objetivo soberano do card
+- Se esses artefatos nao cobrirem integralmente o objetivo do card, falhar fechado por desvio de escopo.
+- Bloquear se houver divergencia sem justificativa rastreavel entre o objetivo soberano do card e o escopo operacional recebido.
+- Nao aceitar `00_scope.lock.md` ou `10_change_plan.md` que reduzam auditoria ampla a patch local sem justificativa de fatiamento.
 - Bloquear execucao se houver ambiguidade sobre nome, localizacao, comportamento, ordem de execucao ou abrangencia da mudanca.
 - Executar somente os steps definidos no `10_change_plan.md`, sem enriquecer o plano.
 - Executar `bash -n` para qualquer arquivo `.sh` alterado.
 - Executar exatamente os comandos listados em `## Validacao Tecnica Obrigatoria` do `10_change_plan.md`.
+- Se `EAW_SMOKE_SH` estiver definida e executavel, executa-la; caso contrario registrar `SKIP: EAW_SMOKE_SH not set`.
 - Registrar em `20_patch_notes.md`:
   - arquivos alterados
   - resumo objetivo da alteracao por step
@@ -108,6 +118,7 @@ FORBIDDEN
 - Nao alterar contratos publicos sem respaldo do plano e das evidencias.
 - Nao executar automacoes destrutivas.
 - Nao tentar solucao alternativa em caso de falha.
+- Nao reduzir o objetivo soberano do card para um subproblema local sem justificativa evidencial e rastreavel.
 - Nao escrever fora da WRITE_ALLOWLIST.
 
 FAIL_CONDITIONS
@@ -115,6 +126,8 @@ FAIL_CONDITIONS
 - Falhar se qualquer item do PRECHECK falhar.
 - Falhar se qualquer artefato obrigatorio estiver ausente.
 - Falhar se a validacao estrutural pre-execucao falhar.
+- Falhar se `20_findings.md`, `30_hypotheses.md`, `40_next_steps.md`, `00_scope.lock.md` ou `10_change_plan.md` nao cobrirem integralmente o objetivo do card.
+- Falhar se houver divergencia sem justificativa rastreavel entre o objetivo soberano do card e o escopo operacional recebido.
 - Falhar se houver leitura fora de `{{CARD_DIR}}` e dos TARGET_REPOS necessarios aos steps.
 - Falhar se qualquer escrita ocorrer fora da allowlist soberana ou fora dos artefatos permitidos da fase.
 - Falhar se `bash -n` ou qualquer comando de validacao obrigatoria falhar.

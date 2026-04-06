@@ -76,9 +76,12 @@ This makes prompt selection observable and versioned instead of implicit.
 
 ### Context
 
-Context is collected from target repositories into `out/<CARD>/context/<repoKey>/`.
-This keeps AI inputs bounded and reviewable.
-> **Standby**: context collection is currently disabled. This section describes the intended design and is reserved for future activation.
+The canonical context model is documented in `docs/CONTEXT_MODEL.md`.
+That contract distinguishes workspace-sourced `onboarding` context from phase-derived `dynamic_context`.
+`onboarding` is maintained outside the target repository and consumed by EAW; `dynamic_context` is runtime-sourced and may vary by phase.
+When context is materialized, `dynamic_context` is collected under `out/<CARD>/context/dynamic/` to keep AI inputs bounded and reviewable. `onboarding` is consumed by reference from the workspace source via the context block; it is not materialized per card.
+Templates are versioned independently under `templates/context/<type>/<template_name>/` and rendered without redefining the origin of the context.
+Both remain separate from prompt rendering concerns and from `tooling_hints`.
 
 ### Artifacts
 
@@ -121,3 +124,74 @@ That wording matters:
 
 This document does not change CLI semantics, artifact contracts, workflow YAML contracts, or prompt governance.
 It exists only to clarify the mental model and keep onboarding aligned with the implemented system.
+
+## Incremental Context Migration
+
+The canonical contract remains in `docs/CONTEXT_MODEL.md`.
+This section explains how to adopt that contract incrementally, with examples described as copiaveis diretamente so teams can migrate without redefining semantics.
+
+### Checklist de migracao
+
+Use this checklist de migracao in order:
+
+1. Validate that the current track still works sem contexto adicional.
+2. Add `dynamic_context` to one phase only and keep the scope narrow.
+3. Run `./scripts/eaw smoke` before expanding to another phase.
+4. Verify `out/<CARD>/context/dynamic/` and confirm the materialized evidence is readable.
+5. Add onboarding only when stable repository knowledge is repeatedly needed.
+6. Expand phase por phase after the previous step is stable and auditable.
+7. Keep the rollout reversivel; removing the new `context` block must restore the previous baseline.
+
+### Track por track, fase por fase
+
+- `feature`: start with `findings`, because the runtime already uses `dynamic_context_template: deterministic_baseline_v1` there; expand to `planning` only after smoke validation.
+- `bug`: start sem bootstrap and add `dynamic_context` only to the first phase where evidence selection is needed; keep onboarding optional until repeated repository knowledge becomes a real constraint.
+- `standard`: begin with one operational phase, validate the materialized `CONTEXT` blocks, then extend phase por phase instead of changing the whole track at once.
+- `spike`: keep the smallest context surface possible; prefer dynamic evidence selection first and postpone onboarding unless the exploratory work repeats the same repository facts.
+- `ARCH_REFACTOR`: consider `context_bootstrap` only when the refactor needs an explicit first checkpoint for provenance and deterministic context materialization.
+
+### Example complete `phase.yaml` with `context`
+
+This example is copiavel diretamente for a first migration sem bootstrap:
+
+```yaml
+id: findings
+description: Investigate the current card with bounded evidence.
+context:
+  dynamic_context_template: deterministic_baseline_v1
+  onboarding_template: repo_discovery
+tooling_hints:
+  execution_mode: deterministic
+outputs:
+  artifacts:
+    - investigations/20_findings.md
+```
+
+Expected verification after `./scripts/eaw next 589`:
+
+- inspect `out/589/context/dynamic/00_scope_manifest.md`
+- inspect `out/589/context/dynamic/20_candidate_files.txt`
+- inspect `out/589/context/dynamic/30_target_snippets.md`
+- confirm the generated prompt shows `CONTEXT - DYNAMIC`
+
+### Example of incremental adoption sem bootstrap
+
+Use this path when you want the smallest reversible change:
+
+1. Keep the current track as-is.
+2. Add the `context` block to a single phase such as `findings`.
+3. Run `./scripts/eaw next 589`.
+4. Check `out/589/context/dynamic/` and confirm the prompt contains `CONTEXT - DYNAMIC`.
+5. Run `./scripts/eaw smoke`.
+
+### Example of incremental adoption with bootstrap opcional
+
+Use this path when the team wants an explicit first pass for context artifacts:
+
+1. Add a bootstrap opcional step before the phase that depends on the new context.
+2. Materialize onboarding if a stable source exists under `context_sources/onboarding/<repo_key>/`.
+3. Run `./scripts/eaw next 589`.
+4. Check `out/589/context/dynamic/00_scope_manifest.md` and confirm the onboarding context block was injected via reference.
+5. Run `./scripts/eaw smoke` before expanding the rollout.
+
+The bootstrap path is still incremental: first verify determinism and provenance, then expand track por track and fase por fase.

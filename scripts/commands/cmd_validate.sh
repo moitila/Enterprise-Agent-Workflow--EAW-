@@ -89,6 +89,9 @@ cmd_validate() {
 			errors=$((errors + 1))
 			continue
 		fi
+		if ! eaw_card_enforce_mandatory_analysis_audit "$(basename "$card_dir")" "$card_dir" "${EAW_CARD_WORKFLOW_CURRENT_PHASE:-}"; then
+			errors=$((errors + 1))
+		fi
 		workflow_summary="SUMMARY: workflow card=$(basename "$card_dir") track=$EAW_CARD_WORKFLOW_TRACK_ID current_phase=$EAW_CARD_WORKFLOW_CURRENT_PHASE prompt_phase=$EAW_CARD_WORKFLOW_CURRENT_PROMPT_PHASE prompt_path=$EAW_CARD_WORKFLOW_CURRENT_PROMPT_PATH"
 		if [[ "$EAW_CARD_WORKFLOW_CURRENT_PHASE" == "$EAW_CARD_WORKFLOW_FINAL_PHASE" ]]; then
 			echo "$workflow_summary next_phase=<none> final_phase=$EAW_CARD_WORKFLOW_FINAL_PHASE"
@@ -216,7 +219,7 @@ cmd_validate() {
 		[[ -d "$card_dir" ]] || continue
 		impl_dir="$card_dir/implementation"
 		if [[ -d "$impl_dir" ]]; then
-			for impl_name in 00_scope.lock.md 10_change_plan.md 20_patch_notes.md; do
+			for impl_name in 00_scope.lock.md 10_change_plan.md; do
 				impl_path="$impl_dir/$impl_name"
 				if [[ ! -f "$impl_path" ]]; then
 					if [[ -e "$impl_path" ]]; then
@@ -232,6 +235,16 @@ cmd_validate() {
 					errors=$((errors + 1))
 				fi
 			done
+			impl_path="$impl_dir/20_patch_notes.md"
+			if [[ -e "$impl_path" ]]; then
+				if [[ ! -f "$impl_path" ]]; then
+					echo "WARNING: implement artifact not a regular file: $impl_path" >&2
+					warnings=$((warnings + 1))
+				elif [[ ! -s "$impl_path" ]]; then
+					echo "WARNING: implement artifact empty: $impl_path" >&2
+					warnings=$((warnings + 1))
+				fi
+			fi
 		fi
 	done
 
