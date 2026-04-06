@@ -41,6 +41,8 @@ Para executar um card:
    - o prompt integral da fase
    - as skills declaradas em `phase.skills` (+ `workspace` sempre)
    - o contexto de `repos.conf` do workspace
+   - a skill `workspace.md` como contexto operacional obrigatorio do subagente
+   - quando existirem, os contratos soberanos do card: `00_scope.lock.md`, allowlist de escrita, `Out of Scope` e `10_change_plan.md`
 
 8. Executar o prompt usando esse agente isolado, e nao no contexto do orquestrador
 
@@ -80,10 +82,46 @@ O campo `skills` é uma lista de nomes de skills disponíveis no workspace.
 - O orquestrador lê `phase.skills` do YAML da fase atual
 - Se `phase.skills` não estiver declarado, fallback para `[workspace]` apenas
 - `workspace` é sempre incluída — se o YAML declarar skills sem `workspace`, o orquestrador adiciona automaticamente
+- `workspace` nao e opcional nem decorativa: ela deve ser efetivamente repassada ao subagente como contexto de execucao, e nao apenas presumida pelo operador
 - O orquestrador não inventa skills além das declaradas + `workspace`
 - O prompt continua sendo a autoridade sobre **o que fazer**; as skills dão ao agente **como fazer**
 - O orquestrador não altera o prompt para mencionar skills — as skills são contexto operacional do agente, não conteúdo do prompt
 - Se uma skill declarada não existir no workspace, o orquestrador avisa o executor e prossegue sem ela
+
+## Mandatory Delegation Context
+
+Ao spawnar/delegar um agente de fase, o operador deve repassar explicitamente o contexto minimo abaixo.
+O prompt da fase sozinho nao basta.
+
+### Sempre obrigatorio
+
+- skill `workspace.md`
+- `repos.conf` ativo do workspace
+- `RUNTIME_ROOT`, `EAW_WORKDIR`, `OUT_DIR` e `CARD_DIR` da execucao corrente
+- prompt integral da fase atual
+
+### Obrigatorio quando existir no card
+
+- `00_scope.lock.md`
+- `10_change_plan.md`
+- allowlist de escrita explicita
+- `Out of Scope`
+- `WRITE_ALLOWLIST` ou write set declarado no prompt/runtime
+
+### Hierarquia de autoridade que o subagente deve obedecer
+
+1. `repos.conf` para papeis de repositorio (`target` vs `infra`)
+2. `RUNTIME_ROOT`, `OUT_DIR`, `CARD_DIR` e limites operacionais do runtime atual
+3. `00_scope.lock.md`, allowlist e `Out of Scope`
+4. `10_change_plan.md`
+5. prompt da fase
+
+Se houver conflito entre prompt/plano e `scope lock`/allowlist:
+
+- o subagente deve parar
+- registrar bloqueio
+- devolver controle ao operador
+- nunca improvisar mudando repo alvo, write set ou superficie de validacao
 
 ## Rules
 
@@ -95,6 +133,8 @@ O campo `skills` é uma lista de nomes de skills disponíveis no workspace.
 - Se o orquestrador ler o prompt para encaminhamento, isso nao autoriza executar a fase no proprio contexto
 - O orquestrador nao deve pedir permissao ao usuario para delegar a fase quando a plataforma suportar agentes
 - O orquestrador nao deve bloquear a execucao por receio de custo, latencia, contexto ou preferencia propria quando a skill ja exige agente isolado
+- O orquestrador deve repassar ao subagente a skill `workspace.md` e os contratos soberanos do card quando existirem
+- O orquestrador deve deixar explicito para o subagente qual repo/papel esta autorizado para escrita na fase atual
 - O agente atual NÃO deve:
   - executar múltiplas fases ao mesmo tempo
   - pular fases
@@ -109,6 +149,10 @@ O campo `skills` é uma lista de nomes de skills disponíveis no workspace.
 - Nunca escolher o diretorio de execucao do `next` por nome presumido de repositorio
 - Nunca executar localmente uma fase que deveria ter sido delegada a agente isolado
 - Nunca tratar delegacao como opcional, implicita ou dependente de autorizacao extra do usuario
+- Nunca spawnar subagente apenas com o prompt da fase e sem `workspace.md`
+- Nunca deixar o subagente inferir `target` vs `infra` por nome de repositorio
+- Nunca deixar o subagente escolher repo de escrita diferente do definido por `scope lock`/allowlist
+- Nunca aceitar plano ou validacao que aponte para repo diferente da allowlist sem bloquear a execucao
 
 ## Runtime authority
 
@@ -155,6 +199,8 @@ O campo `skills` é uma lista de nomes de skills disponíveis no workspace.
 Estas armadilhas foram identificadas em execuções reais e devem ser conhecidas pelo executor:
 
 - `repos.conf` deve ser injetado no contexto do prompt da fase; se ausente, o agente isolado vai inventar caminhos de repositório
+- `workspace.md` deve ser injetado no subagente junto do prompt; sem isso, o agente tende a misturar `infra` e `target`
+- Se `scope lock` e validacao tecnica apontarem para repositorios diferentes, isso e bloqueio estrutural do card, nao decisao local do executor
 - Artefatos vazios (0 bytes ou contendo apenas template/scaffold) não devem passar phase completion; se o runtime aceitar, registrar como bug do runtime
 - Erros de `awk`/`sed` nos scripts do runtime podem ser silenciosos; verificar exit codes após cada comando do runtime
 - Quando CI falha por dependência não publicada (ex: classes do framework não disponíveis no maven), classificar como "expected dependency gap" e não como regressão
