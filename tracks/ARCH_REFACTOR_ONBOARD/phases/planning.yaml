@@ -6,14 +6,14 @@ phase:
   description: Produce the architectural alignment plan without implementation leakage.
 
   prompt:
-    active: 2
+    active: 3
     path: templates/prompts/ARCH_REFACTOR_ONBOARD/planning/prompt_v<active>.md
 
   context:
     onboarding_template: architecture_first
 
   tooling_hints:
-    - Quando `phase.context.onboarding_template` estiver declarado, consumir onboarding a partir de `out/<CARD>/context/onboarding/`.
+    - Quando `phase.context.onboarding_template` estiver declarado, consumir onboarding a partir de `{{EAW_WORKDIR}}/context_sources/onboarding/<resolved_repo_key>/` apos resolver exatamente um `resolved_repo_key`.
 
   outputs:
     create_directories:

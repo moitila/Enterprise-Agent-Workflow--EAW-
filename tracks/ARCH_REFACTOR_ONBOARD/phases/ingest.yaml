@@ -6,7 +6,7 @@ phase:
   description: Collect and normalize raw review evidence before intake.
 
   prompt:
-    active: 2
+    active: 3
     path: templates/prompts/ARCH_REFACTOR_ONBOARD/ingest/prompt_v<active>.md
 
   context:
@@ -15,7 +15,7 @@ phase:
   tooling_hints:
     - Tratar `out/<CARD>/ingest/` como a origem primaria dos insumos brutos.
     - Nao acessar TARGET_REPOS durante a fase de ingest.
-    - Quando `phase.context.onboarding_template` estiver declarado, consumir onboarding a partir de `out/<CARD>/context/onboarding/`.
+    - Quando `phase.context.onboarding_template` estiver declarado, consumir onboarding a partir de `{{EAW_WORKDIR}}/context_sources/onboarding/<resolved_repo_key>/` apos resolver exatamente um `resolved_repo_key`.
 
   outputs:
     create_directories:

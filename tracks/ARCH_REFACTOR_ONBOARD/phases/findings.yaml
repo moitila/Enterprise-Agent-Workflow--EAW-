@@ -6,7 +6,7 @@ phase:
   description: Validate the current behavior and architectural adherence with evidence.
 
   prompt:
-    active: 2
+    active: 3
     path: templates/prompts/ARCH_REFACTOR_ONBOARD/findings/prompt_v<active>.md
 
   context:
@@ -15,7 +15,7 @@ phase:
   tooling_hints:
     - Ler somente `<CARD_DIR>` e TARGET_REPOS em modo read-only.
     - Registrar a saida relevante de `doctor` e `validate`.
-    - Quando `phase.context.onboarding_template` estiver declarado, consumir onboarding a partir de `out/<CARD>/context/onboarding/`.
+    - Quando `phase.context.onboarding_template` estiver declarado, consumir onboarding a partir de `{{EAW_WORKDIR}}/context_sources/onboarding/<resolved_repo_key>/` apos resolver exatamente um `resolved_repo_key`.
 
   outputs:
     create_directories:
