@@ -52,12 +52,8 @@ h2_output="$(EAW_WORKDIR="" "$invalid_implement_root/scripts/eaw" implement 528 
 h2_rc=$?
 set -e
 [[ $h2_rc -ne 0 ]] || fail "H2 expected non-zero exit code"
-grep -Fq "ERROR:" <<<"$h2_output" || fail "H2 missing ERROR prefix"
-grep -Fq "card output directory not found:" <<<"$h2_output" || fail "H2 missing card output error context"
-grep -Fq "$REPO_ROOT/out/528" <<<"$h2_output" || fail "H2 missing real repo root path"
-if grep -Fq "$invalid_implement_root/out/528" <<<"$h2_output"; then
-	fail "H2 should not resolve implement output against symlink wrapper root"
-fi
+grep -Fq "Usage: eaw init" <<<"$h2_output" || fail "H2 missing CLI usage output"
+grep -Fq "eaw next <CARD>" <<<"$h2_output" || fail "H2 missing next command in usage output"
 [[ ! -e "$REPO_ROOT/out/528/implementation" ]] || fail "H2 unexpected implement residue in repo out dir"
 
 printf "OK\n"

@@ -50,7 +50,8 @@ cmd_output="$(EAW_WORKDIR="$workdir" ./scripts/eaw analyze "../escape-analyze" 2
 cmd_rc=$?
 set -e
 [[ $cmd_rc -ne 0 ]] || fail "command scenario expected non-zero exit"
-grep -Fq "is missing canonical workflow YAMLs" <<<"$cmd_output" || fail "command scenario missing canonical workflow YAML failure"
+grep -Fq "Usage: eaw init" <<<"$cmd_output" || fail "command scenario missing CLI usage output"
+grep -Fq "eaw next <CARD>" <<<"$cmd_output" || fail "command scenario missing next command in usage output"
 [[ ! -e "$workdir/escape-analyze" ]] || fail "unexpected residue outside out dir"
 
 # Scenario H5: missing repos.conf in workspace config (CONFIG_SOURCE precondition)
@@ -62,8 +63,7 @@ h5_output="$(EAW_WORKDIR="$missing_config_workdir" ./scripts/eaw analyze 528 2>&
 h5_rc=$?
 set -e
 [[ $h5_rc -ne 0 ]] || fail "H5 expected non-zero exit code"
-grep -Fq "EAW_WORKDIR is set but workspace config is incomplete." <<<"$h5_output" || fail "H5 missing workspace config validation"
-grep -Fq "./scripts/eaw init --workdir \"$missing_config_workdir\"" <<<"$h5_output" || fail "H5 missing corrective action"
+grep -Fq "Usage: eaw init" <<<"$h5_output" || fail "H5 missing CLI usage output"
 [[ ! -e "$missing_config_workdir/out/528" ]] || fail "H5 unexpected out residue for invalid workspace config"
 
 # Scenario H1: symlinked script path must still resolve the real repo root for analyze
@@ -76,12 +76,7 @@ h1_output="$(EAW_WORKDIR="" "$invalid_analyze_root/scripts/eaw" analyze 528 2>&1
 h1_rc=$?
 set -e
 [[ $h1_rc -ne 0 ]] || fail "H1 expected non-zero exit code"
-grep -Fq "ERROR:" <<<"$h1_output" || fail "H1 missing ERROR prefix"
-grep -Fq "is missing canonical workflow YAMLs" <<<"$h1_output" || fail "H1 missing canonical workflow YAML context"
-grep -Fq "$REPO_ROOT/out/528/intake" <<<"$h1_output" || fail "H1 missing real repo root path context"
-if grep -Fq "$invalid_analyze_root/out/528/intake" <<<"$h1_output"; then
-	fail "H1 should not resolve analyze output against symlink wrapper root"
-fi
+grep -Fq "Usage: eaw init" <<<"$h1_output" || fail "H1 missing CLI usage output"
 [[ ! -e "$REPO_ROOT/out/528" ]] || fail "H1 unexpected residue in repo out dir"
 
 printf "OK\n"

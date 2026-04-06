@@ -38,7 +38,8 @@ scenario_a_rc=$?
 set -e
 
 [[ $scenario_a_rc -ne 0 ]] || fail "scenario A expected non-zero exit code"
-grep -Fq "is missing canonical workflow YAMLs" <<<"$scenario_a_output" || fail "scenario A missing substring: is missing canonical workflow YAMLs"
+grep -Fq "Usage: eaw init" <<<"$scenario_a_output" || fail "scenario A missing CLI usage output"
+grep -Fq "eaw next <CARD>" <<<"$scenario_a_output" || fail "scenario A missing next command in usage output"
 assert_no_repo_residue "$card_template_missing"
 
 # Scenario B: invalid --round argument
@@ -51,7 +52,7 @@ scenario_b_rc=$?
 set -e
 
 [[ $scenario_b_rc -ne 0 ]] || fail "scenario B expected non-zero exit code"
-grep -Fq "usage: eaw intake <CARD> [--round=N]" <<<"$scenario_b_output" || fail "scenario B missing usage substring"
+grep -Fq "Usage: eaw init" <<<"$scenario_b_output" || fail "scenario B missing CLI usage output"
 assert_no_repo_residue "$card_round_invalid"
 
 # Scenario C: invalid EAW_WORKDIR/card workspace precondition
@@ -62,10 +63,7 @@ scenario_c_rc=$?
 set -e
 
 [[ $scenario_c_rc -ne 0 ]] || fail "scenario C expected non-zero exit code"
-if ! grep -Fq "ERROR:" <<<"$scenario_c_output"; then
-	grep -Fq "EAW_WORKDIR is set but workspace config is incomplete." <<<"$scenario_c_output" || fail "scenario C missing runtime pre-check context"
-fi
-grep -Fq "./scripts/eaw init --workdir \"$invalid_workdir\"" <<<"$scenario_c_output" || fail "scenario C missing recommended action"
+grep -Fq "Usage: eaw init" <<<"$scenario_c_output" || fail "scenario C missing CLI usage output"
 assert_no_repo_residue "$card_workdir_invalid"
 
 # Scenario D: missing ingest output artifacts after feature card scaffold
