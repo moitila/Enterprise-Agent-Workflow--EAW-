@@ -2,6 +2,12 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+RUNTIME_ROOT="$(mktemp -d)"
+cp -R "$REPO_ROOT/scripts" "$RUNTIME_ROOT/"
+cp -R "$REPO_ROOT/templates" "$RUNTIME_ROOT/"
+cp -R "$REPO_ROOT/tracks" "$RUNTIME_ROOT/"
+cp -R "$REPO_ROOT/config" "$RUNTIME_ROOT/"
+EAW_BIN="$RUNTIME_ROOT/scripts/eaw"
 
 fail() {
 	printf "workflow_prompt_path_smoke failed: %s\n" "$1" >&2
@@ -10,7 +16,7 @@ fail() {
 
 init_workdir() {
 	local workdir="$1"
-	"$REPO_ROOT/scripts/eaw" init --workdir "$workdir" --force >/dev/null
+	"$EAW_BIN" init --workdir "$workdir" --force >/dev/null
 	cat >"$workdir/config/repos.conf" <<CFG
 local-main|$REPO_ROOT|target
 CFG
@@ -40,10 +46,11 @@ card_state:
   completed_phases: []
 EOF
 
-	cat >"$intake_dir/phase_analysis.yaml" <<'EOF'
+cat >"$intake_dir/phase_analysis.yaml" <<'EOF'
 phase:
   id: analysis
   prompt:
+    active: 2
     path: templates/prompts/default/analyze_findings/prompt_v<active>.md
 EOF
 }
@@ -111,10 +118,11 @@ card_state:
   completed_phases: []
 EOF
 
-	cat >"$intake_dir/phase_analysis.yaml" <<'EOF'
+cat >"$intake_dir/phase_analysis.yaml" <<'EOF'
 phase:
   id: analysis
   prompt:
+    active: 2
     path: templates/prompts/default/missing/prompt_v<active>.md
 EOF
 }
@@ -136,7 +144,7 @@ EOF
 }
 
 tmp_root="$(mktemp -d)"
-trap 'rm -rf "$tmp_root"' EXIT
+trap 'rm -rf "$tmp_root" "$RUNTIME_ROOT"' EXIT
 
 success_workdir="$tmp_root/workdir-success"
 failure_workdir="$tmp_root/workdir-failure"
@@ -149,15 +157,15 @@ write_official_track_card "$success_workdir" "539FEATURE" "feature" "findings" "
 write_official_track_card "$success_workdir" "539BUG" "bug" "findings" "intake"
 write_official_track_card "$success_workdir" "539SPIKE" "spike" "findings" "intake"
 
-EAW_WORKDIR="$success_workdir" "$REPO_ROOT/scripts/eaw" card "540FEATURE" --track feature "feature track smoke" >/dev/null
-EAW_WORKDIR="$success_workdir" "$REPO_ROOT/scripts/eaw" card "540BUG" --track bug "bug track smoke" >/dev/null
-EAW_WORKDIR="$success_workdir" "$REPO_ROOT/scripts/eaw" card "540SPIKE" --track spike "spike track smoke" >/dev/null
+EAW_WORKDIR="$success_workdir" "$EAW_BIN" card "540FEATURE" --track feature "feature track smoke" >/dev/null
+EAW_WORKDIR="$success_workdir" "$EAW_BIN" card "540BUG" --track bug "bug track smoke" >/dev/null
+EAW_WORKDIR="$success_workdir" "$EAW_BIN" card "540SPIKE" --track spike "spike track smoke" >/dev/null
 
 grep -Fq "track_id: feature" "$success_workdir/out/540FEATURE/state_card_feature.yaml" || fail "card command did not create track_id: feature"
 grep -Fq "track_id: bug" "$success_workdir/out/540BUG/state_card_bug.yaml" || fail "card command did not create track_id: bug"
 grep -Fq "track_id: spike" "$success_workdir/out/540SPIKE/state_card_spike.yaml" || fail "card command did not create track_id: spike"
 
-success_output="$(EAW_WORKDIR="$success_workdir" "$REPO_ROOT/scripts/eaw" validate 2>&1)" || fail "expected success validate to pass"
+success_output="$(EAW_WORKDIR="$success_workdir" "$EAW_BIN" validate 2>&1)" || fail "expected success validate to pass"
 grep -Fq "current_phase=analysis prompt_phase=analyze_findings" <<<"$success_output" || fail "missing prompt_phase derived from prompt.path in success output"
 grep -Fq "prompt_path=templates/prompts/default/analyze_findings/prompt_v<active>.md" <<<"$success_output" || fail "missing prompt_path in success output"
 grep -Fq "workflow card=538OFFICIAL track=standard current_phase=findings prompt_phase=analyze_findings" <<<"$success_output" || fail "missing official track validation summary"
@@ -176,8 +184,8 @@ init_workdir "$prompt_workdir"
 write_official_track_card_without_completed "$prompt_workdir" "544FEATURE" "feature" "findings" "ingest"
 write_official_track_card_without_completed "$prompt_workdir" "544STANDARD" "standard" "findings" "intake"
 
-feature_prompt_output="$(EAW_WORKDIR="$prompt_workdir" "$REPO_ROOT/scripts/eaw" next "544FEATURE" 2>&1)" || fail "expected feature findings prompt generation to pass"
-standard_prompt_output="$(EAW_WORKDIR="$prompt_workdir" "$REPO_ROOT/scripts/eaw" next "544STANDARD" 2>&1)" || fail "expected standard findings prompt generation to pass"
+feature_prompt_output="$(EAW_WORKDIR="$prompt_workdir" "$EAW_BIN" next "544FEATURE" 2>&1)" || fail "expected feature findings prompt generation to pass"
+standard_prompt_output="$(EAW_WORKDIR="$prompt_workdir" "$EAW_BIN" next "544STANDARD" 2>&1)" || fail "expected standard findings prompt generation to pass"
 
 feature_prompt="$prompt_workdir/out/544FEATURE/prompts/findings.md"
 standard_prompt="$prompt_workdir/out/544STANDARD/prompts/findings.md"
@@ -200,7 +208,7 @@ init_workdir "$failure_workdir"
 write_invalid_card "$failure_workdir" "537FAIL"
 
 set +e
-failure_output="$(EAW_WORKDIR="$failure_workdir" "$REPO_ROOT/scripts/eaw" validate 2>&1)"
+failure_output="$(EAW_WORKDIR="$failure_workdir" "$EAW_BIN" validate 2>&1)"
 failure_rc=$?
 set -e
 
@@ -211,7 +219,7 @@ init_workdir "$missing_track_workdir"
 write_missing_official_track_card "$missing_track_workdir" "537MISSING"
 
 set +e
-missing_track_output="$(EAW_WORKDIR="$missing_track_workdir" "$REPO_ROOT/scripts/eaw" validate 2>&1)"
+missing_track_output="$(EAW_WORKDIR="$missing_track_workdir" "$EAW_BIN" validate 2>&1)"
 missing_track_rc=$?
 set -e
 
@@ -228,10 +236,10 @@ context_invalid_workdir="$tmp_root/workdir-context-invalid"
 
 init_workdir "$context_valid_workdir"
 
-ctx_valid_track_dir="$context_valid_workdir/tracks/ctx-test/phases"
+ctx_valid_track_dir="$RUNTIME_ROOT/tracks/ctx-test/phases"
 mkdir -p "$ctx_valid_track_dir"
 
-cat >"$context_valid_workdir/tracks/ctx-test/track.yaml" <<'EOF'
+cat >"$RUNTIME_ROOT/tracks/ctx-test/track.yaml" <<'EOF'
 track:
   id: ctx-test
   initial_phase: no-context
@@ -252,6 +260,7 @@ cat >"$ctx_valid_track_dir/no-context.yaml" <<'EOF'
 phase:
   id: no-context
   prompt:
+    active: 2
     path: templates/prompts/default/analyze_findings/prompt_v<active>.md
 EOF
 
@@ -260,6 +269,7 @@ cat >"$ctx_valid_track_dir/dynamic-only.yaml" <<'EOF'
 phase:
   id: dynamic-only
   prompt:
+    active: 2
     path: templates/prompts/default/analyze_findings/prompt_v<active>.md
   context:
     dynamic_context_template: repo-diff
@@ -270,22 +280,23 @@ cat >"$ctx_valid_track_dir/both-fields.yaml" <<'EOF'
 phase:
   id: both-fields
   prompt:
+    active: 2
     path: templates/prompts/default/analyze_findings/prompt_v<active>.md
   context:
     dynamic_context_template: repo-diff
     onboarding_template: workspace-onboarding
 EOF
 
-context_valid_output="$(EAW_WORKDIR="$context_valid_workdir" "$REPO_ROOT/scripts/eaw" validate workflow --track ctx-test 2>&1)" || fail "expected valid phase.context to pass validate workflow"
+context_valid_output="$(EAW_WORKDIR="$context_valid_workdir" "$EAW_BIN" validate workflow --track ctx-test 2>&1)" || fail "expected valid phase.context to pass validate workflow"
 grep -Fq "OK track=ctx-test" <<<"$context_valid_output" || fail "missing OK for valid context track"
 
 # Phase with invalid context (extra field) — should fail validate workflow
 init_workdir "$context_invalid_workdir"
 
-ctx_invalid_track_dir="$context_invalid_workdir/tracks/ctx-invalid/phases"
+ctx_invalid_track_dir="$RUNTIME_ROOT/tracks/ctx-invalid/phases"
 mkdir -p "$ctx_invalid_track_dir"
 
-cat >"$context_invalid_workdir/tracks/ctx-invalid/track.yaml" <<'EOF'
+cat >"$RUNTIME_ROOT/tracks/ctx-invalid/track.yaml" <<'EOF'
 track:
   id: ctx-invalid
   initial_phase: bad-context
@@ -298,6 +309,7 @@ cat >"$ctx_invalid_track_dir/bad-context.yaml" <<'EOF'
 phase:
   id: bad-context
   prompt:
+    active: 2
     path: templates/prompts/default/analyze_findings/prompt_v<active>.md
   context:
     dynamic_context_template: repo-diff
@@ -305,7 +317,7 @@ phase:
 EOF
 
 set +e
-context_invalid_output="$(EAW_WORKDIR="$context_invalid_workdir" "$REPO_ROOT/scripts/eaw" validate workflow --track ctx-invalid 2>&1)"
+context_invalid_output="$(EAW_WORKDIR="$context_invalid_workdir" "$EAW_BIN" validate workflow --track ctx-invalid 2>&1)"
 context_invalid_rc=$?
 set -e
 
@@ -339,6 +351,7 @@ cat >"$runtime_intake_dir/phase_no_context.yaml" <<'EOF'
 phase:
   id: no-context
   prompt:
+    active: 2
     path: templates/prompts/default/analyze_findings/prompt_v<active>.md
 EOF
 
@@ -346,6 +359,7 @@ cat >"$runtime_intake_dir/phase_dynamic_only.yaml" <<'EOF'
 phase:
   id: dynamic-only
   prompt:
+    active: 2
     path: templates/prompts/default/analyze_findings/prompt_v<active>.md
   context:
     dynamic_context_template: repo-diff
@@ -355,6 +369,7 @@ cat >"$runtime_intake_dir/phase_done.yaml" <<'EOF'
 phase:
   id: done
   prompt:
+    active: 2
     path: templates/prompts/default/analyze_findings/prompt_v<active>.md
 EOF
 
@@ -377,6 +392,6 @@ context_runtime_rc=$?
 set -e
 
 [[ "$context_runtime_rc" -ne 0 ]] || fail "expected dynamic context runtime without materialization to fail"
-grep -Fq "context nao materializado" <<<"$context_runtime_output" || fail "missing deterministic runtime error for absent dynamic context"
+grep -Fq "template directory not found for context 'dynamic' template 'repo-diff'" <<<"$context_runtime_output" || fail "missing deterministic runtime error for absent dynamic context template"
 
 printf "workflow_prompt_path_smoke OK\n"
