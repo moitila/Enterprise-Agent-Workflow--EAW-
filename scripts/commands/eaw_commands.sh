@@ -1076,6 +1076,11 @@ eaw_state_phase_status_for_next() {
 	printf "LEGACY_UNSET\n"
 }
 
+eaw_state_phase_completed_for_next() {
+	local state_file="$1"
+	eaw_state_scalar_or_default "$state_file" "phase_completed" "false"
+}
+
 eaw_card_template_type_for_track() {
 	local track_id="${1:-}"
 	if [[ -z "$track_id" ]] || ! eaw_official_track_dir "$track_id" >/dev/null 2>&1; then
@@ -1936,6 +1941,11 @@ eaw_advance_to_next_phase_for_wrapper() {
 	current_phase="$EAW_CARD_WORKFLOW_CURRENT_PHASE"
 	current_phase_file="$EAW_CARD_WORKFLOW_CURRENT_PHASE_FILE"
 	if [[ "$current_phase" == "$EAW_CARD_WORKFLOW_FINAL_PHASE" ]]; then
+		if [[ "$(eaw_state_phase_completed_for_next "$EAW_CARD_WORKFLOW_STATE_FILE")" != "true" ]]; then
+			if ! eaw_mark_current_phase_complete_for_wrapper "$card"; then
+				return 1
+			fi
+		fi
 		echo "CARD ${card}: workflow already complete"
 		return 0
 	fi
@@ -2017,6 +2027,7 @@ phase_load_workflow_context() {
 phase_resolve_workflow_transition() {
 	local card="$1"
 	local card_dir="$EAW_OUT_DIR/$card"
+	local phase_completed
 
 	if ! eaw_card_has_workflow_config "$card_dir"; then
 		echo "RUNTIME: workflow transition skipped for card=$card; legacy lifecycle"
@@ -2028,8 +2039,11 @@ phase_resolve_workflow_transition() {
 		fi
 	fi
 
-	if [[ "$EAW_CARD_WORKFLOW_CURRENT_PHASE" == "$EAW_CARD_WORKFLOW_FINAL_PHASE" ]]; then
+	phase_completed="$(eaw_state_phase_completed_for_next "$EAW_CARD_WORKFLOW_STATE_FILE")"
+	if [[ "$EAW_CARD_WORKFLOW_CURRENT_PHASE" == "$EAW_CARD_WORKFLOW_FINAL_PHASE" && "$phase_completed" == "true" ]]; then
 		echo "RUNTIME: next_phase=<none> final_phase=$EAW_CARD_WORKFLOW_FINAL_PHASE status=complete"
+	elif [[ "$EAW_CARD_WORKFLOW_CURRENT_PHASE" == "$EAW_CARD_WORKFLOW_FINAL_PHASE" ]]; then
+		echo "RUNTIME: next_phase=<none> final_phase=$EAW_CARD_WORKFLOW_FINAL_PHASE status=pending_completion phase_completed=$phase_completed"
 	else
 		echo "RUNTIME: next_phase=$EAW_CARD_WORKFLOW_NEXT_PHASE resolved_via=track.transitions current_phase=$EAW_CARD_WORKFLOW_CURRENT_PHASE"
 	fi
@@ -2065,6 +2079,7 @@ cmd_next() {
 	local card="$1"
 	local card_dir="$EAW_OUT_DIR/$card"
 	local current_phase current_phase_file next_phase completed_phases phase_started_at previous_phase validation_output
+	local phase_completed
 
 	if ! eaw_card_has_workflow_config "$card_dir"; then
 		echo "ERROR: card ${card} is missing canonical workflow YAMLs in $card_dir/intake (MVP requires canonical YAML structure)" >&2
@@ -2078,6 +2093,11 @@ cmd_next() {
 	current_phase="$EAW_CARD_WORKFLOW_CURRENT_PHASE"
 	current_phase_file="$EAW_CARD_WORKFLOW_CURRENT_PHASE_FILE"
 	if [[ "$current_phase" == "$EAW_CARD_WORKFLOW_FINAL_PHASE" ]]; then
+		phase_completed="$(eaw_state_phase_completed_for_next "$EAW_CARD_WORKFLOW_STATE_FILE")"
+		if [[ "$phase_completed" != "true" ]]; then
+			echo "ERROR: card ${card} final phase is not marked complete in persisted state" >&2
+			return 1
+		fi
 		OUTDIR="$card_dir"
 		if ! grep -q '"event_type":"track_completed"' "${OUTDIR}/execution_journal.jsonl" 2>/dev/null; then
 			eaw_journal_append "${EAW_CARD_WORKFLOW_CARD}" "${EAW_CARD_WORKFLOW_TRACK_ID}" \
@@ -2203,10 +2223,11 @@ _cmd_run_find_track_file() {
 
 _cmd_run_read_card_state() {
 	local state_file="$1"
-	local t c p cp
+	local t c p pc cp
 	_CMD_RUN_TRACK_ID=""
 	_CMD_RUN_CURRENT_PHASE=""
 	_CMD_RUN_PHASE_STATUS=""
+	_CMD_RUN_PHASE_COMPLETED=""
 	_CMD_RUN_COMPLETED_PHASES=""
 	if [[ ! -f "$state_file" ]]; then
 		return 1
@@ -2214,10 +2235,12 @@ _cmd_run_read_card_state() {
 	t="$(eaw_yaml_state_scalar "$state_file" "track_id")"
 	c="$(eaw_normalize_phase_id "$(eaw_yaml_state_scalar "$state_file" "current_phase")")"
 	p="$(eaw_yaml_state_scalar "$state_file" "phase_status")"
+	pc="$(eaw_state_scalar_or_default "$state_file" "phase_completed" "false")"
 	cp="$(eaw_yaml_state_completed_phases "$state_file" | tr '\n' ',')"
 	_CMD_RUN_TRACK_ID="$t"
 	_CMD_RUN_CURRENT_PHASE="$c"
 	_CMD_RUN_PHASE_STATUS="$p"
+	_CMD_RUN_PHASE_COMPLETED="$pc"
 	_CMD_RUN_COMPLETED_PHASES="$cp"
 	if [[ -z "$t" || -z "$c" ]]; then
 		return 1
@@ -2271,7 +2294,7 @@ cmd_run() {
 	local exec_log="$runtime_dir/execution.log"
 	local attempt=0
 	local state_file track_file final_phase
-	local track_id current_phase phase_status completed_phases
+	local track_id current_phase phase_status phase_completed completed_phases
 	local snap_before snap_after next_rc
 	local raw_p norm_p phase_found
 
@@ -2295,6 +2318,7 @@ cmd_run() {
 	track_id="$_CMD_RUN_TRACK_ID"
 	current_phase="$_CMD_RUN_CURRENT_PHASE"
 	phase_status="$_CMD_RUN_PHASE_STATUS"
+	phase_completed="$_CMD_RUN_PHASE_COMPLETED"
 	completed_phases="$_CMD_RUN_COMPLETED_PHASES"
 
 	# Step 2: validate track consistency — TRACK_CONSISTENCY_ERROR if track.yaml not found (H7)
@@ -2342,10 +2366,11 @@ cmd_run() {
 		track_id="$_CMD_RUN_TRACK_ID"
 		current_phase="$_CMD_RUN_CURRENT_PHASE"
 		phase_status="$_CMD_RUN_PHASE_STATUS"
+		phase_completed="$_CMD_RUN_PHASE_COMPLETED"
 		completed_phases="$_CMD_RUN_COMPLETED_PHASES"
 
 		# Step 1: detect completion before calling eaw next (H1)
-		if [[ "$current_phase" == "$final_phase" ]]; then
+		if [[ "$current_phase" == "$final_phase" && "$phase_completed" == "true" ]]; then
 			_cmd_run_write_state "$run_state_file" "$card" "$attempt" "COMPLETED" "$track_id" "$current_phase" "$phase_status" "COMPLETED"
 			_cmd_run_log "$exec_log" "attempt=$attempt|status=COMPLETED|card=$card|track=$track_id|phase=$current_phase"
 			printf "CARD %s: run completed\n" "$card"
