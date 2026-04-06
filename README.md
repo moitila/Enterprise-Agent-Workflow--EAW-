@@ -59,7 +59,7 @@ Quickstart minimo de contexto:
 
 `track` is the primary workflow classification for a card. The runtime stores the selected value in `card_state.track_id` and resolves the official workflow from `tracks/<track>/track.yaml`.
 
-The declarative lifecycle advances through `current_phase` and `track.transitions`. `./scripts/eaw card <CARD> --track <TRACK>` materializes the initial phase declared by the selected track as soon as the card is created. `./scripts/eaw next <CARD>` first materializes the current phase, then evaluates the declared `completion` contract for that same phase, remains in place when required artifacts are still missing or still contain only scaffold/template content, and only then applies `track.transitions` and materializes the destination phase. Phases may also declare prompt artifacts directly in `outputs.prompts`, which the runtime materializes under `out/<CARD>/prompts/` using the declared alias as the filename (`<alias>.md`) while preserving compatibility prompt artifacts. `intake`, `analyze`, and `implement` remain deprecated compatibility wrappers over the same lifecycle for transition and AI-assisted execution flows, with planned removal in `v1.0`.
+The declarative lifecycle advances through `current_phase` and `track.transitions`. `./scripts/eaw card <CARD> --track <TRACK>` materializes the initial phase declared by the selected track as soon as the card is created. `./scripts/eaw next <CARD>` first materializes the current phase, then evaluates the declared `completion` contract for that same phase, remains in place when required artifacts are still missing or still contain only scaffold/template content, and only then applies `track.transitions` and materializes the destination phase. Phases may also declare prompt artifacts directly in `outputs.prompts`, which the runtime materializes under `out/<CARD>/prompts/` using the declared alias as the filename (`<alias>.md`) while preserving compatibility prompt artifacts. The public CLI centers on `next`, `run`, `complete`, `validate`, `doctor`, and prompt-governance commands.
 
 `./scripts/eaw run <CARD>` is the deterministic orchestration entrypoint for executing a card end-to-end through the declared workflow. It uses `./scripts/eaw next <CARD>` as the only progression mechanism, persists `out/<CARD>/runtime/run_state.yaml` and `out/<CARD>/runtime/execution.log`, and names terminal outcomes with `stop_reason`. Wave 1 is intentionally minimal: no `--resume`, `--from`, `--dry-run`, automatic retry, extra metrics, or new runtime architecture are part of the documented contract.
 
@@ -67,7 +67,7 @@ Current phase semantics:
 - entering a phase means the card state now points to that declarative workflow phase;
 - `./scripts/eaw card <CARD> --track <TRACK>` materializes the initial declarative phase immediately after card creation;
 - `./scripts/eaw next <CARD>` materializes the current phase, validates that phase against `phase.completion`, stays on the same `current_phase` when required artifacts are missing or unfilled, and otherwise performs the declarative state transition before materializing the destination phase;
-- `intake`, `analyze`, and `implement` remain deprecated compatibility wrappers and should be treated as transitional entrypoints; prefer `next` for the primary lifecycle interface and plan migration before the `v1.0` removal target.
+- `next` is the primary lifecycle interface for declared phase progression.
 
 Future phase-driven note:
 - the current phase-driven executor is incremental: it scaffolds declared outputs, materializes `outputs.prompts` under `out/<CARD>/prompts/`, emits compatibility prompt artifacts for the built-in prompt phases, and records execution in `execution.log`;
@@ -76,7 +76,6 @@ Future phase-driven note:
 ## Migration Path
 
 - Prefer `./scripts/eaw next <CARD>` as the primary lifecycle command.
-- Treat `intake`, `analyze`, and `implement` as deprecated compatibility wrappers during the transition to the phase-driven flow; removal remains planned for `v1.0`.
 - In the current public CLI, phase completion is enforced through `phase.completion` when `next` runs. The repository does not document a public `./scripts/eaw complete <CARD>` command today, so documentation should describe the completion contract rather than an additional CLI step.
 
 ## Test Scopes
@@ -155,12 +154,11 @@ Released versions and historical changes are tracked in `CHANGELOG.md`.
 
 EAW é um sistema determinístico de engenharia assistida por IA para governar trabalho por card. O runtime combina `track`, `phase`, estado por card em `card_state.track_id` e `current_phase`, governança de prompts por `ACTIVE`, coleta de contexto e artefatos auditáveis em `out/<CARD>/`.
 
-Para usar: `./scripts/eaw init`, depois `./scripts/eaw card <CARD> --track <TRACK> ["<TITLE>"]`, avance o lifecycle com `./scripts/eaw next <CARD>` quando quiser progredir a fase declarada, e use `./scripts/eaw intake <CARD>`, `./scripts/eaw analyze <CARD>` e `./scripts/eaw implement <CARD>` como macrocomandos agregados de prompts e compatibilidade. Esses wrappers estao deprecated, permanecem funcionais durante a transicao e tem remocao planejada em `v1.0`. O valor escolhido em `--track` torna-se `card_state.track_id`, o workflow oficial e resolvido por `tracks/<track>/track.yaml` e a proxima fase vem de `track.transitions`.
+Para usar: `./scripts/eaw init`, depois `./scripts/eaw card <CARD> --track <TRACK> ["<TITLE>"]`, avance o lifecycle com `./scripts/eaw next <CARD>` quando quiser progredir a fase declarada. O valor escolhido em `--track` torna-se `card_state.track_id`, o workflow oficial e resolvido por `tracks/<track>/track.yaml` e a proxima fase vem de `track.transitions`.
 
 Semantica atual de fase:
 - entrar em uma fase significa que o estado do card agora aponta para aquela fase declarativa do workflow;
 - `./scripts/eaw next <CARD>` executa a transicao declarativa de estado e depois executa a fase de destino com base nos outputs declarados e nos bindings de prompt do runtime;
-- `intake`, `analyze` e `implement` seguem como comandos agregados de compatibilidade deprecated que materializam o trabalho orientado a prompts dessas fases, com remocao planejada em `v1.0`.
 
 Nota sobre modelo phase-driven futuro:
 - o executor phase-driven atual e incremental: cria artefatos declarados, emite prompts das fases conhecidas e registra a execucao em `execution.log`;
@@ -169,7 +167,6 @@ Nota sobre modelo phase-driven futuro:
 ### Caminho de Migracao
 
 - Prefira `./scripts/eaw next <CARD>` como comando principal do lifecycle.
-- Trate `intake`, `analyze` e `implement` como wrappers deprecated de compatibilidade durante a transicao para o fluxo phase-driven; a remocao continua planejada para `v1.0`.
 - Na CLI publica atual, a conclusao da fase e aplicada por `phase.completion` quando `next` executa. O repositorio nao documenta hoje um comando publico `./scripts/eaw complete <CARD>`, entao a documentacao deve descrever o contrato de conclusao em vez de um passo extra de CLI.
 
 ## Commit Governance (ECS)
@@ -222,23 +219,13 @@ Why this matters: making risk and scope explicit at commit time enables determin
 
 EAW Mode D provides a deterministic path to integrate an external AI/assistant into the engineering workflow by generating complete, structured prompts and producing a test plan and action plan in a reproducible output folder.
 
-This prompt pipeline is an aggregated compatibility flow for AI-assisted execution. It coexists with the declarative lifecycle, where the runtime keeps per-card state in `current_phase` and advances the official workflow through `./scripts/eaw next <CARD>` based on `track.transitions`.
+This prompt pipeline coexists with the declarative lifecycle, where the runtime keeps per-card state in `current_phase` and advances the official workflow through `./scripts/eaw next <CARD>` based on `track.transitions`.
 
 Workflow (example):
 
 1. Create a card: `./scripts/eaw card 12345 --track feature "Short title"`
 2. Fill the dossier following the template sections.
-3. Populate `out/12345/intake/` with evidence files (logs, screenshots, traces).
-
-```bash
-./scripts/eaw intake 12345
-```
-
-4. Generate the analysis prompt artifacts:
-
-```bash
-./scripts/eaw analyze 12345
-```
+3. Advance the card with `./scripts/eaw next 12345` so the declared prompt phases materialize their artifacts.
 
 This produces deterministic files under `out/12345/`:
 
