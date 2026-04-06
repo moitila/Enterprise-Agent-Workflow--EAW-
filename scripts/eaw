@@ -66,12 +66,6 @@ source "$SCRIPT_DIR/commands/cmd_status.sh"
 # shellcheck disable=SC1091
 source "$SCRIPT_DIR/commands/cmd_doctor_hardening.sh"
 # shellcheck disable=SC1091
-source "$SCRIPT_DIR/commands/cmd_implement.sh"
-# shellcheck disable=SC1091
-source "$SCRIPT_DIR/commands/cmd_analyze.sh"
-# shellcheck disable=SC1091
-source "$SCRIPT_DIR/commands/cmd_intake.sh"
-# shellcheck disable=SC1091
 source "$SCRIPT_DIR/commands/cmd_validate_prompt.sh"
 # shellcheck disable=SC1091
 source "$SCRIPT_DIR/commands/cmd_apply_prompt.sh"
@@ -89,13 +83,6 @@ main() {
 	fi
 
 	# Normalize help for subcommands before positional routing.
-	case "$1:${2:-}" in
-	analyze:--help | analyze:-h | intake:--help | intake:-h | implement:--help | implement:-h)
-		usage
-		exit 0
-		;;
-	esac
-
 	case "$1" in
 	init)
 		cmd_init "${@:2}"
@@ -103,34 +90,6 @@ main() {
 	card)
 		validate_runtime_workdir
 		cmd_card_cli "${@:2}"
-		;;
-	analyze)
-		if [[ $# -lt 2 ]]; then
-			echo "Missing args" >&2
-			usage
-			exit 1
-		fi
-		validate_runtime_workdir
-		cmd_analyze "$2"
-		;;
-	intake)
-		validate_runtime_workdir
-		if [[ "$#" -eq 2 ]]; then
-			cmd_intake "$2"
-		elif [[ "$#" -eq 3 && "$3" == --round=* ]]; then
-			cmd_intake "$2" "$3"
-		else
-			echo "ERROR: invalid intake arguments" >&2
-			echo "usage: eaw intake <CARD> [--round=N]" >&2
-			exit 1
-		fi
-		;;
-	implement)
-		if [[ $# -ne 2 ]]; then
-			die "usage: eaw implement <CARD>"
-		fi
-		validate_runtime_workdir
-		cmd_implement "$2"
 		;;
 	tracks)
 		if [[ "${2:-}" == "install" ]]; then

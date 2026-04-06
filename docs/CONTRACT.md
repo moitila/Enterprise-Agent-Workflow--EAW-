@@ -19,8 +19,8 @@ Inputs
 
 Command semantics
 -----------------
-Primary workflow classification remains the selected `track`, persisted as `card_state.track_id`. The declarative lifecycle advances through `card_state.current_phase` and `track.transitions`; `eaw next <CARD>` is the runtime command that first validates the current phase `completion` contract, then applies the transition and executes the destination phase using the declared workflow outputs and prompt bindings. The command sections below document the aggregated prompt-oriented CLI surface that remains public for compatibility and deterministic artifact generation.
-In the current runtime model, `eaw next <CARD>` is the phase-driven entrypoint, while `eaw intake <CARD>`, `eaw analyze <CARD>`, and `eaw implement <CARD>` remain available as deprecated aggregated compatibility commands for prompt-oriented flows, with planned removal in `v1.0`.
+Primary workflow classification remains the selected `track`, persisted as `card_state.track_id`. The declarative lifecycle advances through `card_state.current_phase` and `track.transitions`; `eaw next <CARD>` is the runtime command that first validates the current phase `completion` contract, then applies the transition and executes the destination phase using the declared workflow outputs and prompt bindings. The command sections below document the public CLI surface and the legacy compatibility modules that remain in the tree for internal reference.
+In the current runtime model, `eaw next <CARD>` is the phase-driven entrypoint. `eaw intake <CARD>`, `eaw analyze <CARD>`, and `eaw implement <CARD>` are no longer exposed by `scripts/eaw` as public commands.
 The current contract documents phase completion through `phase.completion` and the `eaw next <CARD>` transition gate. It does not define a public `eaw complete <CARD>` command in the current CLI surface, so callers should treat completion as part of the declarative phase contract rather than a separate command.
 
 ### `eaw run`
@@ -37,10 +37,10 @@ Behavior:
 - Treats the declared workflow as the source of truth: it validates `track_id` and `current_phase` before iterating and does not call `intake`, `analyze`, or `implement` directly.
 - Wave 1 scope is intentionally limited: `--resume`, `--from`, `--dry-run`, automatic retry, and extra metrics are out of scope.
 
-### `eaw intake`
+### Legacy compatibility module: `intake`
 
 Syntax:
-`eaw intake <CARD> [--round=N]`
+Not exposed by `scripts/eaw`.
 
 Behavior:
 - Generates a deterministic intake prompt in `out/<CARD>/prompts/intake.md`.
@@ -48,10 +48,10 @@ Behavior:
 - The generated prompt constrains evidence reading to `out/<CARD>/intake/**`.
 - Emits a warning in `stderr` marking the wrapper as deprecated, points callers to `eaw next`, and keeps the wrapper functional during the transition until the planned `v1.0` removal target.
 
-### `eaw analyze`
+### Legacy compatibility module: `analyze`
 
 Syntax:
-`eaw analyze <CARD>`
+Not exposed by `scripts/eaw`.
 
 Behavior:
 - Generates prompt artifacts only at `out/<CARD>/prompts/<prompt_alias>.md` when the current phase declares `outputs.prompts`.
@@ -61,10 +61,10 @@ Behavior:
 - Does not modify source code repositories.
 - Emits a warning in `stderr` marking the wrapper as deprecated, points callers to `eaw next`, and keeps the wrapper functional during the transition until the planned `v1.0` removal target.
 
-### `eaw implement`
+### Legacy compatibility module: `implement`
 
 Syntax:
-`eaw implement <CARD>`
+Not exposed by `scripts/eaw`.
 
 Behavior:
 - Creates implementation scaffolds in `out/<CARD>/implementation/`.

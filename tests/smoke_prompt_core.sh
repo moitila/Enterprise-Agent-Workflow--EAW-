@@ -38,13 +38,14 @@ trap cleanup EXIT
 "$REPO_ROOT/scripts/eaw" prompt validate >/dev/null
 
 "$REPO_ROOT/scripts/eaw" card 500 --track standard "Prompt core smoke" >/dev/null
-"$REPO_ROOT/scripts/eaw" intake 500 --round=1 >/dev/null
-
 test -f "$EAW_WORKDIR/out/500/prompts/intake.md"
 provenance_file="$EAW_WORKDIR/out/500/provenance/prompts_used.yaml"
 test -f "$provenance_file"
 grep -F "phase: intake" "$provenance_file" >/dev/null
 grep -Eq "prompt_used: intake_v[0-9]+" "$provenance_file"
+standard_next_output="$("$REPO_ROOT/scripts/eaw" next 500 2>&1)"
+grep -F "phase 'intake' is incomplete; unfilled required artifacts" <<<"$standard_next_output" >/dev/null
+grep -F "CARD 500: intake remains current; unfilled required artifacts" <<<"$standard_next_output" >/dev/null
 
 test -f "$REPO_ROOT/tracks/feature/phases/ingest.yaml"
 grep -F "initial_phase: ingest" "$REPO_ROOT/tracks/feature/track.yaml" >/dev/null

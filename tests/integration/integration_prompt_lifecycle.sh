@@ -128,11 +128,9 @@ for phase in "${phases[@]}"; do
 done
 
 default_intake_dir="$RUNTIME_ROOT/templates/prompts/default/intake"
-"$RUNTIME_ROOT/scripts/eaw" card 499 --track standard "Invalid active prompt guardrail" >/dev/null
-rm -f "$EAW_WORKDIR/out/499/prompts/intake.md"
 printf "v999\n" >"$default_intake_dir/ACTIVE"
 set +e
-"$RUNTIME_ROOT/scripts/eaw" intake 499 --round=1 >/dev/null 2>&1
+"$RUNTIME_ROOT/scripts/eaw" card 499 --track standard "Invalid active prompt guardrail" >/dev/null 2>&1
 rc=$?
 set -e
 [[ "$rc" -ne 0 ]]
@@ -140,9 +138,18 @@ test ! -f "$EAW_WORKDIR/out/499/prompts/intake.md"
 printf "v2\n" >"$default_intake_dir/ACTIVE"
 
 "$RUNTIME_ROOT/scripts/eaw" card 500 --track standard "Prompt lifecycle integration" >/dev/null
-"$RUNTIME_ROOT/scripts/eaw" intake 500 --round=1 >/dev/null
-"$RUNTIME_ROOT/scripts/eaw" analyze 500 >/dev/null
-"$RUNTIME_ROOT/scripts/eaw" implement 500 >/dev/null
+printf "# intake ok\n" >"$EAW_WORKDIR/out/500/investigations/00_intake.md"
+printf "# provenance ok\n" >"$EAW_WORKDIR/out/500/investigations/_intake_provenance.md"
+"$RUNTIME_ROOT/scripts/eaw" next 500 >/dev/null
+printf "# findings ok\n" >"$EAW_WORKDIR/out/500/investigations/20_findings.md"
+"$RUNTIME_ROOT/scripts/eaw" next 500 >/dev/null
+printf "# hypotheses ok\n" >"$EAW_WORKDIR/out/500/investigations/30_hypotheses.md"
+"$RUNTIME_ROOT/scripts/eaw" next 500 >/dev/null
+printf "# planning ok\n" >"$EAW_WORKDIR/out/500/investigations/40_next_steps.md"
+"$RUNTIME_ROOT/scripts/eaw" next 500 >/dev/null
+printf "# scope lock ok\n" >"$EAW_WORKDIR/out/500/implementation/00_scope.lock.md"
+printf "# change plan ok\n" >"$EAW_WORKDIR/out/500/implementation/10_change_plan.md"
+"$RUNTIME_ROOT/scripts/eaw" next 500 >/dev/null
 
 test -f "$EAW_WORKDIR/out/500/prompts/intake.md"
 test -f "$EAW_WORKDIR/out/500/prompts/findings.md"

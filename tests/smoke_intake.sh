@@ -17,8 +17,8 @@ CARD="4012"
 
 ./scripts/eaw init --workdir "$EAW_WORKDIR" --upgrade
 ./scripts/eaw card "$CARD" --track standard "intake smoke"
-./scripts/eaw intake "$CARD" >/dev/null
-./scripts/eaw intake "$CARD" --round=2 >/dev/null
+printf "# provenance ok\n" >"$EAW_WORKDIR/out/$CARD/investigations/_intake_provenance.md"
+./scripts/eaw next "$CARD" >/dev/null
 
 prompt="$EAW_WORKDIR/out/$CARD/prompts/intake.md"
 

@@ -27,7 +27,17 @@ echo "SMOKE: card=$CARD"
 
 bash ./scripts/eaw init --workdir "$EAW_WORKDIR" --upgrade >/dev/null 2>&1
 bash ./scripts/eaw card "$CARD" --track standard "smoke implement" >/dev/null 2>&1
-bash ./scripts/eaw implement "$CARD" >/dev/null 2>&1
+printf "# provenance ok\n" >"$INVESTIGATIONS_DIR/_intake_provenance.md"
+bash ./scripts/eaw next "$CARD" >/dev/null 2>&1
+printf "# findings ok\n" >"$INVESTIGATIONS_DIR/20_findings.md"
+bash ./scripts/eaw next "$CARD" >/dev/null 2>&1
+printf "# hypotheses ok\n" >"$INVESTIGATIONS_DIR/30_hypotheses.md"
+bash ./scripts/eaw next "$CARD" >/dev/null 2>&1
+printf "# planning ok\n" >"$INVESTIGATIONS_DIR/40_next_steps.md"
+bash ./scripts/eaw next "$CARD" >/dev/null 2>&1
+printf "# scope lock ok\n" >"$IMPL_DIR/00_scope.lock.md"
+printf "# change plan ok\n" >"$IMPL_DIR/10_change_plan.md"
+bash ./scripts/eaw next "$CARD" >/dev/null 2>&1
 echo "SMOKE: implement OK"
 
 if [[ ! -d "$IMPL_DIR" ]]; then
