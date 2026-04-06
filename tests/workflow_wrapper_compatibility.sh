@@ -26,54 +26,64 @@ card="554WRAP"
 EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" card "$card" --track standard "wrapper compatibility" >/dev/null
 state_file="$workdir/out/$card/state_card_standard.yaml"
 
-intake_output="$(EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" intake "$card" 2>&1)" || fail "intake wrapper failed"
-grep -Fq "WARNING: 'intake' is deprecated and planned for removal in v1.0. Prefer 'eaw next'." <<<"$intake_output" || fail "intake wrapper deprecation warning missing"
-grep -Fq "current_phase: intake" "$state_file" || fail "intake wrapper should preserve intake as current phase"
-grep -Eq '^  phase_started_at: [0-9]{4}-[0-9]{2}-[0-9]{2}T' "$state_file" || fail "intake wrapper should preserve phase_started_at"
-grep -Fq "phase_completed: false" "$state_file" || fail "intake wrapper should keep phase_completed false"
-grep -Fq "phase_completed_at: null" "$state_file" || fail "intake wrapper should keep null phase_completed_at"
-# 00_intake.md is created by the intake phase execution, not by eaw card scaffold
-test -f "$workdir/out/$card/investigations/00_intake.md" || fail "intake wrapper missing 00_intake"
-test -f "$workdir/out/$card/investigations/_intake_provenance.md" || fail "intake wrapper missing provenance"
-test -f "$workdir/out/$card/prompts/intake.md" || fail "intake wrapper missing round 1 prompt"
+set +e
+intake_output="$(EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" intake "$card" 2>&1)"
+intake_rc=$?
+set -e
+[[ "$intake_rc" -ne 0 ]] || fail "intake wrapper should be rejected"
+grep -Fq "Usage: eaw init" <<<"$intake_output" || fail "intake wrapper should fall back to top-level usage"
 
-round2_output="$(EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" intake "$card" --round=2 2>&1)" || fail "intake wrapper round 2 failed"
-grep -Fq "WARNING: 'intake' is deprecated and planned for removal in v1.0. Prefer 'eaw next'." <<<"$round2_output" || fail "intake wrapper round 2 deprecation warning missing"
-test -f "$workdir/out/$card/prompts/intake.md" || fail "intake wrapper missing round 2 prompt"
+set +e
+analyze_output="$(EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" analyze "$card" 2>&1)"
+analyze_rc=$?
+set -e
+[[ "$analyze_rc" -ne 0 ]] || fail "analyze wrapper should be rejected"
+grep -Fq "Usage: eaw init" <<<"$analyze_output" || fail "analyze wrapper should fall back to top-level usage"
 
-analyze_output="$(EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" analyze "$card" 2>&1)" || fail "analyze wrapper failed"
-grep -Fq "WARNING: 'analyze' is deprecated and planned for removal in v1.0. Prefer 'eaw next'." <<<"$analyze_output" || fail "analyze wrapper deprecation warning missing"
-grep -Fq "current_phase: planning" "$state_file" || fail "analyze wrapper should advance card to planning"
-grep -Eq '^  phase_started_at: [0-9]{4}-[0-9]{2}-[0-9]{2}T' "$state_file" || fail "analyze wrapper should stamp planning phase_started_at"
-grep -Fq "phase_completed: false" "$state_file" || fail "analyze wrapper should leave planning phase_completed false"
-grep -Fq "phase_completed_at: null" "$state_file" || fail "analyze wrapper should reset planning phase_completed_at"
-grep -Fq "phase_status: RUN" "$state_file" || fail "analyze wrapper should leave planning in RUN"
-grep -Fq "    - intake" "$state_file" || fail "analyze wrapper missing completed intake"
-grep -Fq "    - findings" "$state_file" || fail "analyze wrapper missing completed findings"
-grep -Fq "    - hypotheses" "$state_file" || fail "analyze wrapper missing completed hypotheses"
-test -f "$workdir/out/$card/prompts/findings.md" || fail "analyze wrapper missing findings prompt"
-test -f "$workdir/out/$card/prompts/hypotheses.md" || fail "analyze wrapper missing hypotheses prompt"
-test -f "$workdir/out/$card/prompts/planning.md" || fail "analyze wrapper missing planning prompt"
-test -f "$workdir/out/$card/TEST_PLAN_${card}.md" || fail "analyze wrapper missing test plan"
+set +e
+implement_output="$(EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" implement "$card" 2>&1)"
+implement_rc=$?
+set -e
+[[ "$implement_rc" -ne 0 ]] || fail "implement wrapper should be rejected"
+grep -Fq "Usage: eaw init" <<<"$implement_output" || fail "implement wrapper should fall back to top-level usage"
 
-implement_output="$(EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" implement "$card" 2>&1)" || fail "implement wrapper failed"
-grep -Fq "WARNING: 'implement' is deprecated and planned for removal in v1.0. Prefer 'eaw next'." <<<"$implement_output" || fail "implement wrapper deprecation warning missing"
-grep -Fq "current_phase: implementation_executor" "$state_file" || fail "implement wrapper should advance card to implementation_executor"
-grep -Eq '^  phase_started_at: [0-9]{4}-[0-9]{2}-[0-9]{2}T' "$state_file" || fail "implement wrapper should stamp implementation_executor phase_started_at"
-grep -Fq "phase_completed: false" "$state_file" || fail "implement wrapper should leave implementation_executor phase_completed false"
-grep -Fq "phase_completed_at: null" "$state_file" || fail "implement wrapper should reset implementation_executor phase_completed_at"
-grep -Fq "phase_status: RUN" "$state_file" || fail "implement wrapper should leave implementation_executor in RUN"
-grep -Fq "    - planning" "$state_file" || fail "implement wrapper missing completed planning"
-grep -Fq "    - implementation_planning" "$state_file" || fail "implement wrapper missing completed implementation_planning"
-test -f "$workdir/out/$card/implementation/00_scope.lock.md" || fail "implement wrapper missing scope lock"
-test -f "$workdir/out/$card/implementation/10_change_plan.md" || fail "implement wrapper missing change plan"
-test -f "$workdir/out/$card/implementation/20_patch_notes.md" || fail "implement wrapper missing patch notes"
-test -f "$workdir/out/$card/prompts/implementation_planning.md" || fail "implement wrapper missing planning prompt"
-test -f "$workdir/out/$card/prompts/implementation_executor.md" || fail "implement wrapper missing executor prompt"
+grep -Fq "current_phase: intake" "$state_file" || fail "rejected wrappers should preserve intake as current phase"
+grep -Fq "phase_completed: false" "$state_file" || fail "rejected wrappers should preserve phase completion state"
+grep -Fq "phase_completed_at: null" "$state_file" || fail "rejected wrappers should preserve null phase_completed_at"
+
+printf "# provenance ok\n" >"$workdir/out/$card/investigations/_intake_provenance.md"
+EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" next "$card" >/dev/null
+test -f "$workdir/out/$card/prompts/intake.md" || fail "next should materialize intake prompt"
+
+printf "# findings ok\n" >"$workdir/out/$card/investigations/20_findings.md"
+EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" next "$card" >/dev/null
+printf "# hypotheses ok\n" >"$workdir/out/$card/investigations/30_hypotheses.md"
+EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" next "$card" >/dev/null
+printf "# planning ok\n" >"$workdir/out/$card/investigations/40_next_steps.md"
+EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" next "$card" >/dev/null
+printf "# scope lock ok\n" >"$workdir/out/$card/implementation/00_scope.lock.md"
+printf "# change plan ok\n" >"$workdir/out/$card/implementation/10_change_plan.md"
+EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" next "$card" >/dev/null
+
+grep -Fq "current_phase: implementation_executor" "$state_file" || fail "next should advance card to implementation_executor"
+test -f "$workdir/out/$card/prompts/findings.md" || fail "next missing findings prompt"
+test -f "$workdir/out/$card/prompts/hypotheses.md" || fail "next missing hypotheses prompt"
+test -f "$workdir/out/$card/prompts/planning.md" || fail "next missing planning prompt"
+test -f "$workdir/out/$card/implementation/00_scope.lock.md" || fail "next missing scope lock"
+test -f "$workdir/out/$card/implementation/10_change_plan.md" || fail "next missing change plan"
+test -f "$workdir/out/$card/prompts/implementation_planning.md" || fail "next missing planning prompt"
+test -f "$workdir/out/$card/prompts/implementation_executor.md" || fail "next missing executor prompt"
 
 help_output="$("$REPO_ROOT/scripts/eaw" --help 2>&1)" || fail "help command failed"
-grep -Fq "eaw intake <CARD> [--round=N]   # deprecated compatibility wrapper; planned removal in v1.0" <<<"$help_output" || fail "help missing deprecated intake marker"
-grep -Fq "eaw analyze <CARD>              # deprecated compatibility wrapper; planned removal in v1.0" <<<"$help_output" || fail "help missing deprecated analyze marker"
-grep -Fq "eaw implement <CARD>            # deprecated compatibility wrapper; planned removal in v1.0" <<<"$help_output" || fail "help missing deprecated implement marker"
+grep -Fq "eaw next <CARD>" <<<"$help_output" || fail "help missing next command"
+if grep -Fq "eaw intake <CARD>" <<<"$help_output"; then
+	fail "help should not expose intake wrapper"
+fi
+if grep -Fq "eaw analyze <CARD>" <<<"$help_output"; then
+	fail "help should not expose analyze wrapper"
+fi
+if grep -Fq "eaw implement <CARD>" <<<"$help_output"; then
+	fail "help should not expose implement wrapper"
+fi
 
 printf "workflow_wrapper_compatibility OK\n"

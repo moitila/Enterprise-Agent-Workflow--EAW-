@@ -59,6 +59,40 @@ run_onboarding_runtime_suite() {
 	printf 'local-main|/home/user/dev/EAW-dev|target\n' >"$workdir/config/repos.conf"
 	prepare_feature_planning_with_onboarding "$runtime_root"
 
+	advance_feature_card_to_planning() {
+		local card_id="$1"
+		local card_dir="$workdir/out/$card_id"
+
+		cat >>"$card_dir/investigations/00_intake.md" <<'EOF'
+
+Intake preenchido para onboarding runtime suite.
+EOF
+		cat >>"$card_dir/investigations/_intake_provenance.md" <<'EOF'
+
+Fonte: onboarding runtime suite.
+EOF
+		EAW_WORKDIR="$workdir" "$eaw_bin" next "$card_id" >/dev/null
+		EAW_WORKDIR="$workdir" "$eaw_bin" next "$card_id" >/dev/null
+
+		cat >>"$card_dir/context/dynamic/00_scope_manifest.md" <<'EOF'
+
+Dynamic context preenchido para onboarding runtime suite.
+EOF
+		EAW_WORKDIR="$workdir" "$eaw_bin" next "$card_id" >/dev/null
+
+		cat >>"$card_dir/investigations/20_findings.md" <<'EOF'
+
+Findings preenchido para onboarding runtime suite.
+EOF
+		EAW_WORKDIR="$workdir" "$eaw_bin" next "$card_id" >/dev/null
+
+		cat >>"$card_dir/investigations/30_hypotheses.md" <<'EOF'
+
+Hypotheses preenchido para onboarding runtime suite.
+EOF
+		EAW_WORKDIR="$workdir" "$eaw_bin" next "$card_id" >/dev/null
+	}
+
 	mkdir -p "$workdir/context_sources/onboarding/local-main/docs"
 	printf 'alpha\n' >"$workdir/context_sources/onboarding/local-main/README.md"
 	printf 'beta\n' >"$workdir/context_sources/onboarding/local-main/docs/info.txt"
@@ -66,7 +100,7 @@ run_onboarding_runtime_suite() {
 
 	card="585ACC"
 	EAW_WORKDIR="$workdir" "$eaw_bin" card "$card" --track feature "onboarding acceptance" >/dev/null
-	EAW_WORKDIR="$workdir" "$eaw_bin" analyze "$card" >/dev/null
+	advance_feature_card_to_planning "$card"
 	test ! -e "$workdir/out/$card/context/onboarding" || fail "repo_discovery should not materialize onboarding into card context"
 	prompt_file="$workdir/out/$card/prompts/planning.md"
 	test -f "$prompt_file" || fail "missing planning prompt for onboarding-by-reference validation"
@@ -78,7 +112,7 @@ run_onboarding_runtime_suite() {
 	rm -rf "$workdir/context_sources/onboarding/local-main"
 	card="585ABS"
 	EAW_WORKDIR="$workdir" "$eaw_bin" card "$card" --track feature "onboarding absent" >/dev/null
-	EAW_WORKDIR="$workdir" "$eaw_bin" analyze "$card" >/dev/null
+	advance_feature_card_to_planning "$card"
 	test ! -e "$workdir/out/$card/context/onboarding" || fail "absent repo_discovery source should still avoid card onboarding materialization"
 	prompt_file="$workdir/out/$card/prompts/planning.md"
 	test -f "$prompt_file" || fail "missing planning prompt when onboarding source is absent"
@@ -89,10 +123,11 @@ run_onboarding_runtime_suite() {
 	printf 'stale\n' >"$workdir/context_sources/onboarding/local-main/a.md"
 	card="585IDEMP"
 	EAW_WORKDIR="$workdir" "$eaw_bin" card "$card" --track feature "onboarding idempotence" >/dev/null
-	EAW_WORKDIR="$workdir" "$eaw_bin" analyze "$card" >/dev/null
+	advance_feature_card_to_planning "$card"
 	rm "$workdir/context_sources/onboarding/local-main/a.md"
 	printf 'fresh\n' >"$workdir/context_sources/onboarding/local-main/b.md"
-	EAW_WORKDIR="$workdir" "$eaw_bin" analyze "$card" >/dev/null
+	printf "# planning ok\n" >"$workdir/out/$card/investigations/40_next_steps.md"
+	EAW_WORKDIR="$workdir" "$eaw_bin" next "$card" >/dev/null
 	test ! -e "$workdir/out/$card/context/onboarding" || fail "rerun should keep repo_discovery onboarding non-materialized"
 
 	rm -rf "$workdir/context_sources/onboarding/local-main"
@@ -110,7 +145,7 @@ Path(sys.argv[1]).write_text(json.dumps(payload))
 PY
 	card="585LIMIT"
 	EAW_WORKDIR="$workdir" "$eaw_bin" card "$card" --track feature "onboarding limits" >/dev/null
-	EAW_WORKDIR="$workdir" "$eaw_bin" analyze "$card" >/dev/null
+	advance_feature_card_to_planning "$card"
 	test ! -e "$workdir/out/$card/context/onboarding" || fail "repo_discovery should not create onboarding artifacts even with oversized source trees"
 }
 
