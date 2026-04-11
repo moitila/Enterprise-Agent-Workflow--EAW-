@@ -1257,14 +1257,17 @@ eaw_metrics_retry_count() {
 	fi
 
 	awk '
-		match($0, /"phase":"workflow_phase_([^"]+)"/, phase_match) &&
-		match($0, /"event_type":"phase_completed"/) {
+		/"phase":"workflow_phase_/ && /"event_type":"phase_completed"/ {
+			line = $0
+			sub(/.*"phase":"workflow_phase_/, "", line)
+			sub(/".*/, "", line)
+			phase_name = line
 			total++
-			seen[phase_match[1]] = 1
+			seen[phase_name] = 1
 		}
 		END {
 			unique = 0
-			for (phase_name in seen) {
+			for (p in seen) {
 				unique++
 			}
 			retries = total - unique
@@ -1285,10 +1288,18 @@ eaw_metrics_phase_duration_block() {
 	fi
 
 	awk '
-		match($0, /"phase":"workflow_phase_([^"]+)"/, phase_match) &&
-		match($0, /"duration_ms":([0-9]+)/, duration_match) &&
-		match($0, /"event_type":"phase_completed"/) {
-			sum[phase_match[1]] += duration_match[1]
+		/"phase":"workflow_phase_/ && /"duration_ms":/ && /"event_type":"phase_completed"/ {
+			line = $0
+			sub(/.*"phase":"workflow_phase_/, "", line)
+			sub(/".*/, "", line)
+			phase_name = line
+
+			line2 = $0
+			sub(/.*"duration_ms":/, "", line2)
+			sub(/[^0-9].*/, "", line2)
+			duration_ms = line2 + 0
+
+			sum[phase_name] += duration_ms
 			count++
 		}
 		END {
@@ -1296,8 +1307,8 @@ eaw_metrics_phase_duration_block() {
 				print "- sem eventos de fase registrados"
 				exit
 			}
-			for (phase_name in sum) {
-				printf "- %s: %sms\n", phase_name, sum[phase_name]
+			for (p in sum) {
+				printf "- %s: %sms\n", p, sum[p]
 			}
 		}
 	' "$journal_file" | LC_ALL=C sort
@@ -1322,8 +1333,10 @@ eaw_write_deterministic_baseline() {
 	context_files=$(($(eaw_metrics_count_files "$dynamic_dir")))
 	snippet_count="$(eaw_metrics_count_lines "$snippets_file" "^### ")"
 	prompt_size="$(eaw_metrics_prompt_size_bytes "$card_dir")"
-	retries="$(eaw_metrics_retry_count "$journal_file")"
-	phase_duration_block="$(eaw_metrics_phase_duration_block "$journal_file")"
+	retries="$(eaw_metrics_retry_count "$journal_file")" \
+	  || { echo "FATAL: eaw_metrics_retry_count falhou (card=$card)" >&2; return 1; }
+	phase_duration_block="$(eaw_metrics_phase_duration_block "$journal_file")" \
+	  || { echo "FATAL: eaw_metrics_phase_duration_block falhou (card=$card)" >&2; return 1; }
 	journal_status="$( [[ -f "$journal_file" ]] && printf "presente" || printf "ausente" )"
 	prompt_status="$( [[ -f "$card_dir/prompts/implementation_executor.md" || -n "${EAW_CARD_WORKFLOW_CURRENT_PHASE:-}" && -f "$card_dir/prompts/${EAW_CARD_WORKFLOW_CURRENT_PHASE}.md" ]] && printf "presente" || printf "ausente" )"
 	snippets_status="$( [[ -f "$snippets_file" ]] && printf "presente" || printf "ausente" )"
@@ -1388,8 +1401,10 @@ eaw_write_pilot_report() {
 	context_files=$(($(eaw_metrics_count_files "$dynamic_dir")))
 	snippet_count="$(eaw_metrics_count_lines "$dynamic_dir/30_target_snippets.md" "^### ")"
 	prompt_size="$(eaw_metrics_prompt_size_bytes "$card_dir")"
-	retries="$(eaw_metrics_retry_count "$card_dir/execution_journal.jsonl")"
-	phase_duration_block="$(eaw_metrics_phase_duration_block "$card_dir/execution_journal.jsonl")"
+	retries="$(eaw_metrics_retry_count "$card_dir/execution_journal.jsonl")" \
+	  || { echo "FATAL: eaw_metrics_retry_count falhou (card=$card)" >&2; return 1; }
+	phase_duration_block="$(eaw_metrics_phase_duration_block "$card_dir/execution_journal.jsonl")" \
+	  || { echo "FATAL: eaw_metrics_phase_duration_block falhou (card=$card)" >&2; return 1; }
 	baseline_status="presente"
 	if [[ ! -d "$dynamic_dir" ]]; then
 		baseline_status="ausente"

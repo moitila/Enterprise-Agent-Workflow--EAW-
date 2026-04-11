@@ -31,7 +31,14 @@ cmd_doctor() {
 		echo "  rg/grep: MISSING"
 		errors=$((errors + 1))
 	fi
-	if command -v awk >/dev/null 2>&1; then echo "  awk: OK"; else
+	if command -v awk >/dev/null 2>&1; then
+		if echo '' | awk 'BEGIN { match("test", /t(e)/, arr); print arr[1] }' 2>/dev/null | grep -q 'e'; then
+			echo "  awk: OK"
+		else
+			echo "  awk: WARN (match/3 not supported; runtime requires gawk)"
+			warnings=$((warnings + 1))
+		fi
+	else
 		echo "  awk: MISSING"
 		errors=$((errors + 1))
 	fi
