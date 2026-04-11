@@ -8,7 +8,7 @@ cmd_validate() {
 	local errors=0
 	local warnings=0
 	local line lineno normalized key path role resolved_path card_dir impl_dir impl_name impl_path
-	local prompt_phase workflow_summary
+	local prompt_phase workflow_summary card current_phase current_phase_file validation_output
 
 	echo "EAW validate"
 	echo "Resolved dirs:"
@@ -89,11 +89,20 @@ cmd_validate() {
 			errors=$((errors + 1))
 			continue
 		fi
-		if ! eaw_card_enforce_mandatory_analysis_audit "$(basename "$card_dir")" "$card_dir" "${EAW_CARD_WORKFLOW_CURRENT_PHASE:-}"; then
+		card="$(basename "$card_dir")"
+		current_phase="${EAW_CARD_WORKFLOW_CURRENT_PHASE:-}"
+		current_phase_file="${EAW_CARD_WORKFLOW_CURRENT_PHASE_FILE:-}"
+		if ! eaw_card_enforce_mandatory_analysis_audit "$card" "$card_dir" "$current_phase"; then
 			errors=$((errors + 1))
 		fi
-		workflow_summary="SUMMARY: workflow card=$(basename "$card_dir") track=$EAW_CARD_WORKFLOW_TRACK_ID current_phase=$EAW_CARD_WORKFLOW_CURRENT_PHASE prompt_phase=$EAW_CARD_WORKFLOW_CURRENT_PROMPT_PHASE prompt_path=$EAW_CARD_WORKFLOW_CURRENT_PROMPT_PATH"
-		if [[ "$EAW_CARD_WORKFLOW_CURRENT_PHASE" == "$EAW_CARD_WORKFLOW_FINAL_PHASE" ]]; then
+		if [[ "$current_phase" == "findings" ]]; then
+			if ! validation_output="$(eaw_validate_phase_completion_strict "$card" "$card_dir" "$current_phase" "$current_phase_file" 2>&1)"; then
+				printf "%s\n" "$validation_output" >&2
+				errors=$((errors + 1))
+			fi
+		fi
+		workflow_summary="SUMMARY: workflow card=$card track=$EAW_CARD_WORKFLOW_TRACK_ID current_phase=$current_phase prompt_phase=$EAW_CARD_WORKFLOW_CURRENT_PROMPT_PHASE prompt_path=$EAW_CARD_WORKFLOW_CURRENT_PROMPT_PATH"
+		if [[ "$current_phase" == "$EAW_CARD_WORKFLOW_FINAL_PHASE" ]]; then
 			echo "$workflow_summary next_phase=<none> final_phase=$EAW_CARD_WORKFLOW_FINAL_PHASE"
 		else
 			echo "$workflow_summary next_phase=$EAW_CARD_WORKFLOW_NEXT_PHASE final_phase=$EAW_CARD_WORKFLOW_FINAL_PHASE"

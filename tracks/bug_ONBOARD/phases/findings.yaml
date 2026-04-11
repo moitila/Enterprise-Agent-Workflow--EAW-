@@ -3,7 +3,7 @@ config_version: 1
 phase:
   id: findings
   name: Findings
-  description: Analyze the intake information and identify key findings.
+  description: Analyze the intake information and record substantive findings in investigations/20_findings.md; scaffold-only content does not satisfy the phase contract.
 
   prompt:
     active: 3
@@ -16,5 +16,6 @@ phase:
 
   completion:
     strategy: required_artifacts_exist
+    # Contract: investigations/20_findings.md must be meaningfully filled; template/scaffold-only content remains incomplete.
     required_artifacts:
       - investigations/20_findings.md
