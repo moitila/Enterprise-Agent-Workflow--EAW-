@@ -16,6 +16,7 @@ This skill governs prompt semantics and tone, not workflow wiring.
 - constraints for exploratory versus consolidatory work
 - prompt structures that reduce drift
 - handoff-aware prompt sections for later phases
+- mode-first contracts that can be validated without subjective interpretation
 
 ## Core Rule
 
@@ -23,6 +24,7 @@ Choose the prompt mode before choosing the wording.
 
 Exploration, comparison, consolidation, and validation are different prompt jobs.
 Do not mix them unless the contract explicitly says the phase must do both.
+State the selected mode in the prompt before any free-form wording is drafted.
 
 ## Prompt Modes
 
@@ -44,7 +46,7 @@ Do not mix them unless the contract explicitly says the phase must do both.
 
 ## Minimum Contract
 
-A valid creative prompt should specify:
+A valid creative prompt should specify all of these fields:
 
 - objective
 - allowed scope
@@ -53,12 +55,18 @@ A valid creative prompt should specify:
 - handoff target
 - validation rule
 
+If any field is missing, the prompt is incomplete.
+
 ## Boundary With EAW Prompt Governance
 
 This skill does not replace `EAW_prompt_creator`.
 
 - `EAW_prompt_creator` governs the phase contract, prompt binding, and workflow shape.
 - `EAW_creative_prompting` governs the creative mode and content behavior inside that contract.
+- `EAW_track_creator` stays outside this skill and remains responsible for track-level composition.
+
+This skill never creates track wiring or runtime logic.
+This skill never defines prompt behavior that depends on an unstated runtime detail.
 
 ## Guardrails
 
