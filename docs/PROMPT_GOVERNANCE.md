@@ -88,6 +88,35 @@ Provenance Log
 - `registry.yaml` não define binding em runtime nesta fase.
 - A provenance deve registrar o prompt efetivamente utilizado na execução.
 
+## Coringas Creative Domain
+
+The Coringas pipeline uses the same prompt-governance contract as the rest of EAW. It does not create a new runtime path; it only defines stricter semantic expectations for creative work.
+
+The binding model remains unchanged:
+
+- `phase.prompt.path` still binds the phase prompt.
+- `ACTIVE` still selects the concrete prompt version.
+- `prompts_used.yaml` still records provenance.
+
+The new creative skills govern content semantics, not runtime wiring:
+
+- `EAW_creative_research` governs the research substrate used to justify references, symbols, cultural notes, and anti-cliche decisions.
+- `EAW_creative_prompting` governs how prompts request exploration, divergence, comparison, consolidation, or validation.
+- `EAW_creative_governance` governs handoff boundaries, artifact sovereignty, and cross-track separation.
+
+Boundary with the existing EAW prompt/track skills:
+
+- `EAW_prompt_creator` still governs workflow contract design, phase structure, and prompt binding quality.
+- `EAW_track_creator` still governs track and phase wiring, registration, and workflow validation.
+- The Coringas creative skills govern the semantic behavior of the content inside those contracts.
+
+For this backlog, the governance rule is simple:
+
+- do not let prompt creativity bypass artifact contracts
+- do not let track design bypass the skill contracts
+- do not let the pilot gate disappear behind a generalized prompt template
+- do not let the active runtime root become a write target for the Coringas backlog
+
 ## Sprint Result
 Resultado esperado consolidado desta trilha:
 - Prompt Governance Layer

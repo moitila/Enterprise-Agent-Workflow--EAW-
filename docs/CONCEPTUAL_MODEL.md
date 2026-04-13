@@ -97,6 +97,30 @@ They include investigation documents, implementation planning files, prompt arti
 - Prompt governance explains how prompt execution is controlled.
 - The CLI and `out/<CARD>/` show the model operating on a real card.
 
+### Coringas Creative Specialization
+
+The Coringas pipeline is a specialization of the generic EAW card flow. It keeps the same governed model, but adds semantic boundaries for creative work so the team can scale prompts and tracks without turning them into a single undifferentiated blob.
+
+For this backlog, the distinction is:
+
+- `track` decides the flow of work.
+- `prompt` decides the task of a phase.
+- `skill` decides the creative behavior expected from the agent that executes that phase.
+
+The three creative skills split responsibility cleanly:
+
+- `EAW_creative_research` collects references, symbols, cultural notes, and anti-cliche evidence.
+- `EAW_creative_prompting` decides how to ask for exploration, comparison, consolidation, or validation.
+- `EAW_creative_governance` keeps handoffs bounded and prevents one track from silently taking over another track's responsibility.
+
+The pipeline is intentionally staged:
+
+1. First canonize the architecture and the skill contracts.
+2. Then run `creative_ideation` as a pilot.
+3. Only after the pilot is stable, expand to `world_definition`, `production_design`, and `script_finalization`.
+
+This preserves the core EAW property: a workflow is only useful when its semantics remain auditable and replay-safe.
+
 ## How To Read The Repo
 
 If you are new to EAW, use this sequence:

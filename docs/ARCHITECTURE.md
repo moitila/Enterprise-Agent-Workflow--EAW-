@@ -58,6 +58,45 @@ Compatibility rule:
 - Best-effort collector failures are logged in `_warnings.txt` and do not fail the full run by default.
 - Fatal errors remain explicit and non-zero.
 
+## Coringas Creative Pipeline
+
+The Coringas backlog is a design-time specialization of the generic EAW workflow. It canonizes the creative pipeline at the documentation layer only; it does not add runtime logic or modify the active runtime root.
+
+The core separation is:
+
+- `track` defines the workflow flow.
+- `prompt` defines the phase task and its prompt binding.
+- `skill` defines the semantic behavior expected from the isolated agent.
+
+Canonical Coringas track sequence:
+
+1. `creative_ideation`
+2. `world_definition`
+3. `production_design`
+4. `script_finalization`
+
+The design-time gate is intentionally ordered:
+
+- `A0` canonizes architecture, prompt governance, and the creative skill contracts.
+- `A1`, `A2`, and `A3` materialize `EAW_creative_research`, `EAW_creative_prompting`, and `EAW_creative_governance`.
+- `creative_ideation` runs first as the pilot track.
+- `world_definition`, `production_design`, and `script_finalization` only expand after the pilot proves the contract.
+
+The Coringas handoff surface is bounded and replay-safe:
+
+- research brief
+- ideation selection memo
+- world definition brief
+- production design brief
+- final script packet
+
+The pipeline remains contract-first:
+
+- no runtime changes in the active runtime root
+- no track implementation before skill contracts exist
+- no prompt expansion that bypasses the documented handoff surface
+- no write paths outside the active target repositories for this backlog
+
 ## Testable Architecture Invariants
 
 - CLI interface remains stable (`./scripts/eaw <subcommand>`).
