@@ -7,40 +7,39 @@ description: Build structured creative research for EAW creative pipelines. Use 
 
 Use this skill when the task is to collect, organize, or review research for a creative pipeline in EAW.
 
-This skill is for semantic research design, not for writing the final story or implementing tracks.
+This skill is for semantic research design, not for final narrative writing or runtime wiring.
 
 ## What This Skill Produces
 
 - structured research briefs
 - reference maps
-- cultural or symbolic note sets
+- cultural and symbolic note sets
 - anti-cliche guardrails
 - evidence-backed creative inputs for later prompt work
 
 ## Core Rule
 
-Research must be useful to a future prompt or track decision.
+Research must be reusable by a future prompt or track decision.
 
-Do not collect facts without deciding how they will be reused.
-Do not turn research into prose filler.
+Do not collect facts without a reuse path.
+Do not write prose filler.
+Do not confuse research with final creative output.
 
 ## Workflow
 
 1. Resolve the active workspace with the `workspace` skill and `repos.conf`.
-2. Identify the creative target:
-   - ideation
-   - world definition
-   - production design
-   - script finalization
+2. Define the creative target in one sentence.
 3. Gather evidence in bounded themes:
-   - references
-   - symbols
-   - tone
-   - cultural context
-   - visual or narrative patterns
-4. Separate observation from interpretation.
+   - culture
+   - symbol
+   - aesthetic
+   - custom
+   - reference
+4. Split the notes into:
+   - Observation: what is directly supported by evidence
+   - Interpretation: what those observations may imply
 5. Mark what is reusable, what is risky, and what is still uncertain.
-6. Produce a brief that a prompt-authoring skill can consume without guessing.
+6. Produce a compact brief that a prompt-authoring skill can consume without guessing.
 
 ## Minimum Contract
 
@@ -50,7 +49,7 @@ A valid research output should make these points explicit:
 - why it matters for the creative pipeline
 - which observations are supported by evidence
 - which claims are still tentative
-- what should be avoided as cliche or drift
+- what should be avoided as cliche, exotization, or surface reading
 
 ## Guardrails
 
@@ -59,6 +58,9 @@ A valid research output should make these points explicit:
 - never treat a single reference as a full design
 - never ignore the workspace authority or the active `repos.conf`
 - never create runtime logic or track wiring
+- avoid cliche by checking whether the note adds evidence or only mood
+- avoid exotization by preferring grounded context over spectacle
+- avoid surface-level readings when a deeper pattern is available
 
 ## Companion Skills
 
