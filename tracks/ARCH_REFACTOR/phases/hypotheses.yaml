@@ -14,6 +14,7 @@ phase:
       - prompts
     create_artifacts:
       - investigations/30_hypotheses.md
+      - investigations/20_handoff.json
     prompts:
       - hypotheses
 
@@ -21,3 +22,4 @@ phase:
     strategy: required_artifacts_exist
     required_artifacts:
       - investigations/30_hypotheses.md
+      - investigations/20_handoff.json

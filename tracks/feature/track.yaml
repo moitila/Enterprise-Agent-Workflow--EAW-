@@ -35,10 +35,22 @@ track:
       next: findings
     findings:
       next: hypotheses
+      contract:
+        emit_phase_output: true
+        emit_handoff: true
+        consume_previous: true
     hypotheses:
       next: planning
+      contract:
+        emit_phase_output: true
+        emit_handoff: true
+        consume_previous: true
     planning:
       next: implementation_planning
+      contract:
+        emit_phase_output: true
+        emit_handoff: true
+        consume_previous: true
     implementation_planning:
       next: implementation_executor
 

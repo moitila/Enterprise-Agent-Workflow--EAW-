@@ -360,6 +360,44 @@ eaw_yaml_track_transitions() {
 	' "$file"
 }
 
+eaw_yaml_track_contract_field() {
+        local file="$1"
+        local phase_id="$2"
+        local field="$3"
+        awk -v ph="$phase_id" -v fld="$field" '
+                /^  transitions:[[:space:]]*$/ { in_tr=1; next }
+                in_tr && /^  [^[:space:]]/ { in_tr=0 }
+                in_tr && $0 ~ ("^    " ph ":[[:space:]]*$") { in_ph=1; next }
+                in_ph && /^    [^[:space:]]/ { in_ph=0 }
+                in_ph && /^      contract:[[:space:]]*$/ { in_co=1; next }
+                in_co && /^      [^[:space:]]/ { in_co=0; in_ph=0 }
+                in_co && $0 ~ ("^        " fld ":[[:space:]]*") {
+                        line=$0
+                        sub(/^        [^:]+:[[:space:]]*/, "", line)
+                        gsub(/[[:space:]]/, "", line)
+                        print line
+                        exit
+                }
+        ' "$file"
+}
+
+eaw_emit_phase_envelope() {
+        local track_file="$1"
+        local phase_id="$2"
+        local card_dir="$3"
+        local emit_handoff emit_phase_output
+        emit_handoff="$(eaw_yaml_track_contract_field "$track_file" "$phase_id" "emit_handoff")"
+        emit_phase_output="$(eaw_yaml_track_contract_field "$track_file" "$phase_id" "emit_phase_output")"
+        if [[ "$emit_handoff" == "true" ]]; then
+                printf '{"from_phase":"%s","status":"completed","messages":[]}\n' "$phase_id" \
+                        > "${card_dir}/investigations/20_handoff.json"
+        fi
+        if [[ "$emit_phase_output" == "true" ]]; then
+                printf '{"phase_id":"%s","status":"completed","summary":""}\n' "$phase_id" \
+                        > "${card_dir}/investigations/10_phase_output.json"
+        fi
+}
+
 eaw_yaml_state_completed_phases() {
 	local file="$1"
 	awk '
@@ -2132,6 +2170,7 @@ cmd_next() {
 	next_phase="$EAW_CARD_WORKFLOW_NEXT_PHASE"
 	completed_phases="$(eaw_state_completed_phases_with_current "$current_phase")"
 	phase_started_at="$(utc_timestamp)"
+	eaw_emit_phase_envelope "$EAW_CARD_WORKFLOW_TRACK_FILE" "$current_phase" "$card_dir"
 	eaw_write_next_state "$EAW_CARD_WORKFLOW_STATE_FILE" "$current_phase" "$next_phase" "$completed_phases" "RUN" "$phase_started_at" "false" "null"
 
 	echo "CARD ${card}: ${current_phase} -> ${next_phase}"
