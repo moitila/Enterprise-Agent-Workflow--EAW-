@@ -74,19 +74,22 @@ Tabela explícita de mapeamento entre campos de domínio interno (`phase_output`
 
 ## Estrutura do 20_handoff.json
 
-O artefato `20_handoff.json` é produzido pela fase `hypotheses` como output de orquestração. Estrutura mínima:
+O artefato `20_handoff.json` é produzido como output de orquestração no formato de envelope do runtime. Estrutura:
 
 ```json
-{
-  "type": "recommendation",
-  "code": "<CODE>",
-  "text": "<descrição legível da condição que gerou o code>"
-}
+{"from_phase":"<PHASE>","status":"completed","messages":[],"codes":["<CODE>"]}
 ```
 
-**Campo `type`**: fixo como `"recommendation"` para esta versão.
-**Campo `code`**: um dos 3 values do catálogo: `NO_CODE_DEVIATION`, `INFORMATIONAL_ONLY`, `ADHERENCE_CONFIRMED`.
-**Campo `text`**: string livre descrevendo a condição específica observada na execução.
+Quando nenhum code se aplica (fluxo completo, sem skip):
+
+```json
+{"from_phase":"<PHASE>","status":"completed","messages":[],"codes":[]}
+```
+
+**Campo `from_phase`**: identificador da fase que emitiu o handoff (ex: `findings`, `hypotheses`).
+**Campo `status`**: fixo como `"completed"` para emissão normal.
+**Campo `messages`**: array de mensagens auxiliares (vazio na maioria dos casos).
+**Campo `codes`**: array contendo zero ou um code do catálogo: `NO_CODE_DEVIATION`, `INFORMATIONAL_ONLY`, `ADHERENCE_CONFIRMED`.
 
 ---
 
@@ -110,11 +113,42 @@ transitions:
 
 ## Extensibilidade
 
-Este catálogo é **v1 — fechado**. Para adicionar novos codes:
+Este catálogo é **v1.1 — estendido por card 624**. Para adicionar novos codes:
 1. Criar card de modificação da ARCH_REFACTOR com escopo de extensão do catálogo
-2. Documentar novo code neste arquivo (nova versão: `v2`)
+2. Documentar novo code neste arquivo (nova versão)
 3. Atualizar `skip_when` em `track.yaml`
 4. Atualizar tabela de mapeamento campo→code
+
+---
+
+## Extensão v1.1 — Card 624
+
+### `SIMPLE_ALIGNMENT`
+
+**Descrição**: O intake classificou o card como `ALINHAMENTO_A_PADRAO` com escopo trivial (até 2 arquivos, desvios informacionais, direção local clara). A investigação via findings é desnecessária porque o alinhamento é simples e determinístico.
+
+**Emissor**: fase `intake` (diferente dos 3 codes v1, que são emitidos por `hypotheses`/`findings`)
+
+**Transição**: `intake → findings` no track `ARCH_REFACTOR_ONBOARD`
+
+**Condição de emissão**: Todos os critérios abaixo atendidos simultaneamente:
+1. Classificação do contexto: `ALINHAMENTO_A_PADRAO`
+2. Escopo de no máximo 2 arquivos no mesmo módulo
+3. Desvios exclusivamente informacionais (sem mudança de comportamento)
+4. Direção arquitetural local clara, única e inequívoca
+5. Sem ambiguidades relevantes que exijam investigação
+
+**Semântica para skip_when**: A fase `findings` não agrega valor quando o intake já determinou alinhamento simples com escopo trivial. O card pode avançar diretamente para `hypotheses` (que por sua vez pode ser skipado pelos codes v1 se findings anterior também emitiu skip).
+
+**Nota**: Este code opera em cascata com os codes v1. Se `SIMPLE_ALIGNMENT` pular `findings`, o próximo `eaw next` avaliará `findings → hypotheses` e poderá pular também se os codes propagados corresponderem.
+
+---
+
+## Rastreabilidade da extensão v1.1
+
+- **Card de origem**: 624
+- **Track de execução**: ARCH_REFACTOR_ONBOARD
+- **Hipótese base**: H1 (skip_when suficiente), H2 (2 skip_when para fluxo LITE)
 
 ---
 
@@ -124,3 +158,36 @@ Este catálogo é **v1 — fechado**. Para adicionar novos codes:
 - **Track de execução**: ARCH_REFACTOR_ONBOARD
 - **Direções arquiteturais**: D-L1, D-L2, D-L3, D-L4 (investigations/00_intake.md do card 622)
 - **Cards dependentes**: `614A` (enforcement de skip_when no engine)
+
+---
+
+## Extensão v1.2 — Card 626 (Feature Track)
+
+### Reutilização no Feature Track
+
+**Card de origem**: 626
+**Track**: feature
+**Transição**: `findings → hypotheses`
+
+Os 3 codes originais do catálogo v1 (`NO_CODE_DEVIATION`, `INFORMATIONAL_ONLY`, `ADHERENCE_CONFIRMED`) são reutilizados no feature track para a transição `findings → hypotheses`.
+
+**Diferenças em relação ao ARCH_REFACTOR:**
+
+| Aspecto | ARCH_REFACTOR | Feature Track |
+|---|---|---|
+| Emissor | fase `hypotheses` ou `findings` | fase `findings` |
+| Transição | `findings → hypotheses` | `findings → hypotheses` |
+| Artefato | `investigations/20_handoff.json` | `investigations/20_handoff.json` |
+| Prompt que emite | hypotheses prompt | findings prompt v5 |
+
+**Semântica**: Quando a fase `findings` do feature track não identifica desvios relevantes (apenas observações informacionais, conformidade confirmada ou ausência de desvios de código), a fase `hypotheses` é pulada via `skip_when`. O planning (prompt v6) tolera a ausência de `30_hypotheses.md` quando há evidência de skip legítimo.
+
+**Estrutura do 20_handoff.json**: Idêntica ao catálogo v1 (type, code, text).
+
+**Precedência de codes**: Idêntica ao catálogo v1 (NO_CODE_DEVIATION > ADHERENCE_CONFIRMED > INFORMATIONAL_ONLY).
+
+### Rastreabilidade da extensão v1.2
+
+- **Card de origem**: 626
+- **Track de execução**: feature
+- **Hipóteses base**: H1 (reutilizar codes ARCH_REFACTOR), H2 (adaptar findings + skip_when), H3 (planning tolera skip)

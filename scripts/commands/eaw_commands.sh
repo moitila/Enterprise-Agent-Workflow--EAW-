@@ -77,6 +77,30 @@ eaw_yaml_track_scalar() {
 	' "$file"
 }
 
+eaw_yaml_track_rule_scalar() {
+	local file="$1"
+	local key="$2"
+	awk -v key="$key" '
+		function trim(s) {
+			sub(/^[[:space:]]+/, "", s)
+			sub(/[[:space:]]+$/, "", s)
+			sub(/^"/, "", s)
+			sub(/"$/, "", s)
+			return s
+		}
+		/^track:[[:space:]]*$/ { in_track=1; next }
+		in_track && /^[^[:space:]]/ { in_track=0 }
+		in_track && /^  rules:[[:space:]]*$/ { in_rules=1; next }
+		in_rules && /^  [^[:space:]]/ { in_rules=0 }
+		in_rules && $0 ~ ("^    " key ":[[:space:]]*") {
+			line=$0
+			sub("^    " key ":[[:space:]]*", "", line)
+			print trim(line)
+			exit
+		}
+	' "$file"
+}
+
 eaw_yaml_phase_scalar() {
 	local file="$1"
 	local key="$2"
@@ -381,6 +405,40 @@ eaw_yaml_track_contract_field() {
         ' "$file"
 }
 
+eaw_yaml_track_skip_when() {
+        local file="$1"
+        local phase_id="$2"
+        awk -v ph="$phase_id" '
+                /^  transitions:[[:space:]]*$/ { in_tr=1; next }
+                in_tr && /^  [^[:space:]]/ { in_tr=0 }
+                in_tr && $0 ~ ("^    " ph ":[[:space:]]*$") { in_ph=1; next }
+                in_ph && /^    [^[:space:]]/ { in_ph=0 }
+                in_ph && /^      skip_when:[[:space:]]*$/ { in_sw=1; next }
+                in_sw && /^      [^[:space:]-]/ { exit }
+                in_sw && /^        - / {
+                        line=$0
+                        sub(/^        - /, "", line)
+                        sub(/[[:space:]]+$/, "", line)
+                        print line
+                }
+        ' "$file"
+}
+
+eaw_eval_skip_when() {
+        local declared_codes="$1"
+        local active_codes="$2"
+        [[ -z "$declared_codes" || -z "$active_codes" ]] && return 1
+        local code
+        while IFS= read -r code; do
+                [[ -z "$code" ]] && continue
+                local ac
+                for ac in $active_codes; do
+                        [[ "$ac" == "$code" ]] && return 0
+                done
+        done <<< "$declared_codes"
+        return 1
+}
+
 eaw_emit_phase_envelope() {
         local track_file="$1"
         local phase_id="$2"
@@ -389,13 +447,194 @@ eaw_emit_phase_envelope() {
         emit_handoff="$(eaw_yaml_track_contract_field "$track_file" "$phase_id" "emit_handoff")"
         emit_phase_output="$(eaw_yaml_track_contract_field "$track_file" "$phase_id" "emit_phase_output")"
         if [[ "$emit_handoff" == "true" ]]; then
-                printf '{"from_phase":"%s","status":"completed","messages":[]}\n' "$phase_id" \
+                printf '{"from_phase":"%s","status":"completed","messages":[],"codes":[]}\n' "$phase_id" \
                         > "${card_dir}/investigations/20_handoff.json"
         fi
         if [[ "$emit_phase_output" == "true" ]]; then
                 printf '{"phase_id":"%s","status":"completed","summary":""}\n' "$phase_id" \
                         > "${card_dir}/investigations/10_phase_output.json"
         fi
+}
+
+eaw_resolve_inherited_from() {
+        local card_dir="$1"
+        local handoff_file="${card_dir}/investigations/20_handoff.json"
+        if [[ ! -f "$handoff_file" ]]; then
+                echo ""
+                return 0
+        fi
+        local prev_status
+        prev_status="$(grep -o '"status":"[^"]*"' "$handoff_file" 2>/dev/null | head -1 | sed 's/"status":"//;s/"//' || true)"
+        if [[ "$prev_status" == "skipped" ]]; then
+                grep -o '"inherited_from":"[^"]*"' "$handoff_file" 2>/dev/null | head -1 | sed 's/"inherited_from":"//;s/"//' || true
+        else
+                grep -o '"from_phase":"[^"]*"' "$handoff_file" 2>/dev/null | head -1 | sed 's/"from_phase":"//;s/"//' || true
+        fi
+}
+
+eaw_emit_skip_envelope() {
+        local phase_id="$1"
+        local card_dir="$2"
+        local skip_codes="$3"
+        local inherited_from="$4"
+        local inherited_codes="$5"
+        local inv_dir="${card_dir}/investigations"
+        local ts
+        ts="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+        mkdir -p "$inv_dir"
+        cat > "${inv_dir}/00_human.md" <<EOF
+# Phase Skipped
+
+Phase \`${phase_id}\` was skipped by skip_when rule.
+
+- Reason codes: ${skip_codes}
+- Inherited from: ${inherited_from:-none}
+- Timestamp: ${ts}
+EOF
+        local codes_json
+        codes_json="$(echo "$inherited_codes" | awk '{for(i=1;i<=NF;i++) printf "\"%s\"%s",$i,(i<NF?",":"")}')"
+        printf '{"phase_id":"%s","status":"skipped","summary":"Phase skipped by skip_when rule","skip_reason_code":"%s"}\n' \
+                "$phase_id" "$skip_codes" \
+                > "${inv_dir}/10_phase_output.json"
+        printf '{"from_phase":"%s","status":"skipped","inherited_from":"%s","messages":[{"type":"info","code":"PHASE_SKIPPED_BY_RULE","text":"Phase %s skipped by skip_when rule"}],"codes":[%s]}\n' \
+                "$phase_id" "$inherited_from" "$phase_id" "$codes_json" \
+                > "${inv_dir}/20_handoff.json"
+}
+
+eaw_validate_envelope_schema() {
+	local track_file="$1"
+	local phase_id="$2"
+	local card_dir="$3"
+	local inv_dir="${card_dir}/investigations"
+	local errors=0
+	local normalized
+
+	# 10_phase_output.json — validate if exists
+	local po_file="${inv_dir}/10_phase_output.json"
+	if [[ -f "$po_file" ]]; then
+		normalized="$(tr -d '\n' < "$po_file" | tr -s ' ')"
+		if ! echo "$normalized" | grep -q '"phase_id":"[^"]\+"' 2>/dev/null; then
+			echo "  envelope: 10_phase_output.json missing or empty phase_id" >&2
+			errors=$((errors + 1))
+		fi
+		if ! echo "$normalized" | grep -qE '"status":"(completed|skipped|failed)"' 2>/dev/null; then
+			echo "  envelope: 10_phase_output.json status missing or invalid (expected completed|skipped|failed)" >&2
+			errors=$((errors + 1))
+		fi
+		if ! echo "$normalized" | grep -q '"summary":' 2>/dev/null; then
+			echo "  envelope: 10_phase_output.json missing summary field" >&2
+			errors=$((errors + 1))
+		fi
+	fi
+
+	# 20_handoff.json — validate if exists
+	local hf_file="${inv_dir}/20_handoff.json"
+	if [[ -f "$hf_file" ]]; then
+		normalized="$(tr -d '\n' < "$hf_file" | tr -s ' ')"
+		if ! echo "$normalized" | grep -q '"from_phase":"[^"]\+"' 2>/dev/null; then
+			echo "  envelope: 20_handoff.json missing or empty from_phase" >&2
+			errors=$((errors + 1))
+		fi
+		if ! echo "$normalized" | grep -qE '"status":"(completed|skipped|failed)"' 2>/dev/null; then
+			echo "  envelope: 20_handoff.json status missing or invalid (expected completed|skipped|failed)" >&2
+			errors=$((errors + 1))
+		fi
+		if ! echo "$normalized" | grep -q '"messages":\[' 2>/dev/null; then
+			echo "  envelope: 20_handoff.json missing messages array" >&2
+			errors=$((errors + 1))
+		fi
+		if ! echo "$normalized" | grep -q '"codes":\[' 2>/dev/null; then
+			echo "  envelope: 20_handoff.json missing codes array" >&2
+			errors=$((errors + 1))
+		fi
+		# If messages non-empty, require at least one type and one code
+		local messages_content
+		messages_content="$(echo "$normalized" | grep -o '"messages":\[[^]]*\]' 2>/dev/null)"
+		if [[ -n "$messages_content" && "$messages_content" != '"messages":[]' ]]; then
+			if ! echo "$messages_content" | grep -q '"type":"[^"]\+"' 2>/dev/null; then
+				echo "  envelope: 20_handoff.json messages non-empty but missing type in entries" >&2
+				errors=$((errors + 1))
+			fi
+			if ! echo "$messages_content" | grep -q '"code":"[^"]\+"' 2>/dev/null; then
+				echo "  envelope: 20_handoff.json messages non-empty but missing code in entries" >&2
+				errors=$((errors + 1))
+			fi
+		fi
+	fi
+
+	# Cross-status consistency
+	if [[ -f "$po_file" && -f "$hf_file" ]]; then
+		local po_status hf_status
+		po_status="$(tr -d '\n' < "$po_file" | grep -o '"status":"[^"]*"' 2>/dev/null | head -1 | sed 's/"status":"//;s/"//')"
+		hf_status="$(tr -d '\n' < "$hf_file" | grep -o '"status":"[^"]*"' 2>/dev/null | head -1 | sed 's/"status":"//;s/"//')"
+		if [[ -n "$po_status" && -n "$hf_status" && "$po_status" != "$hf_status" ]]; then
+			echo "  envelope: status mismatch — 10_phase_output.json='${po_status}' vs 20_handoff.json='${hf_status}'" >&2
+			errors=$((errors + 1))
+		fi
+	fi
+
+	# 00_human.md — opportunistic warning (non-blocking)
+	local human_file="${inv_dir}/00_human.md"
+	if [[ -f "$human_file" ]]; then
+		if grep -qE '<CARD>|<PHASE>|\{\{' "$human_file" 2>/dev/null; then
+			echo "  envelope: WARNING — 00_human.md contains template markers (non-blocking)" >&2
+		fi
+	fi
+
+	[[ "$errors" -eq 0 ]]
+}
+
+eaw_emit_context_summary() {
+	local phase_id="$1"
+	local card_dir="$2"
+	local track_file="${3:-}"
+
+	# 627: per-track policy gate — default is optional (emit silently)
+	if [[ -n "$track_file" ]] && [[ -f "$track_file" ]]; then
+		local policy
+		policy="$(eaw_yaml_track_rule_scalar "$track_file" context_summary_policy)"
+		if [[ "$policy" == "excluded" ]]; then
+			return 0
+		fi
+	fi
+
+	local po_file="${card_dir}/investigations/10_phase_output.json"
+	local summary_file="${card_dir}/investigations/_context_summary.md"
+
+	local phase_status="unknown"
+	local phase_summary=""
+
+	if [[ -f "$po_file" ]]; then
+		local normalized
+		normalized="$(tr -d '\n' < "$po_file" | tr -s ' ')"
+		phase_status="$(echo "$normalized" | grep -o '"status":"[^"]*"' 2>/dev/null | head -1 | sed 's/"status":"//;s/"//')"
+		phase_summary="$(echo "$normalized" | grep -o '"summary":"[^"]*"' 2>/dev/null | head -1 | sed 's/"summary":"//;s/"//')"
+	fi
+
+	if [[ ! -f "$summary_file" ]]; then
+		printf "# Context Summary\n\n" > "$summary_file"
+	fi
+
+	{
+		printf "## %s\n\n" "$phase_id"
+		printf "%s\n" "- **Status**: ${phase_status:-unknown}"
+		if [[ -n "$phase_summary" ]]; then
+			printf "%s\n" "- **Summary**: $phase_summary"
+		fi
+		printf "\n"
+	} >> "$summary_file"
+}
+
+eaw_load_phase_exit_codes() {
+        local card_dir="$1"
+        local handoff_file="${card_dir}/investigations/20_handoff.json"
+        [[ -f "$handoff_file" ]] || return 0
+        local codes_raw
+        codes_raw="$(grep -o '"codes":\[[^]]*\]' "$handoff_file" 2>/dev/null || true)"
+        if [[ -n "$codes_raw" ]]; then
+                echo "$codes_raw" | sed 's/"codes":\[//;s/\]//;s/"//g' | tr ',' ' '
+        fi
+        return 0
 }
 
 eaw_yaml_state_completed_phases() {
@@ -851,6 +1090,17 @@ eaw_load_card_workflow_context() {
 			echo "ERROR: current phase '$current_phase' has no declarative next transition in $track_file" >&2
 			return 1
 		fi
+		# 614A: evaluate skip_when if declared for current_phase
+		local _skip_codes
+		_skip_codes="$(eaw_yaml_track_skip_when "$track_file" "$current_phase")"
+		if [[ -n "$_skip_codes" ]] && eaw_eval_skip_when "$_skip_codes" "${EAW_PHASE_EXIT_CODES:-}"; then
+			# 615: emit skip envelope for the phase being skipped
+			local _inherited_from _inherited_codes
+			_inherited_from="$(eaw_resolve_inherited_from "$card_dir")"
+			_inherited_codes="${EAW_PHASE_EXIT_CODES:-}"
+			eaw_emit_skip_envelope "$next_phase" "$card_dir" "$_skip_codes" "$_inherited_from" "$_inherited_codes"
+			next_phase="${transition_map[$next_phase]:-$next_phase}"
+		fi
 	fi
 
 	EAW_CARD_WORKFLOW_TRACK_ID="$track_id"
@@ -1124,35 +1374,102 @@ eaw_card_template_type_for_track() {
 	printf "%s\n" "$track_id"
 }
 
+eaw_inherit_parent_context() {
+	local parent_card="$1"
+	local child_outdir="$2"
+	local child_track_id="${3:-}"
+	local parent_outdir="$EAW_OUT_DIR/$parent_card"
+	local inherited_dir="$child_outdir/context/inherited"
+
+	if [[ ! -d "$parent_outdir" ]]; then
+		die "parent card '$parent_card' not found at $parent_outdir"
+	fi
+
+	# 627: resolve child track policy for context_summary filtering
+	local summary_policy="optional"
+	if [[ -n "$child_track_id" ]]; then
+		local child_track_dir
+		if child_track_dir="$(eaw_official_track_dir "$child_track_id")"; then
+			local child_track_file="$child_track_dir/track.yaml"
+			if [[ -f "$child_track_file" ]]; then
+				local p
+				p="$(eaw_yaml_track_rule_scalar "$child_track_file" context_summary_policy)"
+				[[ -n "$p" ]] && summary_policy="$p"
+			fi
+		fi
+	fi
+
+	ensure_dir "$inherited_dir"
+
+	local -a artifacts=(
+		"investigations/00_intake.md"
+		"investigations/20_findings.md"
+		"investigations/30_hypotheses.md"
+		"investigations/_context_summary.md"
+		"context/dynamic/30_target_snippets.md"
+	)
+
+	local copied=0
+	for artifact in "${artifacts[@]}"; do
+		# 627: skip _context_summary.md when child track policy is excluded
+		if [[ "$artifact" == "investigations/_context_summary.md" ]] && [[ "$summary_policy" == "excluded" ]]; then
+			continue
+		fi
+		if [[ -f "$parent_outdir/$artifact" ]]; then
+			local dest_name
+			dest_name="$(basename "$artifact")"
+			cp "$parent_outdir/$artifact" "$inherited_dir/$dest_name"
+			((copied++))
+		fi
+	done
+
+	if [[ $copied -eq 0 ]]; then
+		echo "WARN: parent card '$parent_card' has no investigation artifacts to inherit" >&2
+	else
+		echo "inherited $copied artifact(s) from parent card '$parent_card'"
+	fi
+}
+
 cmd_card_cli() {
 	local card="${1:-}"
 	shift || true
 
 	if [[ -z "$card" ]]; then
-		die "usage: eaw card <CARD> --track <TRACK> [\"<TITLE>\"]"
+		die "usage: eaw card <CARD> --track <TRACK> [--parent <CARD>] [\"<TITLE>\"]"
 	fi
 
 	local track=""
 	local title=""
+	local parent=""
 	while [[ $# -gt 0 ]]; do
 		case "$1" in
 		--track)
 			shift || true
 			if [[ $# -eq 0 || -z "${1:-}" ]]; then
-				die "usage: eaw card <CARD> --track <TRACK> [\"<TITLE>\"]"
+				die "usage: eaw card <CARD> --track <TRACK> [--parent <CARD>] [\"<TITLE>\"]"
 			fi
 			track="$1"
 			;;
 		--track=*)
 			track="${1#--track=}"
 			;;
+		--parent)
+			shift || true
+			if [[ $# -eq 0 || -z "${1:-}" ]]; then
+				die "usage: eaw card <CARD> --track <TRACK> --parent <CARD>"
+			fi
+			parent="$1"
+			;;
+		--parent=*)
+			parent="${1#--parent=}"
+			;;
 		-h | --help)
-			echo "usage: eaw card <CARD> --track <TRACK> [\"<TITLE>\"]"
+			echo "usage: eaw card <CARD> --track <TRACK> [--parent <CARD>] [\"<TITLE>\"]"
 			return 0
 			;;
 		*)
 			if [[ -n "$title" ]]; then
-				die "usage: eaw card <CARD> --track <TRACK> [\"<TITLE>\"]"
+				die "usage: eaw card <CARD> --track <TRACK> [--parent <CARD>] [\"<TITLE>\"]"
 			fi
 			title="$1"
 			;;
@@ -1187,7 +1504,7 @@ cmd_card_cli() {
 		die "track '$track' is unsupported for card creation"
 	fi
 
-	cmd_card "$template_type" "$card" "$title" "$track"
+	cmd_card "$template_type" "$card" "$title" "$track" "$parent"
 }
 
 eaw_write_next_state() {
@@ -1491,6 +1808,9 @@ EOF
 
 ## Risks
 EOF
+		;;
+	*.json)
+		echo '{}' > "$target_path"
 		;;
 	*)
 		cat >"$target_path" <<EOF
@@ -2090,10 +2410,16 @@ cmd_card() {
 	local card="$2"
 	local title="$3"
 	local track_id="${4:-${type,,}}"
+	local parent="${5:-}"
 	local outdir="$EAW_OUT_DIR/$card"
 	# expose OUTDIR for run_phase and others
 	OUTDIR="$outdir"
 	ensure_dir "$outdir"
+
+	# 620: inherit parent card context before phases
+	if [[ -n "$parent" ]]; then
+		eaw_inherit_parent_context "$parent" "$outdir" "$track_id"
+	fi
 
 	# Preserve the lifecycle engine, but load declarative workflow context before
 	# proceeding with the remaining phases so the runtime can validate state and
@@ -2104,6 +2430,14 @@ cmd_card() {
 	run_phase "load_config" false phase_load_config "$outdir"
 	run_phase "resolve_repos" false phase_resolve_repos
 	run_phase "finalize" false phase_finalize "$card" "$outdir"
+
+	# 620: persist parent_card_id in state
+	if [[ -n "$parent" ]]; then
+		local state_file="$outdir/state_card_${track_id}.yaml"
+		if [[ -f "$state_file" ]] && ! eaw_yaml_state_has_key "$state_file" "parent_card_id"; then
+			sed -i "/^card_state:/a\\  parent_card_id: $parent" "$state_file"
+		fi
+	fi
 
 	if eaw_card_has_workflow_config "$outdir"; then
 		eaw_materialize_current_phase "$card" || return 1
@@ -2120,6 +2454,9 @@ cmd_next() {
 		echo "ERROR: card ${card} is missing canonical workflow YAMLs in $card_dir/intake (MVP requires canonical YAML structure)" >&2
 		return 1
 	fi
+
+	# 614B: load phase exit codes from previous phase handoff
+	EAW_PHASE_EXIT_CODES="$(eaw_load_phase_exit_codes "$card_dir")"
 
 	if ! eaw_load_card_workflow_context "$card_dir"; then
 		return 1
@@ -2167,6 +2504,15 @@ cmd_next() {
 		return 1
 	fi
 
+	# 616: validate agent envelope schema before emit overwrites
+	if ! eaw_validate_envelope_schema "$EAW_CARD_WORKFLOW_TRACK_FILE" "$current_phase" "$card_dir"; then
+		echo "CARD ${card}: ${current_phase} envelope schema validation failed" >&2
+		return 1
+	fi
+
+	# 617: capture context summary before envelope overwrite
+	eaw_emit_context_summary "$current_phase" "$card_dir" "$EAW_CARD_WORKFLOW_TRACK_FILE"
+
 	next_phase="$EAW_CARD_WORKFLOW_NEXT_PHASE"
 	completed_phases="$(eaw_state_completed_phases_with_current "$current_phase")"
 	phase_started_at="$(utc_timestamp)"
@@ -2201,12 +2547,23 @@ cmd_complete() {
 		return 1
 	fi
 
+	# 616: validate agent envelope schema
+	if ! eaw_validate_envelope_schema "$EAW_CARD_WORKFLOW_TRACK_FILE" "$current_phase" "$card_dir"; then
+		echo "CARD ${card}: ${current_phase} envelope schema validation failed" >&2
+		return 1
+	fi
+
+	# 617: capture context summary for completed phase
+	eaw_emit_context_summary "$current_phase" "$card_dir" "$EAW_CARD_WORKFLOW_TRACK_FILE"
+
 	OUTDIR="$card_dir"
 	if [[ "$current_phase" == "$EAW_CARD_WORKFLOW_FINAL_PHASE" ]]; then
 		if ! grep -q '"event_type":"card_completed"' "${OUTDIR}/execution_journal.jsonl" 2>/dev/null; then
 			eaw_journal_append "${EAW_CARD_WORKFLOW_CARD}" "${EAW_CARD_WORKFLOW_TRACK_ID}" \
 				"${EAW_CARD_WORKFLOW_FINAL_PHASE}" "OK" "0" "card_completed"
 		fi
+		# 618: emit card-level metrics from journal
+		eaw_emit_card_metrics "$card_dir"
 	fi
 	phase_completed_at="$(utc_timestamp)"
 	eaw_write_phase_status "$EAW_CARD_WORKFLOW_STATE_FILE" "COMPLETE" "$previous_phase" "$current_phase" "$completed_phases" "$phase_started_at" "true" "$phase_completed_at"

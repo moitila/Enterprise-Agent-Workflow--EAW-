@@ -35,6 +35,10 @@ track:
       next: findings
     findings:
       next: hypotheses
+      skip_when:
+        - NO_CODE_DEVIATION
+        - INFORMATIONAL_ONLY
+        - ADHERENCE_CONFIRMED
       contract:
         emit_phase_output: true
         emit_handoff: true

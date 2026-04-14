@@ -31,12 +31,20 @@ track:
       next: intake
     intake:
       next: findings
+      skip_when:
+        - SIMPLE_ALIGNMENT
     findings:
       next: hypotheses
+      skip_when:
+        - NO_CODE_DEVIATION
+        - INFORMATIONAL_ONLY
+        - ADHERENCE_CONFIRMED
     hypotheses:
       next: planning
     planning:
       next: implementation_planning
+      skip_when:
+        - TRIVIAL_SCOPE
     implementation_planning:
       next: implementation_executor
 

@@ -2107,6 +2107,70 @@ eaw_journal_append() {
 		>>"${OUTDIR}/execution_journal.jsonl"
 }
 
+eaw_emit_card_metrics() {
+	local outdir="${1:-${OUTDIR:-}}"
+	local journal_file metrics_file tmp_file
+
+	[[ -n "$outdir" ]] || return 0
+	journal_file="$outdir/execution_journal.jsonl"
+	metrics_file="$outdir/card_metrics.json"
+
+	[[ -f "$journal_file" ]] || return 0
+	[[ -s "$journal_file" ]] || return 0
+
+	tmp_file="${metrics_file}.tmp.$$"
+
+	awk '
+		function extract_string(line, key,    value) {
+			value = line
+			sub(".*\"" key "\":\"", "", value)
+			sub("\".*", "", value)
+			return value
+		}
+		function extract_number(line, key,    value) {
+			value = line
+			sub(".*\"" key "\":", "", value)
+			sub(",.*", "", value)
+			sub("}.*", "", value)
+			return value + 0
+		}
+		{
+			et = extract_string($0, "event_type")
+			if (et != "phase_completed") next
+			ph = extract_string($0, "phase")
+			if (ph !~ /^workflow_phase_/) next
+			st = extract_string($0, "status")
+			dur = extract_number($0, "duration_ms")
+
+			total_dur += dur
+			count[ph]++
+			if (count[ph] == 1 && st == "OK") first_ok[ph] = 1
+		}
+		END {
+			total_phases = 0
+			re_exec = 0
+			first_success = 0
+			for (p in count) {
+				total_phases++
+				if (count[p] > 1) re_exec++
+				if (count[p] == 1 && first_ok[p] == 1) first_success++
+			}
+			if (total_phases > 0)
+				rate = first_success / total_phases
+			else
+				rate = 0
+			printf "{\n"
+			printf "  \"total_duration_ms\": %d,\n", total_dur
+			printf "  \"phases_executed\": %d,\n", total_phases
+			printf "  \"re_executions\": %d,\n", re_exec
+			printf "  \"first_attempt_success_rate\": %.2f\n", rate
+			printf "}\n"
+		}
+	' "$journal_file" > "$tmp_file"
+
+	mv "$tmp_file" "$metrics_file"
+}
+
 # Parse phase.context.dynamic_context_template from phase YAML.
 # Returns the logical template identifier (string) or empty when absent.
 eaw_yaml_phase_dynamic_context_template() {

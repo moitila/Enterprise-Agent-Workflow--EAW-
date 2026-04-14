@@ -6,8 +6,8 @@ phase:
   description: Analyze the intake information and identify key findings using the canonical prompt contract for this phase.
 
   prompt:
-    # Canonical prompt surface currently resolves to templates/prompts/feature/findings/prompt_v4.md.
-    active: 4
+    # Canonical prompt surface currently resolves to templates/prompts/feature/findings/prompt_v5.md.
+    active: 5
     path: templates/prompts/feature/findings/prompt_v<active>.md
 
   context:
@@ -24,6 +24,7 @@ phase:
       - prompts
     create_artifacts:
       - investigations/20_findings.md
+      - investigations/20_handoff.json
     prompts:
       - findings
 

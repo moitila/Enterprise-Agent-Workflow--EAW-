@@ -75,6 +75,10 @@ source "$SCRIPT_DIR/commands/cmd_suggest_prompt.sh"
 source "$SCRIPT_DIR/commands/cmd_propose_prompt.sh"
 # shellcheck disable=SC1091
 source "$SCRIPT_DIR/commands/cmd_test_suites.sh"
+# shellcheck disable=SC1091
+source "$SCRIPT_DIR/commands/cmd_rollback.sh"
+# shellcheck disable=SC1091
+source "$SCRIPT_DIR/commands/cmd_ingest_pr.sh"
 
 main() {
 	if [[ $# -lt 1 ]]; then
@@ -125,6 +129,13 @@ main() {
 		fi
 		validate_runtime_workdir
 		cmd_complete "$2"
+		;;
+	rollback)
+		if [[ $# -ne 2 ]]; then
+			die "usage: eaw rollback <CARD>"
+		fi
+		validate_runtime_workdir
+		cmd_rollback "$2"
 		;;
 	smoke)
 		validate_runtime_workdir
@@ -195,6 +206,10 @@ main() {
 		;;
 	doctor-hardening)
 		cmd_doctor_hardening
+		;;
+	ingest-pr)
+		validate_runtime_workdir
+		cmd_ingest_pr "${@:2}"
 		;;
 	--help | -h)
 		usage

@@ -18,6 +18,7 @@ phase:
       - prompts
     create_artifacts:
       - investigations/20_findings.md
+      - investigations/20_handoff.json
     prompts:
       - findings
 
@@ -25,3 +26,4 @@ phase:
     strategy: required_artifacts_exist
     required_artifacts:
       - investigations/20_findings.md
+      - investigations/20_handoff.json

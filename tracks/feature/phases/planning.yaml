@@ -6,7 +6,7 @@ phase:
   description: Define implementation steps.
 
   prompt:
-    active: 5
+    active: 6
     path: templates/prompts/feature/planning/prompt_v<active>.md
 
   context:

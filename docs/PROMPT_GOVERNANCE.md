@@ -95,3 +95,15 @@ Resultado esperado consolidado desta trilha:
 - Prompt Registry
 - Prompt Loader
 - Prompt Provenance
+
+## Operational Skill Surface
+
+O executor do EAW opera com três superfícies ortogonais e independentes ao executar uma fase de agente isolado:
+
+1. **Conteúdo do prompt** — selecionado via `phase.prompt.path` e resolução de `ACTIVE`. Imutável durante a execução da fase.
+2. **Contexto injetado** — selecionado via `phase.context` (`dynamic_context_template`, `onboarding_template`). Materializado sob `out/<CARD>/context/` antes da execução.
+3. **Skills operacionais** — declaradas via `phase.skills`. Carregadas pelo executor como contexto operacional do agente isolado, externas ao prompt e ao contexto injetado.
+
+**Invariante de governança:** o executor não altera o conteúdo do prompt para incluir ou mencionar nomes de skills. `phase.skills` é ortogonal a `phase.prompt.path` e ao registro `ACTIVE`. A separação entre as três superfícies é absoluta e deve ser preservada em qualquer extensão futura do runtime.
+
+Esta regra é de governança de prompts: skills equipam o agente operacionalmente, mas nunca como texto no prompt. A mecânica completa do ciclo de execução (Modo D) é definida em `docs/ARCHITECTURE.md` (Deterministic Agent Mode).
