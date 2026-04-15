@@ -22,6 +22,8 @@ phase:
       - prompts
     create_artifacts:
       - investigations/20_findings.md
+      - investigations/20_handoff.json
+      - investigations/10_phase_output.json
     prompts:
       - findings
 

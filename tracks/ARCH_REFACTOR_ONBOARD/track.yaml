@@ -39,6 +39,10 @@ track:
         - NO_CODE_DEVIATION
         - INFORMATIONAL_ONLY
         - ADHERENCE_CONFIRMED
+      contract:
+        emit_phase_output: true
+        emit_handoff: true
+        consume_previous: true
     hypotheses:
       next: planning
     planning:

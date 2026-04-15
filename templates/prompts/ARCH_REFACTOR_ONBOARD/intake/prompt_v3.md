@@ -137,6 +137,9 @@ OUTPUT
 - Escrever somente:
   - `{{CARD_DIR}}/investigations/00_intake.md`
   - `{{CARD_DIR}}/investigations/_intake_provenance.md`
+  - `{{CARD_DIR}}/investigations/20_handoff.json`
+- `00_intake.md` continua sendo rastreabilidade humana.
+- `20_handoff.json` e o envelope consumido pelo runtime para resolver `skip_when`.
 
 READ_SCOPE
 
@@ -152,6 +155,7 @@ WRITE_SCOPE
 - Escrever somente em:
   - `{{CARD_DIR}}/investigations/00_intake.md`
   - `{{CARD_DIR}}/investigations/_intake_provenance.md`
+  - `{{CARD_DIR}}/investigations/20_handoff.json`
 
 RULES
 
@@ -185,9 +189,25 @@ RULES
   - arquivos ignorados com motivo
   - fonte primaria escolhida
   - lacunas detectadas
+- A secao `Sinal para Pipeline` em `00_intake.md` e somente rastreabilidade humana; nao substitui o envelope de runtime.
 - Nao validar a aplicabilidade tecnica da direcao arquitetural nesta fase.
 - Nao transformar direcao arquitetural em plano ou implementacao.
-- Confirmar ao final que somente os dois arquivos da allowlist foram escritos.
+- Confirmar ao final que somente os tres arquivos da allowlist foram escritos.
+
+SIMPLE_ALIGNMENT_HANDOFF
+
+- Apos produzir `00_intake.md` e `_intake_provenance.md`, avaliar se o card atende aos criterios de alinhamento simples definidos em `/home/user/dev/EAW-tool/docs/ARCH_REFACTOR_handoff_codes_v1.md`.
+- O card tem alinhamento simples quando TODOS os criterios abaixo forem atendidos simultaneamente:
+  1. A classificacao do contexto e `ALINHAMENTO_A_PADRAO`
+  2. O escopo afeta no maximo 2 arquivos no mesmo modulo
+  3. Todos os desvios identificados sao informacionais (nomenclatura, documentacao, alinhamento textual) sem mudanca de comportamento
+  4. A direcao arquitetural local e clara, unica e inequivoca
+  5. Nao ha ambiguidades relevantes que exijam investigacao via findings
+- Se o card for `SIMPLE_ALIGNMENT`, escrever `{{CARD_DIR}}/investigations/20_handoff.json` com:
+  `{"from_phase":"intake","status":"completed","messages":[],"codes":["SIMPLE_ALIGNMENT"]}`
+- Se o card NAO for `SIMPLE_ALIGNMENT`, escrever o envelope vazio:
+  `{"from_phase":"intake","status":"completed","messages":[],"codes":[]}`
+- Nao registrar `## Sinal de Skip` em `00_intake.md`; a secao `Sinal para Pipeline` permanece apenas como rastreabilidade humana.
 
 FORBIDDEN
 
@@ -209,4 +229,4 @@ FAIL_CONDITIONS
 - Falhar se o repositorio alvo do card nao puder ser resolvido de forma unica contra `TARGET_REPOS`.
 - Falhar se qualquer arquivo for lido fora de `{{CARD_DIR}}/ingest`, `{{EAW_WORKDIR}}/context_sources/onboarding/<resolved_repo_key>/` e `TARGET_REPOS`.
 - Falhar se qualquer arquivo for escrito fora da WRITE_ALLOWLIST.
-- Falhar se `00_intake.md` ou `_intake_provenance.md` nao existirem ao final.
+- Falhar se `00_intake.md`, `_intake_provenance.md` ou `20_handoff.json` nao existirem ao final.

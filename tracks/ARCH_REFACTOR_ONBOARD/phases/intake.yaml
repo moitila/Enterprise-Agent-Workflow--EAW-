@@ -3,7 +3,7 @@ config_version: 1
 phase:
   id: intake
   name: Intake
-  description: Define the problem and pipeline signals from normalized ingest evidence.
+  description: Define the problem, human traceability, and runtime handoff from normalized ingest evidence.
 
   prompt:
     active: 3
@@ -22,9 +22,11 @@ phase:
     create_artifacts:
       - investigations/00_intake.md
       - investigations/_intake_provenance.md
+      - investigations/20_handoff.json
 
   completion:
     strategy: required_artifacts_exist
     required_artifacts:
       - investigations/00_intake.md
       - investigations/_intake_provenance.md
+      - investigations/20_handoff.json

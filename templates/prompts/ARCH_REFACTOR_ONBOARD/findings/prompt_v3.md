@@ -13,6 +13,7 @@ CONTEXT_USAGE
 - REQUIRED_ARTIFACT: {{CARD_DIR}}/investigations/00_intake.md
 - WRITE_ALLOWLIST:
   - {{CARD_DIR}}/investigations/20_findings.md
+  - {{CARD_DIR}}/investigations/20_handoff.json
   - {{CARD_DIR}}/investigations/_warnings.md
 - PRECHECK:
   - set -euo pipefail
@@ -107,6 +108,7 @@ OUTPUT
 
 - Escrever somente:
   - `{{CARD_DIR}}/investigations/20_findings.md`
+  - `{{CARD_DIR}}/investigations/20_handoff.json`
   - `{{CARD_DIR}}/investigations/_warnings.md` quando estritamente necessario
 
 READ_SCOPE
@@ -120,6 +122,7 @@ WRITE_SCOPE
 
 - Escrever somente em:
   - `{{CARD_DIR}}/investigations/20_findings.md`
+  - `{{CARD_DIR}}/investigations/20_handoff.json`
   - `{{CARD_DIR}}/investigations/_warnings.md`
 
 RULES
@@ -157,6 +160,24 @@ RULES
   - nenhuma sugestao de implementacao produzida
   - nenhuma escrita fora da whitelist
 - Confirmar ao final que somente os arquivos da allowlist foram escritos.
+- Apos produzir `20_findings.md`, avaliar se o conjunto de evidencias se enquadra em um dos 3 codigos de handoff reutilizados do catalogo ARCH_REFACTOR (vide `docs/ARCH_REFACTOR_handoff_codes_v1.md`).
+- Os codigos aplicaveis sao:
+  - `NO_CODE_DEVIATION` — nenhum desvio de codigo detectado.
+  - `INFORMATIONAL_ONLY` — observacoes meramente informacionais sem prescricao de acao.
+  - `ADHERENCE_CONFIRMED` — conformidade completa com padrao de referencia.
+- Regra de precedencia (quando multiplas condicoes sao verdadeiras simultaneamente):
+  1. `NO_CODE_DEVIATION` (prioridade mais alta)
+  2. `ADHERENCE_CONFIRMED`
+  3. `INFORMATIONAL_ONLY`
+- Se nenhum codigo se aplica (existem desvios relevantes, problemas acionaveis ou incerteza), escrever `{{CARD_DIR}}/investigations/20_handoff.json` com envelope vazio:
+  ```json
+  {"from_phase":"findings","status":"completed","messages":[],"codes":[]}
+  ```
+- Se algum codigo se aplica, escrever `{{CARD_DIR}}/investigations/20_handoff.json` com o code no array `codes`:
+  ```json
+  {"from_phase":"findings","status":"completed","messages":[],"codes":["<CODE>"]}
+  ```
+- O code emitido pode ser usado pelo runtime para pular a fase `hypotheses` via `skip_when` declarado no `track.yaml`.
 
 FORBIDDEN
 
