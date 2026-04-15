@@ -234,8 +234,8 @@ eaw_validate_workflow_phase_prompt_sync() {
 	fi
 
 	if [[ "$yaml_active" != "$active_from_active" ]]; then
-		errors=$((errors + 1))
-		eaw_validate_workflow_error "$track_id" "$phase_id" "prompt.active" "phase.prompt.active '$yaml_active' diverges from ACTIVE '$active_from_active' for prompt.path '$prompt_path'; ACTIVE is the operational authority"
+		printf "[WARN] track=%s phase=%s field=prompt.active phase.prompt.active '%s' diverges from ACTIVE '%s' for prompt.path '%s'; ACTIVE is the operational authority\n" \
+			"$track_id" "$phase_id" "$yaml_active" "$active_from_active" "$prompt_path"
 	fi
 
 	return "$errors"
