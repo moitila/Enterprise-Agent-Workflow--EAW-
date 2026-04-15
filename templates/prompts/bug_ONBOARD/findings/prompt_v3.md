@@ -39,7 +39,7 @@ INPUT
 - OUT_DIR={{OUT_DIR}}
 - CARD_DIR={{CARD_DIR}}
 - TARGET_REPOS:
-- framework => /home/user/dev/emr-tasy-framework
+{{TARGET_REPOS}}
 - EXCLUDED_REPOS:
 (none)
 - WARNINGS:
