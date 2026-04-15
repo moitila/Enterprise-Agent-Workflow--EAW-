@@ -50,6 +50,7 @@ INPUT
 
 OUTPUT
 - Escrever somente `{{CARD_DIR}}/investigations/20_findings.md`.
+- Escrever `{{CARD_DIR}}/investigations/20_handoff.json`.
 - Escrever `{{CARD_DIR}}/investigations/_warnings.md` somente se necessario.
 - Registrar no findings a saida relevante de `doctor` e `validate`.
 
@@ -123,9 +124,29 @@ PASSO 3 - PRODUZIR 20_findings.md
   - trecho relevante
   - interpretacao objetiva
 
+PASSO 4 - HANDOFF_CODE_EMISSION
+
+- Apos produzir `20_findings.md`, avaliar se o conjunto de evidencias se enquadra em um dos codes de handoff documentados para `bug_ONBOARD`:
+  - `ROOT_CAUSE_CONFIRMED` — a causa raiz foi confirmada com evidencia suficiente para sustentar o skip de `hypotheses`.
+  - `REGRESSION_CLEAR` — a regressao ficou clara e documentavel, mas a causa raiz nao foi confirmada de forma unica.
+- Regra de precedencia:
+  1. Se `ROOT_CAUSE_CONFIRMED` se aplicar, emitir apenas esse code no envelope.
+  2. Se `ROOT_CAUSE_CONFIRMED` nao se aplicar e `REGRESSION_CLEAR` se aplicar, emitir `REGRESSION_CLEAR`.
+  3. Se nenhum code se aplicar, emitir envelope com `codes: []`.
+- Escrever `{{CARD_DIR}}/investigations/20_handoff.json` no formato:
+  ```json
+  {"from_phase":"findings","status":"completed","messages":[],"codes":["<CODE>"]}
+  ```
+  ou, quando nenhum code se aplicar:
+  ```json
+  {"from_phase":"findings","status":"completed","messages":[],"codes":[]}
+  ```
+- O runtime pode usar `ROOT_CAUSE_CONFIRMED` como unico gatilho de skip para `hypotheses`; `REGRESSION_CLEAR` nao deve ativar skip.
+
 VALIDACOES FINAIS
 
 - `test -f "{{CARD_DIR}}/investigations/20_findings.md"`
+- `test -f "{{CARD_DIR}}/investigations/20_handoff.json"`
 - Confirmar escrita apenas na whitelist
 
 FORBIDDEN

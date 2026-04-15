@@ -9,6 +9,9 @@ phase:
     active: 4
     path: templates/prompts/bug_ONBOARD/planning/prompt_v<active>.md
 
+  context:
+    onboarding_template: repo_discovery
+
   outputs:
     create_directories: []
     create_artifacts:

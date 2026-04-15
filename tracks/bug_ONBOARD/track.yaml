@@ -29,6 +29,11 @@ track:
       next: findings
     findings:
       next: hypotheses
+      skip_when:
+        - ROOT_CAUSE_CONFIRMED
+      contract:
+        emit_phase_output: true
+        emit_handoff: true
     hypotheses:
       next: planning
     planning:
