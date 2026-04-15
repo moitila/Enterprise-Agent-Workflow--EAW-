@@ -191,3 +191,28 @@ Os 3 codes originais do catálogo v1 (`NO_CODE_DEVIATION`, `INFORMATIONAL_ONLY`,
 - **Card de origem**: 626
 - **Track de execução**: feature
 - **Hipóteses base**: H1 (reutilizar codes ARCH_REFACTOR), H2 (adaptar findings + skip_when), H3 (planning tolera skip)
+
+---
+
+## Extensão v1.3 — Card AR-03
+
+### `TRIVIAL_SCOPE`
+
+**Descrição**: O planning determinou que o escopo de implementação é trivial: superfície pequena e local, sem dependências cruzadas relevantes e sem necessidade de `implementation_planning` elaborado.
+
+**Emissor**: fase `planning`
+
+**Transição**: `planning → implementation_planning` na track `ARCH_REFACTOR_ONBOARD`
+
+**Condição de emissão**: Todos os critérios abaixo atendidos simultaneamente:
+1. Escopo afeta exatamente 1 arquivo ou uma superfície muito pequena (até 2 arquivos no mesmo módulo)
+2. Todos os desvios identificados são informacionais, sem mudança de comportamento
+3. Não há ambiguidade arquitetural relevante e o impacto é local
+
+**Semântica para skip_when**: `implementation_planning` é pulado; o `implementation_executor` recebe o alinhamento produzido em `40_next_steps.md` e os artefatos mínimos já materializados pelo planning.
+
+### Rastreabilidade da extensão v1.3
+
+- **Card de origem**: AR-03
+- **Track de execução**: ARCH_REFACTOR_ONBOARD
+- **Hipóteses base**: H1 (implementação parcial entre superfícies), H2 (pedido residual de alinhamento)

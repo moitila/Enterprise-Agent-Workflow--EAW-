@@ -14,6 +14,8 @@ phase:
 
   tooling_hints:
     - Quando `phase.context.onboarding_template` estiver declarado, consumir onboarding a partir de `{{EAW_WORKDIR}}/context_sources/onboarding/<resolved_repo_key>/` apos resolver exatamente um `resolved_repo_key`.
+    - Avaliar explicitamente `TRIVIAL_SCOPE` ao final do planning quando o alinhamento confirmado for local e sem ambiguidade arquitetural relevante.
+    - Quando `TRIVIAL_SCOPE` for emitido, tratar `40_next_steps.md` como contrato minimo para o executor e materializar somente os artefatos adicionais estritamente necessarios.
 
   outputs:
     create_directories:
