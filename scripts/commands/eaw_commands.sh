@@ -443,12 +443,18 @@ eaw_emit_phase_envelope() {
         local track_file="$1"
         local phase_id="$2"
         local card_dir="$3"
-        local emit_handoff emit_phase_output phase_snapshot_dir
+        local emit_handoff emit_phase_output phase_snapshot_dir handoff_file existing_codes_json
         emit_handoff="$(eaw_yaml_track_contract_field "$track_file" "$phase_id" "emit_handoff")"
         emit_phase_output="$(eaw_yaml_track_contract_field "$track_file" "$phase_id" "emit_phase_output")"
         if [[ "$emit_handoff" == "true" ]]; then
                 phase_snapshot_dir="${card_dir}/investigations/${phase_id}"
-                printf '{"from_phase":"%s","status":"completed","messages":[],"codes":[]}\n' "$phase_id" \
+                handoff_file="${card_dir}/investigations/20_handoff.json"
+                existing_codes_json='[]'
+                if [[ -f "$handoff_file" ]]; then
+                        existing_codes_json="$(grep -o '"codes":\[[^]]*\]' "$handoff_file" 2>/dev/null | head -1 | sed 's/^"codes"://' || true)"
+                        [[ -n "$existing_codes_json" ]] || existing_codes_json='[]'
+                fi
+                printf '{"from_phase":"%s","status":"completed","code_origin":"emitted","messages":[],"codes":%s}\n' "$phase_id" "$existing_codes_json" \
                         > "${card_dir}/investigations/20_handoff.json"
                 mkdir -p "$phase_snapshot_dir"
                 cp "${card_dir}/investigations/20_handoff.json" "${phase_snapshot_dir}/20_handoff.json"
@@ -499,7 +505,7 @@ EOF
         printf '{"phase_id":"%s","status":"skipped","summary":"Phase skipped by skip_when rule","skip_reason_code":"%s"}\n' \
                 "$phase_id" "$skip_codes" \
                 > "${inv_dir}/10_phase_output.json"
-        printf '{"from_phase":"%s","status":"skipped","inherited_from":"%s","messages":[{"type":"info","code":"PHASE_SKIPPED_BY_RULE","text":"Phase %s skipped by skip_when rule"}],"codes":[%s]}\n' \
+        printf '{"from_phase":"%s","status":"skipped","code_origin":"inherited","inherited_from":"%s","messages":[{"type":"info","code":"PHASE_SKIPPED_BY_RULE","text":"Phase %s skipped by skip_when rule"}],"codes":[%s]}\n' \
                 "$phase_id" "$inherited_from" "$phase_id" "$codes_json" \
                 > "${inv_dir}/20_handoff.json"
 }
