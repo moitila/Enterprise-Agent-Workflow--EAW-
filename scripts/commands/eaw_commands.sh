@@ -443,12 +443,15 @@ eaw_emit_phase_envelope() {
         local track_file="$1"
         local phase_id="$2"
         local card_dir="$3"
-        local emit_handoff emit_phase_output
+        local emit_handoff emit_phase_output phase_snapshot_dir
         emit_handoff="$(eaw_yaml_track_contract_field "$track_file" "$phase_id" "emit_handoff")"
         emit_phase_output="$(eaw_yaml_track_contract_field "$track_file" "$phase_id" "emit_phase_output")"
         if [[ "$emit_handoff" == "true" ]]; then
+                phase_snapshot_dir="${card_dir}/investigations/${phase_id}"
                 printf '{"from_phase":"%s","status":"completed","messages":[],"codes":[]}\n' "$phase_id" \
                         > "${card_dir}/investigations/20_handoff.json"
+                mkdir -p "$phase_snapshot_dir"
+                cp "${card_dir}/investigations/20_handoff.json" "${phase_snapshot_dir}/20_handoff.json"
         fi
         if [[ "$emit_phase_output" == "true" ]]; then
                 printf '{"phase_id":"%s","status":"completed","summary":""}\n' "$phase_id" \
