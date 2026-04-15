@@ -33,6 +33,9 @@ track:
       next: findings
       skip_when:
         - SIMPLE_ALIGNMENT
+      contract:
+        emit_phase_output: true
+        emit_handoff: true
     findings:
       next: hypotheses
       skip_when:
@@ -45,10 +48,18 @@ track:
         consume_previous: true
     hypotheses:
       next: planning
+      contract:
+        emit_phase_output: true
+        emit_handoff: true
+        consume_previous: true
     planning:
       next: implementation_planning
       skip_when:
         - TRIVIAL_SCOPE
+      contract:
+        emit_phase_output: true
+        emit_handoff: true
+        consume_previous: true
     implementation_planning:
       next: implementation_executor
 
