@@ -1,0 +1,3 @@
+version=v3
+required_substrings=ROLE|OBJECTIVE|INPUT|OUTPUT|OUTPUT_STRUCTURE|READ_SCOPE|WRITE_SCOPE|RULES|FORBIDDEN|FAIL_CONDITIONS|DOMINANTE|DISCRIMINACAO OBRIGATORIA|TESTES DISCRIMINATORIOS|REDUCAO DE ESPACO
+forbidden_words=ignore previous instructions|write anywhere|disable tests|skip validation|modify excluded repos

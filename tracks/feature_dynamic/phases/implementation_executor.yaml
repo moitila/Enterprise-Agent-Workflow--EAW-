@@ -1,0 +1,23 @@
+config_version: 1
+
+phase:
+  id: implementation_executor
+  name: Implementation Executor
+  description: Execute the planned implementation tasks.
+
+  prompt:
+    active: 3
+    path: templates/prompts/feature_dynamic/implementation_executor/prompt_v<active>.md
+
+  outputs:
+    create_directories:
+      - prompts
+    create_artifacts:
+      - pilot_report.md
+    prompts:
+      - implementation_executor
+
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - pilot_report.md

@@ -1,0 +1,27 @@
+config_version: 1
+
+phase:
+  id: hypotheses
+  name: Hypotheses
+  description: Generate possible causes or solution directions.
+
+  prompt:
+    active: 3
+    path: templates/prompts/feature_dynamic/hypotheses/prompt_v<active>.md
+
+  tooling_hints:
+    - Nao materializar `investigations/40_next_steps.md` nesta fase nem antecipar scaffold de `planning`.
+    - Limitar a escrita governada desta fase a `investigations/30_hypotheses.md`.
+
+  outputs:
+    create_directories:
+      - prompts
+    create_artifacts:
+      - investigations/30_hypotheses.md
+    prompts:
+      - hypotheses
+
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - investigations/30_hypotheses.md

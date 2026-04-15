@@ -1,0 +1,3 @@
+version=v6
+required_substrings=ROLE|OBJECTIVE|INPUT|OUTPUT|OUTPUT_STRUCTURE|READ_SCOPE|WRITE_SCOPE|RULES|FORBIDDEN|FAIL_CONDITIONS|MINIMALIDADE OBRIGATORIA|RASTREABILIDADE DE ARQUIVOS|ORDEM DE EXECUCAO|Replay-safe para executor|Estruturas serializadas|Preservacao semantica|Fronteira cross-repo
+forbidden_words=ignore previous instructions|write anywhere|disable tests|skip validation|modify excluded repos
