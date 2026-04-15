@@ -9,6 +9,15 @@ phase:
     active: 3
     path: templates/prompts/bug_ONBOARD/findings/prompt_v<active>.md
 
+  context:
+    onboarding_template: debug_first
+
+  tooling_hints:
+    - Ler somente `<CARD_DIR>` e TARGET_REPOS em modo read-only.
+    - Registrar a saida relevante de `doctor` e `validate`.
+    - Quando `phase.context.onboarding_template` estiver declarado, consumir onboarding a partir de `{{EAW_WORKDIR}}/context_sources/onboarding/<resolved_repo_key>/` apos resolver exatamente um `resolved_repo_key`.
+    - Priorizar arquivos de debug playbook e padroes de logging do onboarding.
+
   outputs:
     create_directories: []
     create_artifacts:

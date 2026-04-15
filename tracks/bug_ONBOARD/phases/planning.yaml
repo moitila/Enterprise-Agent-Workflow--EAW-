@@ -10,7 +10,11 @@ phase:
     path: templates/prompts/bug_ONBOARD/planning/prompt_v<active>.md
 
   context:
-    onboarding_template: repo_discovery
+    onboarding_template: debug_first
+
+  tooling_hints:
+    - Quando `phase.context.onboarding_template` estiver declarado, consumir onboarding a partir de `{{EAW_WORKDIR}}/context_sources/onboarding/<resolved_repo_key>/` apos resolver exatamente um `resolved_repo_key`.
+    - Priorizar arquivos de debug playbook e padroes de logging do onboarding.
 
   outputs:
     create_directories: []
