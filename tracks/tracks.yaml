@@ -15,3 +15,5 @@ tracks:
     status: installed
   - track_id: standard
     status: installed
+  - track_id: feature_dynamic
+    status: installed
