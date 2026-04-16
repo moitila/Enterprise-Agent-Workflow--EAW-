@@ -6,7 +6,7 @@ phase:
   description: Generate possible causes or solution directions.
 
   prompt:
-    active: 3
+    active: 4
     path: templates/prompts/feature_dynamic/hypotheses/prompt_v<active>.md
 
   tooling_hints:
@@ -17,6 +17,8 @@ phase:
     create_directories:
       - prompts
     create_artifacts:
+      - investigations/10_phase_output.json
+      - investigations/20_handoff.json
       - investigations/30_hypotheses.md
     prompts:
       - hypotheses
@@ -24,4 +26,6 @@ phase:
   completion:
     strategy: required_artifacts_exist
     required_artifacts:
+      - investigations/10_phase_output.json
+      - investigations/20_handoff.json
       - investigations/30_hypotheses.md
