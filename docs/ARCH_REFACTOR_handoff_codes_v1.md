@@ -61,6 +61,7 @@ Tabela explícita de mapeamento entre campos de domínio interno (`phase_output`
 | `code_deviation_count` | `0` | `NO_CODE_DEVIATION` |
 | `deviation_type` | `informational_only` | `INFORMATIONAL_ONLY` |
 | `adherence` | `all_confirmed` | `ADHERENCE_CONFIRMED` |
+| `all_informational` | `true` | `NO_DOMINANT_HYPOTHESIS` |
 
 **Regra de precedência** (para casos de múltiplos campos satisfeitos simultaneamente):
 
@@ -69,6 +70,14 @@ Tabela explícita de mapeamento entre campos de domínio interno (`phase_output`
 3. `INFORMATIONAL_ONLY` — prioridade mais baixa
 
 **Nota**: O mapeamento é 1-para-1 em execução normal. Casos de múltiplos campos ativos simultaneamente são edge-cases; a precedência acima garante determinismo. Casos sem nenhum campo ativo não emitem code e a fase `hypotheses` não é skipável.
+
+**Code adicional**: `NO_DOMINANT_HYPOTHESIS`
+
+**Descrição**: Todas as hipóteses levantadas pela fase `hypotheses` são informacionais e não existe hipótese dominante acionável para orientar o planejamento.
+
+**Condição de emissão**: O envelope final da fase indica `all_informational: true`.
+
+**Semântica para skip_when**: O code é consumido por `planning` como sinal de ausência de hipótese dominante e evita o reuso de `INFORMATIONAL_ONLY`, que permanece associado semanticamente a `findings`.
 
 ---
 
@@ -89,7 +98,7 @@ Quando nenhum code se aplica (fluxo completo, sem skip):
 **Campo `from_phase`**: identificador da fase que emitiu o handoff (ex: `findings`, `hypotheses`).
 **Campo `status`**: fixo como `"completed"` para emissão normal.
 **Campo `messages`**: array de mensagens auxiliares (vazio na maioria dos casos).
-**Campo `codes`**: array contendo zero ou um code do catálogo: `NO_CODE_DEVIATION`, `INFORMATIONAL_ONLY`, `ADHERENCE_CONFIRMED`.
+**Campo `codes`**: array contendo zero ou um code do catálogo: `NO_CODE_DEVIATION`, `INFORMATIONAL_ONLY`, `ADHERENCE_CONFIRMED`, `NO_DOMINANT_HYPOTHESIS`.
 
 ---
 
@@ -182,9 +191,9 @@ Os 3 codes originais do catálogo v1 (`NO_CODE_DEVIATION`, `INFORMATIONAL_ONLY`,
 
 **Semântica**: Quando a fase `findings` do feature track não identifica desvios relevantes (apenas observações informacionais, conformidade confirmada ou ausência de desvios de código), a fase `hypotheses` é pulada via `skip_when`. O planning (prompt v6) tolera a ausência de `30_hypotheses.md` quando há evidência de skip legítimo.
 
-**Estrutura do 20_handoff.json**: Idêntica ao catálogo v1 (type, code, text).
+**Estrutura do 20_handoff.json**: Idêntica ao catálogo v1 (type, code, text), com inclusão de `NO_DOMINANT_HYPOTHESIS` quando aplicável.
 
-**Precedência de codes**: Idêntica ao catálogo v1 (NO_CODE_DEVIATION > ADHERENCE_CONFIRMED > INFORMATIONAL_ONLY).
+**Precedência de codes**: Idêntica ao catálogo v1 (NO_CODE_DEVIATION > ADHERENCE_CONFIRMED > INFORMATIONAL_ONLY). `NO_DOMINANT_HYPOTHESIS` é emitido por um critério próprio da fase `hypotheses` e não compete com os codes de `findings`.
 
 ### Rastreabilidade da extensão v1.2
 
@@ -216,3 +225,25 @@ Os 3 codes originais do catálogo v1 (`NO_CODE_DEVIATION`, `INFORMATIONAL_ONLY`,
 - **Card de origem**: AR-03
 - **Track de execução**: ARCH_REFACTOR_ONBOARD
 - **Hipóteses base**: H1 (implementação parcial entre superfícies), H2 (pedido residual de alinhamento)
+
+---
+
+## Extensão v1.4 — Card AR-05
+
+### `NO_DOMINANT_HYPOTHESIS`
+
+**Descrição**: A fase `hypotheses` não encontrou hipótese dominante acionável; o conjunto de hipóteses é apenas informacional e não deve ser reclassificado como `INFORMATIONAL_ONLY`.
+
+**Emissor**: fase `hypotheses`
+
+**Transição**: `hypotheses → planning` na track `ARCH_REFACTOR_ONBOARD`
+
+**Condição de emissão**: O envelope final da fase indica `all_informational: true` no artefato `10_phase_output.json`.
+
+**Semântica para skip_when**: `planning` consome o code como sinal de ausência de hipótese dominante e mantém o alinhamento arquitetural sem ampliar escopo nem criar novo contrato.
+
+### Rastreabilidade da extensão v1.4
+
+- **Card de origem**: AR-05
+- **Track de execução**: ARCH_REFACTOR_ONBOARD
+- **Hipóteses base**: H1 (envelope final da fase), H2 (code próprio de handoff), H3 (repasse até planning)

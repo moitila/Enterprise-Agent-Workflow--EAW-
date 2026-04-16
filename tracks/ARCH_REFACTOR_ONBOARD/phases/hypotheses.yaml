@@ -19,6 +19,8 @@ phase:
     create_directories:
       - prompts
     create_artifacts:
+      - investigations/10_phase_output.json
+      - investigations/20_handoff.json
       - investigations/30_hypotheses.md
     prompts:
       - hypotheses
