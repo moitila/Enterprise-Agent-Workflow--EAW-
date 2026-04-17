@@ -69,7 +69,7 @@ printf "%s|%s\n" "smoke-test" "$REPO_DIR" >"$REPOS_CONF"
 
 # run eaw to create a card
 CARD_ID="SMOKE_CARD_1"
-./scripts/eaw card "$CARD_ID" --track standard "Smoke test"
+bash "$REPO_ROOT/scripts/eaw" card "$CARD_ID" --track standard "Smoke test"
 
 OUTDIR="$REPO_ROOT/out/$CARD_ID"
 if [[ ! -d "$OUTDIR" ]]; then
@@ -89,6 +89,7 @@ if ! grep -qE '[0-9]{4}-[0-9]{2}-[0-9]{2}' "$MAIN_MD"; then
 	exit 4
 fi
 
+bash "$REPO_ROOT/tests/smoke/smoke_arch_refactor_onboard.sh"
 bash "$REPO_ROOT/tests/smoke_intake_negative.sh"
 bash "$REPO_ROOT/tests/smoke_analyze_negative.sh"
 bash "$REPO_ROOT/tests/smoke_implement_negative.sh"
