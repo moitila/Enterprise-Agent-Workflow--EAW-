@@ -27,6 +27,9 @@ track:
   transitions:
     intake:
       next: findings
+      contract:
+        emit_phase_output: false
+        emit_handoff: false
     findings:
       next: hypotheses
       skip_when:
@@ -36,6 +39,10 @@ track:
         emit_handoff: true
     hypotheses:
       next: planning
+      contract:
+        emit_phase_output: true
+        emit_handoff: true
+        consume_previous: true
     planning:
       next: implementation_planning
     implementation_planning:
