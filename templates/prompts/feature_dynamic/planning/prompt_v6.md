@@ -6,6 +6,7 @@ ROLE
 OBJECTIVE
 - Gerar `40_next_steps.md` transformando hipoteses formais em plano executavel minimo.
 - Nao criar hipotese nova, nao alterar findings e nao propor arquitetura nova.
+- Tratar `NO_DOMINANT_HYPOTHESIS` como o code canonico downstream quando a origem do card usar `HYPOTHESES_NOT_REQUIRED`, sem alterar a dinamica da fase nem o contrato de `skip_when`.
 
 INPUT
 - CARD={{CARD}}

@@ -79,6 +79,8 @@ Tabela explícita de mapeamento entre campos de domínio interno (`phase_output`
 
 **Semântica para skip_when**: O code é consumido por `planning` como sinal de ausência de hipótese dominante e evita o reuso de `INFORMATIONAL_ONLY`, que permanece associado semanticamente a `findings`.
 
+**Nota de nomenclatura**: `HYPOTHESES_NOT_REQUIRED` aparece como redacao de origem/drift no backlog; neste catalogo, a forma canonica mantida e `NO_DOMINANT_HYPOTHESIS`.
+
 ---
 
 ## Estrutura do 20_handoff.json
