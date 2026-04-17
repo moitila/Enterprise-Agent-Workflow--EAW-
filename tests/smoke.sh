@@ -90,6 +90,7 @@ if ! grep -qE '[0-9]{4}-[0-9]{2}-[0-9]{2}' "$MAIN_MD"; then
 fi
 
 bash "$REPO_ROOT/tests/smoke/smoke_arch_refactor_onboard.sh"
+bash "$REPO_ROOT/tests/smoke/smoke_bug_onboard.sh"
 bash "$REPO_ROOT/tests/smoke_intake_negative.sh"
 bash "$REPO_ROOT/tests/smoke_analyze_negative.sh"
 bash "$REPO_ROOT/tests/smoke_implement_negative.sh"
