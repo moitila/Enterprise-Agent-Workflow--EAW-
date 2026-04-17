@@ -9,7 +9,11 @@ phase:
     active: 4
     path: templates/prompts/feature_dynamic/hypotheses/prompt_v<active>.md
 
+  context:
+    onboarding_template: repo_discovery
+
   tooling_hints:
+    - Quando `phase.context.onboarding_template` estiver declarado, consumir onboarding a partir de `{{EAW_WORKDIR}}/context_sources/onboarding/<resolved_repo_key>/` apos resolver exatamente um `resolved_repo_key`.
     - Nao materializar `investigations/40_next_steps.md` nesta fase nem antecipar scaffold de `planning`.
     - Limitar a escrita governada desta fase a `investigations/30_hypotheses.md`.
 

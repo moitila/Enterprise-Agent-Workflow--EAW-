@@ -11,8 +11,10 @@ phase:
 
   context:
     dynamic_context_template: deterministic_baseline_v1
+    onboarding_template: repo_discovery
 
   tooling_hints:
+    - Quando `phase.context.onboarding_template` estiver declarado, consumir onboarding a partir de `{{EAW_WORKDIR}}/context_sources/onboarding/<resolved_repo_key>/` apos resolver exatamente um `resolved_repo_key`.
     - Ler `out/<CARD>/context/dynamic/` apenas depois da fase formal `dynamic_context`.
     - Nao tratar placeholder, scaffold vazio ou artefato futuro preexistente como progresso governado.
 

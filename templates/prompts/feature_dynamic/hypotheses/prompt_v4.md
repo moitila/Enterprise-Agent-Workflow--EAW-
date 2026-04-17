@@ -26,6 +26,8 @@ INPUT
 - MODE: quando `EAW_WORKDIR` estiver vazio, saida em `OUT_DIR`; quando definido, saida isolada em `EAW_WORKDIR`.
 - EXECUTION_STRUCTURE: `RUNTIME_ROOT` nunca deve ser modificado; `TARGET_REPOS` somente leitura; `CARD_DIR` e o limite unico de escrita da fase.
 
+{{CONTEXT_BLOCK}}
+
 OUTPUT
 - Escrever somente `{{CARD_DIR}}/investigations/30_hypotheses.md`.
 - Ao final da fase, emitir `{{CARD_DIR}}/investigations/10_phase_output.json` e `{{CARD_DIR}}/investigations/20_handoff.json` com envelope deterministico.
@@ -95,6 +97,7 @@ RULES
 - PASSO 6 - PROVENANCE:
   - Adicionar provenance com arquivos lidos, arquivos ignorados com motivo e limitacoes.
 - Confirmar explicitamente que nenhuma decisao de implementacao foi tomada.
+- Interpretar consumo de onboarding por referencia como uso exclusivo da superficie de contexto injetada pelo runtime, especialmente `{{CONTEXT_BLOCK}}`, sem exigir copia para `out/<CARD>/` e sem instruir leitura de `{{CARD_DIR}}/context/onboarding/` como pre-condicao.
 - VALIDACOES FINAIS:
   - Validar `test -f "{{CARD_DIR}}/investigations/30_hypotheses.md"`.
   - Confirmar Coverage Map presente.
