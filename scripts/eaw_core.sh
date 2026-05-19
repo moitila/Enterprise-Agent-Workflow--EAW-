@@ -2221,15 +2221,41 @@ eaw_yaml_phase_onboarding_template() {
 	' "$file"
 }
 
+# Parse phase.context.onboarding_source from phase YAML.
+# Returns the logical source identifier (string) or empty when absent.
+eaw_yaml_phase_onboarding_source() {
+	local file="$1"
+	awk '
+		function trim(s) {
+			sub(/^[[:space:]]+/, "", s)
+			sub(/[[:space:]]+$/, "", s)
+			sub(/^"/, "", s)
+			sub(/"$/, "", s)
+			return s
+		}
+		/^phase:[[:space:]]*$/ { in_phase=1; next }
+		in_phase && /^[^[:space:]]/ { in_phase=0; in_context=0 }
+		in_phase && /^  context:[[:space:]]*$/ { in_context=1; next }
+		in_context && /^  [^[:space:]]/ { in_context=0 }
+		in_context && /^    onboarding_source:[[:space:]]*/ {
+			line=$0
+			sub(/^    onboarding_source:[[:space:]]*/, "", line)
+			print trim(line)
+			exit
+		}
+	' "$file"
+}
+
 # Parse the full context pack from phase YAML.
 # Outputs key=value lines for each declared context field.
 # Returns empty output when phase.context block is absent (fallback: no injection).
 eaw_yaml_phase_context_pack() {
 	local phase_file="$1"
-	local dynamic_tpl onboarding_tpl
+	local dynamic_tpl onboarding_tpl onboarding_src_val
 	dynamic_tpl="$(eaw_yaml_phase_dynamic_context_template "$phase_file")"
 	onboarding_tpl="$(eaw_yaml_phase_onboarding_template "$phase_file")"
-	if [[ -n "$dynamic_tpl" || -n "$onboarding_tpl" ]]; then
+	onboarding_src_val="$(eaw_yaml_phase_onboarding_source "$phase_file")"
+	if [[ -n "$dynamic_tpl" || -n "$onboarding_tpl" || -n "$onboarding_src_val" ]]; then
 		printf "context=true\n"
 	fi
 	if [[ -n "$dynamic_tpl" ]]; then
@@ -2238,4 +2264,36 @@ eaw_yaml_phase_context_pack() {
 	if [[ -n "$onboarding_tpl" ]]; then
 		printf "onboarding_template=%s\n" "$onboarding_tpl"
 	fi
+	if [[ -n "$onboarding_src_val" ]]; then
+		printf "onboarding_source=%s\n" "$onboarding_src_val"
+	fi
+}
+
+# Extract the repo key declared under '## Repositório principal de onboarding' in a markdown intake file.
+# Prints the first non-empty, non-heading line after that heading, or empty string when absent.
+eaw_intake_parse_onboarding_repo() {
+	local file="$1"
+	awk '
+		/^## Repositório principal de onboarding/ { found=1; next }
+		found && /^[[:space:]]*$/ { next }
+		found && /^#/ { exit }
+		found { print; exit }
+	' "$file"
+}
+
+# Check whether a key exists as a valid entry in REPOS_CONF.
+# Returns 0 (true) when key is found, 1 (false) otherwise.
+eaw_repos_conf_has_key() {
+	local search_key="$1"
+	local line lineno normalized key path role
+	[[ -f "$REPOS_CONF" ]] || return 1
+	lineno=0
+	while IFS= read -r line; do
+		lineno=$((lineno + 1))
+		if normalized="$(parse_repos_conf_line "$line" "$lineno" 2>/dev/null)"; then
+			IFS='|' read -r key path role <<<"$normalized"
+			[[ "$key" == "$search_key" ]] && return 0
+		fi
+	done <"$REPOS_CONF"
+	return 1
 }

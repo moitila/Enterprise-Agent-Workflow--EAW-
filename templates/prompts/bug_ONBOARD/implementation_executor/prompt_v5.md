@@ -47,7 +47,11 @@ INPUT
 - REQUIRED_ARTIFACTS:
   - `{{CARD_DIR}}/investigations/00_intake.md`
   - `{{CARD_DIR}}/investigations/20_findings.md`
-  - `{{CARD_DIR}}/investigations/30_hypotheses.md`
+  - `{{CARD_DIR}}/investigations/30_hypotheses.md` (condicional - pode ficar ausente somente quando `20_handoff.json` confirmar `ROOT_CAUSE_CONFIRMED`)
+- HYPOTHESES_SKIP_DETECTION:
+  - Se `30_hypotheses.md` nao existir, ler `{{CARD_DIR}}/investigations/20_handoff.json`.
+  - Se `ROOT_CAUSE_CONFIRMED` estiver presente no handoff, prosseguir usando `20_findings.md` como base unica para resolucao de hipoteses.
+  - Se `ROOT_CAUSE_CONFIRMED` nao estiver presente, bloquear.
   - `{{CARD_DIR}}/investigations/40_next_steps.md`
   - `{{CARD_DIR}}/implementation/00_scope.lock.md`
   - `{{CARD_DIR}}/implementation/10_change_plan.md`
@@ -84,6 +88,7 @@ RULES
   - `test -f "{{CONFIG_SOURCE}}"`
 
 - Confirmar existencia de todos os REQUIRED_ARTIFACTS; se qualquer um estiver ausente, abortar.
+  - Exceto `30_hypotheses.md`: se ausente, verificar `20_handoff.json` para `ROOT_CAUSE_CONFIRMED`. Se confirmado, prosseguir. Se nao confirmado, abortar.
 
 PASSO 1 - VALIDACAO PRE-EXECUCAO
 
@@ -173,10 +178,10 @@ FORBIDDEN
 
 FAIL_CONDITIONS
 - Falhar em qualquer erro de pre-check ou comando critico
-- Falhar se qualquer REQUIRED_ARTIFACT estiver ausente
+- Falhar se qualquer REQUIRED_ARTIFACT estiver ausente (exceto `30_hypotheses.md` quando hypotheses foi pulado legitimamente com ROOT_CAUSE_CONFIRMED em `20_handoff.json`)
+- Falhar se `30_hypotheses.md` nao existir e `20_handoff.json` nao confirmar `ROOT_CAUSE_CONFIRMED`
 - Falhar se a validacao estrutural pre-execucao falhar
 - Falhar se houver divergencia entre `00_scope.lock.md` e `10_change_plan.md`
 - Falhar em qualquer tentativa de leitura fora de `{{CARD_DIR}}` e TARGET_REPOS necessarios para os Steps
 - Falhar se qualquer escrita ocorrer fora da allowlist soberana
 - Falhar se `bash -n` ou qualquer validacao obrigatoria falhar
-- Falhar interrompendo a execucao e reportando o erro literal em caso de problema

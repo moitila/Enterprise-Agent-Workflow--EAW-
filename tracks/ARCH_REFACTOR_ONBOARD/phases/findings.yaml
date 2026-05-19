@@ -11,6 +11,7 @@ phase:
 
   context:
     onboarding_template: architecture_first
+    onboarding_source: intake_primary
 
   tooling_hints:
     - Ler somente `<CARD_DIR>` e TARGET_REPOS em modo read-only.

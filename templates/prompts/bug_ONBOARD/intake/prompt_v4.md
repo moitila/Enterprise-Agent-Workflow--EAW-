@@ -13,6 +13,16 @@ Before analyzing the evidences, you MUST read the repository onboarding located 
 
 {{EAW_WORKDIR}}/context_sources/onboarding/<resolved_repo_key>/
 
+RESOLVING `resolved_repo_key` (MT01A — MANDATORY):
+Before reading onboarding, resolve `resolved_repo_key` from `00_intake.md`:
+1. Read section `## Repositório principal de onboarding` from `{{CARD_DIR}}/intake/00_intake.md`.
+2. If the field is present and non-empty, use its value as `resolved_repo_key` — this is the
+   canonical source. Do NOT override it with `TARGET_REPOS` inference.
+3. If the field is absent or empty, fall back to the legacy heuristic via `TARGET_REPOS`
+   (explicit textual reference or folder name matching).
+4. After resolving, verify the key is NOT listed under `## Repositórios relacionados` (MT01B).
+   If it is, STOP — do NOT load onboarding.
+
 Priority order:
 
 1. INDEX.md

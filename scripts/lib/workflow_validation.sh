@@ -305,6 +305,17 @@ eaw_validate_workflow_phase_context() {
 				}
 				next
 			}
+			/^    onboarding_source:[[:space:]]*/ {
+				line=$0
+				sub(/^    onboarding_source:[[:space:]]*/, "", line)
+				val=trim(line)
+				if (val == "" || val ~ /^[-{[]/) {
+					printf "onboarding_source must be a non-empty string identifier\n"
+				} else if (val ~ /\//) {
+					printf "onboarding_source must be a logical identifier, not a path: '\''%s'\''\n", val
+				}
+				next
+			}
 			/^    [A-Za-z0-9_-]+:[[:space:]]*/ {
 				line=$0
 				sub(/^    /, "", line)

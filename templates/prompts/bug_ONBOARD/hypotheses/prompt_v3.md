@@ -10,7 +10,7 @@ OBJECTIVE
 
 Before generating hypotheses, you MUST read the repository onboarding located at:
 
-{{EAW_WORKDIR}}/context_sources/onboarding/schematics-framework/
+{{EAW_WORKDIR}}/context_sources/onboarding/<resolved_repo_key>/
 
 Priority order:
 

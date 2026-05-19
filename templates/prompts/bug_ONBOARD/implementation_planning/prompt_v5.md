@@ -48,7 +48,11 @@ INPUT
 - REQUIRED_ARTIFACTS:
   - `{{CARD_DIR}}/investigations/00_intake.md`
   - `{{CARD_DIR}}/investigations/20_findings.md`
-  - `{{CARD_DIR}}/investigations/30_hypotheses.md`
+  - `{{CARD_DIR}}/investigations/30_hypotheses.md` (condicional - pode ficar ausente somente quando `20_handoff.json` confirmar `ROOT_CAUSE_CONFIRMED`)
+- HYPOTHESES_SKIP_DETECTION:
+  - Se `30_hypotheses.md` nao existir, ler `{{CARD_DIR}}/investigations/20_handoff.json`.
+  - Se `ROOT_CAUSE_CONFIRMED` estiver presente no handoff, prosseguir usando `20_findings.md` como base unica do plano.
+  - Se `ROOT_CAUSE_CONFIRMED` nao estiver presente, bloquear.
   - `{{CARD_DIR}}/investigations/40_next_steps.md`
 - MODE: quando `EAW_WORKDIR` estiver vazio, saida em `OUT_DIR`; quando definido, saida isolada em `EAW_WORKDIR`.
 - EXECUTION_STRUCTURE: `RUNTIME_ROOT` nunca deve ser modificado; `TARGET_REPOS` somente leitura; `CARD_DIR` e o limite unico de escrita da fase.
@@ -102,7 +106,11 @@ RULES
 
 - PASSO 1 - VALIDACAO DE ENTRADA:
   - Confirmar existencia dos artefatos obrigatorios; se qualquer um estiver ausente, bloquear.
-  - Bloquear se `30_hypotheses.md` estiver ausente ou vazio.
+  - Verificar existencia de `30_hypotheses.md`:
+    - Se presente, usá-lo normalmente.
+    - Se ausente, conferir `{{CARD_DIR}}/investigations/20_handoff.json`.
+    - Se `20_handoff.json` contiver `ROOT_CAUSE_CONFIRMED`, prosseguir usando `20_findings.md` como base unica e registrar explicitamente a evidencia que confirmou a causa raiz.
+    - Se `ROOT_CAUSE_CONFIRMED` nao estiver presente, bloquear.
   - Bloquear se `40_next_steps.md` estiver ausente ou vazio.
   - Bloquear se `40_next_steps.md` nao contiver referencia explicita a `H[0-9]+` ou nao indicar hipotese(s) selecionada(s).
   - Bloquear se houver inconsistencia entre hipoteses listadas e plano descrito.
@@ -217,11 +225,11 @@ FAIL_CONDITIONS
 - Falhar em qualquer erro de pre-check ou comando critico (fail-fast).
 - Falhar se `./scripts/eaw` nao existir em `{{RUNTIME_ROOT}}`.
 - Falhar se `{{CONFIG_SOURCE}}` nao existir.
-- Falhar se qualquer artefato obrigatorio estiver ausente.
+- Falhar se qualquer artefato obrigatorio estiver ausente (exceto `30_hypotheses.md` quando hypotheses foi pulado legitimamente com evidencia de skip).
+- Falhar se `30_hypotheses.md` nao existir e `20_handoff.json` nao confirmar `ROOT_CAUSE_CONFIRMED`.
 - Falhar se `40_next_steps.md` nao referenciar hipoteses no formato `H[0-9]+`.
 - Falhar se qualquer verificacao de consistencia entre allowlist e `arquivo(s) envolvidos` falhar.
 - Falhar se houver arquivo sem funcao, metodo, bloco ou area alvo claramente identificada quando aplicavel.
 - Falhar em qualquer tentativa de leitura fora de `{{CARD_DIR}}`, `{{CARD_DIR}}/investigations` e `{{CARD_DIR}}/context`.
 - Falhar em qualquer tentativa de escrita fora de `out/{{CARD}}/implementation/00_scope.lock.md` e `out/{{CARD}}/implementation/10_change_plan.md`.
 - Falhar se `out/{{CARD}}/implementation/00_scope.lock.md` nao existir ao final.
-- Falhar se `out/{{CARD}}/implementation/10_change_plan.md` nao existir ao final.

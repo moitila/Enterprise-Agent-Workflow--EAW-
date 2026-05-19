@@ -6,7 +6,7 @@ phase:
   description: Produce the architectural alignment plan without implementation leakage.
 
   prompt:
-    active: 3
+    active: 5
     path: templates/prompts/ARCH_REFACTOR_ONBOARD/planning/prompt_v<active>.md
 
   context:
