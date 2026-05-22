@@ -613,6 +613,8 @@ eaw_emit_context_summary() {
 	local phase_status="unknown"
 	local phase_summary=""
 
+	mkdir -p "${card_dir}/investigations"
+
 	if [[ -f "$po_file" ]]; then
 		local normalized
 		normalized="$(tr -d '\n' < "$po_file" | tr -s ' ')"

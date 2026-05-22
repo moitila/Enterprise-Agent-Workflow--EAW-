@@ -31,6 +31,7 @@ intake_file="$workdir/out/$feature_card/investigations/00_intake.md"
 dynamic_context_manifest="$workdir/out/$feature_card/context/dynamic/00_scope_manifest.md"
 dynamic_context_prompt_phase="$workdir/out/$feature_card/prompts/dynamic_context.md"
 findings_file="$workdir/out/$feature_card/investigations/20_findings.md"
+findings_handoff_file="$workdir/out/$feature_card/investigations/20_handoff.json"
 findings_prompt_phase="$workdir/out/$feature_card/prompts/findings.md"
 execution_log="$workdir/out/$feature_card/execution.log"
 
@@ -122,6 +123,9 @@ cat >>"$findings_file" <<'EOF'
 
 Findings preenchido para teste.
 Referencia textual mantida: out/<CARD>/investigations/20_findings.md
+EOF
+cat >"$findings_handoff_file" <<'EOF'
+{"from_phase":"findings","status":"completed","messages":[],"codes":[]}
 EOF
 
 validate_output="$(EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" validate 2>&1)" || fail "validate should pass after findings receives meaningful content"
