@@ -1257,14 +1257,17 @@ eaw_metrics_retry_count() {
 	fi
 
 	awk '
-		match($0, /"phase":"workflow_phase_([^"]+)"/, phase_match) &&
-		match($0, /"event_type":"phase_completed"/) {
+		/"phase":"workflow_phase_/ && /"event_type":"phase_completed"/ {
+			line = $0
+			sub(/.*"phase":"workflow_phase_/, "", line)
+			sub(/".*/, "", line)
+			phase_name = line
 			total++
-			seen[phase_match[1]] = 1
+			seen[phase_name] = 1
 		}
 		END {
 			unique = 0
-			for (phase_name in seen) {
+			for (p in seen) {
 				unique++
 			}
 			retries = total - unique
@@ -1285,10 +1288,18 @@ eaw_metrics_phase_duration_block() {
 	fi
 
 	awk '
-		match($0, /"phase":"workflow_phase_([^"]+)"/, phase_match) &&
-		match($0, /"duration_ms":([0-9]+)/, duration_match) &&
-		match($0, /"event_type":"phase_completed"/) {
-			sum[phase_match[1]] += duration_match[1]
+		/"phase":"workflow_phase_/ && /"duration_ms":/ && /"event_type":"phase_completed"/ {
+			line = $0
+			sub(/.*"phase":"workflow_phase_/, "", line)
+			sub(/".*/, "", line)
+			phase_name = line
+
+			line2 = $0
+			sub(/.*"duration_ms":/, "", line2)
+			sub(/[^0-9].*/, "", line2)
+			duration_ms = line2 + 0
+
+			sum[phase_name] += duration_ms
 			count++
 		}
 		END {
@@ -1296,8 +1307,8 @@ eaw_metrics_phase_duration_block() {
 				print "- sem eventos de fase registrados"
 				exit
 			}
-			for (phase_name in sum) {
-				printf "- %s: %sms\n", phase_name, sum[phase_name]
+			for (p in sum) {
+				printf "- %s: %sms\n", p, sum[p]
 			}
 		}
 	' "$journal_file" | LC_ALL=C sort
@@ -1322,8 +1333,10 @@ eaw_write_deterministic_baseline() {
 	context_files=$(($(eaw_metrics_count_files "$dynamic_dir")))
 	snippet_count="$(eaw_metrics_count_lines "$snippets_file" "^### ")"
 	prompt_size="$(eaw_metrics_prompt_size_bytes "$card_dir")"
-	retries="$(eaw_metrics_retry_count "$journal_file")"
-	phase_duration_block="$(eaw_metrics_phase_duration_block "$journal_file")"
+	retries="$(eaw_metrics_retry_count "$journal_file")" \
+	  || { echo "FATAL: eaw_metrics_retry_count falhou (card=$card)" >&2; return 1; }
+	phase_duration_block="$(eaw_metrics_phase_duration_block "$journal_file")" \
+	  || { echo "FATAL: eaw_metrics_phase_duration_block falhou (card=$card)" >&2; return 1; }
 	journal_status="$( [[ -f "$journal_file" ]] && printf "presente" || printf "ausente" )"
 	prompt_status="$( [[ -f "$card_dir/prompts/implementation_executor.md" || -n "${EAW_CARD_WORKFLOW_CURRENT_PHASE:-}" && -f "$card_dir/prompts/${EAW_CARD_WORKFLOW_CURRENT_PHASE}.md" ]] && printf "presente" || printf "ausente" )"
 	snippets_status="$( [[ -f "$snippets_file" ]] && printf "presente" || printf "ausente" )"
@@ -1388,8 +1401,10 @@ eaw_write_pilot_report() {
 	context_files=$(($(eaw_metrics_count_files "$dynamic_dir")))
 	snippet_count="$(eaw_metrics_count_lines "$dynamic_dir/30_target_snippets.md" "^### ")"
 	prompt_size="$(eaw_metrics_prompt_size_bytes "$card_dir")"
-	retries="$(eaw_metrics_retry_count "$card_dir/execution_journal.jsonl")"
-	phase_duration_block="$(eaw_metrics_phase_duration_block "$card_dir/execution_journal.jsonl")"
+	retries="$(eaw_metrics_retry_count "$card_dir/execution_journal.jsonl")" \
+	  || { echo "FATAL: eaw_metrics_retry_count falhou (card=$card)" >&2; return 1; }
+	phase_duration_block="$(eaw_metrics_phase_duration_block "$card_dir/execution_journal.jsonl")" \
+	  || { echo "FATAL: eaw_metrics_phase_duration_block falhou (card=$card)" >&2; return 1; }
 	baseline_status="presente"
 	if [[ ! -d "$dynamic_dir" ]]; then
 		baseline_status="ausente"
@@ -2092,6 +2107,70 @@ eaw_journal_append() {
 		>>"${OUTDIR}/execution_journal.jsonl"
 }
 
+eaw_emit_card_metrics() {
+	local outdir="${1:-${OUTDIR:-}}"
+	local journal_file metrics_file tmp_file
+
+	[[ -n "$outdir" ]] || return 0
+	journal_file="$outdir/execution_journal.jsonl"
+	metrics_file="$outdir/card_metrics.json"
+
+	[[ -f "$journal_file" ]] || return 0
+	[[ -s "$journal_file" ]] || return 0
+
+	tmp_file="${metrics_file}.tmp.$$"
+
+	awk '
+		function extract_string(line, key,    value) {
+			value = line
+			sub(".*\"" key "\":\"", "", value)
+			sub("\".*", "", value)
+			return value
+		}
+		function extract_number(line, key,    value) {
+			value = line
+			sub(".*\"" key "\":", "", value)
+			sub(",.*", "", value)
+			sub("}.*", "", value)
+			return value + 0
+		}
+		{
+			et = extract_string($0, "event_type")
+			if (et != "phase_completed") next
+			ph = extract_string($0, "phase")
+			if (ph !~ /^workflow_phase_/) next
+			st = extract_string($0, "status")
+			dur = extract_number($0, "duration_ms")
+
+			total_dur += dur
+			count[ph]++
+			if (count[ph] == 1 && st == "OK") first_ok[ph] = 1
+		}
+		END {
+			total_phases = 0
+			re_exec = 0
+			first_success = 0
+			for (p in count) {
+				total_phases++
+				if (count[p] > 1) re_exec++
+				if (count[p] == 1 && first_ok[p] == 1) first_success++
+			}
+			if (total_phases > 0)
+				rate = first_success / total_phases
+			else
+				rate = 0
+			printf "{\n"
+			printf "  \"total_duration_ms\": %d,\n", total_dur
+			printf "  \"phases_executed\": %d,\n", total_phases
+			printf "  \"re_executions\": %d,\n", re_exec
+			printf "  \"first_attempt_success_rate\": %.2f\n", rate
+			printf "}\n"
+		}
+	' "$journal_file" > "$tmp_file"
+
+	mv "$tmp_file" "$metrics_file"
+}
+
 # Parse phase.context.dynamic_context_template from phase YAML.
 # Returns the logical template identifier (string) or empty when absent.
 eaw_yaml_phase_dynamic_context_template() {
@@ -2142,15 +2221,41 @@ eaw_yaml_phase_onboarding_template() {
 	' "$file"
 }
 
+# Parse phase.context.onboarding_source from phase YAML.
+# Returns the logical source identifier (string) or empty when absent.
+eaw_yaml_phase_onboarding_source() {
+	local file="$1"
+	awk '
+		function trim(s) {
+			sub(/^[[:space:]]+/, "", s)
+			sub(/[[:space:]]+$/, "", s)
+			sub(/^"/, "", s)
+			sub(/"$/, "", s)
+			return s
+		}
+		/^phase:[[:space:]]*$/ { in_phase=1; next }
+		in_phase && /^[^[:space:]]/ { in_phase=0; in_context=0 }
+		in_phase && /^  context:[[:space:]]*$/ { in_context=1; next }
+		in_context && /^  [^[:space:]]/ { in_context=0 }
+		in_context && /^    onboarding_source:[[:space:]]*/ {
+			line=$0
+			sub(/^    onboarding_source:[[:space:]]*/, "", line)
+			print trim(line)
+			exit
+		}
+	' "$file"
+}
+
 # Parse the full context pack from phase YAML.
 # Outputs key=value lines for each declared context field.
 # Returns empty output when phase.context block is absent (fallback: no injection).
 eaw_yaml_phase_context_pack() {
 	local phase_file="$1"
-	local dynamic_tpl onboarding_tpl
+	local dynamic_tpl onboarding_tpl onboarding_src_val
 	dynamic_tpl="$(eaw_yaml_phase_dynamic_context_template "$phase_file")"
 	onboarding_tpl="$(eaw_yaml_phase_onboarding_template "$phase_file")"
-	if [[ -n "$dynamic_tpl" || -n "$onboarding_tpl" ]]; then
+	onboarding_src_val="$(eaw_yaml_phase_onboarding_source "$phase_file")"
+	if [[ -n "$dynamic_tpl" || -n "$onboarding_tpl" || -n "$onboarding_src_val" ]]; then
 		printf "context=true\n"
 	fi
 	if [[ -n "$dynamic_tpl" ]]; then
@@ -2159,4 +2264,36 @@ eaw_yaml_phase_context_pack() {
 	if [[ -n "$onboarding_tpl" ]]; then
 		printf "onboarding_template=%s\n" "$onboarding_tpl"
 	fi
+	if [[ -n "$onboarding_src_val" ]]; then
+		printf "onboarding_source=%s\n" "$onboarding_src_val"
+	fi
+}
+
+# Extract the repo key declared under '## Repositório principal de onboarding' in a markdown intake file.
+# Prints the first non-empty, non-heading line after that heading, or empty string when absent.
+eaw_intake_parse_onboarding_repo() {
+	local file="$1"
+	awk '
+		/^## Repositório principal de onboarding/ { found=1; next }
+		found && /^[[:space:]]*$/ { next }
+		found && /^#/ { exit }
+		found { print; exit }
+	' "$file"
+}
+
+# Check whether a key exists as a valid entry in REPOS_CONF.
+# Returns 0 (true) when key is found, 1 (false) otherwise.
+eaw_repos_conf_has_key() {
+	local search_key="$1"
+	local line lineno normalized key path role
+	[[ -f "$REPOS_CONF" ]] || return 1
+	lineno=0
+	while IFS= read -r line; do
+		lineno=$((lineno + 1))
+		if normalized="$(parse_repos_conf_line "$line" "$lineno" 2>/dev/null)"; then
+			IFS='|' read -r key path role <<<"$normalized"
+			[[ "$key" == "$search_key" ]] && return 0
+		fi
+	done <"$REPOS_CONF"
+	return 1
 }

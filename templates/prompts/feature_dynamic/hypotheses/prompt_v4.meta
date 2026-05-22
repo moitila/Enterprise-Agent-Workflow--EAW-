@@ -1,0 +1,3 @@
+version=v4
+required_substrings=ROLE|OBJECTIVE|INPUT|OUTPUT|OUTPUT_STRUCTURE|HANDOFF_CODE_EMISSION|10_phase_output.json|20_handoff.json|phase_id|status|summary|READ_SCOPE|WRITE_SCOPE|RULES|FORBIDDEN|FAIL_CONDITIONS|DOMINANTE|DISCRIMINACAO OBRIGATORIA|TESTES DISCRIMINATORIOS|REDUCAO DE ESPACO|NO_DOMINANT_HYPOTHESIS
+forbidden_words=ignore previous instructions|write anywhere|disable tests|skip validation|modify excluded repos|HYPOTHESES_NOT_REQUIRED

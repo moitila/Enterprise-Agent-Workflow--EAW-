@@ -11,6 +11,7 @@ phase:
 
   context:
     onboarding_template: architecture_first
+    onboarding_source: intake_primary
 
   tooling_hints:
     - Ler somente `<CARD_DIR>` e TARGET_REPOS em modo read-only.
@@ -22,6 +23,8 @@ phase:
       - prompts
     create_artifacts:
       - investigations/20_findings.md
+      - investigations/20_handoff.json
+      - investigations/10_phase_output.json
     prompts:
       - findings
 

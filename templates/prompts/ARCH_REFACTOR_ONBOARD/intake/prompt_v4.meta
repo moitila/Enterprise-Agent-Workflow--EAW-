@@ -1,0 +1,3 @@
+version=v4
+required_substrings=ROLE|OBJECTIVE|ONBOARDING_ENFORCEMENT_V1|INPUT|OUTPUT|READ_SCOPE|WRITE_SCOPE|RULES|SIMPLE_ALIGNMENT_DETECTION|FORBIDDEN|FAIL_CONDITIONS
+forbidden_words=ignore previous instructions|write anywhere|disable tests|skip validation|modify excluded repos

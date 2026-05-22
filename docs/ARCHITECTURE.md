@@ -38,6 +38,29 @@ For full-card orchestration, `./scripts/eaw run <CARD>` adds a run-level control
 - In the current runtime model, phase completion is validated through the phase `completion` contract when `next` runs; the architecture does not rely on a separate public `complete` CLI command.
 - The current phase-driven executor is incremental: it scaffolds declared outputs, materializes any `phase.outputs.prompts` entries under `out/<CARD>/prompts/` using the declared alias as the filename, emits compatibility prompt artifacts for built-in prompt phases, and records execution in `execution.log`.
 
+### Deterministic Agent Mode (Modo D)
+
+Modo D is the execution model in which EAW spawns an isolated agent for a specific phase, equipped with an explicit operational skill set, and governs the full cycle from phase entry to phase completion.
+
+**Cycle (authoritative definition):**
+
+```
+next → load phase.yaml → read phase.skills → spawn isolated agent with skills → agent executes phase with prompt and injected context → next
+```
+
+**Executor role:** the executor (`./scripts/eaw next`) is the entry point and governor of the Modo D cycle. It reads `phase.skills`, resolves the effective skill set, spawns the isolated agent, and advances the card state after completion. The agent does not govern the cycle — it operates within the boundaries defined by the executor.
+
+**Current runtime state:** `implementation_executor` (feature track) operates under the Tier 1 skills fallback (`[workspace]`) because no phase.yaml in the current installation declares `phase.skills`. This is valid and expected; the Modo D cycle is active regardless of whether `phase.skills` is explicitly declared.
+
+**Post-execution skills:** skills `reviewer` and `delivery` are post-execution capabilities. They are not loaded through `phase.skills` during normal execution phases. They operate outside the Modo D spawn cycle.
+
+**Skills invariant:** the executor does not modify prompt content to mention or include skill names. Skills are provided to the agent as operational context external to the prompt and external to the injected context declared by `phase.context`. This separation is absolute.
+
+Cross-document references:
+- Formal contract for `phase.skills` field: `docs/WORKFLOW_YAML_CONTRACT.md` (Phase Skills Block).
+- Object model for Skill: `docs/CONCEPTUAL_MODEL.md` (Core Objects → Skill).
+- Prompt governance rule for skills/prompt orthogonality: `docs/PROMPT_GOVERNANCE.md` (Operational Skill Surface).
+
 ## Deterministic Output Boundaries
 
 Public output surface:

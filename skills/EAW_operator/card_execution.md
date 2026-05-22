@@ -3,9 +3,19 @@
 ## Objective
 Executar um card no EAW corretamente usando o comando `next`, respeitando o fluxo por fases e o uso de agentes isolados.
 
+## Mandatory prerequisite
+
+Antes de executar qualquer card, o executor deve conhecer e aplicar a skill `workspace.md`.
+
+- `workspace.md` nao e contexto opcional
+- `workspace.md` nao pode ser presumida por memoria do operador
+- a descoberta de `EAW_WORKDIR`, `repos.conf`, `RUNTIME_ROOT`, `OUT_DIR` e papeis `target`/`infra` deve seguir explicitamente a skill `workspace.md`
+- se o executor nao leu/aplicou `workspace.md` na execucao corrente, ele nao esta autorizado a rodar `next`
+
 ## Core rule
 
 - **`EAW_WORKDIR` deve estar exportado antes de qualquer `next`.** Sem isso, o runtime opera em `eaw/out/` (repo tool) em vez do workspace real. Verificar com `echo $EAW_WORKDIR` antes da primeira execução.
+- O executor principal deve saber e aplicar `workspace.md` antes da primeira chamada de `next`
 - O agente NÃO executa múltiplas fases ao mesmo tempo
 - O agente NÃO pula fases
 - O agente NÃO valida formalmente a conclusão da fase
@@ -25,19 +35,21 @@ Executar um card no EAW corretamente usando o comando `next`, respeitando o flux
 
 Para executar um card:
 
-1. Descobrir e validar o runtime root do workspace atual
+1. Ler e aplicar `workspace.md` para descobrir e validar o runtime root do workspace atual
 
-2. Rodar:
+2. Validar `EAW_WORKDIR`, `repos.conf`, papeis `target`/`infra` e `./scripts/eaw` conforme `workspace.md`
+
+3. Rodar:
    ./scripts/eaw next <CARD_ID>
 
-3. Localizar o prompt gerado da fase atual em:
+4. Localizar o prompt gerado da fase atual em:
    $OUT_DIR/<CARD_ID>/prompts/
 
-4. Ler o prompt da fase atual
+5. Ler o prompt da fase atual
 
-5. Ler `phase.skills` do YAML da fase atual (ver Skill Routing)
+6. Ler `phase.skills` do YAML da fase atual (ver Skill Routing)
 
-6. Criar explicitamente um agente isolado para a fase atual, equipando-o com:
+7. Criar explicitamente um agente isolado para a fase atual, equipando-o com:
    - o prompt integral da fase
    - as skills declaradas em `phase.skills` (+ `workspace` sempre)
    - o contexto de `repos.conf` do workspace
@@ -83,6 +95,7 @@ O campo `skills` é uma lista de nomes de skills disponíveis no workspace.
 - Se `phase.skills` não estiver declarado, fallback para `[workspace]` apenas
 - `workspace` é sempre incluída — se o YAML declarar skills sem `workspace`, o orquestrador adiciona automaticamente
 - `workspace` nao e opcional nem decorativa: ela deve ser efetivamente repassada ao subagente como contexto de execucao, e nao apenas presumida pelo operador
+- o executor principal tambem deve conhecer `workspace.md`; nao basta repassa-la ao subagente sem aplica-la na orquestracao
 - O orquestrador não inventa skills além das declaradas + `workspace`
 - O prompt continua sendo a autoridade sobre **o que fazer**; as skills dão ao agente **como fazer**
 - O orquestrador não altera o prompt para mencionar skills — as skills são contexto operacional do agente, não conteúdo do prompt

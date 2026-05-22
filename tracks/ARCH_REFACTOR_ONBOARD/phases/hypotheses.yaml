@@ -6,11 +6,12 @@ phase:
   description: Explain only residual uncertainty that remains after findings.
 
   prompt:
-    active: 3
+    active: 4
     path: templates/prompts/ARCH_REFACTOR_ONBOARD/hypotheses/prompt_v<active>.md
 
   context:
     onboarding_template: architecture_first
+    onboarding_source: intake_primary
 
   tooling_hints:
     - Quando `phase.context.onboarding_template` estiver declarado, consumir onboarding a partir de `{{EAW_WORKDIR}}/context_sources/onboarding/<resolved_repo_key>/` apos resolver exatamente um `resolved_repo_key`.
@@ -19,6 +20,8 @@ phase:
     create_directories:
       - prompts
     create_artifacts:
+      - investigations/10_phase_output.json
+      - investigations/20_handoff.json
       - investigations/30_hypotheses.md
     prompts:
       - hypotheses

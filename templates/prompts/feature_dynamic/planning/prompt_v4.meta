@@ -1,0 +1,3 @@
+version=v4
+required_substrings=ROLE|OBJECTIVE|INPUT|DEFINITIONS|OUTPUT|OUTPUT_STRUCTURE|WARNINGS_POLICY|READ_SCOPE|WRITE_SCOPE|RULES|FORBIDDEN|FAIL_CONDITIONS|hipotese dominante|valida|implementa|mitiga|consumo de onboarding por referencia
+forbidden_words=ignore previous instructions|write anywhere|disable tests|skip validation|modify excluded repos

@@ -1,0 +1,3 @@
+version=v5
+required_substrings=ROLE|OBJECTIVE|INPUT|OUTPUT|OUTPUT_STRUCTURE|READ_SCOPE|WRITE_SCOPE|RULES|FORBIDDEN|FAIL_CONDITIONS|ROOT_CAUSE_CONFIRMED|20_handoff.json|30_hypotheses.md|HYPOTHESES_SKIP_DETECTION
+forbidden_words=ignore previous instructions|write anywhere|disable tests|skip validation|modify excluded repos

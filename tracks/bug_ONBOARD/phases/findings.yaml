@@ -3,11 +3,21 @@ config_version: 1
 phase:
   id: findings
   name: Findings
-  description: Analyze the intake information and identify key findings.
+  description: Analyze the intake information and record substantive findings in investigations/20_findings.md; scaffold-only content does not satisfy the phase contract.
 
   prompt:
     active: 3
     path: templates/prompts/bug_ONBOARD/findings/prompt_v<active>.md
+
+  context:
+    onboarding_template: debug_first
+    onboarding_source: intake_primary
+
+  tooling_hints:
+    - Ler somente `<CARD_DIR>` e TARGET_REPOS em modo read-only.
+    - Registrar a saida relevante de `doctor` e `validate`.
+    - Quando `phase.context.onboarding_template` estiver declarado, consumir onboarding a partir de `{{EAW_WORKDIR}}/context_sources/onboarding/<resolved_repo_key>/` apos resolver exatamente um `resolved_repo_key`.
+    - Priorizar arquivos de debug playbook e padroes de logging do onboarding.
 
   outputs:
     create_directories: []
@@ -16,5 +26,6 @@ phase:
 
   completion:
     strategy: required_artifacts_exist
+    # Contract: investigations/20_findings.md must be meaningfully filled; template/scaffold-only content remains incomplete.
     required_artifacts:
       - investigations/20_findings.md

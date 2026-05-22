@@ -35,3 +35,4 @@ track:
     generated_artifacts_of_each_phase_must_be_non_empty: true
     allow_phase_skip: false
     allow_manual_phase_skip: false
+    context_summary_policy: excluded

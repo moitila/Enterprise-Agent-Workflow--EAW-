@@ -14,6 +14,7 @@ RUNTIME_ENVIRONMENT
 - WRITE_ALLOWLIST:
   - /home/user/dev/.eaw/out/<CARD>/investigations/20_findings.md
   - /home/user/dev/.eaw/out/<CARD>/investigations/_warnings.md
+  - {{CARD_DIR}}/investigations/20_handoff.json
 - PRECHECK:
   - set -euo pipefail
   - cd "{{RUNTIME_ROOT}}"
@@ -44,6 +45,7 @@ OUTPUT
 - Escrever somente:
   - `{{CARD_DIR}}/investigations/20_findings.md`
   - `{{CARD_DIR}}/investigations/_warnings.md` quando estritamente necessario
+  - `{{CARD_DIR}}/investigations/20_handoff.json`
 
 READ_SCOPE
 
@@ -56,6 +58,30 @@ WRITE_SCOPE
 - Escrever somente em:
   - `{{CARD_DIR}}/investigations/20_findings.md`
   - `{{CARD_DIR}}/investigations/_warnings.md`
+  - `{{CARD_DIR}}/investigations/20_handoff.json`
+
+HANDOFF_PROTOCOL
+
+- Ao final da fase, o agente DEVE escrever `{{CARD_DIR}}/investigations/20_handoff.json`.
+- O arquivo e obrigatorio mesmo quando nenhum code se aplica (nesse caso, `"codes":[]`).
+- Schema:
+
+```json
+{
+  "from_phase": "findings",
+  "status": "completed",
+  "messages": [],
+  "codes": []
+}
+```
+
+- Regras de decisao para codes:
+  - Se NENHUM finding identifica desvio real de codigo em relacao ao padrao → adicionar `"NO_CODE_DEVIATION"` a codes
+  - Se TODOS os findings sao classificados como informacionais ou de severidade inferior a `MEDIUM` → adicionar `"INFORMATIONAL_ONLY"` a codes
+  - Se findings confirmam aderencia ao padrao esperado em todos os pontos avaliados → adicionar `"ADHERENCE_CONFIRMED"` a codes
+  - Se QUALQUER finding identifica desvio real com severidade >= `MEDIUM` → codes DEVE ser `[]` (vazio)
+- Cada code e independente. Emitir todos os codes cujas condicoes forem satisfeitas.
+- O runtime usa esses codes para avaliar transicoes condicionais (`skip_when`). O agente nao decide o skip — apenas reporta os sinais.
 
 RULES
 

@@ -1,0 +1,66 @@
+config_version: 1
+
+track:
+  id: feature_dynamic
+  name: Feature Dynamic Track
+  description: >
+    Canonical EAW track installed in the repository as the official
+    workflow source for feature cards.
+  initial_phase: ingest
+  final_phase: implementation_executor
+
+  initial_outputs:
+    create_directories:
+      - ingest
+      - investigations
+      - context
+    create_artifacts: []
+
+  phases:
+    - ingest
+    - intake
+    - dynamic_context
+    - findings
+    - hypotheses
+    - planning
+    - implementation_planning
+    - implementation_executor
+
+  transitions:
+    ingest:
+      next: intake
+    intake:
+      next: dynamic_context
+    dynamic_context:
+      next: findings
+    findings:
+      next: hypotheses
+      skip_when:
+        - NO_CODE_DEVIATION
+        - INFORMATIONAL_ONLY
+        - ADHERENCE_CONFIRMED
+      contract:
+        emit_phase_output: true
+        emit_handoff: true
+        consume_previous: true
+    hypotheses:
+      next: planning
+      contract:
+        emit_phase_output: true
+        emit_handoff: true
+        consume_previous: true
+    planning:
+      next: implementation_planning
+      contract:
+        emit_phase_output: true
+        emit_handoff: true
+        consume_previous: true
+    implementation_planning:
+      next: implementation_executor
+
+  rules:
+    # These are orchestration invariants of the track; phase prompts still need a visible contract of their own.
+    one_prompt_per_phase: true
+    generated_artifacts_of_each_phase_must_be_non_empty: true
+    allow_phase_skip: false
+    allow_manual_phase_skip: false

@@ -151,6 +151,7 @@ Optional fields:
 - `phase.prompt.active`
 - `phase.tooling_hints`
 - `phase.context`
+- `phase.skills`
 - `phase.outputs`
 - `phase.completion`
 
@@ -252,6 +253,61 @@ Error rules and fallbacks:
 - Contexto nao materializado: `dynamic_context_template` declarado mas artefato ausente em `out/<CARD>/context/dynamic/` falha em runtime com mensagem deterministica.
 - Onboarding ausente: quando `onboarding_template` e declarado e a fonte workspace estiver ausente, a ausencia deve permanecer observavel sem abortar o fluxo.
 - Fallback: ausencia do bloco `context` ou de campo especifico preserva o comportamento atual sem injecao adicional.
+
+Phase Skills Block
+------------------
+The optional `phase.skills` block declares the list of skill names that the executor will load into the isolated agent for this phase. It is separate from `phase.context` and from `phase.tooling_hints`.
+
+Permitted value:
+- A YAML list of skill name strings. An empty list (`[]`) is treated as absent.
+
+Semantics: each entry is the name of a skill file available in the workspace. The executor resolves each declared skill and makes it available to the isolated agent as operational context — external to the prompt and to the injected context.
+
+Fallback: when `phase.skills` is absent or the list is empty, the executor applies the implicit fallback skill set `[workspace]`.
+
+Auto-inclusion invariant: the `workspace` skill is always loaded by the executor regardless of whether it is declared. Declaring `workspace` explicitly in `phase.skills` is redundant but valid.
+
+Resolution order (skill routing tiers):
+- Tier 1 — fallback: when `phase.skills` is absent or empty, `[workspace]` is the effective skill set.
+- Tier 2 — declared: when `phase.skills` is present and non-empty, the declared list is the effective skill set (with `workspace` always present per the auto-inclusion invariant).
+- Tier 3 — track context override: reserved for future runtime versions. Not implemented in the current runtime. When implemented, it will not break Tier 1 or Tier 2 compatibility.
+
+Validation limitation (Known Limitation D-03): `workflow_validation.sh` accepts `phase.skills` without semantic validation. The structure of the list and the existence of each declared skill name are not verified in the current version of the validator. A malformed value (non-list, non-string items, undeclared skill name) passes the validator silently. This is expected behavior in the current runtime version.
+
+Current runtime state: `implementation_executor` (feature track) operates under Tier 1 fallback (`[workspace]`) because no phase.yaml in the current installation declares `phase.skills`. This is valid and expected prior to explicit skill declarations.
+
+Valid examples:
+
+```yaml
+# Phase without phase.skills — Tier 1 fallback active
+phase:
+  id: implementation_executor
+  prompt:
+    path: templates/prompts/feature/implementation_executor/prompt_v<active>.md
+
+# Phase with explicit skill list — Tier 2
+phase:
+  id: implementation_executor
+  prompt:
+    path: templates/prompts/feature/implementation_executor/prompt_v<active>.md
+  skills:
+    - workspace
+    - eaw_workdir_context_v1
+```
+
+Invalid examples:
+
+```yaml
+# Invalid: skills as string, not list
+phase:
+  skills: workspace
+
+# Invalid: extra key inside skills block
+phase:
+  skills:
+    - workspace
+    extra_key: value
+```
 
 Card State Contract
 -------------------

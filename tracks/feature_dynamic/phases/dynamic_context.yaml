@@ -1,0 +1,28 @@
+config_version: 1
+
+phase:
+  id: dynamic_context
+  name: Dynamic Context
+  description: Materialize the governed dynamic context after intake and before findings.
+
+  prompt:
+    active: 2
+    path: templates/prompts/feature_dynamic/dynamic_context/prompt_v<active>.md
+
+  tooling_hints:
+    - Materializar `out/<CARD>/context/dynamic/` nesta fase antes de `findings`.
+    - Consumir `out/<CARD>/ingest/` e `out/<CARD>/investigations/00_intake.md` como baseline governado para selecionar contexto dinamico.
+
+  outputs:
+    create_directories:
+      - context
+    create_artifacts:
+      - context/dynamic/00_scope_manifest.md
+      - context/dynamic/20_candidate_files.txt
+      - context/dynamic/30_target_snippets.md
+      - context/dynamic/40_warnings.md
+
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - context/dynamic/00_scope_manifest.md

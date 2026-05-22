@@ -83,6 +83,19 @@ When context is materialized, `dynamic_context` is collected under `out/<CARD>/c
 Templates are versioned independently under `templates/context/<type>/<template_name>/` and rendered without redefining the origin of the context.
 Both remain separate from prompt rendering concerns and from `tooling_hints`.
 
+### Skill
+
+A skill is a workspace definition file, identified by name, that the executor loads as operational context for an isolated agent during a governed phase.
+
+Skills represent capabilities made available to the agent at execution time. They are declared in `phase.skills` in the phase YAML (optional field; fallback is `[workspace]` when absent). The `workspace` skill is always present regardless of declaration.
+
+Skill vs Context distinction:
+- `phase.context` declares files and templates injected as evidence into the agent's context (what the agent reads as input evidence).
+- `phase.skills` declares capabilities loaded into the agent as operational context (how the agent operates).
+Skills are external to the prompt and external to the injected context. Neither the prompt content nor the context artifacts are modified to mention skill names.
+
+See `docs/ARCHITECTURE.md` (Deterministic Agent Mode / Modo D) for the authoritative definition of how the executor loads skills and governs the full agent cycle.
+
 ### Artifacts
 
 Artifacts are deterministic files written under `out/<CARD>/`.

@@ -8,6 +8,19 @@ Resolution rules:
 
 - Use only the card artifacts already allowed for the phase plus `TARGET_REPOS`.
 - Accept repository key, absolute path, repository folder name, or explicit textual reference from the card as resolution evidence.
+
+Priority of resolution sources (descending):
+1. Field `## Repositório principal de onboarding` in `00_intake.md` — canonical, takes precedence
+   over all other resolution sources (MT01A).
+2. Explicit textual reference from the card (legacy fallback, accepted only if field is absent).
+3. Repository key, absolute path, or folder name inferred from `TARGET_REPOS`.
+If priority 1 is present, sources 2 and 3 MUST NOT be used to override it.
+
+MT01B — Related repositories restriction:
+- Repositories listed under `## Repositórios relacionados` in `00_intake.md` are read-only.
+- `resolved_repo_key` MUST NOT be derived from a repository listed under `## Repositórios relacionados`.
+- If the only candidate resolved matches an entry in `## Repositórios relacionados`, STOP.
+  Do NOT load onboarding for a related repository.
 - If zero candidates remain, STOP.
 - If more than one candidate remains, STOP.
 - After resolving the repository, derive `resolved_repo_key` from the single matching entry in `TARGET_REPOS`.

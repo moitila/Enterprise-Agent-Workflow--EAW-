@@ -62,8 +62,10 @@ write_official_track_card() {
 	local current_phase="$4"
 	local previous_phase="$5"
 	local intake_dir="$workdir/out/$card/intake"
+	local investigations_dir="$workdir/out/$card/investigations"
 
 	mkdir -p "$intake_dir"
+	mkdir -p "$investigations_dir"
 
 	cat >"$intake_dir/state_card_official.yaml" <<EOF
 card_state:
@@ -72,6 +74,12 @@ card_state:
   current_phase: $current_phase
   completed_phases:
     - $previous_phase
+EOF
+
+	cat >"$investigations_dir/20_findings.md" <<'EOF'
+# 20_findings
+
+Fixture artifact for workflow prompt.path validation.
 EOF
 }
 

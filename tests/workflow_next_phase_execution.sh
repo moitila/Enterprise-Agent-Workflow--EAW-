@@ -31,6 +31,7 @@ intake_file="$workdir/out/$feature_card/investigations/00_intake.md"
 dynamic_context_manifest="$workdir/out/$feature_card/context/dynamic/00_scope_manifest.md"
 dynamic_context_prompt_phase="$workdir/out/$feature_card/prompts/dynamic_context.md"
 findings_file="$workdir/out/$feature_card/investigations/20_findings.md"
+findings_handoff_file="$workdir/out/$feature_card/investigations/20_handoff.json"
 findings_prompt_phase="$workdir/out/$feature_card/prompts/findings.md"
 execution_log="$workdir/out/$feature_card/execution.log"
 
@@ -113,11 +114,22 @@ next_output="$(EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" next "$feature_ca
 grep -Fq "unfilled required artifacts: investigations/20_findings.md" <<<"$next_output" || fail "feature next output missing findings content gate"
 grep -Fq "current_phase: findings" "$state_file" || fail "feature card should remain in findings while findings artifact is unfilled"
 
+if validate_output="$(EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" validate 2>&1)"; then
+	fail "validate should fail while findings is scaffold-only"
+fi
+grep -Fq "phase 'findings' is incomplete; unfilled required artifacts: investigations/20_findings.md" <<<"$validate_output" || fail "validate output missing strict findings gate"
+
 cat >>"$findings_file" <<'EOF'
 
 Findings preenchido para teste.
 Referencia textual mantida: out/<CARD>/investigations/20_findings.md
 EOF
+cat >"$findings_handoff_file" <<'EOF'
+{"from_phase":"findings","status":"completed","messages":[],"codes":[]}
+EOF
+
+validate_output="$(EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" validate 2>&1)" || fail "validate should pass after findings receives meaningful content"
+grep -Fq "SUMMARY: errors=0" <<<"$validate_output" || fail "validate success output missing zero-error summary after findings fill"
 
 next_output="$(EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" next "$feature_card" 2>&1)" || fail "feature next command failed after findings was filled"
 grep -Fq "current_phase: hypotheses" "$state_file" || fail "feature card did not advance to hypotheses after findings fill"

@@ -9,6 +9,9 @@ phase:
     active: 3
     path: templates/prompts/bug_ONBOARD/intake/prompt_v<active>.md
 
+  context:
+    onboarding_source: intake_primary
+
   outputs:
     create_directories:
       - investigations

@@ -33,6 +33,10 @@ track:
       next: findings
     findings:
       next: hypotheses
+      skip_when:
+        - NO_CODE_DEVIATION
+        - INFORMATIONAL_ONLY
+        - ADHERENCE_CONFIRMED
     hypotheses:
       next: planning
     planning:
