@@ -306,6 +306,7 @@ run_debug_first_scenario() {
 	write_intake_artifact "$workdir" "$card"
 	write_ingest_artifact "$workdir" "$card"
 	write_findings_artifact "$workdir" "$card"
+	write_handoff "$workdir" "$card" "REGRESSION_CLEAR"
 	seed_onboarding_source "$workdir" "$repo_key"
 	seed_onboarding_context "$workdir" "$card" "$repo_key" "present"
 
@@ -336,6 +337,8 @@ run_source_absent_scenario() {
 	write_intake_artifact "$workdir" "$card"
 	write_ingest_artifact "$workdir" "$card"
 	write_findings_artifact "$workdir" "$card"
+	write_handoff "$workdir" "$card" "REGRESSION_CLEAR"
+	write_absent_onboarding_provenance "$workdir" "$card"
 
 	output="$(run_next "$workdir" "$card")"
 	grep -Fq "CARD ${card}: findings -> hypotheses" <<<"$output" || fail "source absent scenario did not advance to hypotheses"
