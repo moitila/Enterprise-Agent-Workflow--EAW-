@@ -605,8 +605,9 @@ eaw_emit_context_summary() {
 		fi
 	fi
 
-	local po_file="${card_dir}/investigations/10_phase_output.json"
-	local summary_file="${card_dir}/investigations/_context_summary.md"
+	local inv_dir="${card_dir}/investigations"
+	local po_file="${inv_dir}/10_phase_output.json"
+	local summary_file="${inv_dir}/_context_summary.md"
 
 	local phase_status="unknown"
 	local phase_summary=""
@@ -618,6 +619,7 @@ eaw_emit_context_summary() {
 		phase_summary="$(echo "$normalized" | grep -o '"summary":"[^"]*"' 2>/dev/null | head -1 | sed 's/"summary":"//;s/"//')"
 	fi
 
+	mkdir -p "$inv_dir"
 	if [[ ! -f "$summary_file" ]]; then
 		printf "# Context Summary\n\n" >"$summary_file"
 	fi

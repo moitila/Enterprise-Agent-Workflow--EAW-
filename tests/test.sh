@@ -84,6 +84,9 @@ EOF
 
 Findings preenchido para onboarding runtime suite.
 EOF
+		cat >"$card_dir/investigations/20_handoff.json" <<'EOF'
+{"from_phase":"findings","status":"completed","messages":[],"codes":[]}
+EOF
 		EAW_WORKDIR="$workdir" "$eaw_bin" next "$card_id" >/dev/null
 
 		cat >>"$card_dir/investigations/30_hypotheses.md" <<'EOF'

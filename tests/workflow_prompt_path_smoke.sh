@@ -81,6 +81,32 @@ EOF
 
 Fixture artifact for workflow prompt.path validation.
 EOF
+
+	if [[ "$track" == "feature" ]]; then
+		cat >"$investigations_dir/20_handoff.json" <<'EOF'
+{"status":"fixture","source":"workflow_prompt_path_smoke"}
+EOF
+	fi
+}
+
+write_findings_completion_artifacts() {
+	local workdir="$1"
+	local card="$2"
+	local track="$3"
+	local investigations_dir="$workdir/out/$card/investigations"
+
+	mkdir -p "$investigations_dir"
+	cat >"$investigations_dir/20_findings.md" <<'EOF'
+# 20_findings
+
+Fixture artifact for workflow prompt.path validation.
+EOF
+
+	if [[ "$track" == "feature" ]]; then
+		cat >"$investigations_dir/20_handoff.json" <<'EOF'
+{"status":"fixture","source":"workflow_prompt_path_smoke"}
+EOF
+	fi
 }
 
 write_official_track_card_without_completed() {
@@ -168,6 +194,10 @@ write_official_track_card "$success_workdir" "539SPIKE" "spike" "findings" "inta
 EAW_WORKDIR="$success_workdir" "$EAW_BIN" card "540FEATURE" --track feature "feature track smoke" >/dev/null
 EAW_WORKDIR="$success_workdir" "$EAW_BIN" card "540BUG" --track bug "bug track smoke" >/dev/null
 EAW_WORKDIR="$success_workdir" "$EAW_BIN" card "540SPIKE" --track spike "spike track smoke" >/dev/null
+
+write_findings_completion_artifacts "$success_workdir" "540FEATURE" "feature"
+write_findings_completion_artifacts "$success_workdir" "540BUG" "bug"
+write_findings_completion_artifacts "$success_workdir" "540SPIKE" "spike"
 
 grep -Fq "track_id: feature" "$success_workdir/out/540FEATURE/state_card_feature.yaml" || fail "card command did not create track_id: feature"
 grep -Fq "track_id: bug" "$success_workdir/out/540BUG/state_card_bug.yaml" || fail "card command did not create track_id: bug"

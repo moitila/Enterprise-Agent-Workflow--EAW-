@@ -191,7 +191,7 @@ phase:
       - review/report.md
 EOF
 
-custom_output="$(EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" next "$custom_card" 2>&1)" || fail "custom next command failed"
+custom_output="$(EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" next "$custom_card" 2>&1)" || fail "custom next command failed: $custom_output"
 custom_state="$workdir/out/$custom_card/intake/state_card_custom.yaml"
 custom_report="$workdir/out/$custom_card/review/report.md"
 custom_log="$workdir/out/$custom_card/execution.log"
