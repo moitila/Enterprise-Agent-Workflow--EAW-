@@ -82,6 +82,8 @@ INPUT
   - `{{CARD_DIR}}/investigations/20_findings.md`
 - TARGET_REPOS podem ser consultados em modo read-only apenas se uma evidencia complementar for estritamente necessaria
 
+{{CONTEXT_BLOCK}}
+
 OUTPUT
 
 - Escrever somente:

@@ -138,6 +138,8 @@ INPUT
   - `{{CARD_DIR}}/investigations/30_hypotheses.md`
   - `{{CARD_DIR}}/investigations/20_handoff.json`
 
+{{CONTEXT_BLOCK}}
+
 OUTPUT
 
 - Escrever somente:

@@ -26,9 +26,10 @@ INPUT
   - `{{CARD_DIR}}/investigations/20_findings.md`
   - `{{CARD_DIR}}/investigations/30_hypotheses.md` (condicional - pode ficar ausente somente quando `20_handoff.json` confirmar `ROOT_CAUSE_CONFIRMED`)
 - HYPOTHESES_SKIP_DETECTION:
-  - Se `30_hypotheses.md` nao existir, ler `{{CARD_DIR}}/investigations/20_handoff.json`.
-  - Se `ROOT_CAUSE_CONFIRMED` estiver presente no handoff, prosseguir usando `20_findings.md` como base unica do plano.
-  - Se `ROOT_CAUSE_CONFIRMED` nao estiver presente, bloquear.
+  - Se `30_hypotheses.md` nao existir OU for scaffold vazio, ler `{{CARD_DIR}}/investigations/20_handoff.json`.
+  - Scaffold vazio: arquivo cujo conteudo nao contenha nenhuma entrada no formato `H[0-9]+` e nao contenha status decisorio preenchido (ex: CONFIRMED, REJECTED, ROOT_CAUSE_CONFIRMED) em bloco de hipotese.
+  - Se `ROOT_CAUSE_CONFIRMED` estiver presente no handoff, prosseguir usando `20_findings.md` como base unica do plano; citar explicitamente o skip no output.
+  - Se `ROOT_CAUSE_CONFIRMED` nao estiver presente e arquivo for scaffold vazio, bloquear.
 - MODE: quando `EAW_WORKDIR` estiver vazio, saida em `OUT_DIR`; quando definido, saida isolada em `EAW_WORKDIR`.
 - EXECUTION_STRUCTURE: `RUNTIME_ROOT` nunca deve ser modificado; `TARGET_REPOS` somente leitura; `CARD_DIR` e o limite unico de escrita da fase.
 

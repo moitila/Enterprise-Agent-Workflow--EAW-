@@ -48,6 +48,8 @@ INPUT
 - MODE: quando `EAW_WORKDIR` estiver vazio, saida em `OUT_DIR`; quando definido, saida isolada em `EAW_WORKDIR`.
 - EXECUTION_STRUCTURE: `RUNTIME_ROOT` nunca deve ser modificado; `TARGET_REPOS` somente leitura; `CARD_DIR` e o limite unico de escrita da fase.
 
+{{CONTEXT_BLOCK}}
+
 OUTPUT
 - Escrever somente `{{CARD_DIR}}/investigations/20_findings.md`.
 - Escrever `{{CARD_DIR}}/investigations/20_handoff.json`.

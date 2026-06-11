@@ -27,17 +27,79 @@ eaw_phase_completion_required_artifacts() {
 	local file="$1"
 	awk '
 		/^phase:[[:space:]]*$/ { in_phase=1; next }
-		in_phase && /^[^[:space:]]/ { in_phase=0; in_completion=0; in_required=0 }
+		in_phase && /^[^[:space:]]/ { in_phase=0; in_completion=0; in_required=0; in_obj=0 }
 		in_phase && /^  completion:[[:space:]]*$/ { in_completion=1; next }
-		in_completion && /^  [^[:space:]]/ { in_completion=0; in_required=0 }
+		in_completion && /^  [^[:space:]]/ { in_completion=0; in_required=0; in_obj=0 }
 		in_completion && /^    required_artifacts:[[:space:]]*$/ { in_required=1; next }
-		in_required && /^    [^[:space:]-]/ { in_required=0 }
+		in_required && /^    [^[:space:]-]/ { in_required=0; in_obj=0 }
+		in_required && in_obj && /^        / { next }
+		in_required && /^      - path:[[:space:]]/ {
+			in_obj=1
+			line=$0
+			sub(/^      - path:[[:space:]]*/, "", line)
+			print line
+			next
+		}
 		in_required && /^      - / {
+			in_obj=0
 			line=$0
 			sub(/^      - /, "", line)
 			print line
 		}
 	' "$file"
+}
+
+eaw_phase_completion_artifact_object_metadata() {
+	local phase_file="$1"
+	local target="$2"
+	awk -v target="$target" '
+		function emit() {
+			if (min_bytes != "") printf "min_bytes=%s\n", min_bytes
+			if (validation_mode != "") printf "validation_mode=%s\n", validation_mode
+			if (headings != "") printf "required_headings=%s\n", headings
+		}
+		BEGIN {
+			in_phase=0; in_completion=0; in_required=0
+			found=0; in_obj=0; in_headings=0
+			min_bytes=""; validation_mode=""; headings=""
+		}
+		/^phase:[[:space:]]*$/ { in_phase=1; next }
+		in_phase && /^[^[:space:]]/ { in_phase=0; in_completion=0; in_required=0 }
+		in_phase && /^  completion:[[:space:]]*$/ { in_completion=1; next }
+		in_completion && /^  [^[:space:]]/ { in_completion=0; in_required=0 }
+		in_completion && /^    required_artifacts:[[:space:]]*$/ { in_required=1; next }
+		in_required && /^    [^[:space:]-]/ { if (found) { emit(); exit } in_required=0 }
+		in_required && /^      - / {
+			if (found && in_obj) { emit(); exit }
+			in_obj=0; in_headings=0
+			if (/^      - path:[[:space:]]/) {
+				line=$0; sub(/^      - path:[[:space:]]*/, "", line)
+				sub(/[[:space:]]+$/, "", line)
+				if (line == target) { found=1; in_obj=1 }
+			}
+			next
+		}
+		in_required && found && in_obj && in_headings && /^          - / {
+			val=$0; sub(/^          - /, "", val)
+			gsub(/^"|"$/, "", val)
+			sub(/[[:space:]]+$/, "", val)
+			headings=(headings == "" ? val : headings "|" val)
+			next
+		}
+		in_required && found && in_obj && in_headings && /^        [^[:space:]]/ { in_headings=0 }
+		in_required && found && in_obj && /^        min_bytes:[[:space:]]/ {
+			val=$0; sub(/^        min_bytes:[[:space:]]*/, "", val)
+			sub(/[[:space:]]+$/, "", val); min_bytes=val; next
+		}
+		in_required && found && in_obj && /^        validation_mode:[[:space:]]/ {
+			val=$0; sub(/^        validation_mode:[[:space:]]*/, "", val)
+			sub(/[[:space:]]+$/, "", val); validation_mode=val; next
+		}
+		in_required && found && in_obj && /^        required_headings:[[:space:]]*$/ {
+			in_headings=1; next
+		}
+		END { if (found && in_obj) emit() }
+	' "$phase_file"
 }
 
 eaw_phase_completion_evaluate_required_artifacts_exist() {
@@ -73,7 +135,7 @@ eaw_phase_completion_detect_card_template_type() {
 		printf "bug\n"
 	elif [[ -f "$card_dir/spike_${card}.md" ]]; then
 		printf "spike\n"
-	elif compgen -G "$card_dir/state_card_repo_onboarding.yaml" > /dev/null 2>&1; then
+	elif compgen -G "$card_dir/state_card_repo_onboarding.yaml" >/dev/null 2>&1; then
 		printf "repo_onboarding\n"
 	else
 		printf "feature\n"
@@ -226,6 +288,72 @@ eaw_phase_completion_evaluate_required_artifacts_filled() {
 	return 0
 }
 
+eaw_phase_completion_evaluate_required_artifacts_substantive() {
+	local card="$1"
+	local card_dir="$2"
+	local phase_id="$3"
+	local phase_file="$4"
+	local rel_path metadata meta_line min_bytes validation_mode headings file_size failed heading
+	local -a warning_artifacts=()
+	local -a blocking_artifacts=()
+	local -a heading_list
+
+	while IFS= read -r rel_path; do
+		[[ -n "$rel_path" ]] || continue
+		metadata="$(eaw_phase_completion_artifact_object_metadata "$phase_file" "$rel_path")"
+		[[ -n "$metadata" ]] || continue
+		min_bytes=""
+		validation_mode=""
+		headings=""
+		while IFS= read -r meta_line; do
+			case "$meta_line" in
+			min_bytes=*) min_bytes="${meta_line#min_bytes=}" ;;
+			validation_mode=*) validation_mode="${meta_line#validation_mode=}" ;;
+			required_headings=*) headings="${meta_line#required_headings=}" ;;
+			esac
+		done <<<"$metadata"
+		[[ -n "$validation_mode" ]] || validation_mode="warning"
+		failed=0
+		if [[ -n "$min_bytes" && -e "$card_dir/$rel_path" ]]; then
+			file_size="$(wc -c <"$card_dir/$rel_path")"
+			if [[ "$file_size" -lt "$min_bytes" ]]; then
+				failed=1
+			fi
+		fi
+		if [[ "$failed" -eq 0 && -n "$headings" && -e "$card_dir/$rel_path" ]]; then
+			IFS='|' read -ra heading_list <<<"$headings"
+			for heading in "${heading_list[@]}"; do
+				if ! grep -qF "$heading" "$card_dir/$rel_path"; then
+					failed=1
+					break
+				fi
+			done
+		fi
+		if [[ "$failed" -eq 1 ]]; then
+			if [[ "$validation_mode" == "blocking" ]]; then
+				blocking_artifacts+=("$rel_path")
+			else
+				warning_artifacts+=("$rel_path")
+			fi
+		fi
+	done < <(eaw_phase_completion_required_artifacts "$phase_file")
+
+	if [[ ${#warning_artifacts[@]} -gt 0 ]]; then
+		printf "WARNING: card %s phase '%s' has artifacts not meeting criteria:" "$card" "$phase_id" >&2
+		printf " %s" "${warning_artifacts[@]}" >&2
+		printf "\n" >&2
+	fi
+
+	if [[ ${#blocking_artifacts[@]} -gt 0 ]]; then
+		printf "ERROR: card %s phase '%s' is incomplete; invalid required artifacts:" "$card" "$phase_id" >&2
+		printf " %s" "${blocking_artifacts[@]}" >&2
+		printf "\n" >&2
+		return 1
+	fi
+
+	return 0
+}
+
 eaw_phase_completion_evaluate() {
 	local card="$1"
 	local card_dir="$2"
@@ -255,7 +383,10 @@ eaw_phase_completion_evaluate_strict() {
 	strategy="$(eaw_phase_completion_strategy_name "$phase_file")"
 	case "$strategy" in
 	"" | required_artifacts_exist)
-		eaw_phase_completion_evaluate_required_artifacts_filled "$card" "$card_dir" "$phase_id" "$phase_file"
+		if ! eaw_phase_completion_evaluate_required_artifacts_filled "$card" "$card_dir" "$phase_id" "$phase_file"; then
+			return 1
+		fi
+		eaw_phase_completion_evaluate_required_artifacts_substantive "$card" "$card_dir" "$phase_id" "$phase_file"
 		;;
 	*)
 		eaw_phase_completion_evaluate "$card" "$card_dir" "$phase_id" "$phase_file"
@@ -271,8 +402,7 @@ eaw_card_enforce_mandatory_analysis_audit() {
 	local -a missing_artifacts=()
 
 	case "$phase_id" in
-	implementation_planning | implementation_executor)
-		;;
+	implementation_planning | implementation_executor) ;;
 	*)
 		return 0
 		;;
@@ -305,4 +435,62 @@ eaw_card_enforce_mandatory_analysis_audit() {
 	fi
 
 	return 0
+}
+
+eaw_phase_completion_render_artifact_status_checklist() {
+	local card="$1"
+	local card_dir="$2"
+	local phase_id="$3"
+	local phase_file="$4"
+	local rel_path label metadata meta_line min_bytes validation_mode headings file_size failed heading
+	local -a heading_list
+
+	while IFS= read -r rel_path; do
+		[[ -n "$rel_path" ]] || continue
+		if [[ ! -e "$card_dir/$rel_path" ]]; then
+			label="[missing]"
+		elif ! eaw_phase_completion_artifact_has_meaningful_content "$card" "$card_dir" "$phase_id" "$rel_path"; then
+			label="[unfilled]"
+		else
+			label="[ok]"
+			metadata="$(eaw_phase_completion_artifact_object_metadata "$phase_file" "$rel_path")"
+			if [[ -n "$metadata" ]]; then
+				min_bytes=""
+				validation_mode=""
+				headings=""
+				while IFS= read -r meta_line; do
+					case "$meta_line" in
+					min_bytes=*) min_bytes="${meta_line#min_bytes=}" ;;
+					validation_mode=*) validation_mode="${meta_line#validation_mode=}" ;;
+					required_headings=*) headings="${meta_line#required_headings=}" ;;
+					esac
+				done <<<"$metadata"
+				[[ -n "$validation_mode" ]] || validation_mode="warning"
+				failed=0
+				if [[ -n "$min_bytes" ]]; then
+					file_size="$(wc -c <"$card_dir/$rel_path")"
+					if [[ "$file_size" -lt "$min_bytes" ]]; then
+						failed=1
+					fi
+				fi
+				if [[ "$failed" -eq 0 && -n "$headings" ]]; then
+					IFS='|' read -ra heading_list <<<"$headings"
+					for heading in "${heading_list[@]}"; do
+						if ! grep -qF "$heading" "$card_dir/$rel_path"; then
+							failed=1
+							break
+						fi
+					done
+				fi
+				if [[ "$failed" -eq 1 ]]; then
+					if [[ "$validation_mode" == "blocking" ]]; then
+						label="[invalid]"
+					else
+						label="[warning]"
+					fi
+				fi
+			fi
+		fi
+		printf "%-10s %s\n" "$label" "$rel_path"
+	done < <(eaw_phase_completion_required_artifacts "$phase_file")
 }

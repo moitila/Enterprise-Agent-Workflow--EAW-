@@ -152,6 +152,8 @@ INPUT
 - TARGET_REPOS:
 {{TARGET_REPOS}}
 
+{{CONTEXT_BLOCK}}
+
 OUTPUT
 
 - Alterar somente codigo nos TARGET_REPOS autorizados por `00_scope.lock.md`

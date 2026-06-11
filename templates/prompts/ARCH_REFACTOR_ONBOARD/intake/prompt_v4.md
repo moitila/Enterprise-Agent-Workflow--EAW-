@@ -132,6 +132,8 @@ INPUT
   - `{{CARD_DIR}}/ingest/sources.md`
 - Pode ler outros arquivos de `ingest/` apenas para fidelidade ou desempate textual
 
+{{CONTEXT_BLOCK}}
+
 OUTPUT
 
 - Escrever somente:

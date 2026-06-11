@@ -44,8 +44,6 @@ eaw_normalize_phase_id() {
 	esac
 }
 
-
-
 eaw_yaml_trim() {
 	local value="${1:-}"
 	value="${value#"${value%%[![:space:]]*}"}"
@@ -385,10 +383,10 @@ eaw_yaml_track_transitions() {
 }
 
 eaw_yaml_track_contract_field() {
-        local file="$1"
-        local phase_id="$2"
-        local field="$3"
-        awk -v ph="$phase_id" -v fld="$field" '
+	local file="$1"
+	local phase_id="$2"
+	local field="$3"
+	awk -v ph="$phase_id" -v fld="$field" '
                 /^  transitions:[[:space:]]*$/ { in_tr=1; next }
                 in_tr && /^  [^[:space:]]/ { in_tr=0 }
                 in_tr && $0 ~ ("^    " ph ":[[:space:]]*$") { in_ph=1; next }
@@ -406,9 +404,9 @@ eaw_yaml_track_contract_field() {
 }
 
 eaw_yaml_track_skip_when() {
-        local file="$1"
-        local phase_id="$2"
-        awk -v ph="$phase_id" '
+	local file="$1"
+	local phase_id="$2"
+	awk -v ph="$phase_id" '
                 /^  transitions:[[:space:]]*$/ { in_tr=1; next }
                 in_tr && /^  [^[:space:]]/ { in_tr=0 }
                 in_tr && $0 ~ ("^    " ph ":[[:space:]]*$") { in_ph=1; next }
@@ -425,73 +423,73 @@ eaw_yaml_track_skip_when() {
 }
 
 eaw_eval_skip_when() {
-        local declared_codes="$1"
-        local active_codes="$2"
-        [[ -z "$declared_codes" || -z "$active_codes" ]] && return 1
-        local code
-        while IFS= read -r code; do
-                [[ -z "$code" ]] && continue
-                local ac
-                for ac in $active_codes; do
-                        [[ "$ac" == "$code" ]] && return 0
-                done
-        done <<< "$declared_codes"
-        return 1
+	local declared_codes="$1"
+	local active_codes="$2"
+	[[ -z "$declared_codes" || -z "$active_codes" ]] && return 1
+	local code
+	while IFS= read -r code; do
+		[[ -z "$code" ]] && continue
+		local ac
+		for ac in $active_codes; do
+			[[ "$ac" == "$code" ]] && return 0
+		done
+	done <<<"$declared_codes"
+	return 1
 }
 
 eaw_emit_phase_envelope() {
-        local track_file="$1"
-        local phase_id="$2"
-        local card_dir="$3"
-        local emit_handoff emit_phase_output phase_snapshot_dir handoff_file existing_codes_json
-        emit_handoff="$(eaw_yaml_track_contract_field "$track_file" "$phase_id" "emit_handoff")"
-        emit_phase_output="$(eaw_yaml_track_contract_field "$track_file" "$phase_id" "emit_phase_output")"
-        if [[ "$emit_handoff" == "true" ]]; then
-                phase_snapshot_dir="${card_dir}/investigations/${phase_id}"
-                handoff_file="${card_dir}/investigations/20_handoff.json"
-                existing_codes_json='[]'
-                if [[ -f "$handoff_file" ]]; then
-                        existing_codes_json="$(grep -o '"codes":\[[^]]*\]' "$handoff_file" 2>/dev/null | head -1 | sed 's/^"codes"://' || true)"
-                        [[ -n "$existing_codes_json" ]] || existing_codes_json='[]'
-                fi
-                printf '{"from_phase":"%s","status":"completed","code_origin":"emitted","messages":[],"codes":%s}\n' "$phase_id" "$existing_codes_json" \
-                        > "${card_dir}/investigations/20_handoff.json"
-                mkdir -p "$phase_snapshot_dir"
-                cp "${card_dir}/investigations/20_handoff.json" "${phase_snapshot_dir}/20_handoff.json"
-        fi
-        if [[ "$emit_phase_output" == "true" ]]; then
-                printf '{"phase_id":"%s","status":"completed","summary":""}\n' "$phase_id" \
-                        > "${card_dir}/investigations/10_phase_output.json"
-        fi
+	local track_file="$1"
+	local phase_id="$2"
+	local card_dir="$3"
+	local emit_handoff emit_phase_output phase_snapshot_dir handoff_file existing_codes_json
+	emit_handoff="$(eaw_yaml_track_contract_field "$track_file" "$phase_id" "emit_handoff")"
+	emit_phase_output="$(eaw_yaml_track_contract_field "$track_file" "$phase_id" "emit_phase_output")"
+	if [[ "$emit_handoff" == "true" ]]; then
+		phase_snapshot_dir="${card_dir}/investigations/${phase_id}"
+		handoff_file="${card_dir}/investigations/20_handoff.json"
+		existing_codes_json='[]'
+		if [[ -f "$handoff_file" ]]; then
+			existing_codes_json="$(grep -o '"codes":\[[^]]*\]' "$handoff_file" 2>/dev/null | head -1 | sed 's/^"codes"://' || true)"
+			[[ -n "$existing_codes_json" ]] || existing_codes_json='[]'
+		fi
+		printf '{"from_phase":"%s","status":"completed","code_origin":"emitted","messages":[],"codes":%s}\n' "$phase_id" "$existing_codes_json" \
+			>"${card_dir}/investigations/20_handoff.json"
+		mkdir -p "$phase_snapshot_dir"
+		cp "${card_dir}/investigations/20_handoff.json" "${phase_snapshot_dir}/20_handoff.json"
+	fi
+	if [[ "$emit_phase_output" == "true" ]]; then
+		printf '{"phase_id":"%s","status":"completed","summary":""}\n' "$phase_id" \
+			>"${card_dir}/investigations/10_phase_output.json"
+	fi
 }
 
 eaw_resolve_inherited_from() {
-        local card_dir="$1"
-        local handoff_file="${card_dir}/investigations/20_handoff.json"
-        if [[ ! -f "$handoff_file" ]]; then
-                echo ""
-                return 0
-        fi
-        local prev_status
-        prev_status="$(grep -o '"status":"[^"]*"' "$handoff_file" 2>/dev/null | head -1 | sed 's/"status":"//;s/"//' || true)"
-        if [[ "$prev_status" == "skipped" ]]; then
-                grep -o '"inherited_from":"[^"]*"' "$handoff_file" 2>/dev/null | head -1 | sed 's/"inherited_from":"//;s/"//' || true
-        else
-                grep -o '"from_phase":"[^"]*"' "$handoff_file" 2>/dev/null | head -1 | sed 's/"from_phase":"//;s/"//' || true
-        fi
+	local card_dir="$1"
+	local handoff_file="${card_dir}/investigations/20_handoff.json"
+	if [[ ! -f "$handoff_file" ]]; then
+		echo ""
+		return 0
+	fi
+	local prev_status
+	prev_status="$(grep -o '"status":"[^"]*"' "$handoff_file" 2>/dev/null | head -1 | sed 's/"status":"//;s/"//' || true)"
+	if [[ "$prev_status" == "skipped" ]]; then
+		grep -o '"inherited_from":"[^"]*"' "$handoff_file" 2>/dev/null | head -1 | sed 's/"inherited_from":"//;s/"//' || true
+	else
+		grep -o '"from_phase":"[^"]*"' "$handoff_file" 2>/dev/null | head -1 | sed 's/"from_phase":"//;s/"//' || true
+	fi
 }
 
 eaw_emit_skip_envelope() {
-        local phase_id="$1"
-        local card_dir="$2"
-        local skip_codes="$3"
-        local inherited_from="$4"
-        local inherited_codes="$5"
-        local inv_dir="${card_dir}/investigations"
-        local ts
-        ts="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-        mkdir -p "$inv_dir"
-        cat > "${inv_dir}/00_human.md" <<EOF
+	local phase_id="$1"
+	local card_dir="$2"
+	local skip_codes="$3"
+	local inherited_from="$4"
+	local inherited_codes="$5"
+	local inv_dir="${card_dir}/investigations"
+	local ts
+	ts="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+	mkdir -p "$inv_dir"
+	cat >"${inv_dir}/00_human.md" <<EOF
 # Phase Skipped
 
 Phase \`${phase_id}\` was skipped by skip_when rule.
@@ -500,14 +498,14 @@ Phase \`${phase_id}\` was skipped by skip_when rule.
 - Inherited from: ${inherited_from:-none}
 - Timestamp: ${ts}
 EOF
-        local codes_json
-        codes_json="$(echo "$inherited_codes" | awk '{for(i=1;i<=NF;i++) printf "\"%s\"%s",$i,(i<NF?",":"")}')"
-        printf '{"phase_id":"%s","status":"skipped","summary":"Phase skipped by skip_when rule","skip_reason_code":"%s"}\n' \
-                "$phase_id" "$skip_codes" \
-                > "${inv_dir}/10_phase_output.json"
-        printf '{"from_phase":"%s","status":"skipped","code_origin":"inherited","inherited_from":"%s","messages":[{"type":"info","code":"PHASE_SKIPPED_BY_RULE","text":"Phase %s skipped by skip_when rule"}],"codes":[%s]}\n' \
-                "$phase_id" "$inherited_from" "$phase_id" "$codes_json" \
-                > "${inv_dir}/20_handoff.json"
+	local codes_json
+	codes_json="$(echo "$inherited_codes" | awk '{for(i=1;i<=NF;i++) printf "\"%s\"%s",$i,(i<NF?",":"")}')"
+	printf '{"phase_id":"%s","status":"skipped","summary":"Phase skipped by skip_when rule","skip_reason_code":"%s"}\n' \
+		"$phase_id" "$skip_codes" \
+		>"${inv_dir}/10_phase_output.json"
+	printf '{"from_phase":"%s","status":"skipped","code_origin":"inherited","inherited_from":"%s","messages":[{"type":"info","code":"PHASE_SKIPPED_BY_RULE","text":"Phase %s skipped by skip_when rule"}],"codes":[%s]}\n' \
+		"$phase_id" "$inherited_from" "$phase_id" "$codes_json" \
+		>"${inv_dir}/20_handoff.json"
 }
 
 eaw_validate_envelope_schema() {
@@ -521,7 +519,7 @@ eaw_validate_envelope_schema() {
 	# 10_phase_output.json — validate if exists
 	local po_file="${inv_dir}/10_phase_output.json"
 	if [[ -f "$po_file" ]]; then
-		normalized="$(tr -d '\n' < "$po_file" | tr -s ' ')"
+		normalized="$(tr -d '\n' <"$po_file" | tr -s ' ')"
 		if ! echo "$normalized" | grep -q '"phase_id":"[^"]\+"' 2>/dev/null; then
 			echo "  envelope: 10_phase_output.json missing or empty phase_id" >&2
 			errors=$((errors + 1))
@@ -539,7 +537,7 @@ eaw_validate_envelope_schema() {
 	# 20_handoff.json — validate if exists
 	local hf_file="${inv_dir}/20_handoff.json"
 	if [[ -f "$hf_file" ]]; then
-		normalized="$(tr -d '\n' < "$hf_file" | tr -s ' ')"
+		normalized="$(tr -d '\n' <"$hf_file" | tr -s ' ')"
 		if ! echo "$normalized" | grep -q '"from_phase":"[^"]\+"' 2>/dev/null; then
 			echo "  envelope: 20_handoff.json missing or empty from_phase" >&2
 			errors=$((errors + 1))
@@ -574,8 +572,8 @@ eaw_validate_envelope_schema() {
 	# Cross-status consistency
 	if [[ -f "$po_file" && -f "$hf_file" ]]; then
 		local po_status hf_status
-		po_status="$(tr -d '\n' < "$po_file" | grep -o '"status":"[^"]*"' 2>/dev/null | head -1 | sed 's/"status":"//;s/"//')"
-		hf_status="$(tr -d '\n' < "$hf_file" | grep -o '"status":"[^"]*"' 2>/dev/null | head -1 | sed 's/"status":"//;s/"//')"
+		po_status="$(tr -d '\n' <"$po_file" | grep -o '"status":"[^"]*"' 2>/dev/null | head -1 | sed 's/"status":"//;s/"//')"
+		hf_status="$(tr -d '\n' <"$hf_file" | grep -o '"status":"[^"]*"' 2>/dev/null | head -1 | sed 's/"status":"//;s/"//')"
 		if [[ -n "$po_status" && -n "$hf_status" && "$po_status" != "$hf_status" ]]; then
 			echo "  envelope: status mismatch — 10_phase_output.json='${po_status}' vs 20_handoff.json='${hf_status}'" >&2
 			errors=$((errors + 1))
@@ -615,13 +613,13 @@ eaw_emit_context_summary() {
 
 	if [[ -f "$po_file" ]]; then
 		local normalized
-		normalized="$(tr -d '\n' < "$po_file" | tr -s ' ')"
+		normalized="$(tr -d '\n' <"$po_file" | tr -s ' ')"
 		phase_status="$(echo "$normalized" | grep -o '"status":"[^"]*"' 2>/dev/null | head -1 | sed 's/"status":"//;s/"//')"
 		phase_summary="$(echo "$normalized" | grep -o '"summary":"[^"]*"' 2>/dev/null | head -1 | sed 's/"summary":"//;s/"//')"
 	fi
 
 	if [[ ! -f "$summary_file" ]]; then
-		printf "# Context Summary\n\n" > "$summary_file"
+		printf "# Context Summary\n\n" >"$summary_file"
 	fi
 
 	{
@@ -631,19 +629,19 @@ eaw_emit_context_summary() {
 			printf "%s\n" "- **Summary**: $phase_summary"
 		fi
 		printf "\n"
-	} >> "$summary_file"
+	} >>"$summary_file"
 }
 
 eaw_load_phase_exit_codes() {
-        local card_dir="$1"
-        local handoff_file="${card_dir}/investigations/20_handoff.json"
-        [[ -f "$handoff_file" ]] || return 0
-        local codes_raw
-        codes_raw="$(grep -o '"codes":\[[^]]*\]' "$handoff_file" 2>/dev/null || true)"
-        if [[ -n "$codes_raw" ]]; then
-                echo "$codes_raw" | sed 's/"codes":\[//;s/\]//;s/"//g' | tr ',' ' '
-        fi
-        return 0
+	local card_dir="$1"
+	local handoff_file="${card_dir}/investigations/20_handoff.json"
+	[[ -f "$handoff_file" ]] || return 0
+	local codes_raw
+	codes_raw="$(grep -o '"codes":\[[^]]*\]' "$handoff_file" 2>/dev/null || true)"
+	if [[ -n "$codes_raw" ]]; then
+		echo "$codes_raw" | sed 's/"codes":\[//;s/\]//;s/"//g' | tr ',' ' '
+	fi
+	return 0
 }
 
 eaw_yaml_state_completed_phases() {
@@ -1624,6 +1622,18 @@ eaw_card_markdown_section_list() {
 					flush_and_exit()
 					exit
 				}
+				if (line ~ /^```/) {
+					in_fence = !in_fence
+					next
+				}
+				if (in_fence) {
+					if (line ~ /^[[:space:]]*$/) { next }
+					if (line ~ /^\//) {
+						seen_items=1
+						print line
+					}
+					next
+				}
 				if (line ~ /^- /) {
 					seen_items=1
 					print line
@@ -1667,7 +1677,12 @@ eaw_card_write_allowlist_entries() {
 	local -a markdown_candidates=()
 
 	if [[ -f "$scope_lock_file" ]]; then
-		eaw_card_markdown_section_list "$scope_lock_file" "## Allowlist de Escrita" | sed '/^[[:space:]]*$/d'
+		local parsed_allowlist
+		parsed_allowlist="$(eaw_card_markdown_section_list "$scope_lock_file" "## Allowlist de Escrita" | sed '/^[[:space:]]*$/d')"
+		if [[ -z "$parsed_allowlist" ]]; then
+			printf "[WARNING] WRITE_ALLOWLIST: scope.lock presente mas nao parseavel (formato nao suportado): %s\n" "$scope_lock_file" >&2
+		fi
+		printf "%s\n" "$parsed_allowlist"
 		return 0
 	fi
 
@@ -1692,6 +1707,76 @@ eaw_card_write_allowlist_entries() {
 	fi
 
 	printf -- "- %s\n" "$card_dir"
+}
+
+eaw_generate_followup_candidates() {
+	local card_dir="$1"
+	local scope_lock_file="$card_dir/implementation/00_scope.lock.md"
+
+	# Fail-soft: scope.lock ausente -> skip
+	[[ -f "$scope_lock_file" ]] || return 0
+
+	# Extrair secao bruta de ## Out of Scope
+	local raw_section
+	raw_section="$(awk '/^## Out of Scope$/{found=1; next} found && /^## /{exit} found{print}' "$scope_lock_file")"
+
+	# Secao vazia -> skip
+	[[ -n "$raw_section" ]] || return 0
+
+	# Detectar formatos nao-suportados
+	local unsupported=0
+	grep -qE "^\|" <<<"$raw_section" && unsupported=1
+	grep -qE "^### " <<<"$raw_section" && unsupported=1
+
+	local out_file="$card_dir/_followup_candidates.md"
+	local timestamp
+	timestamp="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+
+	if [[ "$unsupported" -eq 1 ]]; then
+		printf "[WARNING] FOLLOWUP_CANDIDATES: Out of Scope contains unsupported format (tables or subsections): %s\n" "$scope_lock_file" >&2
+		cat >"$out_file" <<EOF
+# Follow-up Candidates — $(basename "$card_dir")
+
+generated_at: $timestamp
+source: implementation/00_scope.lock.md § "Out of Scope"
+
+NOTE: These are candidates only. No cards have been created automatically.
+NOTE: V1 extracts only direct bullet items under "## Out of Scope".
+
+## Unsupported Out of Scope content
+
+The source section contained unsupported structures (tables, subsections, or nested content).
+These were not converted into candidates automatically.
+EOF
+		return 0
+	fi
+
+	# Extrair bullets diretos
+	local bullets
+	bullets="$(eaw_card_markdown_section_list "$scope_lock_file" "## Out of Scope" | sed '/^[[:space:]]*$/d')"
+
+	# Bullets vazios -> skip
+	[[ -n "$bullets" ]] || return 0
+
+	# Gerar arquivo
+	{
+		printf "# Follow-up Candidates — %s\n\n" "$(basename "$card_dir")"
+		printf "generated_at: %s\n" "$timestamp"
+		printf "source: implementation/00_scope.lock.md § \"Out of Scope\"\n\n"
+		printf "NOTE: These are candidates only. No cards have been created automatically.\n"
+		printf "NOTE: V1 extracts only direct bullet items under \"## Out of Scope\".\n"
+		local n=0
+		while IFS= read -r line; do
+			n=$(( n + 1 ))
+			local desc="${line#- }"
+			printf "\n## Candidate %d\n\n" "$n"
+			printf "Description: %s\n" "$desc"
+			printf "Suggested track: TBD\n"
+			printf "Suggested scope: Review and convert into a dedicated card if still relevant.\n"
+		done <<<"$bullets"
+	} >"$out_file"
+
+	return 0
 }
 
 eaw_card_write_allowlist_block() {
@@ -1737,6 +1822,26 @@ eaw_runtime_environment_block() {
 	local write_allowlist="$5"
 	local critical_paths="$6"
 	local target_repos="$7"
+	local scope_lock_file="$card_dir/implementation/00_scope.lock.md"
+	local write_allowlist_extra=""
+	if [[ -f "$scope_lock_file" ]]; then
+		local resolved_from_scope_lock
+		local write_allowlist_source
+		resolved_from_scope_lock="$(eaw_card_markdown_section_list "$scope_lock_file" "## Allowlist de Escrita" | sed '/^[[:space:]]*$/d')"
+		if [[ -n "$resolved_from_scope_lock" ]]; then
+			write_allowlist_source="scope_lock:$scope_lock_file"
+		else
+			write_allowlist_source="fallback:scope_lock_empty"
+		fi
+		write_allowlist_extra="
+WRITE_ALLOWLIST_SOURCE:
+$write_allowlist_source
+
+WRITE_ALLOWLIST_RESOLVED_FROM_SCOPE_LOCK:
+${resolved_from_scope_lock:-(not available — scope.lock ausente ou formato nao suportado)}
+
+NOTE: This resolved list is derived from scope.lock. scope.lock is authoritative."
+	fi
 
 	cat <<EOF
 RUNTIME_ENVIRONMENT
@@ -1753,7 +1858,7 @@ $target_repos
 
 WRITE_ALLOWLIST:
 $write_allowlist
-
+$write_allowlist_extra
 CRITICAL_PATHS:
 $critical_paths
 EOF
@@ -1819,7 +1924,7 @@ EOF
 EOF
 		;;
 	*.json)
-		echo '{}' > "$target_path"
+		echo '{}' >"$target_path"
 		;;
 	*)
 		cat >"$target_path" <<EOF
@@ -1970,13 +2075,8 @@ eaw_apply_context_block_to_prompt() {
 		}
 		END {
 			if (!inserted) {
-				if (NR > 0) {
-					printf "\n"
-				}
-				printf "%s", context_block
-				if (substr(context_block, length(context_block), 1) != "\n") {
-					printf "\n"
-				}
+				print "ERROR: {{CONTEXT_BLOCK}} placeholder not found in template" > "/dev/stderr"
+				exit 1
 			}
 		}
 		' "$output_file" >"$tmp_file"
@@ -2348,7 +2448,7 @@ eaw_wrapper_materialize_until_phase() {
 	current_index="$(eaw_phase_index_in_track "$EAW_CARD_WORKFLOW_TRACK_FILE" "$current_phase")" || return 1
 	target_index="$(eaw_phase_index_in_track "$EAW_CARD_WORKFLOW_TRACK_FILE" "$target_phase")" || return 1
 
-	if (( current_index > target_index )); then
+	if ((current_index > target_index)); then
 		echo "ERROR: card ${card} is already beyond compatibility target phase '${target_phase}' (current_phase=${current_phase})" >&2
 		return 1
 	fi
@@ -2439,6 +2539,7 @@ cmd_card() {
 	run_phase "load_config" false phase_load_config "$outdir"
 	run_phase "resolve_repos" false phase_resolve_repos
 	run_phase "finalize" false phase_finalize "$card" "$outdir"
+	eaw_capture_git_snapshot "$card" "$outdir"
 
 	# 620: persist parent_card_id in state
 	if [[ -n "$parent" ]]; then
@@ -2476,8 +2577,51 @@ cmd_next() {
 	if [[ "$current_phase" == "$EAW_CARD_WORKFLOW_FINAL_PHASE" ]]; then
 		phase_completed="$(eaw_state_phase_completed_for_next "$EAW_CARD_WORKFLOW_STATE_FILE")"
 		if [[ "$phase_completed" != "true" ]]; then
-			echo "ERROR: card ${card} final phase is not marked complete in persisted state" >&2
-			return 1
+			# AUTO-CLOSE INLINE (H02): replicate cmd_complete canonical sequence
+			# (a) [H04] validate phase artifacts — CA3 graceful block
+			if ! validation_output="$(eaw_validate_phase_completion_strict "$card" "$card_dir" "$current_phase" "$current_phase_file" 2>&1)"; then
+				if [[ "$validation_output" == *"is incomplete; missing required artifacts:"* || "$validation_output" == *"is incomplete; unfilled required artifacts:"* || "$validation_output" == *"is incomplete; invalid required artifacts:"* ]]; then
+					local remain_reason="missing required artifacts"
+					if [[ "$validation_output" == *"is incomplete; unfilled required artifacts:"* ]]; then
+						remain_reason="unfilled required artifacts"
+					elif [[ "$validation_output" == *"is incomplete; invalid required artifacts:"* ]]; then
+						remain_reason="invalid required artifacts"
+					fi
+					printf "%s\n" "$validation_output" >&2
+					echo "CARD ${card}: ${current_phase} remains current; ${remain_reason}"
+					return 0
+				fi
+				printf "%s\n" "$validation_output" >&2
+				return 1
+			fi
+			# (b) [H08] validate envelope schema before any journal emit
+			if ! eaw_validate_envelope_schema "$EAW_CARD_WORKFLOW_TRACK_FILE" "$current_phase" "$card_dir"; then
+				echo "CARD ${card}: ${current_phase} envelope schema validation failed" >&2
+				return 1
+			fi
+			# (c) context summary
+			eaw_emit_context_summary "$current_phase" "$card_dir" "$EAW_CARD_WORKFLOW_TRACK_FILE"
+			# (d) [H05] guard dedup card_completed
+			OUTDIR="$card_dir"
+			if ! grep -q '"event_type":"card_completed"' "${OUTDIR}/execution_journal.jsonl" 2>/dev/null; then
+				eaw_journal_append "${EAW_CARD_WORKFLOW_CARD}" "${EAW_CARD_WORKFLOW_TRACK_ID}" \
+					"${EAW_CARD_WORKFLOW_FINAL_PHASE}" "OK" "0" "card_completed"
+			fi
+			# (e) [H09] emit card metrics
+			eaw_emit_card_metrics "$card_dir"
+			# (f) [H06] capture state vars + write phase_completed: true
+			local phase_completed_at
+			phase_completed_at="$(utc_timestamp)"
+			local previous_phase
+			previous_phase="$(eaw_normalize_phase_id "$(eaw_yaml_state_scalar "$EAW_CARD_WORKFLOW_STATE_FILE" "previous_phase")")"
+			local completed_phases
+			completed_phases="${EAW_CARD_WORKFLOW_COMPLETED_PHASES:-}"
+			local phase_started_at
+			phase_started_at="$(eaw_state_scalar_or_default "$EAW_CARD_WORKFLOW_STATE_FILE" "phase_started_at" "null")"
+			eaw_write_phase_status "$EAW_CARD_WORKFLOW_STATE_FILE" "COMPLETE" "$previous_phase" \
+				"$current_phase" "$completed_phases" "$phase_started_at" "true" "$phase_completed_at"
+			# (g) confirmation
+			echo "CARD ${card}: ${current_phase} marked COMPLETE"
 		fi
 		OUTDIR="$card_dir"
 		if ! grep -q '"event_type":"track_completed"' "${OUTDIR}/execution_journal.jsonl" 2>/dev/null; then
@@ -2494,18 +2638,31 @@ cmd_next() {
 	fi
 	current_phase="$EAW_CARD_WORKFLOW_CURRENT_PHASE"
 	current_phase_file="$EAW_CARD_WORKFLOW_CURRENT_PHASE_FILE"
+	next_phase="$EAW_CARD_WORKFLOW_NEXT_PHASE"
+
+	printf "Current phase: %s\n" "$current_phase"
+	printf "Next phase: %s\n" "$next_phase"
+	printf "\n"
+	printf "Required artifacts:\n"
+	eaw_phase_completion_render_artifact_status_checklist \
+		"$card" "$card_dir" "$current_phase" "$current_phase_file"
+	printf "\n"
 
 	if ! validation_output="$(eaw_validate_phase_completion_strict "$card" "$card_dir" "$current_phase" "$current_phase_file" 2>&1)"; then
-		if [[ "$validation_output" == *"is incomplete; missing required artifacts:"* || "$validation_output" == *"is incomplete; unfilled required artifacts:"* ]]; then
+		if [[ "$validation_output" == *"is incomplete; missing required artifacts:"* || "$validation_output" == *"is incomplete; unfilled required artifacts:"* || "$validation_output" == *"is incomplete; invalid required artifacts:"* ]]; then
 			local remain_reason="missing required artifacts"
 			if [[ "$validation_output" == *"is incomplete; unfilled required artifacts:"* ]]; then
 				remain_reason="unfilled required artifacts"
+			elif [[ "$validation_output" == *"is incomplete; invalid required artifacts:"* ]]; then
+				remain_reason="invalid required artifacts"
 			fi
 			printf "%s\n" "$validation_output" >&2
 			previous_phase="$(eaw_normalize_phase_id "$(eaw_yaml_state_scalar "$EAW_CARD_WORKFLOW_STATE_FILE" "previous_phase")")"
 			completed_phases="${EAW_CARD_WORKFLOW_COMPLETED_PHASES:-}"
 			phase_started_at="$(eaw_state_scalar_or_default "$EAW_CARD_WORKFLOW_STATE_FILE" "phase_started_at" "$(utc_timestamp)")"
 			eaw_write_phase_status "$EAW_CARD_WORKFLOW_STATE_FILE" "RUN" "$previous_phase" "$current_phase" "$completed_phases" "$phase_started_at" "false" "null"
+			printf "Validation: blocked\n\n"
+			printf "Reason:\n%s\n\n" "$remain_reason"
 			echo "CARD ${card}: ${current_phase} remains current; ${remain_reason}"
 			return 0
 		fi
@@ -2522,13 +2679,17 @@ cmd_next() {
 	# 617: capture context summary before envelope overwrite
 	eaw_emit_context_summary "$current_phase" "$card_dir" "$EAW_CARD_WORKFLOW_TRACK_FILE"
 
-	next_phase="$EAW_CARD_WORKFLOW_NEXT_PHASE"
 	completed_phases="$(eaw_state_completed_phases_with_current "$current_phase")"
 	phase_started_at="$(utc_timestamp)"
 	eaw_emit_phase_envelope "$EAW_CARD_WORKFLOW_TRACK_FILE" "$current_phase" "$card_dir"
 	eaw_write_next_state "$EAW_CARD_WORKFLOW_STATE_FILE" "$current_phase" "$next_phase" "$completed_phases" "RUN" "$phase_started_at" "false" "null"
 
+	printf "Validation: passed\n\n"
+	printf "Action:\nAdvanced to phase: %s\n\n" "$next_phase"
 	echo "CARD ${card}: ${current_phase} -> ${next_phase}"
+	if eaw_generate_context_bundle "$card" "$card_dir" "$current_phase" "$next_phase" "$EAW_CARD_WORKFLOW_TRACK_ID" "$EAW_CARD_WORKFLOW_TRACK_FILE"; then
+		printf "Context bundle: %s\n" "$card_dir/runtime/context_bundle_${next_phase}.md"
+	fi
 	eaw_materialize_current_phase "$card" || return 1
 	return 0
 }
@@ -2573,6 +2734,8 @@ cmd_complete() {
 		fi
 		# 618: emit card-level metrics from journal
 		eaw_emit_card_metrics "$card_dir"
+		# 619: generate follow-up candidates from Out of Scope
+		eaw_generate_followup_candidates "$card_dir" || true
 	fi
 	phase_completed_at="$(utc_timestamp)"
 	eaw_write_phase_status "$EAW_CARD_WORKFLOW_STATE_FILE" "COMPLETE" "$previous_phase" "$current_phase" "$completed_phases" "$phase_started_at" "true" "$phase_completed_at"

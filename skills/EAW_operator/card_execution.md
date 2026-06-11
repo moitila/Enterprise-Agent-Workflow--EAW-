@@ -1,4 +1,4 @@
-# SKILL: eaw_next_execution_v3
+# SKILL: eaw_next_execution_v4
 
 ## Objective
 Executar um card no EAW corretamente usando o comando `next`, respeitando o fluxo por fases e o uso de agentes isolados.
@@ -42,32 +42,59 @@ Para executar um card:
 3. Rodar:
    ./scripts/eaw next <CARD_ID>
 
-4. Localizar o prompt gerado da fase atual em:
+4. Localizar o prompt renderizado da fase atual em:
    $OUT_DIR/<CARD_ID>/prompts/
+   O runtime ja substituiu todos os placeholders (`{{RUNTIME_ENVIRONMENT}}`, `{{TARGET_REPOS}}`,
+   `{{EAW_WORKDIR}}`, `{{CARD_DIR}}`, `{{CONTEXT_BLOCK}}`, etc.) — o prompt gerado e autossuficiente.
 
-5. Ler o prompt da fase atual
+5. Ler `phase.skills` do YAML da fase atual (ver Skill Routing)
 
-6. Ler `phase.skills` do YAML da fase atual (ver Skill Routing)
-
-7. Criar explicitamente um agente isolado para a fase atual, equipando-o com:
-   - o prompt integral da fase
+6. Criar explicitamente um agente isolado para a fase atual, equipando-o com:
+   - o prompt renderizado da fase (arquivo em `$OUT_DIR/<CARD_ID>/prompts/`)
+   - a skill `workspace.md` como regras comportamentais obrigatorias do subagente
    - as skills declaradas em `phase.skills` (+ `workspace` sempre)
-   - o contexto de `repos.conf` do workspace
-   - a skill `workspace.md` como contexto operacional obrigatorio do subagente
-   - quando existirem, os contratos soberanos do card: `00_scope.lock.md`, allowlist de escrita, `Out of Scope` e `10_change_plan.md`
+   - quando existirem, os contratos soberanos do card que NAO estao inline no prompt:
+     `00_scope.lock.md`, `10_change_plan.md`, `Out of Scope`
+   NAO reinjetar manualmente `repos.conf`, `RUNTIME_ROOT`, `EAW_WORKDIR`, `OUT_DIR` ou `CARD_DIR`:
+   esses valores ja estao no prompt renderizado via `{{RUNTIME_ENVIRONMENT}}` e `{{TARGET_REPOS}}`.
 
-8. Executar o prompt usando esse agente isolado, e nao no contexto do orquestrador
+6a. Antes de spawnar o subagente, salvar o ambiente crítico do orquestrador:
+    ```bash
+    SAFE_PATH="$PATH"
+    SAFE_EAW_WORKDIR="$EAW_WORKDIR"
+    SAFE_PWD="$PWD"
+    ```
+    Isso garante que o retorno do subagente não deixe PATH, EAW_WORKDIR ou PWD corrompidos.
 
-9. Apos concluir a execucao da fase, chamar novamente:
+7. Executar a fase no agente isolado
+
+8. Ao concluir, solicitar ao agente isolado um relatorio pos-execucao minimo:
+   - artefatos produzidos (path + tamanho nao-zero)
+   - bloqueios ou falhas encontradas
+   - warnings emitidos
+   - comportamentos inesperados (ex: PATH corrompido, permissao negada, artefato ausente)
+   O orquestrador usa esse relatorio para decidir se chama `next` ou reporta bloqueio.
+
+8b. Antes de chamar `next` novamente, restaurar o ambiente do orquestrador:
+    ```bash
+    export PATH="$SAFE_PATH"
+    export EAW_WORKDIR="$SAFE_EAW_WORKDIR"
+    cd "$SAFE_PWD"
+    ```
+    Sem restauração, `PATH` pode conter apenas um path de repositório target, fazendo com que
+    `./scripts/eaw next` falhe com `/usr/bin/env: 'bash': No such file or directory` (exit 126).
+
+9. Apos receber o relatorio, chamar novamente:
    ./scripts/eaw next <CARD_ID>
 
 10. Se o `next` avancar:
-   - seguir para a próxima fase
+    - seguir para a próxima fase
 
 11. Se o `next` nao avancar:
-   - considerar a fase não concluída
-   - reportar bloqueio do runtime
-   - não forçar avanço manual
+    - considerar a fase nao concluida
+    - cruzar com o relatorio do agente para identificar causa
+    - reportar bloqueio ao executor
+    - nao forcar avanco manual
 
 ## Skill Routing
 
@@ -103,28 +130,27 @@ O campo `skills` é uma lista de nomes de skills disponíveis no workspace.
 
 ## Mandatory Delegation Context
 
-Ao spawnar/delegar um agente de fase, o operador deve repassar explicitamente o contexto minimo abaixo.
-O prompt da fase sozinho nao basta.
+O prompt renderizado em `$OUT_DIR/<CARD_ID>/prompts/` ja e autossuficiente para contexto operacional:
+o runtime substitui `{{RUNTIME_ENVIRONMENT}}`, `{{TARGET_REPOS}}`, `{{EAW_WORKDIR}}`, `{{CARD_DIR}}`,
+`{{CONTEXT_BLOCK}}` e demais placeholders antes de gravar o arquivo.
+O orquestrador NAO deve reinjetar manualmente essas informacoes — isso criaria segunda fonte de verdade.
 
-### Sempre obrigatorio
+### Sempre obrigatorio ao spawnar o subagente
 
-- skill `workspace.md`
-- `repos.conf` ativo do workspace
-- `RUNTIME_ROOT`, `EAW_WORKDIR`, `OUT_DIR` e `CARD_DIR` da execucao corrente
-- prompt integral da fase atual
+- prompt renderizado (arquivo em `$OUT_DIR/<CARD_ID>/prompts/`, nao o template original)
+- skill `workspace.md` (regras comportamentais: o que nao fazer, como interpretar conflitos, fail-fast)
+- skills declaradas em `phase.skills`
 
-### Obrigatorio quando existir no card
+### Obrigatorio quando existir no card (nao estao inline no prompt)
 
-- `00_scope.lock.md`
-- `10_change_plan.md`
-- allowlist de escrita explicita
-- `Out of Scope`
-- `WRITE_ALLOWLIST` ou write set declarado no prompt/runtime
+- `00_scope.lock.md` — contrato soberano de escrita
+- `10_change_plan.md` — plano de mudanca aprovado
+- `Out of Scope` — quando declarado separadamente do scope lock
 
 ### Hierarquia de autoridade que o subagente deve obedecer
 
-1. `repos.conf` para papeis de repositorio (`target` vs `infra`)
-2. `RUNTIME_ROOT`, `OUT_DIR`, `CARD_DIR` e limites operacionais do runtime atual
+1. `repos.conf` para papeis de repositorio (`target` vs `infra`) — ja injetado via `{{TARGET_REPOS}}`
+2. `RUNTIME_ROOT`, `OUT_DIR`, `CARD_DIR` — ja injetados via `{{RUNTIME_ENVIRONMENT}}`
 3. `00_scope.lock.md`, allowlist e `Out of Scope`
 4. `10_change_plan.md`
 5. prompt da fase
@@ -188,6 +214,35 @@ Se houver conflito entre prompt/plano e `scope lock`/allowlist:
   - retomar o controle apos a execucao para nova chamada de `next`
   - fazer essa delegacao explicitamente e imediatamente, sem friccao adicional
 
+## Fechamento do card
+
+Ao chamar `./scripts/eaw next <CARD_ID>` na **fase final** de qualquer track, o runtime executa
+**AUTO-CLOSE INLINE** sem necessidade de comando separado:
+
+1. Valida os artefatos da fase final (CA3 graceful block).
+2. Escreve `phase_completed: true` no state file.
+3. Emite evento `track_completed` no `execution_journal.jsonl`.
+4. Retorna:
+   ```
+   CARD <CARD_ID>: <fase_final> marked COMPLETE
+   CARD <CARD_ID>: workflow already complete
+   ```
+
+`CARD <CARD_ID>: workflow already complete` é a **saída normal de encerramento** — não é erro.
+
+O comportamento é genérico: é determinado pela lógica `current_phase == final_phase` em `cmd_next`,
+não por configuração específica do track. Aplica-se a qualquer track cujo fluxo `next` percorra uma
+fase final.
+
+**`eaw complete` não é necessário** no fluxo normal. Ele existe como comando standalone de escape
+para contextos em que `eaw run` (em vez de `next`) foi usado, ou quando o state file precisou de
+correção manual. Em operações normais orquestradas pelo orquestrador, `eaw complete` nunca deve ser
+chamado.
+
+**Nota**: nenhuma mensagem `"ERROR: final phase is not marked complete"` é emitida pelo runtime em
+nenhuma condição — essa string não existe em `eaw_commands.sh`. Qualquer documentação que a
+mencionar está incorreta.
+
 ## Anti-patterns
 
 - Rodar `next` múltiplas vezes sem executar o prompt
@@ -211,14 +266,15 @@ Se houver conflito entre prompt/plano e `scope lock`/allowlist:
 
 Estas armadilhas foram identificadas em execuções reais e devem ser conhecidas pelo executor:
 
-- `repos.conf` deve ser injetado no contexto do prompt da fase; se ausente, o agente isolado vai inventar caminhos de repositório
-- `workspace.md` deve ser injetado no subagente junto do prompt; sem isso, o agente tende a misturar `infra` e `target`
+- **Delegar o template original em vez do prompt renderizado**: o template tem placeholders nao resolvidos (`{{TARGET_REPOS}}`, `{{CONTEXT_BLOCK}}`, etc.); o subagente ficará sem contexto operacional. Sempre usar o arquivo gerado em `out/<CARD>/prompts/`, nunca o template de `templates/prompts/`.
+- `workspace.md` deve ser repassada ao subagente junto do prompt; sem isso, o agente tende a misturar `infra` e `target` e nao aplica fail-fast
 - Se `scope lock` e validacao tecnica apontarem para repositorios diferentes, isso e bloqueio estrutural do card, nao decisao local do executor
 - Artefatos vazios (0 bytes ou contendo apenas template/scaffold) não devem passar phase completion; se o runtime aceitar, registrar como bug do runtime
 - Erros de `awk`/`sed` nos scripts do runtime podem ser silenciosos; verificar exit codes após cada comando do runtime
 - Quando CI falha por dependência não publicada (ex: classes do framework não disponíveis no maven), classificar como "expected dependency gap" e não como regressão
 - Cards multi-repo exigem ordem explícita de merge; nunca assumir merge paralelo sem verificar o grafo de dependências
 - Se o prompt da fase referencia repos que não estão em `repos.conf`, o agente isolado deve falhar, não improvisar
+- **PATH corrompido após subagente**: salvar `SAFE_PATH="$PATH"` antes de delegar; restaurar com `export PATH="$SAFE_PATH"` antes de chamar `./scripts/eaw next`. Se PATH for corrompido, `next` falha com `/usr/bin/env: 'bash': No such file or directory`.
 
 ## Fail-fast
 

@@ -29,3 +29,4 @@ phase:
     # Contract: investigations/20_findings.md must be meaningfully filled; template/scaffold-only content remains incomplete.
     required_artifacts:
       - investigations/20_findings.md
+      - investigations/20_handoff.json
