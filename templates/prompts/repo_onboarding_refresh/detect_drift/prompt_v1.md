@@ -44,6 +44,17 @@ emitir `20_handoff.json` com o código `NO_DRIFT_DETECTED` para acionar o skip d
 - Listar todos os artefatos declarados
 - Ler `provenance.md` para extrair a data do último onboarding publicado
 
+**1c. Verificar completude do INDEX.md (reconciliação com filesystem):**
+
+- Listar todos os arquivos `.md` em `$EAW_WORKDIR/context_sources/onboarding/<repo_key>/`, excluindo `INDEX.md` e `provenance.md`
+- Cruzar com os artefatos declarados em `INDEX.md`
+- Para cada arquivo presente no disco mas **ausente do INDEX**:
+  - Registrar na tabela `## Artefatos Analisados` com evidência: `"arquivo presente no disco mas ausente do INDEX.md"`
+  - Classificar `INDEX.md` como `STALE_MINOR` na `## Classificação de Drift` com essa evidência
+- Se todos os arquivos no disco estiverem no INDEX: nenhuma ação adicional neste passo
+
+> Este passo detecta arquivos criados por fases anteriores (ex: `repo_onboarding_refine`) que nunca foram indexados. Sem ele, esses arquivos são invisíveis a todo o ciclo de drift.
+
 ### Passo 2 — Verificar existência de cada artefato
 
 Para cada artefato listado em `INDEX.md`:
@@ -68,26 +79,54 @@ Para cada artefato presente:
 linhas 102–107. Não existem limiares numéricos definidos (W05). Adotar julgamento qualitativo baseado
 em evidência lida do repositório alvo. Nunca declarar `STALE_MAJOR` sem evidência lida do código-fonte.
 
+### Passo 3b — Cross-check de versões contra arquivos de build
+
+Executar após o Passo 3, para cada artefato classificado como íntegro pelo git log:
+
+1. Verificar se o repositório alvo possui `gradle/libs.versions.toml` (fallback: `libs.versions.toml`, `gradle.properties`, `build.gradle` raiz)
+2. Se arquivo de versões presente: para cada artefato de onboarding que documenta versões de bibliotecas (tipicamente `00_overview.md`, artefatos de tech stack, integrações, dependências):
+   - Extrair as versões documentadas no artefato (ex: `kafka = "3.9.1"`, `guice = "5.1.0"`)
+   - Comparar contra o valor real no arquivo de versões do repositório
+   - Se qualquer versão documentada **difere** da versão real → classificar o artefato como `STALE_MINOR`, evidência: `"versão documentada X.Y.Z ≠ versão real A.B.C em <arquivo>:<linha>"`
+   - Esta verificação é **independente do git log**: uma versão pode ter sido atualizada antes da provenance date e o onboarding ainda estar desatualizado
+3. Se nenhum arquivo de versões encontrado: registrar na `## Conclusão` do drift_report que cross-check de versões não foi possível (sem arquivo de versões detectado)
+4. Artefatos sem menção a versões de biblioteca: pular esta verificação
+
+> **Por que este passo é necessário:** o git log detecta apenas mudanças *após* a provenance date. Se uma versão foi atualizada *antes* da data de publicação do onboarding, o git log não reporta nada e o artefato é incorretamente classificado como íntegro — mesmo que a versão documentada já estivesse errada no momento da publicação.
+
 ### Passo 4 — Algoritmo determinístico para `repo_ai_context.md`
 
 Executar os seguintes 5 passos em ordem, sem pular:
 
 1. Verificar existência de `$EAW_WORKDIR/context_sources/onboarding/<repo_key>/repo_ai_context.md`
 2. Se `repo_ai_context.md` ausente:
-   - Verificar presença de fontes IA nativas no repositório alvo:
-     - `.github/copilot-instructions.md`
-     - `AGENTS.md`
-     - `CLAUDE.md`
-     - `.cursor/rules`
-     - `.windsurfrules`
+   - **Descoberta ativa de fontes IA** — não depender de lista fixa; executar busca ampla no repositório alvo:
+     ```
+     find <repo_path> -maxdepth 4 \(
+       -name "copilot-instructions.md"
+       -o -name "AGENTS.md"
+       -o -name "CLAUDE.md"
+       -o -name ".windsurfrules"
+       -o -name "*.agent.md"
+       -o -name "*.instructions.md"
+       -o -path "*/.cursor/rules*"
+       -o -path "*/.github/agents/*"
+       -o -path "*/.github/instructions/*"
+       -o -path "*/.copilot/*"
+     \) 2>/dev/null
+     ```
+   - Avaliar cada arquivo encontrado: se o conteúdo indica instruções para agentes de IA (papel, regras, knowledge sources) → é uma fonte IA nativa
+   - Também verificar paths conhecidos que `find` pode não cobrir: `ls .github/` para detectar subdiretórios não padrão
    - Se **pelo menos uma fonte IA nativa existe** E `repo_ai_context.md` está ausente:
      → Classificar como `MISSING_ARTIFACT` (drift real — arquivo deveria existir)
-   - Se **nenhuma fonte IA nativa existe**:
+   - Se **nenhuma fonte IA nativa existe** após busca ampla:
      → Ausência de `repo_ai_context.md` é **correta** — NÃO classificar como drift
 3. Se `repo_ai_context.md` presente:
-   - Comparar data de `provenance.md` com `git log --since=<data_provenance> -- .github/ AGENTS.md CLAUDE.md .cursor/rules .windsurfrules`
+   - **Descoberta ativa** (mesmo comando `find` acima) para obter lista completa de fontes IA atuais
+   - Comparar data de `provenance.md` com `git log --since=<data_provenance>` nos paths descobertos
    - Se commits recentes existem nas fontes IA: classificar `repo_ai_context.md` como `STALE_MINOR` ou `STALE_MODERATE` conforme extensão das mudanças
-   - Se sem commits recentes: artefato íntegro
+   - Se sem commits recentes nas fontes IA: provisoriamente íntegro — prosseguir para verificação de referências abaixo antes de confirmar
+   - **Verificação de referências (independente do git log):** ler `repo_ai_context.md` e extrair todos os paths de arquivo mencionados (ex: `.github/copilot-instructions.md`, `AGENTS.md`, outros caminhos explícitos); para cada path extraído executar `test -f <repo_path>/<arquivo>`; se qualquer path referenciado **não existir** no repositório → classificar como `STALE_MODERATE`, evidência: `"referencia arquivo inexistente: <path>"`; esta verificação detecta FALSE_CLAIMs que não aparecem no git log porque o arquivo nunca existiu ou foi removido antes da provenance date
 4. Registrar resultado no `## Artefatos Analisados` do `drift_report.md`
 5. Incluir `repo_ai_context.md` na tabela de `## Classificação de Drift` apenas se classificado como drift
 

@@ -210,3 +210,22 @@ test -f "$onboarding_dir/provenance.md" || warn "provenance.md absent — cannot
 > **If you cannot determine `repo_key` from intake or card artifacts, stop and ask the operator.**
 > Do not guess. Do not pick the first target from `repos.conf`. A workspace has many repos — only
 > the operator knows which one this card is about.
+
+## Resolução de repo_key quando TARGET_REPOSITORIES é inconsistente
+
+O runtime pode injetar `TARGET_REPOSITORIES` com nome e path de repos diferentes quando `repos.conf` tem múltiplos `target`. Exemplo de rendering incorreto: `eaw => /home/user/dev/emr-tasy-plsql` (nome de um repo, path de outro).
+
+Nesse caso, o Pre-check acima já é suficiente — ele não usa `TARGET_REPOSITORIES` diretamente para derivar `repo_key`. Porém, se a etapa (a) ou (b) não resolverem e você precisar usar `TARGET_REPOSITORIES` como fallback, aplique o seguinte algoritmo:
+
+```
+1. Para cada entry em TARGET_REPOSITORIES (formato "nome => path"):
+   a. Tentar: context_sources/onboarding/<nome>/ existe no disco?
+      Se sim → repo_key = <nome>
+   b. Se não: extrair último segmento do path → tentar como repo_key
+      ex: /home/user/dev/emr-tasy-plsql → emr-tasy-plsql
+      Se context_sources/onboarding/emr-tasy-plsql/ existe → repo_key = emr-tasy-plsql
+2. Se nenhuma entrada resolver → parar e reportar ao operador; nunca inferir
+3. Se mais de uma entrada resolver → parar e reportar ao operador; nunca inferir
+```
+
+**Regra absoluta:** nunca derivar `repo_key` de `TARGET_REPOSITORIES` sem confirmar que o diretório de onboarding correspondente existe em disco. O nome renderizado pelo runtime pode estar errado.

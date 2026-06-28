@@ -13,6 +13,12 @@ Aplicar patches cirúrgicos nos artefatos de onboarding identificados como desat
 em `drift_report.md`. Usar `drift_report.md` como única fonte de autoridade para decidir quais artefatos
 atualizar. Produzir `patch_notes.md` documentando cada alteração realizada.
 
+## PRÉ-REQUISITO — Skills
+
+Antes de criar ou modificar qualquer artefato, ler as skills declaradas em `phase.skills` desta fase. A skill `eaw_onboarding_operator` define schemas canônicos para artefatos como `repo_ai_context.md`. Desviar do schema canônico é um erro de execução.
+
+Path da skill: `$RUNTIME_ROOT/skills/EAW_onboarding_operator/SKILL.md`
+
 ## INSUMOS OBRIGATÓRIOS
 
 1. `$CARD_DIR/intake/` — ler todos os arquivos presentes antes de qualquer outra ação; confirmam o escopo e o repo alvo declarados pelo operador
@@ -33,6 +39,8 @@ atualizar. Produzir `patch_notes.md` documentando cada alteração realizada.
 
 > `TARGET_REPOSITORIES` lista todos os repos target do workspace — um workspace pode ter 20 repos. O `drift_report.md` e o `intake/` definem qual é o escopo deste card.
 
+**Validação obrigatória:** após derivar `<repo_key>`, confirmar que esse repo aparece em `TARGET_REPOSITORIES`. Se o campo `**Repo analisado:**` de `drift_report.md` apontar para um repo ausente de `TARGET_REPOSITORIES`, **parar e reportar ao operador** — não aplicar patches sobre relatório de repo fora do contexto atual.
+
 **1b. Ler `drift_report.md`:**
 
 - Extrair a tabela `## Classificação de Drift` — esta é a única lista autoritativa de artefatos a atualizar
@@ -50,6 +58,16 @@ Para cada artefato com drift classificado como `STALE_MINOR`, `STALE_MODERATE` o
 3. Atualizar apenas a(s) seção(ões) com drift confirmado em `drift_report.md`
 4. Não regenerar o arquivo inteiro a menos que todas as seções sejam stale
 5. Para `MISSING_ARTIFACT`: criar o artefato completo e adicioná-lo ao `INDEX.md`
+
+**Caso especial — `INDEX.md` com entradas ausentes (`STALE_MINOR` por arquivos orphãos):**
+
+Quando `drift_report.md` classificar `INDEX.md` como `STALE_MINOR` com evidência de arquivos presentes no disco mas ausentes do INDEX:
+- Ler `INDEX.md` atual
+- Para cada arquivo indicado como orphão no drift_report:
+  - Identificar a seção mais adequada da "Ordem de Leitura Recomendada" conforme o tipo do arquivo
+  - Adicionar link relativo e descrição de 1 linha
+  - Adicionar entrada na tabela "Arquivos por Objetivo" se pertinente
+- Registrar em `patch_notes.md` e `provenance.md` como qualquer outro patch STALE_MINOR
 
 **Para `STALE_MAJOR`: NÃO aplicar patch.** Registrar em `## Advertências` do `patch_notes.md`:
 ```
