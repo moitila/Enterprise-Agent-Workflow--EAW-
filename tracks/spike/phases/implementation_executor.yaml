@@ -5,9 +5,6 @@ phase:
   name: Implementation Executor
   description: Execute the planned implementation tasks.
 
-  skills:
-    - eaw_card_execution
-
   prompt:
     active: 2
     path: templates/prompts/spike/implementation_executor/prompt_v<active>.md
