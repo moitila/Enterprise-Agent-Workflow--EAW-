@@ -1,0 +1,30 @@
+registry_version: 1
+
+skills:
+  eaw_workspace:
+    file: skills/EAW_operator/workspace.md
+    description: Workspace/runtime root, repos.conf, EAW_WORKDIR and fail-fast operational context.
+
+  eaw_card_execution:
+    file: skills/EAW_operator/card_execution.md
+    description: Card execution and next-phase orchestration guidance.
+
+  eaw_card_creation:
+    file: skills/EAW_operator/card_creation.md
+    description: Card creation workflow guidance.
+
+  eaw_delivery:
+    file: skills/EAW_delivery/SKILL.md
+    description: Post-execution delivery and PR governance.
+
+  eaw_reviewer:
+    file: skills/EAW_reviewer/SKILL.md
+    description: Post-execution review capability.
+
+  eaw_prompt_creator:
+    file: skills/EAW_prompt_creator/SKILL.md
+    description: Prompt creation capability.
+
+  eaw_track_creator:
+    file: skills/EAW_track_creator/SKILL.md
+    description: Track creation capability.

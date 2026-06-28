@@ -39,7 +39,6 @@ INPUT
 - TEMPLATE=`00_intake.md`
 - EVIDENCIAS=`out/<CARD>/ingest/** (primario)`, fallback=`out/<CARD>/intake/**`
 
-{{CONTEXT_BLOCK}}
 
 OUTPUT
 - Escrever somente `{{CARD_DIR}}/investigations/00_intake.md`.

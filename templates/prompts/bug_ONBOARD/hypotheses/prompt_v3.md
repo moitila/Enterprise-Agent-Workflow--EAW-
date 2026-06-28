@@ -48,7 +48,6 @@ INPUT
   - `{{CARD_DIR}}/investigations/00_intake.md`
   - `{{CARD_DIR}}/investigations/20_findings.md`
 
-{{CONTEXT_BLOCK}}
 
 OUTPUT
 - Escrever somente `{{CARD_DIR}}/investigations/30_hypotheses.md`.

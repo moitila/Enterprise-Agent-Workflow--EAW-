@@ -128,7 +128,6 @@ INPUT
 - O material pode conter comentarios de reviewer, transcricoes, screenshots descritos e referencias arquiteturais
 - Nao existe dependencia de fases anteriores
 
-{{CONTEXT_BLOCK}}
 
 OUTPUT
 

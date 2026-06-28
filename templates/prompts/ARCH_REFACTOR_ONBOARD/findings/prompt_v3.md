@@ -104,7 +104,6 @@ INPUT
 {{TARGET_REPOS}}
 - O intake e ponto de partida, nao verdade confirmada
 
-{{CONTEXT_BLOCK}}
 
 OUTPUT
 
