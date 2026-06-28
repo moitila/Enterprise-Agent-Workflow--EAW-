@@ -2,39 +2,36 @@ config_version: 1
 
 track:
   id: spike
-  name: Spike Track
+  name: Spike Investigation Track
   description: >
-    Canonical EAW track installed in the repository as the official
-    workflow source for spike cards.
+    Controlled technical investigation track. A spike answers a specific question
+    before committing to implementation. It produces a recommendation, evidence
+    and a backlog — never code changes in target repositories.
   initial_phase: intake
-  final_phase: implementation_executor
+  final_phase: backlog_handoff
 
   initial_outputs:
     create_directories:
+      - ingest
       - investigations
-      - intake
-      - context
     create_artifacts: []
 
   phases:
     - intake
-    - findings
     - hypotheses
-    - planning
-    - implementation_planning
-    - implementation_executor
+    - findings
+    - technical_decision
+    - backlog_handoff
 
   transitions:
     intake:
-      next: findings
-    findings:
       next: hypotheses
     hypotheses:
-      next: planning
-    planning:
-      next: implementation_planning
-    implementation_planning:
-      next: implementation_executor
+      next: findings
+    findings:
+      next: technical_decision
+    technical_decision:
+      next: backlog_handoff
 
   rules:
     one_prompt_per_phase: true

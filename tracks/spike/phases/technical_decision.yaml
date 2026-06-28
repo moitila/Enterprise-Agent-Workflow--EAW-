@@ -1,0 +1,34 @@
+config_version: 1
+
+phase:
+  id: technical_decision
+  name: Technical Decision
+  description: >
+    Synthesize findings from 20_findings.md into a technical recommendation.
+    Declare the chosen path, justify it with evidence, and document discarded
+    alternatives. This phase does NOT implement code and does NOT alter any
+    target repository.
+
+  prompt:
+    active: 1
+    path: templates/prompts/spike/technical_decision/prompt_v<active>.md
+
+  tooling_hints:
+    - Ler `00_spike_intake.md`, `10_hypotheses.md` e `20_findings.md` antes de recomendar.
+    - A recomendacao deve ser baseada exclusivamente nas evidencias de `20_findings.md`.
+    - Nao sugerir implementacao sem embasar em evidencia real.
+    - Alternativas descartadas devem ser documentadas com justificativa explicita.
+    - Se os achados forem insuficientes para decidir, declarar `DECISION_DEFERRED` e listar lacunas.
+
+  outputs:
+    create_directories:
+      - investigations
+    create_artifacts:
+      - investigations/30_technical_decision.md
+    prompts:
+      - technical_decision
+
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - investigations/30_technical_decision.md

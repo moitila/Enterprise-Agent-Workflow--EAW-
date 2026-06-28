@@ -2,23 +2,26 @@ config_version: 1
 
 phase:
   id: intake
-  name: Intake
-  description: Capture and normalize the initial request for the card.
+  name: Spike Intake
+  description: >
+    Reads raw materials from ingest/ and structures the spike investigation question.
+    Defines scope, success criteria and initial risks. Does NOT formulate hypotheses
+    and does NOT investigate target repositories.
 
   prompt:
-    active: 2
+    active: 1
     path: templates/prompts/spike/intake/prompt_v<active>.md
 
   outputs:
     create_directories:
+      - ingest
       - investigations
-      - context
     create_artifacts:
-      - investigations/00_intake.md
+      - investigations/00_spike_intake.md
       - investigations/_intake_provenance.md
 
   completion:
     strategy: required_artifacts_exist
     required_artifacts:
-      - investigations/00_intake.md
+      - investigations/00_spike_intake.md
       - investigations/_intake_provenance.md

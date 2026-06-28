@@ -6,7 +6,7 @@ phase:
   description: Analyze the intake information and identify key findings.
 
   prompt:
-    active: 2
+    active: 1
     path: templates/prompts/spike/findings/prompt_v<active>.md
 
   outputs:

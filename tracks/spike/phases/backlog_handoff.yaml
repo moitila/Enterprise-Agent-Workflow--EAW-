@@ -1,0 +1,34 @@
+config_version: 1
+
+phase:
+  id: backlog_handoff
+  name: Backlog and Handoff
+  description: >
+    Based on 30_technical_decision.md, produce actionable backlog items and a
+    handoff plan for the next team or track. This is the final phase of the
+    spike — it closes the investigation and opens the path to delivery.
+    This phase does NOT implement code.
+
+  prompt:
+    active: 1
+    path: templates/prompts/spike/backlog_handoff/prompt_v<active>.md
+
+  tooling_hints:
+    - Ler `30_technical_decision.md` como unica fonte autoritativa desta fase.
+    - Cada item de backlog deve ter: titulo, prioridade, evidencia, criterio de aceite, track sugerida.
+    - Nao duplicar achados ja registrados — referenciar por ID (ex: Finding F-01).
+    - Se a decisao tecnica for `DECISION_DEFERRED`, registrar como item de backlog de alta prioridade.
+    - Nao propor implementacao direta nesta fase — o handoff define o proximo card, nao o implementa.
+
+  outputs:
+    create_directories:
+      - investigations
+    create_artifacts:
+      - investigations/40_backlog_or_handoff.md
+    prompts:
+      - backlog_handoff
+
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - investigations/40_backlog_or_handoff.md

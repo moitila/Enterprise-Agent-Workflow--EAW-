@@ -2,19 +2,22 @@ config_version: 1
 
 phase:
   id: hypotheses
-  name: Hypotheses
-  description: Generate possible causes or solution directions.
+  name: Spike Hypotheses
+  description: >
+    Generates 3 to 7 testable hypotheses from the spike intake. Each hypothesis
+    declares how it can be validated or discarded. Does NOT investigate code and
+    does NOT propose solutions.
 
   prompt:
-    active: 2
+    active: 1
     path: templates/prompts/spike/hypotheses/prompt_v<active>.md
 
   outputs:
     create_directories: []
     create_artifacts:
-      - investigations/30_hypotheses.md
+      - investigations/10_hypotheses.md
 
   completion:
     strategy: required_artifacts_exist
     required_artifacts:
-      - investigations/30_hypotheses.md
+      - investigations/10_hypotheses.md
