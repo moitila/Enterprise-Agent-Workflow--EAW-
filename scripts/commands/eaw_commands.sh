@@ -1655,6 +1655,27 @@ eaw_card_markdown_section_list() {
 	' "$file"
 }
 
+# Robustly extract allowlist paths from scope.lock.
+# Accepts diverse section name aliases (Allowlist, WRITE ALLOWLIST, Autorizados)
+# and diverse content formats: code blocks, bullet lists, numbered lists, tables.
+# Returns one absolute path per line, no dash prefix.
+eaw_scope_lock_allowlist_paths() {
+	local scope_lock_file="$1"
+	[[ -f "$scope_lock_file" ]] || return 0
+	awk '
+		/^## .*(Allowlist|ALLOWLIST|Autorizados|WRITE)/ { capture=1; next }
+		capture && /^## / { exit }
+		capture && /^```/ { in_fence = !in_fence; next }
+		capture && in_fence && /\// { print; next }
+		capture && !in_fence && /^(- |[0-9]+[.)][[:space:]]|\||[A-Z]+: \/)/ { print; next }
+	' "$scope_lock_file" | \
+	grep -oE '/[^ |]+' | \
+	tr -d '`' | \
+	sed 's/[^a-zA-Z0-9_./-]*$//' | \
+	grep -Ev '[*?]' | \
+	grep -v '/$'
+}
+
 eaw_card_change_plan_involved_files() {
 	local change_plan_file="$1"
 	awk '
@@ -1680,7 +1701,7 @@ eaw_card_write_allowlist_entries() {
 
 	if [[ -f "$scope_lock_file" ]]; then
 		local parsed_allowlist
-		parsed_allowlist="$(eaw_card_markdown_section_list "$scope_lock_file" "## Allowlist de Escrita" | sed '/^[[:space:]]*$/d')"
+		parsed_allowlist="$(eaw_scope_lock_allowlist_paths "$scope_lock_file" | sed '/^[[:space:]]*$/d')"
 		if [[ -z "$parsed_allowlist" ]]; then
 			printf "[WARNING] WRITE_ALLOWLIST: scope.lock presente mas nao parseavel (formato nao suportado): %s\n" "$scope_lock_file" >&2
 		fi
@@ -1829,7 +1850,7 @@ eaw_runtime_environment_block() {
 	if [[ -f "$scope_lock_file" ]]; then
 		local resolved_from_scope_lock
 		local write_allowlist_source
-		resolved_from_scope_lock="$(eaw_card_markdown_section_list "$scope_lock_file" "## Allowlist de Escrita" | sed '/^[[:space:]]*$/d')"
+		resolved_from_scope_lock="$(eaw_scope_lock_allowlist_paths "$scope_lock_file" | sed '/^[[:space:]]*$/d')"
 		if [[ -n "$resolved_from_scope_lock" ]]; then
 			write_allowlist_source="scope_lock:$scope_lock_file"
 		else
