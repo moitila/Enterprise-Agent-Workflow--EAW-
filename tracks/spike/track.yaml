@@ -26,8 +26,15 @@ track:
   transitions:
     intake:
       next: hypotheses
+      contract:
+        emit_handoff: true
     hypotheses:
       next: findings
+      skip_when:
+        - SPIKE_NO_REPO
+        - SPIKE_RESEARCH
+      contract:
+        emit_handoff: true
     findings:
       next: technical_decision
     technical_decision:

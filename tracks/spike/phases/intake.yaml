@@ -19,6 +19,7 @@ phase:
     create_artifacts:
       - investigations/00_spike_intake.md
       - investigations/_intake_provenance.md
+      - investigations/20_handoff.json
 
   completion:
     strategy: required_artifacts_exist

@@ -39,6 +39,12 @@ OUTPUT_STRUCTURE
 ## Pergunta principal
 <Uma pergunta clara e especifica que esta spike deve responder.>
 
+## spike_mode
+<Valor obrigatorio. Selecionar exatamente um: `repo` | `no_repo` | `research`.
+- `repo`: a investigacao requer leitura de repositorios de codigo.
+- `no_repo`: a investigacao envolve codigo mas nao requer acesso a repos (ex: analise de contrato/prompt).
+- `research`: investigacao puramente teorica ou documental — sem acesso a repos e sem analise de codigo.>
+
 ## Contexto
 <O que motivou esta spike? Qual e o problema ou decisao que exige investigacao?>
 
@@ -56,6 +62,14 @@ OUTPUT_STRUCTURE
 
 ## Perguntas em aberto
 <Perguntas reais, terminando com ?, que precisam de investigacao para serem respondidas.>
+
+## REQUEST_SNAPSHOT
+<Bloco imutavel. Preenchido apenas pelo agente de intake. NAO deve ser alterado em fases subsequentes.>
+
+- **Pergunta principal (literal):** <Copiar textualmente a pergunta da secao "Pergunta principal" — sem parafrase.>
+- **Decisao bloqueada pela resposta:** <Qual decisao tecnica ou de produto depende da resposta desta spike?>
+- **Fora de escopo (verbatim):** <Copiar textualmente a secao "Fora de escopo".>
+- **Criterios de sucesso (verbatim):** <Copiar textualmente a secao "Criterios de sucesso".>
 ```
 
 `_intake_provenance.md` deve conter:
@@ -74,6 +88,7 @@ READ_SCOPE
 WRITE_SCOPE
 - Escrever somente em `{{CARD_DIR}}/investigations/00_spike_intake.md`.
 - Escrever somente em `{{CARD_DIR}}/investigations/_intake_provenance.md`.
+- Escrever somente em `{{CARD_DIR}}/investigations/20_handoff.json`.
 - Nenhuma escrita em TARGET_REPOS ou RUNTIME_ROOT.
 
 RULES
@@ -88,11 +103,24 @@ RULES
   - Produzir 00_spike_intake.md com as secoes obrigatorias.
   - Manter apenas fatos observaveis derivados dos insumos.
   - "Perguntas em aberto" deve conter apenas perguntas reais terminadas com "?".
+  - Declarar `spike_mode` com exatamente um dos valores canonicos: `repo`, `no_repo` ou `research`.
+    - `repo`: se a resposta da spike exige leitura de repositorios.
+    - `no_repo`: se a investigacao envolve codigo mas nao requer acesso a repos.
+    - `research`: se a investigacao e puramente teorica/documental.
+  - Fases subsequentes devem usar `spike_mode` para determinar o branch de comportamento (ex: `findings` com `spike_mode: research` nao acessa repositorios).
 - PASSO 4 — provenance:
   - Preencher _intake_provenance.md com rastreabilidade completa.
-- PASSO 5 — validacao:
+- PASSO 5 — handoff:
+  - Ler `spike_mode` de `{{CARD_DIR}}/investigations/00_spike_intake.md`.
+  - Se `spike_mode: no_repo` → emitir `{{CARD_DIR}}/investigations/20_handoff.json` com `codes: ["SPIKE_NO_REPO"]`.
+  - Se `spike_mode: research` → emitir `{{CARD_DIR}}/investigations/20_handoff.json` com `codes: ["SPIKE_RESEARCH"]`.
+  - Se `spike_mode: repo` → emitir `{{CARD_DIR}}/investigations/20_handoff.json` com `codes: []`.
+  - Formato compacto sem espacos apos `:` e `,`:
+    `{"from_phase":"intake","status":"completed","messages":[],"codes":["SPIKE_NO_REPO"]}`
+- PASSO 6 — validacao:
   - test -s {{CARD_DIR}}/investigations/00_spike_intake.md — deve retornar 0.
   - test -s {{CARD_DIR}}/investigations/_intake_provenance.md — deve retornar 0.
+  - test -f {{CARD_DIR}}/investigations/20_handoff.json — deve retornar 0.
 
 FAIL_CONDITIONS
 - ingest/ ausente ou vazio → abortar com bloqueio.
@@ -100,6 +128,8 @@ FAIL_CONDITIONS
 - Qualquer escrita fora de {{CARD_DIR}} → falha critica de escopo.
 - Pergunta principal ausente ou vaga (ex: "investigar o problema") → falha de qualidade.
 - Secoes obrigatorias ausentes em 00_spike_intake.md → falha estrutural.
+- `spike_mode` ausente ou com valor fora do conjunto `{repo, no_repo, research}` em `00_spike_intake.md` → falha de contrato.
+- `20_handoff.json` ausente ao final da fase → falha de handoff (runtime nao consegue avaliar skip_when).
 
 RESPONSE_FORMAT
 Ao encerrar a fase, responder com:

@@ -65,6 +65,13 @@ OUTPUT_STRUCTURE
 
 ## Riscos residuais
 <Riscos que persistem apos os achados — ex: hipotese parcial, evidencia insuficiente.>
+
+## Fontes externas consultadas
+| Fonte | Tipo | Relevancia |
+|-------|------|------------|
+| <URL ou referencia> | documentacao / RFC / issue / artigo | <por que foi consultada> |
+
+<Se nenhuma fonte externa foi consultada, registrar "Nenhuma fonte externa consultada nesta fase.">
 ```
 
 HANDOFF_CODE_EMISSION
@@ -79,10 +86,12 @@ HANDOFF_CODE_EMISSION
   `{"from_phase":"findings","status":"completed","messages":[],"codes":[]}`
 
 READ_SCOPE
-- Ler `{{CARD_DIR}}/investigations/00_spike_intake.md`.
+- Ler `{{CARD_DIR}}/investigations/00_spike_intake.md` — verificar `spike_mode` antes de acessar repos.
 - Ler `{{CARD_DIR}}/investigations/10_hypotheses.md`.
-- Ler TARGET_REPOS em modo read-only para investigar as hipoteses.
-- Usar `grep`, `find`, `cat`, `git log --oneline` apenas para leitura.
+- Se `spike_mode: repo` — ler TARGET_REPOS em modo read-only; selecao justificada (primary/related); registrar repos consultados e motivo da selecao em "Fontes externas consultadas".
+- Se `spike_mode: no_repo` ou `spike_mode: research` — nao acessar TARGET_REPOS; investigar via artefatos do card e fontes externas.
+- Usar `grep`, `find`, `cat`, `git log --oneline` apenas para leitura (somente se `spike_mode: repo`).
+- Fontes externas: somente referencias tecnicas verificaveis (documentacao oficial, RFCs, issues publicas); registrar em "Fontes externas consultadas".
 
 WRITE_SCOPE
 - Escrever somente em `{{CARD_DIR}}/investigations/20_findings.md`.
@@ -97,6 +106,8 @@ RULES
   - Ler 00_spike_intake.md e 10_hypotheses.md integralmente.
   - Mapear cada hipotese para o teste declarado em "Como validar".
 - PASSO 3 — investigacao:
+  - Verificar `spike_mode` em 00_spike_intake.md.
+  - Se `spike_mode: no_repo` ou `research`: executar investigacao sem acessar TARGET_REPOS; usar artefatos do card e fontes externas como evidencia.
   - Para cada hipotese, executar o teste declarado em "Como validar" / "Como descartar".
   - Registrar cada achado com fonte + linha + evidencia.
   - Nao pular hipoteses sem justificativa — registrar "nao investigada" com motivo.

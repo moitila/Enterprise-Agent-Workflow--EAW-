@@ -65,13 +65,21 @@ DECIDIDA | DECISION_DEFERRED
 
 ## Criterios de aceite para o proximo card
 <O que um card de implementacao ou nova spike devera atingir para ser considerado sucesso? Liste de 2 a 4 CAs verificaveis.>
+
+## Fontes externas consultadas
+| Fonte | Tipo | Relevancia |
+|-------|------|------------|
+| <URL ou referencia> | documentacao / RFC / issue / artigo | <por que foi consultada> |
+
+<Se nenhuma fonte externa foi consultada, registrar "Nenhuma fonte externa consultada nesta fase.">
 ```
 
 READ_SCOPE
 - Ler `{{CARD_DIR}}/investigations/00_spike_intake.md`.
 - Ler `{{CARD_DIR}}/investigations/10_hypotheses.md`.
 - Ler `{{CARD_DIR}}/investigations/20_findings.md`.
-- Ler TARGET_REPOS somente se necessario para clarificar um achado especifico (modo read-only estrito).
+- Ler TARGET_REPOS somente se necessario para clarificar um achado especifico (modo read-only estrito); somente quando `spike_mode: repo`.
+- Fontes externas: somente referencias tecnicas verificaveis (documentacao oficial, RFCs, issues publicas); registrar em "Fontes externas consultadas".
 
 WRITE_SCOPE
 - Escrever somente em `{{CARD_DIR}}/investigations/30_technical_decision.md`.

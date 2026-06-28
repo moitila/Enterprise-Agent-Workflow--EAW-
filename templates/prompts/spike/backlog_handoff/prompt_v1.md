@@ -68,6 +68,15 @@ OUTPUT_STRUCTURE
 ## Handoff para o proximo responsavel
 <O que o proximo time/agente precisa saber para continuar o trabalho? Cite artefatos relevantes.>
 
+## Rastreamento do pedido inicial ate a decisao
+
+| Elemento do intake | Valor declarado | Como foi tratado na spike | Status |
+|--------------------|----------------|--------------------------|--------|
+| <criterio de sucesso do intake> | <valor literal do REQUEST_SNAPSHOT> | <como a spike abordou este criterio> | Atendido / Parcial / Nao atendido / Descartado |
+
+<Adicionar uma linha por criterio de sucesso declarado no REQUEST_SNAPSHOT do intake.
+Status permitidos: Atendido, Parcial, Nao atendido, Descartado.>
+
 ## Status da spike
 COMPLETA | PARCIALMENTE_COMPLETA | REQUER_NOVA_SPIKE
 
@@ -109,6 +118,7 @@ FAIL_CONDITIONS
 - Item propondo implementacao direta sem criar card separado → falha de processo.
 - Qualquer escrita em TARGET_REPOS → falha critica de escopo.
 - 40_backlog_or_handoff.md ausente ou vazio → bloqueio de fechamento da spike.
+- Secao "Rastreamento do pedido inicial ate a decisao" ausente ou sem entradas em `40_backlog_or_handoff.md` → falha de completude.
 
 RESPONSE_FORMAT
 Ao encerrar a fase, responder com:
