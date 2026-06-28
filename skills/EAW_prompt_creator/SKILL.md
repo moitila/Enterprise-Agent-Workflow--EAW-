@@ -33,6 +33,122 @@ Always reason from:
 - validation
 - transition contract
 
+## Semantic Phase Roles
+
+Identifique o papel semântico antes de escrever qualquer prompt:
+
+- `intake` — coleta estruturada do problema/objetivo do card
+- `ingest` — ingesta de fontes externas (tickets, PR, logs); equivalente a intake em tracks com origens externas
+- `dynamic_context` — materializa `context/dynamic/` de forma governada antes de `findings`; contrato `deterministic_baseline_v1`
+- `analysis` / `findings` — investigação e coleta de evidências
+- `hypothesis` — formula e prioriza hipóteses
+- `planning` — plano de ação antes da implementação
+- `implementation_planning` — produz `00_scope.lock.md` e `10_change_plan.md`
+- `implementation` / `implementation_executor` — execução do plano; escrita de código
+- `validation` — valida artefatos produzidos sem escrever código novo
+- `reporting` / `refine` — consolida e publica artefatos operacionais
+
+## Standard Prompt Structure
+
+Todo prompt EAW começa com `{{RUNTIME_ENVIRONMENT}}` como primeira linha. Este placeholder é substituido pelo runtime com o bloco completo de contexto de execução (CARD_ID, TRACK_ID, STEP_ID, WRITE_ALLOWLIST, TARGET_REPOSITORIES, etc.).
+
+Estrutura mínima de um prompt:
+
+```
+{{RUNTIME_ENVIRONMENT}}
+
+ROLE
+- <papel do agente>
+
+OBJECTIVE
+- <objetivo da fase>
+
+INPUT
+- CARD={{CARD}}
+- EAW_WORKDIR={{EAW_WORKDIR}}
+- ...
+- REQUIRED_ARTIFACTS:
+  - {{CARD_DIR}}/<artefato_obrigatorio>
+
+OUTPUT
+- Escrever somente: {{CARD_DIR}}/<artefato_saida>
+
+OUTPUT_STRUCTURE
+- <estrutura do artefato de saida>
+
+READ_SCOPE
+- <o que pode ser lido>
+
+WRITE_SCOPE
+- Escrever somente em: {{CARD_DIR}}/<diretorio>
+
+RULES
+- Executar o pre-check: cd "{{RUNTIME_ROOT}}", test -f ./scripts/eaw, ...
+- <regras operacionais>
+
+FORBIDDEN
+- <acoes proibidas>
+
+FAIL_CONDITIONS
+- Falhar se pre-check falhar.
+- Falhar se artefato de saida nao existir ao final.
+```
+
+## Prompt Versioning Contract (ACTIVE + .meta)
+
+Cada prompt tem três arquivos associados em `templates/prompts/<track>/<phase>/`:
+
+| Arquivo | Propósito |
+|---------|----------|
+| `prompt_vN.md` | Conteúdo do prompt (versão N) |
+| `prompt_vN.meta` | Metadados: version, required_sections, required_substrings, forbidden_words |
+| `ACTIVE` | Contém apenas o número `N` da versão ativa |
+
+Quando criar um novo prompt:
+1. Criar `prompt_v1.md` com o conteúdo
+2. Criar `prompt_v1.meta` com metadados mínimos
+3. Criar `ACTIVE` contendo apenas `1`
+
+Quando revisar (nova versão):
+1. Criar `prompt_v(N+1).md` com o novo conteúdo
+2. Criar `prompt_v(N+1).meta`
+3. Atualizar `ACTIVE` para `N+1` (usar `eaw apply-prompt <TRACK> <PHASE> v<N+1>`)
+
+Nunca editar um `prompt_vN.md` já existente — criar nova versão.
+
+## Handoff Contract (20_handoff.json)
+
+Quando uma fase precisa emitir codes para o mecanismo `skip_when`, o prompt deve instruir explicitamente:
+
+```
+Emitir {{CARD_DIR}}/investigations/20_handoff.json ao final, SEMPRE, com schema compacto:
+- Se <condição>: {"from_phase":"<phase_id>","status":"completed","messages":[],"codes":["CODIGO"]}
+- Senão:         {"from_phase":"<phase_id>","status":"completed","messages":[],"codes":[]}
+```
+
+Regras do schema:
+- Formato compacto obrigatório: sem espaços após `:` e `,`
+- Campos obrigatórios: `from_phase`, `status`, `messages`, `codes`
+- `codes` é array; quando vazio usar `[]`, nunca omitir
+- O runtime lê o arquivo via grep regex — JSON formatado/pretty-printed falha
+- Escrever via `printf` ou similar, nunca via editor que adicione whitespace
+
+O prompt deve declarar `20_handoff.json` em:
+- `OUTPUT` — como artefato de saída
+- `WRITE_SCOPE` — como destino autorizado
+- `FAIL_CONDITIONS` — falhar se ausente ou sem campo `codes`
+
+## Context Declaration
+
+Quando a fase depende de contexto materializado:
+
+- `onboarding_template` → contexto estável em `out/<CARD>/context/onboarding/`
+- `dynamic_context_template: deterministic_baseline_v1` → contexto operacional em `out/<CARD>/context/dynamic/`
+
+No prompt, tratar contexto como artefato observável e materializado, nunca como conhecimento ambiente. Nomear o path esperado explicitamente.
+
+Após EAW-ARCH-CONTEXT-PATH-REF: em tracks com `dynamic_context_template`, referenciar contexto via path-reference no prompt (não via `{{CONTEXT_BLOCK}}` inline).
+
 ## Workflow
 
 1. Identify the target:
@@ -43,13 +159,15 @@ Always reason from:
 
 2. Identify the semantic role:
    - `intake`
-   - `analysis`
+   - `ingest`
+   - `dynamic_context`
+   - `analysis` / `findings`
    - `hypothesis`
    - `planning`
    - `implementation_planning`
-   - `implementation`
+   - `implementation` / `implementation_executor`
    - `validation`
-   - `reporting`
+   - `reporting` / `refine`
 
 3. Resolve context from the active environment before drafting:
    - treat `WORKDIR`, `EAW_WORKDIR`, runtime root, and related values as execution-time values provided or resolved by the active runtime
@@ -122,9 +240,12 @@ When reviewing, produce:
 - Treat `WORKDIR`, `EAW_WORKDIR`, `RUNTIME_ROOT`, and similar values as execution-time context, never as constants.
 - Never hardcode workspace-specific paths, repository aliases, or runtime variable values.
 - Always resolve track, templates, docs, and repos from the active runtime and current workspace.
+- Todo prompt deve começar com `{{RUNTIME_ENVIRONMENT}}` como primeira linha.
+- `eaw_workspace` é sempre incluída implicitamente pelo runtime no agent_bundle — nunca declarar em `phase.skills`.
+- Skills em `phase.skills` devem refletir o papel real do agente da fase: `eaw_card_execution` só para fases orquestradoras.
 - When reviewing a phase that depends on context, require explicit alignment with the runtime context contract:
   - `phase.context.onboarding_template` selects stable repository context
-  - `phase.context.dynamic_context_template` selects operational context generated from the card
+  - `phase.context.dynamic_context_template: deterministic_baseline_v1` selects operational context generated from the card
   - both are runtime-governed and must be reflected in the prompt as materialized artifacts, not informal assumptions
 - Prefer phase prompts that are explicit about artifacts, validation, and fail-fast behavior.
 - For onboarding tracks, start from repository identity and output reusable repository understanding artifacts.
@@ -133,6 +254,7 @@ When reviewing, produce:
 
 Before finalizing any prompt or phase, confirm:
 
+- começa com `{{RUNTIME_ENVIRONMENT}}` como primeira linha
 - the `phase_role` is explicit
 - outputs are inside `write_scope`
 - validation is executable
@@ -140,3 +262,6 @@ Before finalizing any prompt or phase, confirm:
 - transition dependencies are covered by prior outputs
 - the prompt can be reviewed without relying on informal context
 - if context is required, `phase.context.*` is explicit and the prompt names the expected materialization under `out/<CARD>/context/onboarding/` and/or `out/<CARD>/context/dynamic/`
+- se a fase emite codes para `skip_when`: `20_handoff.json` está em OUTPUT, WRITE_SCOPE e FAIL_CONDITIONS
+- `eaw_workspace` não está declarada em `phase.skills` (implícita)
+- `ACTIVE` e `.meta` criados junto com o prompt

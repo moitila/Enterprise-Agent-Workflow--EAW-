@@ -136,7 +136,44 @@ Recommended for real tracks:
 - `phase.outputs`
 - `phase.completion`
 - `phase.skills`
-- `phase.skills`
+
+## Skip-When Contract You Must Teach
+
+O mecanismo `skip_when` é funcional no runtime. Ensine-o como contrato declarativo, não como runtime hack.
+
+### Como funciona
+
+`skip_when` é declarado na **fase que completa** (não na fase que será pulada). Após completar, o runtime lê `20_handoff.json["codes"]` e compara com a lista.
+
+```yaml
+transitions:
+  <phase_que_completa>:
+    next: <fase_alvo>
+    skip_when:
+      - CODIGO_A
+      - CODIGO_B
+    contract:
+      emit_handoff: true
+  <fase_alvo>:
+    next: <proxima>
+```
+
+- `contract: emit_handoff: true` é obrigatório para que o runtime colete os codes do handoff
+- Sem `emit_handoff`, `EAW_PHASE_EXIT_CODES` fica vazio e skip nunca dispara
+- O agente deve escrever `20_handoff.json` com schema compacto:
+  ```json
+  {"from_phase":"<phase_id>","status":"completed","messages":[],"codes":["CODIGO"]}
+  ```
+- Campos obrigatórios: `from_phase`, `status`, `messages`, `codes`
+- Formato compacto sem espaços após `:` e `,` — o parser usa regex
+- Quando nenhuma condição de skip se aplica, emitir `codes: []`
+
+### Guardrails de skip_when
+
+- nunca declarar `skip_when` na fase que vai ser pulada
+- nunca omitir `contract: emit_handoff: true` quando skip_when estiver presente
+- o prompt da fase que emite o handoff deve instruir explicitamente sobre codes esperados
+- `allow_phase_skip` em `track.rules` é campo morto — não afeta skip_when
 
 ## Context Contract You Must Teach
 
@@ -144,10 +181,13 @@ When a phase depends on repository or card context, treat the `context` block as
 
 - `phase.context.onboarding_template` binds stable repository context
 - `phase.context.dynamic_context_template` binds operational context generated from the card
+  - único valor reconhecido pelo runtime: `deterministic_baseline_v1`
+  - este template ativa a fase `dynamic_context` no fluxo de execução
 - onboarding is materialized under `out/<CARD>/context/onboarding/`
 - dynamic context is materialized under `out/<CARD>/context/dynamic/`
 - a phase must not rely on either context surface as implicit knowledge
 - if a phase declares context, prompt and completion expectations must stay consistent with that materialization
+- após EAW-ARCH-CONTEXT-PATH-REF: prompts devem referenciar contexto via path-reference, nunca via `{{CONTEXT_BLOCK}}` inline em tracks com `dynamic_context_template`
 
 ## Phase Skills Declaration
 
@@ -155,18 +195,27 @@ Phases podem declarar quais skills o agente isolado precisa ao executar a fase:
 
 ```yaml
 phase:
-  id: post_review
+  id: implementation_executor
   skills:
-    - workspace
-    - reviewer
+    - eaw_card_execution
 ```
 
-- `skills` é uma lista de nomes de skills disponíveis no workspace
-- Se omitido, o executor assume `[workspace]` como fallback
-- `workspace` é sempre incluída automaticamente pelo executor, mesmo se não listada
-- As skills não aparecem no prompt da fase — só equipam o agente que vai executar
-- Skills disponíveis no EAW: `workspace`, `reviewer`, `delivery`, `prompt_creator`, `track_creator`
-- Ao criar phases de review pós-execução, declarar `reviewer`; ao criar phases de entrega (PR, CI), declarar `delivery`
+- `skills` é uma lista de chaves do `skills/registry.yaml`
+- Se omitido, o executor usa apenas `eaw_workspace` como fallback implícito
+- `eaw_workspace` é sempre incluída automaticamente pelo runtime, mesmo se não declarada — nunca declarar explicitamente
+- As skills não aparecem no prompt da fase — equipam o agente que executa
+- Skills válidas no registry atual:
+  - `eaw_card_execution` — orquestração: rodar `next`, delegar fases, gerenciar fluxo EAW
+  - `eaw_card_creation` — criar cards com `eaw card <ID> --track <TRACK>`
+  - `eaw_reviewer` — review de artefatos pós-execução
+  - `eaw_delivery` — entrega: PR, CI, publicação
+  - `eaw_prompt_creator` — criação e revisão de prompts
+  - `eaw_track_creator` — criação e revisão de tracks
+- **Regra semântica**: declarar apenas skills que o agente da fase realmente precisa:
+  - `eaw_card_execution` só faz sentido em fases orquestradoras (que rodam `next`)
+  - fases executoras (lêem plano e escrevem código) não precisam de `eaw_card_execution`
+  - `eaw_reviewer` em fases de validação pós-implementação
+  - `eaw_delivery` em fases de PR/CI
 
 ## Creation Workflow
 
@@ -316,6 +365,42 @@ Teach this correctly:
 - it updates only `ACTIVE`
 - it does not invent missing prompt directories
 
+## Modifying an Existing Track
+
+Quando o objetivo é modificar uma track já registrada:
+
+1. Ler `track.yaml` atual antes de qualquer alteração
+2. Para adicionar uma fase:
+   - criar o phase YAML em `tracks/<track>/phases/<phase>.yaml`
+   - adicionar o `phase_id` na lista `track.phases`
+   - atualizar `track.transitions` para wiring correto
+   - criar o diretório e arquivo de prompt esperado por `phase.prompt.path`
+3. Para alterar transições (ex: adicionar `skip_when`):
+   - ler a transição atual
+   - adicionar `skip_when` na fase que **completa** (não na que será pulada)
+   - adicionar `contract: emit_handoff: true` junto com `skip_when`
+   - atualizar o prompt da fase que emite para incluir instrução de `20_handoff.json`
+4. Rodar `eaw validate workflow --all` e `eaw tracks install` após qualquer alteração
+5. Nunca alterar `track.id` ou a estrutura de diretórios sem atualizar o registry
+
+## Modifying an Existing Track
+
+Quando o objetivo é modificar uma track já registrada:
+
+1. Ler `track.yaml` atual antes de qualquer alteração
+2. Para adicionar uma fase:
+   - criar o phase YAML em `tracks/<track>/phases/<phase>.yaml`
+   - adicionar o `phase_id` na lista `track.phases`
+   - atualizar `track.transitions` para wiring correto
+   - criar o diretório e arquivos de prompt esperados por `phase.prompt.path` + `ACTIVE` + `.meta`
+3. Para alterar transições (ex: adicionar `skip_when`):
+   - ler a transição atual
+   - adicionar `skip_when` na fase que **completa** (não na que será pulada)
+   - adicionar `contract: emit_handoff: true` junto com `skip_when`
+   - atualizar o prompt da fase que emite para incluir instrução de `20_handoff.json`
+4. Rodar `eaw validate workflow --all` e `eaw tracks install` após qualquer alteração
+5. Nunca alterar `track.id` ou a estrutura de diretórios sem atualizar o registry
+
 ## Creation Guardrails
 
 - never hardcode workspace-specific directories into the track or the skill instructions
@@ -331,6 +416,12 @@ Teach this correctly:
 - never confuse `tracks/` discovery with official registration lifecycle
 - never depend on phase name alone; use your design notes to map each phase to a semantic role
 - never invent runtime commands not present in `EAW-tool`
+- never declarar `eaw_workspace` em `phase.skills` — é implícita e deduplicada pelo runtime
+- never declarar `skip_when` na fase que será pulada; sempre na fase que completa
+- never omitir `contract: emit_handoff: true` quando `skip_when` estiver presente
+- never declare `eaw_workspace` em `phase.skills` — é implícita e deduplicada
+- never declare `skip_when` na fase que será pulada; sempre na fase que completa
+- never omitir `contract: emit_handoff: true` quando `skip_when` estiver presente
 
 ## What To Output
 
