@@ -332,6 +332,103 @@ eaw_validate_workflow_phase_context() {
 	return "$errors"
 }
 
+# Validate phase.skills declarations against skills/registry.yaml.
+# Returns error count (0 = OK).
+eaw_validate_workflow_phase_skills() {
+	local track_id="$1"
+	local phase_id="$2"
+	local phase_file="$3"
+	local errors=0
+	local registry_file="$EAW_ROOT_DIR/skills/registry.yaml"
+
+	# Collect declared skills (empty = no phase.skills declared)
+	local declared_skills=()
+	while IFS= read -r skill; do
+		[[ -n "$skill" ]] && declared_skills+=("$skill")
+	done < <(eaw_yaml_phase_skills "$phase_file")
+
+	# No phase.skills declared: nothing to validate (Tier 1 fallback is normal)
+	if [[ ${#declared_skills[@]} -eq 0 ]]; then
+		return 0
+	fi
+
+	# Empty list: `skills: []` parsed as zero items — emit warning
+	# (detect via raw YAML check since eaw_yaml_phase_skills returns empty for both absent and empty)
+	if awk '
+		/^phase:[[:space:]]*$/ { in_phase=1; next }
+		in_phase && /^[^[:space:]]/ { in_phase=0 }
+		in_phase && /^  skills:[[:space:]]*\[\][[:space:]]*$/ { print "empty"; exit }
+	' "$phase_file" | grep -q "empty"; then
+		printf "[WARN] track=%s phase=%s field=phase.skills declared as empty list ([])\n" \
+			"$track_id" "$phase_id"
+	fi
+
+	# registry.yaml must exist when phase.skills is declared
+	if [[ ! -f "$registry_file" ]]; then
+		errors=$((errors + 1))
+		eaw_validate_workflow_error "$track_id" "$phase_id" "phase.skills" \
+			"skills/registry.yaml not found at $registry_file but phase.skills is declared"
+		return "$errors"
+	fi
+
+	# Check for duplicates and validate each skill
+	local seen_skills=()
+	local s
+	for s in "${declared_skills[@]}"; do
+		# Duplicate check
+		local dup=0
+		local prev
+		for prev in "${seen_skills[@]}"; do
+			[[ "$prev" == "$s" ]] && { dup=1; break; }
+		done
+		if [[ "$dup" -eq 1 ]]; then
+			printf "[WARN] track=%s phase=%s field=phase.skills skill '%s' declared multiple times\n" \
+				"$track_id" "$phase_id" "$s"
+			continue
+		fi
+		seen_skills+=("$s")
+
+		# Delivery/review skill warning
+		case "$s" in
+			eaw_reviewer|eaw_delivery)
+				printf "[WARN] track=%s phase=%s field=phase.skills skill '%s' is a delivery/review skill; verify intent\n" \
+					"$track_id" "$phase_id" "$s"
+				;;
+		esac
+
+		# Skill must exist in registry
+		local skill_file
+		skill_file="$(awk -v sk="$s" '
+			/^skills:[[:space:]]*$/ { in_s=1; next }
+			in_s && /^  [a-z_]+:/ {
+				name=substr($0,3)
+				sub(/:.*/, "", name)
+				cur=name
+				file=""
+			}
+			in_s && /^    file:/ && cur==sk { file=$2 }
+			in_s && file!="" && cur==sk { print file; exit }
+		' "$registry_file")"
+
+		if [[ -z "$skill_file" ]]; then
+			errors=$((errors + 1))
+			eaw_validate_workflow_error "$track_id" "$phase_id" "phase.skills" \
+				"skill '$s' not found in skills/registry.yaml"
+			continue
+		fi
+
+		# Skill file must exist on disk
+		local skill_path="$EAW_ROOT_DIR/$skill_file"
+		if [[ ! -f "$skill_path" ]]; then
+			errors=$((errors + 1))
+			eaw_validate_workflow_error "$track_id" "$phase_id" "phase.skills" \
+				"skill '$s' registry path '$skill_file' does not exist on disk"
+		fi
+	done
+
+	return "$errors"
+}
+
 eaw_validate_workflow_track() {
 	local track_id="$1"
 	local track_dir track_file initial_phase final_phase raw_phase normalized_phase phase_file phase_id prompt_path phase_errors
@@ -440,6 +537,11 @@ eaw_validate_workflow_track() {
 			errors=$((errors + phase_errors))
 		fi
 		eaw_validate_workflow_phase_context "$track_id" "$phase_id" "$phase_file"
+		phase_errors=$?
+		if [[ "$phase_errors" -gt 0 ]]; then
+			errors=$((errors + phase_errors))
+		fi
+		eaw_validate_workflow_phase_skills "$track_id" "$phase_id" "$phase_file"
 		phase_errors=$?
 		if [[ "$phase_errors" -gt 0 ]]; then
 			errors=$((errors + phase_errors))
