@@ -65,7 +65,7 @@ The agent resolves `repo_key` from `repos.conf` and reads the onboarding files d
 
 For any card on a repo that has published onboarding:
 
-1. Resolve `repo_key` from `repos.conf`
+1. Resolve `repo_key` — see **Pre-check Before Any Operation** below
 2. Check that `$EAW_WORKDIR/context_sources/onboarding/<repo_key>/` exists
 3. Read `INDEX.md` — verify reading order and what files exist
 4. Read `81_agent_quickstart.md` — minimal pre-check for the current task
@@ -173,7 +173,9 @@ When `repo_ai_context.md` is absent:
 - never invent paths in `INDEX.md` that do not correspond to real files
 - never update `provenance.md` without citing the card and date
 - never read `context_sources/` for a repo not declared in `repos.conf`
-- never assume `repo_key` — always derive from `repos.conf` column 1
+- never assume `repo_key` — always derive from intake or card artifacts; `repos.conf` is for confirmation
+- never pick `repo_key` by taking the first `target` in `repos.conf` — a workspace can have many targets; only the operator knows which one this card is about
+- if `repo_key` cannot be determined from available context, **ask the operator before proceeding**
 - never look for onboarding inside `out/<CARD>/` — it is not copied per card; always read from `$EAW_WORKDIR/context_sources/onboarding/<repo_key>/`
 
 ## Pre-check Before Any Operation
@@ -182,9 +184,17 @@ When `repo_ai_context.md` is absent:
 # 1. Confirm EAW_WORKDIR
 test -d "$EAW_WORKDIR" || fail "EAW_WORKDIR not set or not a directory"
 
-# 2. Resolve repo_key from repos.conf
-# repos.conf format: <name>|<path>|<role>
-repo_key=$(awk -F'|' '$3=="target" {print $1; exit}' "$EAW_WORKDIR/config/repos.conf")
+# 2. Resolve repo_key — in priority order:
+#
+#   a) Card artifacts from a previous phase (e.g. drift_report.md header "**Repo analisado:**")
+#   b) Files in $CARD_DIR/intake/ — text written by the operator declaring which repo this card is about
+#      Extract the last path segment: /home/user/dev/emr-tasy-plsql -> emr-tasy-plsql
+#   c) If intake/ is empty and no prior artifacts exist: list TARGET_REPOSITORIES from RUNTIME_ENVIRONMENT
+#      and ASK the operator which repo this card should operate on — do not pick one silently
+#
+# repos.conf is used only to CONFIRM that the resolved repo_key exists as a target:
+repo_key=<resolved via steps above>
+grep -qP "^${repo_key}\|" "$EAW_WORKDIR/config/repos.conf" || fail "$repo_key not found in repos.conf"
 
 # 3. Confirm onboarding exists
 onboarding_dir="$EAW_WORKDIR/context_sources/onboarding/$repo_key"
@@ -196,3 +206,7 @@ test -f "$onboarding_dir/INDEX.md" || warn "INDEX.md absent — onboarding may b
 # 5. Read provenance.md
 test -f "$onboarding_dir/provenance.md" || warn "provenance.md absent — cannot assess staleness"
 ```
+
+> **If you cannot determine `repo_key` from intake or card artifacts, stop and ask the operator.**
+> Do not guess. Do not pick the first target from `repos.conf`. A workspace has many repos — only
+> the operator knows which one this card is about.
