@@ -18,9 +18,10 @@ atualizar. Produzir `patch_notes.md` documentando cada alteração realizada.
 
 ## INSUMOS OBRIGATÓRIOS
 
-1. `$CARD_DIR/investigations/drift_report.md` — autoridade única sobre quais artefatos têm drift
-2. `$EAW_WORKDIR/context_sources/onboarding/<repo_key>/` — artefatos publicados a serem atualizados
-3. Repositório alvo — leitura em read-only para evidência de mudanças
+1. `$CARD_DIR/intake/` — ler todos os arquivos presentes antes de qualquer outra ação; confirmam o escopo e o repo alvo declarados pelo operador
+2. `$CARD_DIR/investigations/drift_report.md` — autoridade única sobre quais artefatos têm drift
+3. `$EAW_WORKDIR/context_sources/onboarding/<repo_key>/` — artefatos publicados a serem atualizados
+4. Repositório alvo — leitura em read-only para evidência de mudanças
 
 ## ALGORITMO DE EXECUÇÃO
 

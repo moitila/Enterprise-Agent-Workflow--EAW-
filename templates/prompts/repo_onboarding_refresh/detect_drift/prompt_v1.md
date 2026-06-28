@@ -16,7 +16,7 @@ emitir `20_handoff.json` com o código `NO_DRIFT_DETECTED` para acionar o skip d
 1. `$EAW_WORKDIR/context_sources/onboarding/<repo_key>/INDEX.md` — lista canônica de artefatos publicados
 2. `$EAW_WORKDIR/context_sources/onboarding/<repo_key>/provenance.md` — data e card da última geração
 3. Repositório alvo — leitura em modo read-only
-4. `$CARD_DIR/intake/pedido.md` (quando existir) — declaração do operador sobre qual repo é alvo do refresh; usar para confirmar ou corrigir o `<repo_key>` derivado de `TARGET_REPOSITORIES`
+4. `$CARD_DIR/intake/` — ler todos os arquivos presentes na pasta antes de qualquer outra ação; contêm a declaração do operador sobre o card (repo alvo, escopo, contexto); usar para confirmar ou corrigir o `<repo_key>` derivado de `TARGET_REPOSITORIES`
 
 ## ALGORITMO DE EXECUÇÃO
 
@@ -24,9 +24,9 @@ emitir `20_handoff.json` com o código `NO_DRIFT_DETECTED` para acionar o skip d
 
 **1a. Confirmar `<repo_key>`:**
 
+- **Primeiro:** listar e ler todos os arquivos em `$CARD_DIR/intake/` — essa pasta contém a intenção declarada pelo operador e é a fonte mais confiável sobre o escopo do card
 - Derivar `<repo_key>` do bloco `TARGET_REPOSITORIES` no `RUNTIME_ENVIRONMENT` deste prompt
-- Se `$CARD_DIR/intake/pedido.md` existir: ler o arquivo e verificar se o repo mencionado corresponde ao `<repo_key>` derivado
-  - Se divergirem (ex: `pedido.md` menciona `/home/user/dev/emr-tasy-plsql` mas `TARGET_REPOSITORIES` injeta `eaw`): usar o path de `pedido.md` para derivar o `<repo_key>` correto (último segmento do path declarado); registrar a divergência como aviso no `drift_report.md`
+- Cruzar com o conteúdo de `intake/`: se qualquer arquivo mencionar um repo ou path diferente do `TARGET_REPOSITORIES` injetado, usar o path do intake para derivar o `<repo_key>` correto (último segmento do path declarado); registrar a divergência como aviso no `drift_report.md`
 - Verificar `$EAW_WORKDIR/config/repos.conf`: contar quantos repos têm `role=target`
   - Se houver mais de um `target`: emitir aviso no `drift_report.md` na seção `## Advertências` — "repos.conf contém N targets; runtime pode ter injetado repo incorreto; repo analisado: `<repo_key>` (derivado de `pedido.md`/`TARGET_REPOSITORIES`)"
 
@@ -166,7 +166,7 @@ Quando drift detectado: **não emitir `20_handoff.json`**. O runtime avançará 
 
 - `$EAW_WORKDIR/context_sources/onboarding/<repo_key>/` — leitura completa dos artefatos publicados
 - Repositório alvo (`TARGET_REPOS`) — leitura em read-only para evidência de drift
-- `$CARD_DIR/intake/pedido.md` (quando existir) — leitura obrigatória para confirmar repo alvo
+- `$CARD_DIR/intake/` — leitura obrigatória de todos os arquivos antes de qualquer análise
 - `$EAW_WORKDIR/config/repos.conf` — leitura para contar targets e detectar ambiguidade
 - `$CARD_DIR/` — leitura de contexto do card
 
