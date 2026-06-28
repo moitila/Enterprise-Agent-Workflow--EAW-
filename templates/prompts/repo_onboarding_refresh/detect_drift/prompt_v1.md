@@ -1,9 +1,13 @@
 {{RUNTIME_ENVIRONMENT}}
-<!-- REPO_KEY_RESOLUTION: o placeholder <repo_key> refere-se ao nome (campo 1 de repos.conf name|path|role)
-     do repositorio com role=target injetado pelo runtime via {{RUNTIME_ENVIRONMENT}} no bloco TARGET_REPOSITORIES.
-     O executor deve ler TARGET_REPOSITORIES do prompt renderizado, identificar o repo com role=target
-     e usar seu nome como valor de <repo_key> em todos os paths $EAW_WORKDIR/context_sources/onboarding/<repo_key>/.
-     Exemplo: se TARGET_REPOSITORIES contem "eaw => /path/to/eaw", entao <repo_key>=eaw. -->
+<!-- REPO_KEY_RESOLUTION: TARGET_REPOSITORIES lista TODOS os repos target do workspace — é contexto
+     de workspace, não escopo do card. O card opera em UM repo específico, declarado pelo operador.
+     Para derivar <repo_key>:
+     1. Ler todos os arquivos em $CARD_DIR/intake/ — é a autoridade sobre o escopo deste card
+     2. Identificar o repo ou path mencionado no intake
+     3. Usar o ultimo segmento do path como <repo_key> (ex: /home/user/dev/emr-tasy-plsql -> emr-tasy-plsql)
+     4. Confirmar que <repo_key> aparece em TARGET_REPOSITORIES do RUNTIME_ENVIRONMENT
+     5. Se intake/ estiver vazio ou não mencionar repo: usar o primeiro entry de TARGET_REPOSITORIES
+     6. Se ainda ambiguo: parar e reportar ao operador; nunca inferir -->
 
 ## OBJETIVO
 
@@ -20,15 +24,18 @@ emitir `20_handoff.json` com o código `NO_DRIFT_DETECTED` para acionar o skip d
 
 ## ALGORITMO DE EXECUÇÃO
 
-### Passo 1 — Validar repo alvo e ler `INDEX.md` e `provenance.md`
+### Passo 1 — Identificar o repo alvo do card e ler artefatos de onboarding
 
-**1a. Confirmar `<repo_key>`:**
+**1a. Derivar `<repo_key>` a partir do intake do card:**
 
-- **Primeiro:** listar e ler todos os arquivos em `$CARD_DIR/intake/` — essa pasta contém a intenção declarada pelo operador e é a fonte mais confiável sobre o escopo do card
-- Derivar `<repo_key>` do bloco `TARGET_REPOSITORIES` no `RUNTIME_ENVIRONMENT` deste prompt
-- Cruzar com o conteúdo de `intake/`: se qualquer arquivo mencionar um repo ou path diferente do `TARGET_REPOSITORIES` injetado, usar o path do intake para derivar o `<repo_key>` correto (último segmento do path declarado); registrar a divergência como aviso no `drift_report.md`
-- Verificar `$EAW_WORKDIR/config/repos.conf`: contar quantos repos têm `role=target`
-  - Se houver mais de um `target`: emitir aviso no `drift_report.md` na seção `## Advertências` — "repos.conf contém N targets; runtime pode ter injetado repo incorreto; repo analisado: `<repo_key>` (derivado de `pedido.md`/`TARGET_REPOSITORIES`)"
+- Listar e ler todos os arquivos em `$CARD_DIR/intake/` — essa pasta é a fonte de autoridade sobre o escopo do card
+- Identificar o repo ou path declarado nos arquivos de intake
+- Usar o último segmento do path como `<repo_key>` (ex: `/home/user/dev/emr-tasy-plsql` → `emr-tasy-plsql`)
+- Confirmar que `<repo_key>` está presente em `TARGET_REPOSITORIES` do `RUNTIME_ENVIRONMENT`
+- Se `intake/` estiver vazio ou não mencionar repo: usar o primeiro entry de `TARGET_REPOSITORIES`
+- Se ainda ambíguo: **parar e reportar ao operador; nunca inferir**
+
+> `TARGET_REPOSITORIES` lista todos os repos target do workspace — é contexto de workspace, não escopo do card. Um workspace pode ter 20 repos; o card opera em um. O intake define qual.
 
 **1b. Ler artefatos de onboarding:**
 

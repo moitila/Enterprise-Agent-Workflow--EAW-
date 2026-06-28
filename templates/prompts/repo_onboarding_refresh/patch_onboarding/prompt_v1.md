@@ -1,14 +1,10 @@
 {{RUNTIME_ENVIRONMENT}}
-<!-- REPO_KEY_RESOLUTION: o placeholder <repo_key> refere-se ao nome (campo 1 de repos.conf name|path|role)
-     do repositorio com role=target injetado pelo runtime via {{RUNTIME_ENVIRONMENT}} no bloco TARGET_REPOSITORIES.
-     Quando repos.conf tiver multiplos target, o runtime pode injetar nome incorreto ou inconsistente.
-     Para derivar repo_key com seguranca, usar a seguinte ordem de prioridade:
-     1. Campo `repo_key` em `drift_report.md` cabecalho (linha "**Repo analisado:**") — mais confiavel
-     2. Nome do bloco TARGET_REPOSITORIES: se o diretorio context_sources/onboarding/<nome>/ existir, usar <nome>
-     3. Se o diretorio nao existir pelo nome: extrair o ultimo segmento do PATH de TARGET_REPOSITORIES
-        (ex: TARGET_REPOSITORIES: "eaw => /home/user/dev/emr-tasy-plsql" -> repo_key=emr-tasy-plsql)
-     4. Se ainda assim nao resolver: parar e reportar ambiguidade ao operador
-     Exemplo correto: se drift_report.md diz "Repo analisado: emr-tasy-plsql", usar repo_key=emr-tasy-plsql. -->
+<!-- REPO_KEY_RESOLUTION: TARGET_REPOSITORIES lista TODOS os repos target do workspace — é contexto
+     de workspace, não escopo do card. Para derivar <repo_key> nesta fase:
+     1. Campo "**Repo analisado:**" no cabeçalho de drift_report.md — fonte mais confiável
+     2. Arquivos em $CARD_DIR/intake/ — declaração original do operador
+     3. Confirmar que o repo resolvido existe em TARGET_REPOSITORIES
+     4. Se ainda ambiguo: parar e reportar ao operador; nunca inferir -->
 
 ## OBJETIVO
 
