@@ -142,7 +142,7 @@ O prompt deve declarar `20_handoff.json` em:
 
 Quando a fase depende de contexto materializado:
 
-- `onboarding_template` → contexto estável em `out/<CARD>/context/onboarding/`
+- `onboarding_template` → contexto estável lido de `$EAW_WORKDIR/context_sources/onboarding/<repo_key>/`
 - `dynamic_context_template: deterministic_baseline_v1` → contexto operacional em `out/<CARD>/context/dynamic/`
 
 No prompt, tratar contexto como artefato observável e materializado, nunca como conhecimento ambiente. Nomear o path esperado explicitamente.
@@ -198,7 +198,7 @@ Após EAW-ARCH-CONTEXT-PATH-REF: em tracks com `dynamic_context_template`, refer
 6. Check whether the next phase can operate from outputs and contract alone, without depending on the previous phase name.
 
 7. When a phase declares runtime context, verify the prompt treats context as observable, materialized input:
-   - `onboarding` is stable repository context materialized under `out/<CARD>/context/onboarding/`
+   - `onboarding` is stable repository context read from `$EAW_WORKDIR/context_sources/onboarding/<repo_key>/`
    - `dynamic_context` is operational context derived from the card and materialized under `out/<CARD>/context/dynamic/`
    - never describe either context source as implicit, ambient, or assumed
    - never ask a phase to inject context that has not been materialized yet
@@ -261,7 +261,7 @@ Before finalizing any prompt or phase, confirm:
 - forbidden actions match the phase role
 - transition dependencies are covered by prior outputs
 - the prompt can be reviewed without relying on informal context
-- if context is required, `phase.context.*` is explicit and the prompt names the expected materialization under `out/<CARD>/context/onboarding/` and/or `out/<CARD>/context/dynamic/`
+- if context is required, `phase.context.*` is explicit; prompt references onboarding via `$EAW_WORKDIR/context_sources/onboarding/<repo_key>/` and dynamic context via `out/<CARD>/context/dynamic/`
 - se a fase emite codes para `skip_when`: `20_handoff.json` está em OUTPUT, WRITE_SCOPE e FAIL_CONDITIONS
 - `eaw_workspace` não está declarada em `phase.skills` (implícita)
 - `ACTIVE` e `.meta` criados junto com o prompt

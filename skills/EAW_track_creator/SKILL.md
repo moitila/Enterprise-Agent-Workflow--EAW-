@@ -130,7 +130,7 @@ Recommended for real tracks:
 - `phase.name`
 - `phase.description`
 - `phase.context.dynamic_context_template` when the phase depends on operational context materialized under `out/<CARD>/context/dynamic/`
-- `phase.context.onboarding_template` when the phase depends on stable repository context materialized under `out/<CARD>/context/onboarding/`
+- `phase.context.onboarding_template` when the phase depends on stable repository context from `$EAW_WORKDIR/context_sources/onboarding/<repo_key>/`
 - `phase.prompt.active`
 - `phase.tooling_hints`
 - `phase.outputs`
@@ -183,7 +183,7 @@ When a phase depends on repository or card context, treat the `context` block as
 - `phase.context.dynamic_context_template` binds operational context generated from the card
   - único valor reconhecido pelo runtime: `deterministic_baseline_v1`
   - este template ativa a fase `dynamic_context` no fluxo de execução
-- onboarding is materialized under `out/<CARD>/context/onboarding/`
+- onboarding is read from `$EAW_WORKDIR/context_sources/onboarding/<repo_key>/` — not copied per card
 - dynamic context is materialized under `out/<CARD>/context/dynamic/`
 - a phase must not rely on either context surface as implicit knowledge
 - if a phase declares context, prompt and completion expectations must stay consistent with that materialization
@@ -411,7 +411,7 @@ Quando o objetivo é modificar uma track já registrada:
 - never bind a phase prompt to a fake path
 - never omit the `context` block when the runtime behavior depends on onboarding or dynamic context
 - never describe onboarding and `dynamic_context` as interchangeable
-- never rely on context that is not declared and materialized under `out/<CARD>/context/onboarding/` or `out/<CARD>/context/dynamic/`
+- never rely on onboarding context that is not declared via `phase.context.onboarding_template`; onboarding is read from `$EAW_WORKDIR/context_sources/onboarding/<repo_key>/`, not `out/<CARD>/`
 - never teach prompt activation without validation
 - never confuse `tracks/` discovery with official registration lifecycle
 - never depend on phase name alone; use your design notes to map each phase to a semantic role

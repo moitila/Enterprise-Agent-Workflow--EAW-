@@ -57,15 +57,9 @@ Use `provenance.md` to assess whether the onboarding is stale relative to recent
 
 ## How the Runtime Consumes Onboarding
 
-Onboarding context is loaded into a card via `phase.context.onboarding_template`. The value is a logical identifier (e.g. `execution_guardrails`, `architecture_first`, `debug_first`) that maps to a template in `templates/context/onboarding/<template_name>/template_v1.md`.
+Onboarding is **not copied per card**. It lives in `$EAW_WORKDIR/context_sources/onboarding/<repo_key>/` and agents read it directly from there.
 
-The template instructs the runtime to:
-1. Source files from `$EAW_WORKDIR/context_sources/onboarding/<repo_key>/`
-2. Materialize a curated artifact under `out/<CARD>/context/onboarding/`
-
-The runtime resolves `repo_key` from `repos.conf` for the card's target repo. The agent does **not** read `context_sources/` directly during card execution — it reads the materialized artifact at `out/<CARD>/context/onboarding/`.
-
-Exception: during `repo_onboarding_*` phases and during onboarding refresh/patch work, the agent reads `context_sources/onboarding/<repo_key>/` directly.
+The agent resolves `repo_key` from `repos.conf` and reads the onboarding files directly from `context_sources/`. No per-card copy is created.
 
 ## Reading Onboarding (Minimal Order)
 
@@ -180,7 +174,7 @@ When `repo_ai_context.md` is absent:
 - never update `provenance.md` without citing the card and date
 - never read `context_sources/` for a repo not declared in `repos.conf`
 - never assume `repo_key` — always derive from `repos.conf` column 1
-- never confuse `out/<CARD>/context/onboarding/` (curated copy for card execution, sourced from repo onboarding) with `context_sources/onboarding/<repo_key>/` (published, shared, per-repo — generated once and updated via refresh)
+- never look for onboarding inside `out/<CARD>/` — it is not copied per card; always read from `$EAW_WORKDIR/context_sources/onboarding/<repo_key>/`
 
 ## Pre-check Before Any Operation
 
