@@ -5,6 +5,9 @@ phase:
   name: Implementation Executor
   description: Execute the approved architectural refactor under controlled scope.
 
+  skills:
+    - eaw_card_execution
+
   prompt:
     active: 2
     path: templates/prompts/ARCH_REFACTOR_ONBOARD/implementation_executor/prompt_v<active>.md
