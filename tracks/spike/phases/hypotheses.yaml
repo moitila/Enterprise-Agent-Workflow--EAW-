@@ -8,6 +8,9 @@ phase:
     declares how it can be validated or discarded. Does NOT investigate code and
     does NOT propose solutions.
 
+  skills:
+    - eaw_spike_operator
+
   prompt:
     active: 1
     path: templates/prompts/spike/hypotheses/prompt_v<active>.md

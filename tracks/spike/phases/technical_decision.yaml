@@ -9,6 +9,9 @@ phase:
     alternatives. This phase does NOT implement code and does NOT alter any
     target repository.
 
+  skills:
+    - eaw_spike_operator
+
   prompt:
     active: 1
     path: templates/prompts/spike/technical_decision/prompt_v<active>.md

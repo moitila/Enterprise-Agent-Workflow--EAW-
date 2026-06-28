@@ -9,6 +9,9 @@ phase:
     spike — it closes the investigation and opens the path to delivery.
     This phase does NOT implement code.
 
+  skills:
+    - eaw_spike_operator
+
   prompt:
     active: 1
     path: templates/prompts/spike/backlog_handoff/prompt_v<active>.md

@@ -5,6 +5,9 @@ phase:
   name: Findings
   description: Analyze the intake information and identify key findings.
 
+  skills:
+    - eaw_spike_operator
+
   prompt:
     active: 1
     path: templates/prompts/spike/findings/prompt_v<active>.md

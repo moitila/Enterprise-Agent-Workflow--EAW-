@@ -32,3 +32,7 @@ skills:
   eaw_onboarding_operator:
     file: skills/EAW_onboarding_operator/SKILL.md
     description: Read, assess drift, and patch published onboarding artifacts in context_sources/onboarding/<repo_key>/.
+
+  eaw_spike_operator:
+    file: skills/eaw_spike_operator/SKILL.md
+    description: Spike investigation concept, modes and research policy for spike track agents.

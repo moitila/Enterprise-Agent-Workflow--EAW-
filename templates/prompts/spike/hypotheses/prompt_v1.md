@@ -73,8 +73,11 @@ RULES
   - test -f {{CARD_DIR}}/investigations/00_spike_intake.md — se falhar, abortar com bloqueio "00_spike_intake.md ausente; executar fase intake primeiro".
 - PASSO 2 — leitura:
   - Ler 00_spike_intake.md integralmente.
-  - Identificar pergunta principal, escopo e criterios de sucesso.
-- PASSO 3 — geracao de hipoteses:
+  - Identificar pergunta principal, escopo e criterios de sucesso.  - PASSO 2.5 — pesquisa externa breve (recomendado):
+    - Antes de formular hipoteses, consultar rapidamente documentacao oficial, changelogs e issues publicas relevantes ao problema.
+    - Nao bloquear na pesquisa — time-box de ~10 minutos.
+    - Registrar fontes consultadas em "Fontes externas consultadas" no artefato final.
+    - Hipoteses mais informadas antes de qualquer leitura de repositorio.- PASSO 3 — geracao de hipoteses:
   - Gerar de 3 a 7 hipoteses que cubram os criterios de sucesso.
   - Cada hipotese deve ter ID sequencial (H01, H02, ...).
   - Cada hipotese deve ter teste determinístico — nao deixar "Como validar" em aberto.
