@@ -6,7 +6,7 @@ phase:
   description: Validate and refine the onboarding published in the workspace, generating operational assets for agent consumption.
 
   prompt:
-    active: 1
+    active: 2
     path: templates/prompts/repo_onboarding/repo_onboarding_refine/prompt_v<active>.md
 
   tooling_hints:
