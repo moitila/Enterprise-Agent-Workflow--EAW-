@@ -228,6 +228,23 @@ eaw_yaml_phase_output_prompts() {
 	' "$file"
 }
 
+eaw_yaml_phase_output_write_paths() {
+	local file="$1"
+	awk '
+		/^phase:[[:space:]]*$/ { in_phase=1; next }
+		in_phase && /^[^[:space:]]/ { in_phase=0; in_outputs=0; in_wpaths=0 }
+		in_phase && /^  outputs:[[:space:]]*$/ { in_outputs=1; next }
+		in_outputs && /^  [^[:space:]]/ { in_outputs=0; in_wpaths=0 }
+		in_outputs && /^    write_paths:[[:space:]]*$/ { in_wpaths=1; next }
+		in_wpaths && /^    [^[:space:]-]/ { in_wpaths=0 }
+		in_wpaths && /^      - / {
+			line=$0
+			sub(/^      - /, "", line)
+			print line
+		}
+	' "$file"
+}
+
 eaw_yaml_phase_tooling_hints() {
 	local file="$1"
 	awk '
@@ -1693,6 +1710,7 @@ eaw_card_change_plan_involved_files() {
 
 eaw_card_write_allowlist_entries() {
 	local card_dir="$1"
+	local phase_file="${2:-}"
 	local scope_lock_file="$card_dir/implementation/00_scope.lock.md"
 	local change_plan_file="$card_dir/implementation/10_change_plan.md"
 	local card_allowlist_file=""
@@ -1730,6 +1748,13 @@ eaw_card_write_allowlist_entries() {
 	fi
 
 	printf -- "- %s\n" "$card_dir"
+	if [[ -n "$phase_file" && -f "$phase_file" ]]; then
+		local extra_path
+		while IFS= read -r extra_path; do
+			[[ -n "$extra_path" ]] || continue
+			printf -- "- %s\n" "$(eval echo "$extra_path")"
+		done < <(eaw_yaml_phase_output_write_paths "$phase_file")
+	fi
 }
 
 eaw_generate_followup_candidates() {
@@ -1804,9 +1829,10 @@ EOF
 
 eaw_card_write_allowlist_block() {
 	local card_dir="$1"
+	local phase_file="${2:-}"
 	local allowlist
 
-	allowlist="$(eaw_card_write_allowlist_entries "$card_dir" | awk '!seen[$0]++')"
+	allowlist="$(eaw_card_write_allowlist_entries "$card_dir" "$phase_file" | awk '!seen[$0]++')"
 	if [[ -n "$allowlist" ]]; then
 		printf "%s\n" "$allowlist"
 		return 0
@@ -2387,7 +2413,7 @@ eaw_generate_phase_prompt_artifacts() {
 
 	track_id="${EAW_CARD_WORKFLOW_TRACK_ID:-$type}"
 	step_id="${EAW_CARD_WORKFLOW_CURRENT_PHASE:-$phase_id}"
-	write_allowlist="$(eaw_card_write_allowlist_block "$card_dir")"
+	write_allowlist="$(eaw_card_write_allowlist_block "$card_dir" "$phase_file")"
 	critical_paths="$(eaw_card_critical_paths_block "$card_dir")"
 	runtime_environment="$(eaw_runtime_environment_block "$card" "$card_dir" "$track_id" "$step_id" "$write_allowlist" "$critical_paths" "$target_repos")"
 	tooling_hints="$(eaw_render_tooling_hints_block "$phase_file" "$card" "$type" "$card_dir" "$track_id" "$step_id" "$target_repos")"

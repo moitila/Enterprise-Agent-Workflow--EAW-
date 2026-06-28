@@ -28,6 +28,8 @@ phase:
       - investigations
     create_artifacts:
       - investigations/patch_notes.md
+    write_paths:
+      - $EAW_WORKDIR/context_sources/onboarding/
 
   completion:
     strategy: required_artifacts_exist
