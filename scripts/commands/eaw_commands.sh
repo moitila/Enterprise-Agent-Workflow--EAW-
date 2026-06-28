@@ -2054,6 +2054,9 @@ eaw_apply_context_block_to_prompt() {
 	local output_file="$4"
 	local context_block tmp_file
 
+	if ! grep -qF '{{CONTEXT_BLOCK}}' "$output_file"; then
+		return 0
+	fi
 	context_block="$(eaw_build_phase_context_block "$card" "$card_dir" "$phase_file")" || return 1
 	if [[ -z "$context_block" ]]; then
 		sed -i '/^{{CONTEXT_BLOCK}}$/d' "$output_file"
@@ -2084,8 +2087,9 @@ eaw_apply_context_block_to_prompt() {
 				exit 1
 			}
 		}
-		' "$output_file" >"$tmp_file"
-	mv "$tmp_file" "$output_file"
+		' "$output_file" >"$tmp_file" \
+		|| { rm -f "$tmp_file"; return 1; }
+	mv "$tmp_file" "$output_file" || return 1
 }
 
 eaw_render_phase_prompt_template() {

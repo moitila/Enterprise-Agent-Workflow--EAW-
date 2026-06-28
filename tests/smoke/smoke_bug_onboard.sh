@@ -315,8 +315,7 @@ run_debug_first_scenario() {
 
 	prompt_file="$workdir/out/$card/prompts/hypotheses.md"
 	test -f "$prompt_file" || fail "debug_first scenario missing hypotheses prompt"
-	grep -Fq "CONTEXT - ONBOARDING" "$prompt_file" || fail "debug_first scenario prompt missing onboarding context"
-	grep -Fq "debug_first onboarding" "$prompt_file" || fail "debug_first scenario prompt missing seeded onboarding content"
+	grep -Fq "context_sources/onboarding/" "$prompt_file" || fail "debug_first scenario prompt missing path-reference onboarding directive"
 }
 
 run_source_absent_scenario() {
@@ -345,7 +344,8 @@ run_source_absent_scenario() {
 
 	prompt_file="$workdir/out/$card/prompts/hypotheses.md"
 	test -f "$prompt_file" || fail "source absent scenario missing hypotheses prompt"
-	grep -Fvq "CONTEXT - ONBOARDING" "$prompt_file" || fail "source absent scenario unexpectedly injected onboarding context"
+	grep -Fq "context_sources/onboarding/" "$prompt_file" || fail "source_absent scenario: path-reference directive missing from prompt"
+	test ! -d "$workdir/context_sources/onboarding/$repo_key" || fail "source_absent scenario: onboarding source directory should not exist"
 }
 
 printf "[smoke] full flow findings -> hypotheses -> planning\n"
