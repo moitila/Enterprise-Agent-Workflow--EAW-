@@ -1,0 +1,34 @@
+config_version: 1
+
+phase:
+  id: detect_drift
+  name: Detect Onboarding Drift
+  description: >
+    Analyze published onboarding artifacts for the target repository and
+    produce a structured drift report classifying each artifact by severity.
+    When no drift is detected, emit handoff code NO_DRIFT_DETECTED to skip
+    the patch_onboarding phase.
+
+  skills:
+    - eaw_onboarding_operator
+
+  prompt:
+    active: 1
+    path: templates/prompts/repo_onboarding_refresh/detect_drift/prompt_v<active>.md
+
+  tooling_hints:
+    - Ler o repositorio alvo somente em modo read-only.
+    - Ler artefatos de onboarding publicados em `$EAW_WORKDIR/context_sources/onboarding/<repo_key>/`.
+    - Nao escrever fora de `CARD_DIR/investigations/`.
+    - Emitir `CARD_DIR/investigations/20_handoff.json` apenas quando todos os artefatos estiverem integros.
+
+  outputs:
+    create_directories:
+      - investigations
+    create_artifacts:
+      - investigations/drift_report.md
+
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - investigations/drift_report.md

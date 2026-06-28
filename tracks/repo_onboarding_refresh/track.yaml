@@ -1,0 +1,35 @@
+config_version: 1
+
+track:
+  id: repo_onboarding_refresh
+  name: Repository Onboarding Refresh Track
+  description: >
+    EAW track for detecting drift in published onboarding artifacts and
+    applying surgical patches to bring them up to date without regenerating
+    the entire onboarding from scratch.
+
+  initial_phase: detect_drift
+  final_phase: patch_onboarding
+
+  initial_outputs:
+    create_directories:
+      - investigations
+    create_artifacts: []
+
+  phases:
+    - detect_drift
+    - patch_onboarding
+
+  transitions:
+    detect_drift:
+      next: patch_onboarding
+      skip_when:
+        - NO_DRIFT_DETECTED
+      contract:
+        emit_handoff: true
+
+  rules:
+    one_prompt_per_phase: true
+    generated_artifacts_of_each_phase_must_be_non_empty: true
+    allow_manual_phase_skip: false
+    context_summary_policy: excluded

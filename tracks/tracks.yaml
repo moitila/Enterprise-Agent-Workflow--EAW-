@@ -17,3 +17,5 @@ tracks:
     status: installed
   - track_id: feature_dynamic
     status: installed
+  - track_id: repo_onboarding_refresh
+    status: installed

@@ -1,0 +1,35 @@
+config_version: 1
+
+phase:
+  id: patch_onboarding
+  name: Patch Onboarding Artifacts
+  description: >
+    Apply surgical patches to onboarding artifacts identified as stale or
+    missing in drift_report.md. Uses drift_report.md as the sole authority
+    for which artifacts require update. Produces patch_notes.md documenting
+    every change applied.
+
+  skills:
+    - eaw_onboarding_operator
+
+  prompt:
+    active: 1
+    path: templates/prompts/repo_onboarding_refresh/patch_onboarding/prompt_v<active>.md
+
+  tooling_hints:
+    - Ler `CARD_DIR/investigations/drift_report.md` como unica fonte de autoridade para artefatos a atualizar.
+    - Escrever apenas em `$EAW_WORKDIR/context_sources/onboarding/<repo_key>/`.
+    - Nao escrever no repositorio alvo.
+    - Nao regenerar arquivos inteiros quando apenas secoes especificas estao desatualizadas.
+    - Atualizar `provenance.md` para cada arquivo modificado.
+
+  outputs:
+    create_directories:
+      - investigations
+    create_artifacts:
+      - investigations/patch_notes.md
+
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - investigations/patch_notes.md

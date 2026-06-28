@@ -1,0 +1,7 @@
+prompt_id=repo_onboarding_refresh/patch_onboarding/v1
+version=v1
+track=repo_onboarding_refresh
+phase=patch_onboarding
+created=2026-06-19
+required_substrings={{RUNTIME_ENVIRONMENT}}|OBJETIVO|INSUMOS OBRIGATÓRIOS|ALGORITMO|SCHEMA OBRIGATÓRIO|WRITE SCOPE|READ SCOPE|GUARDRAILS
+forbidden_words=ignore previous instructions|write anywhere|disable tests|skip validation|modify excluded repos
