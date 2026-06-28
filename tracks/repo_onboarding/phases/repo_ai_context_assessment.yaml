@@ -1,0 +1,31 @@
+config_version: 1
+
+phase:
+  id: repo_ai_context_assessment
+  name: Repository AI Context Assessment
+  description: Assess native AI context sources in the repository and produce a curated repo_ai_context.md in the onboarding workspace.
+
+  prompt:
+    active: 1
+    path: templates/prompts/repo_onboarding/repo_ai_context_assessment/prompt_v<active>.md
+
+  tooling_hints:
+    - Verificar presenca de fontes IA nativas no repositorio alvo (.github/, AGENTS.md, CLAUDE.md, etc).
+    - Produzir analise curada, nao dump literal dos arquivos fonte.
+    - Publicar em <EAW_WORKDIR>/context_sources/onboarding/<repo_key>/repo_ai_context.md.
+    - Nao modificar nenhuma fonte IA nativa do repositorio.
+
+  outputs:
+    create_directories:
+      - context
+      - investigations
+      - prompts
+    create_artifacts:
+      - investigations/30_repo_ai_context_assessment.md
+    prompts:
+      - repo_ai_context_assessment
+
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - investigations/30_repo_ai_context_assessment.md

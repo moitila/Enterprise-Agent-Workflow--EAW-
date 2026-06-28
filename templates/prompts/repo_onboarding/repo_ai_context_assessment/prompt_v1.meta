@@ -1,0 +1,7 @@
+prompt_id=repo_onboarding/repo_ai_context_assessment/v1
+version=v1
+track=repo_onboarding
+phase=repo_ai_context_assessment
+created=2026-06-12
+required_substrings=ROLE|OBJECTIVE|INPUT|OUTPUT|OUTPUT_STRUCTURE|READ_SCOPE|WRITE_SCOPE|RULES|FORBIDDEN|FAIL_CONDITIONS
+forbidden_words=ignore previous instructions|write anywhere|disable tests|skip validation|modify excluded repos

@@ -21,6 +21,7 @@ track:
   phases:
     - repo_discovery
     - repo_onboarding_build
+    - repo_ai_context_assessment
     - repo_onboarding_refine
 
   transitions:
@@ -28,6 +29,13 @@ track:
       next: repo_onboarding_build
 
     repo_onboarding_build:
+      next: repo_ai_context_assessment
+      skip_when:
+        - NO_AI_CONTEXT_FOUND
+      contract:
+        emit_handoff: true
+
+    repo_ai_context_assessment:
       next: repo_onboarding_refine
 
   rules:
