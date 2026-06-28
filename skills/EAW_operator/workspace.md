@@ -148,6 +148,20 @@ Após ler `repos.conf`, verificar que cada repositório mapeado existe localment
 
 Esta validação é simples e deve ser feita toda vez que `repos.conf` é lido para uma operação.
 
+## Leitura obrigatória das skills declaradas na fase
+
+**Esta regra se aplica a todos os agentes, em qualquer fase, de qualquer track.**
+
+Antes de executar qualquer ação de análise, escrita ou modificação:
+
+1. Verificar quais skills estão declaradas em `phase.skills` do phase YAML da fase atual
+2. Ler o conteúdo completo de cada skill declarada
+3. Só então iniciar a execução
+
+As skills contêm contratos, schemas de artefatos e guardrails específicos da operação. Executar sem lê-las é um erro de execução — o agente pode produzir artefatos com estrutura errada, escrever em paths incorretos ou ignorar regras críticas.
+
+Se o prompt renderizado contiver um bloco `## Skills` com conteúdo inline (via `{{SKILLS_BLOCK}}`), esse conteúdo já representa as skills — lê-lo é suficiente. Se o bloco estiver ausente, localizar os arquivos de skill via `skills/registry.yaml` e lê-los diretamente.
+
 ## Branch awareness
 
 O EAW não impõe padrão de nomes de branch — isso varia por equipe, repo e desenvolvedor.

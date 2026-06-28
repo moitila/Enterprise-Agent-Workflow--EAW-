@@ -1,4 +1,7 @@
 {{RUNTIME_ENVIRONMENT}}
+
+{{SKILLS_BLOCK}}
+
 <!-- REPO_KEY_RESOLUTION: TARGET_REPOSITORIES lista TODOS os repos target do workspace — é contexto
      de workspace, não escopo do card. Para derivar <repo_key> nesta fase:
      1. Campo "**Repo analisado:**" no cabeçalho de drift_report.md — fonte mais confiável
