@@ -2689,17 +2689,6 @@ cmd_next() {
 	printf "Validation: passed\n\n"
 	printf "Action:\nAdvanced to phase: %s\n\n" "$next_phase"
 	echo "CARD ${card}: ${current_phase} -> ${next_phase}"
-	# D1-A: passive repo AI inventory — detect .github/copilot-instructions.md
-	phase_resolve_repos > /dev/null
-	if [[ "${#REPO_ENTRIES[@]}" -gt 0 ]]; then
-		local _d1a_entry _d1a_key _d1a_path
-		_d1a_entry="${REPO_ENTRIES[0]}"
-		IFS='|' read -r _d1a_key _d1a_path _ <<<"$_d1a_entry"
-		eaw_repo_ai_passive_inventory \
-			"$card" "$card_dir" \
-			"$_d1a_path" "$_d1a_key" \
-			"$current_phase" || true
-	fi
 	if eaw_generate_context_bundle "$card" "$card_dir" "$current_phase" "$next_phase" "$EAW_CARD_WORKFLOW_TRACK_ID" "$EAW_CARD_WORKFLOW_TRACK_FILE"; then
 		printf "Context bundle: %s\n" "$card_dir/runtime/context_bundle_${next_phase}.md"
 	fi
