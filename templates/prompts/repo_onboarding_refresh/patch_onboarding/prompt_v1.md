@@ -21,9 +21,19 @@ atualizar. Produzir `patch_notes.md` documentando cada alteração realizada.
 
 ## ALGORITMO DE EXECUÇÃO
 
-### Passo 1 — Ler `drift_report.md`
+### Passo 1 — Identificar o repo alvo e ler `drift_report.md`
 
-- Abrir `$CARD_DIR/investigations/drift_report.md`
+**1a. Derivar `<repo_key>` a partir dos artefatos já criados no card:**
+
+- Ler `$CARD_DIR/investigations/drift_report.md` campo `**Repo analisado:**` no cabeçalho — fonte primária (artefato produzido pela fase anterior)
+- Se não presente: ler todos os arquivos em `$CARD_DIR/intake/` — declaração original do operador
+- Confirmar que o repo resolvido existe em `TARGET_REPOSITORIES` do `RUNTIME_ENVIRONMENT`
+- Se ainda ambíguo: **parar e reportar ao operador; nunca inferir**
+
+> `TARGET_REPOSITORIES` lista todos os repos target do workspace — um workspace pode ter 20 repos. O `drift_report.md` e o `intake/` definem qual é o escopo deste card.
+
+**1b. Ler `drift_report.md`:**
+
 - Extrair a tabela `## Classificação de Drift` — esta é a única lista autoritativa de artefatos a atualizar
 - Nunca atualizar artefatos ausentes da tabela de `## Classificação de Drift`
 - Verificar se algum artefato tem severidade `STALE_MAJOR`:
