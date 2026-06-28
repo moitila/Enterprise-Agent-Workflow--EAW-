@@ -7,7 +7,7 @@ cmd_validate_workflow() {
 cmd_validate() {
 	local errors=0
 	local warnings=0
-	local line lineno normalized key path role resolved_path card_dir impl_dir impl_name impl_path
+	local line lineno normalized key path role resolved_path onboarding_dir card_dir impl_dir impl_name impl_path
 	local prompt_phase workflow_summary card current_phase current_phase_file validation_output
 
 	echo "EAW validate"
@@ -56,6 +56,24 @@ cmd_validate() {
 			fi
 		done <"$REPOS_CONF"
 		echo "OK: repos.conf parsed"
+		# D1-C: WARN when onboarding context dir exists but repo_ai_context.md is missing and .github/ is present
+		if [[ -n "${EAW_WORKDIR:-}" ]]; then
+			lineno=0
+			while IFS= read -r line; do
+				lineno=$((lineno + 1))
+				if normalized="$(parse_repos_conf_line "$line" "$lineno")"; then
+					IFS='|' read -r key path role <<<"$normalized"
+				else
+					continue
+				fi
+				resolved_path="$(resolve_repo_path "$path")"
+				onboarding_dir="$EAW_WORKDIR/context_sources/onboarding/$key"
+				if [[ -d "$onboarding_dir" && ! -f "$onboarding_dir/repo_ai_context.md" && -d "$resolved_path/.github" ]]; then
+					echo "WARNING: repo '$key' has onboarding context dir but repo_ai_context.md is missing (.github/ detected — consider running repo_ai_context_assessment)"
+					warnings=$((warnings + 1))
+				fi
+			done <"$REPOS_CONF"
+		fi
 	else
 		echo "WARNING: repos.conf missing: $REPOS_CONF"
 		warnings=$((warnings + 1))
