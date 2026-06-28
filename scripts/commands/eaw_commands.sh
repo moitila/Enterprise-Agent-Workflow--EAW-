@@ -2948,7 +2948,7 @@ cmd_run() {
 		fi
 
 		# Step 4: snapshot state for forward-progress detection (H5)
-		snap_before="${track_id}|${current_phase}|${completed_phases}"
+		snap_before="${track_id}|${current_phase}|${completed_phases}|${phase_completed}"
 
 		# Step 3: persist pre-iteration run state (H3)
 		_cmd_run_write_state "$run_state_file" "$card" "$attempt" "RUNNING" "$track_id" "$current_phase" "$phase_status" "null"
@@ -2980,31 +2980,9 @@ cmd_run() {
 		phase_completed="$_CMD_RUN_PHASE_COMPLETED"
 		completed_phases="$_CMD_RUN_COMPLETED_PHASES"
 
-		# Final phases that already satisfy completion should be auto-marked COMPLETE
-		# so `eaw run` can converge without requiring a manual `eaw complete`.
-		if [[ "$current_phase" == "$final_phase" && "$phase_completed" != "true" ]]; then
-			if ! eaw_mark_current_phase_complete_for_wrapper "$card"; then
-				_cmd_run_read_card_state "$state_file" || true
-				_cmd_run_write_state "$run_state_file" "$card" "$attempt" "PHASE_EXECUTION_FAILED" "${_CMD_RUN_TRACK_ID:-$track_id}" "${_CMD_RUN_CURRENT_PHASE:-$current_phase}" "${_CMD_RUN_PHASE_STATUS:-$phase_status}" "PHASE_EXECUTION_FAILED"
-				_cmd_run_log "$exec_log" "attempt=$attempt|status=PHASE_EXECUTION_FAILED|card=$card|phase=$current_phase|reason=final phase auto-complete failed"
-				printf "ERROR: PHASE_EXECUTION_FAILED final phase auto-complete failed for card %s phase %s\n" "$card" "$current_phase" >&2
-				return 1
-			fi
-			if ! _cmd_run_read_card_state "$state_file"; then
-				_cmd_run_write_state "$run_state_file" "$card" "$attempt" "CARD_STATE_INVALID" "${_CMD_RUN_TRACK_ID:-}" "${_CMD_RUN_CURRENT_PHASE:-}" "${_CMD_RUN_PHASE_STATUS:-}" "CARD_STATE_INVALID"
-				_cmd_run_log "$exec_log" "attempt=$attempt|status=CARD_STATE_INVALID|card=$card|reason=state unreadable after final phase auto-complete"
-				printf "ERROR: CARD_STATE_INVALID state unreadable after final phase auto-complete for card %s\n" "$card" >&2
-				return 1
-			fi
-			track_id="$_CMD_RUN_TRACK_ID"
-			current_phase="$_CMD_RUN_CURRENT_PHASE"
-			phase_status="$_CMD_RUN_PHASE_STATUS"
-			phase_completed="$_CMD_RUN_PHASE_COMPLETED"
-			completed_phases="$_CMD_RUN_COMPLETED_PHASES"
-		fi
-
 		# Step 4: detect no forward progress — NO_FORWARD_PROGRESS when state unchanged (H5)
-		snap_after="${track_id}|${current_phase}|${completed_phases}"
+		# phase_completed is included so that cmd_next auto-close (final phase) counts as progress
+		snap_after="${track_id}|${current_phase}|${completed_phases}|${phase_completed}"
 		if [[ "$snap_after" == "$snap_before" ]]; then
 			_cmd_run_write_state "$run_state_file" "$card" "$attempt" "NO_FORWARD_PROGRESS" "$track_id" "$current_phase" "$phase_status" "NO_FORWARD_PROGRESS"
 			_cmd_run_log "$exec_log" "attempt=$attempt|status=NO_FORWARD_PROGRESS|card=$card|phase=$current_phase"
