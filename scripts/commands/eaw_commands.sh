@@ -2699,6 +2699,9 @@ cmd_next() {
 	if eaw_generate_context_bundle "$card" "$card_dir" "$current_phase" "$next_phase" "$EAW_CARD_WORKFLOW_TRACK_ID" "$EAW_CARD_WORKFLOW_TRACK_FILE"; then
 		printf "Context bundle: %s\n" "$card_dir/runtime/context_bundle_${next_phase}.md"
 	fi
+	if eaw_generate_agent_bundle "$card" "$card_dir" "$next_phase" "$EAW_CARD_WORKFLOW_TRACK_ID"; then
+		printf "Agent bundle: %s\n" "$card_dir/runtime/agent_bundle_${next_phase}.md"
+	fi
 	eaw_materialize_current_phase "$card" || return 1
 	return 0
 }
