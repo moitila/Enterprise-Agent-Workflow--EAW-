@@ -1,9 +1,14 @@
 {{RUNTIME_ENVIRONMENT}}
 <!-- REPO_KEY_RESOLUTION: o placeholder <repo_key> refere-se ao nome (campo 1 de repos.conf name|path|role)
      do repositorio com role=target injetado pelo runtime via {{RUNTIME_ENVIRONMENT}} no bloco TARGET_REPOSITORIES.
-     O executor deve ler TARGET_REPOSITORIES do prompt renderizado, identificar o repo com role=target
-     e usar seu nome como valor de <repo_key> em todos os paths $EAW_WORKDIR/context_sources/onboarding/<repo_key>/.
-     Exemplo: se TARGET_REPOSITORIES contem "eaw => /path/to/eaw", entao <repo_key>=eaw. -->
+     Quando repos.conf tiver multiplos target, o runtime pode injetar nome incorreto ou inconsistente.
+     Para derivar repo_key com seguranca, usar a seguinte ordem de prioridade:
+     1. Campo `repo_key` em `drift_report.md` cabecalho (linha "**Repo analisado:**") — mais confiavel
+     2. Nome do bloco TARGET_REPOSITORIES: se o diretorio context_sources/onboarding/<nome>/ existir, usar <nome>
+     3. Se o diretorio nao existir pelo nome: extrair o ultimo segmento do PATH de TARGET_REPOSITORIES
+        (ex: TARGET_REPOSITORIES: "eaw => /home/user/dev/emr-tasy-plsql" -> repo_key=emr-tasy-plsql)
+     4. Se ainda assim nao resolver: parar e reportar ambiguidade ao operador
+     Exemplo correto: se drift_report.md diz "Repo analisado: emr-tasy-plsql", usar repo_key=emr-tasy-plsql. -->
 
 ## OBJETIVO
 
@@ -75,6 +80,7 @@ Para cada artefato atualizado ou criado:
 ### Passo 4 — Produzir `patch_notes.md`
 
 Escrever `$CARD_DIR/investigations/patch_notes.md` conforme schema obrigatório abaixo.
+**Nota:** o arquivo já existe como scaffold (conteúdo placeholder gerado pelo runtime) — substituir inteiramente pelo conteúdo real conforme schema.
 
 ## SCHEMA OBRIGATÓRIO — `patch_notes.md`
 
@@ -145,3 +151,4 @@ Casos especiais que requerem atenção do operador.
 - Nunca escrever no repositório alvo
 - Nunca adicionar artefatos ao `INDEX.md` sem criar o artefato correspondente primeiro
 - Para `STALE_MAJOR`: registrar em `## Advertências` do `patch_notes.md` — não silenciar
+- O `WRITE_ALLOWLIST` do `RUNTIME_ENVIRONMENT` pode listar apenas `$CARD_DIR` — isso é esperado para este track; o WRITE SCOPE declarado no corpo deste prompt é autoritativo; os paths em `context_sources/onboarding/<repo_key>/` estão dentro do escopo permitido desta fase

@@ -765,7 +765,7 @@ collect_repos_lists() {
 
 	if [[ -f "$REPOS_CONF" ]]; then
 		lineno=0
-		while IFS= read -r line; do
+		while IFS= read -r line || [[ -n "$line" ]]; do
 			lineno=$((lineno + 1))
 			if normalized="$(parse_repos_conf_line "$line" "$lineno" 2>/dev/null)"; then
 				IFS='|' read -r key path role <<<"$normalized"
@@ -820,7 +820,7 @@ eaw_dynamic_context_first_target_repo() {
 	if [[ ! -f "$REPOS_CONF" ]]; then
 		return 1
 	fi
-	while IFS= read -r line; do
+	while IFS= read -r line || [[ -n "$line" ]]; do
 		lineno=$((lineno + 1))
 		if normalized="$(parse_repos_conf_line "$line" "$lineno" 2>/dev/null)"; then
 			IFS='|' read -r key path role <<<"$normalized"
@@ -1720,7 +1720,7 @@ phase_resolve_repos() {
 	if [[ -f "$REPOS_CONF" ]]; then
 		local line lineno normalized key path role
 		lineno=0
-		while IFS= read -r line; do
+		while IFS= read -r line || [[ -n "$line" ]]; do
 			lineno=$((lineno + 1))
 			if normalized="$(parse_repos_conf_line "$line" "$lineno")"; then
 				IFS='|' read -r key path role <<<"$normalized"
@@ -2552,7 +2552,7 @@ eaw_repos_conf_has_key() {
 	local line lineno normalized key path role
 	[[ -f "$REPOS_CONF" ]] || return 1
 	lineno=0
-	while IFS= read -r line; do
+	while IFS= read -r line || [[ -n "$line" ]]; do
 		lineno=$((lineno + 1))
 		if normalized="$(parse_repos_conf_line "$line" "$lineno" 2>/dev/null)"; then
 			IFS='|' read -r key path role <<<"$normalized"
