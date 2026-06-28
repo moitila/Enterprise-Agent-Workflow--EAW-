@@ -140,4 +140,58 @@ for tmpl_dir in templates/context/onboarding/*/; do
     fi
 done
 
+# INV-08: Every skill entry in skills/registry.yaml has its file: path present on disk
+while IFS=' ' read -r skill_name skill_file; do
+    if [[ ! -f "$skill_file" ]]; then
+        fail "INV-08" "registry skill '${skill_name}': file not found: ${skill_file}"
+    fi
+done < <(awk '
+    /^skills:/{in_s=1; next}
+    in_s && /^  [a-z_]+:/{name=substr($0,3); sub(/:$/,"",name); file=""}
+    in_s && /^    file:/{file=$2}
+    in_s && file!=""{print name, file; file=""}
+' skills/registry.yaml)
+
+# INV-07: Every skill declared in phase.skills exists in skills/registry.yaml
+# INV-09: eaw_reviewer or eaw_delivery in phase.skills emits WARN (not FAIL)
+registry_skills=""
+while IFS=' ' read -r sname _sfile; do
+    registry_skills="${registry_skills} ${sname} "
+done < <(awk '
+    /^skills:/{in_s=1; next}
+    in_s && /^  [a-z_]+:/{name=substr($0,3); sub(/:$/,"",name); file=""}
+    in_s && /^    file:/{file=$2}
+    in_s && file!=""{print name, file; file=""}
+' skills/registry.yaml)
+
+while IFS= read -r -d '' phase_yaml; do
+    track_name="$(dirname "$(dirname "$phase_yaml")")"
+    track_name="${track_name##*/}"
+    phase_name="$(basename "$phase_yaml" .yaml)"
+
+    while IFS= read -r skill; do
+        case "$registry_skills" in
+            *" ${skill} "*)
+                ;;
+            *)
+                fail "INV-07" "phase '${phase_name}' in track '${track_name}': skill '${skill}' not found in registry"
+                ;;
+        esac
+        case "$skill" in
+            eaw_reviewer|eaw_delivery)
+                printf "WARN: INV-09: phase '%s' in '%s': skill '%s' is a delivery/review skill\n" \
+                    "$phase_name" "$track_name" "$skill"
+                ;;
+        esac
+    done < <(awk '
+        /^phase:/{in_p=1; next}
+        in_p && /^[^[:space:]]/{in_p=0; in_sk=0}
+        in_p && /^[[:space:]]+skills:[[:space:]]*$/{in_sk=1; next}
+        in_p && in_sk && /^[[:space:]]+-[[:space:]]/{
+            v=$0; sub(/^[[:space:]]+-[[:space:]]*/,"",v); gsub(/[[:space:]]+$/,"",v); print v
+        }
+        in_p && in_sk && /^[[:space:]]+[a-z_]+:[[:space:]]*[^-]/{in_sk=0}
+    ' "$phase_yaml")
+done < <(find tracks -name '*.yaml' -path '*/phases/*' -print0)
+
 summary
