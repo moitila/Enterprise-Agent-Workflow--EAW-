@@ -48,7 +48,7 @@ while IFS= read -r -d '' active_file; do
 done < <(find templates/prompts -name 'ACTIVE' -print0)
 
 # INV-02: phase.yaml with onboarding_template must point to existing context dir
-# INV-04: phase.yaml with dynamic_context_template must have {{CONTEXT_BLOCK}} in active prompt
+# INV-04: phase.yaml with dynamic_context_template must NOT have {{CONTEXT_BLOCK}} in active prompt
 while IFS= read -r -d '' phase_yaml; do
     # INV-02
     val02="$(awk '/^[[:space:]]+onboarding_template:/{sub(/^[[:space:]]+onboarding_template:[[:space:]]*/,""); print; exit}' "$phase_yaml")"
@@ -83,8 +83,8 @@ while IFS= read -r -d '' phase_yaml; do
             fail "INV-04" "ACTIVE points to missing file: ${prompt_file}"
             continue
         fi
-        if ! grep -qF '{{CONTEXT_BLOCK}}' "$prompt_file"; then
-            fail "INV-04" "phase '${phase_name}' in '${track_name}': prompt '${prompt_file}' lacks {{CONTEXT_BLOCK}}"
+        if grep -qF '{{CONTEXT_BLOCK}}' "$prompt_file"; then
+            fail "INV-04" "phase '${phase_name}' in '${track_name}': prompt '${prompt_file}' still uses {{CONTEXT_BLOCK}}; migrate to path-reference"
         fi
     fi
 done < <(find tracks -name '*.yaml' -path '*/phases/*' -print0)

@@ -7,7 +7,7 @@ phase:
 
   prompt:
     # Canonical prompt surface currently resolves to templates/prompts/feature_dynamic/findings/prompt_v5.md.
-    active: 5
+    active: 6
     path: templates/prompts/feature_dynamic/findings/prompt_v<active>.md
 
   context:

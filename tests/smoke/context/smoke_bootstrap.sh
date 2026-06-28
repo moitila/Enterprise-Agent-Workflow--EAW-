@@ -86,13 +86,13 @@ STEOF
 
 	# Validacao: headings CONTEXT - ONBOARDING e CONTEXT - DYNAMIC no prompt gerado
 	# oracle: ## CONTEXT - ONBOARDING
-	# oracle: ## CONTEXT - DYNAMIC
+	# oracle: DYNAMIC_CONTEXT path-reference block (Mechanism B)
 	prompt_file="$workdir/out/$card/prompts/findings.md"
 	test -f "$prompt_file" || fail "bootstrap: missing findings prompt file"
 	grep -Fq "CONTEXT - ONBOARDING" "$prompt_file" \
 		|| fail "bootstrap: prompt missing CONTEXT - ONBOARDING heading"
-	grep -Fq "CONTEXT - DYNAMIC" "$prompt_file" \
-		|| fail "bootstrap: prompt missing CONTEXT - DYNAMIC heading"
+	grep -qF 'context/dynamic/' "$prompt_file" \
+		|| fail "bootstrap: prompt missing path-reference (context/dynamic/)"
 
 	# Snapshotar artefatos para comparacao de determinismo
 	local manifest_snap candidates_snap snippets_snap prov_snap
