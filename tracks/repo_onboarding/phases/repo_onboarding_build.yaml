@@ -6,7 +6,7 @@ phase:
   description: Analyze the selected repository in read-only mode and publish reusable onboarding artifacts into the EAW workspace.
 
   prompt:
-    active: 1
+    active: 2
     path: templates/prompts/repo_onboarding/repo_onboarding_build/prompt_v<active>.md
 
   tooling_hints:
