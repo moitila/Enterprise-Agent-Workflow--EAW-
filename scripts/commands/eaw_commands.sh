@@ -2055,7 +2055,10 @@ eaw_apply_context_block_to_prompt() {
 	local context_block tmp_file
 
 	context_block="$(eaw_build_phase_context_block "$card" "$card_dir" "$phase_file")" || return 1
-	[[ -n "$context_block" ]] || return 0
+	if [[ -z "$context_block" ]]; then
+		sed -i '/^{{CONTEXT_BLOCK}}$/d' "$output_file"
+		return 0
+	fi
 
 	tmp_file="$(mktemp "${output_file}.XXXXXX")"
 	awk \
