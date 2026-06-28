@@ -1845,6 +1845,7 @@ eaw_runtime_environment_block() {
 	local write_allowlist="$5"
 	local critical_paths="$6"
 	local target_repos="$7"
+	local phase_file="${8:-${EAW_CARD_WORKFLOW_CURRENT_PHASE_FILE:-}}"
 	local scope_lock_file="$card_dir/implementation/00_scope.lock.md"
 	local write_allowlist_extra=""
 	if [[ -f "$scope_lock_file" ]]; then
@@ -1866,6 +1867,32 @@ ${resolved_from_scope_lock:-(not available — scope.lock ausente ou formato nao
 NOTE: This resolved list is derived from scope.lock. scope.lock is authoritative."
 	fi
 
+	local registry_file="$EAW_ROOT_DIR/skills/registry.yaml"
+	local phase_skills_block=""
+	if [[ -n "$phase_file" && -f "$phase_file" && -f "$registry_file" ]]; then
+		local skill skill_rel skill_path skill_lines=""
+		while IFS= read -r skill; do
+			[[ -n "$skill" ]] || continue
+			skill_rel="$(awk -v sk="$skill" '
+				/^skills:[[:space:]]*$/ { in_s=1; next }
+				in_s && /^  [a-z_]+:/ { name=substr($0,3); sub(/:.*/, "", name); cur=name; file="" }
+				in_s && /^    file:/ && cur==sk { file=$2 }
+				in_s && file!="" && cur==sk { print file; exit }
+			' "$registry_file")"
+			if [[ -n "$skill_rel" ]]; then
+				skill_path="$EAW_ROOT_DIR/$skill_rel"
+				skill_lines+="- $skill: $skill_path"$'\n'
+			else
+				skill_lines+="- $skill: (not found in registry)"$'\n'
+			fi
+		done < <(eaw_yaml_phase_skills "$phase_file")
+		if [[ -n "$skill_lines" ]]; then
+			phase_skills_block="
+PHASE_SKILLS:
+${skill_lines%$'\n'}"
+		fi
+	fi
+
 	cat <<EOF
 RUNTIME_ENVIRONMENT
 
@@ -1878,7 +1905,7 @@ OUT_DIR: $EAW_OUT_DIR
 
 TARGET_REPOSITORIES:
 $target_repos
-
+$phase_skills_block
 WRITE_ALLOWLIST:
 $write_allowlist
 $write_allowlist_extra

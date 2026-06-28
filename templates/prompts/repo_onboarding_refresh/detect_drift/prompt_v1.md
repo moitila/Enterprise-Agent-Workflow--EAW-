@@ -1,7 +1,5 @@
 {{RUNTIME_ENVIRONMENT}}
 
-{{SKILLS_BLOCK}}
-
 <!-- REPO_KEY_RESOLUTION: TARGET_REPOSITORIES lista TODOS os repos target do workspace — é contexto
      de workspace, não escopo do card. O card opera em UM repo específico, declarado pelo operador.
      Para derivar <repo_key>:
