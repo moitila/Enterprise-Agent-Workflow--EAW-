@@ -2112,6 +2112,70 @@ eaw_apply_context_block_to_prompt() {
 		|| { rm -f "$tmp_file"; return 1; }
 	mv "$tmp_file" "$output_file" || return 1
 }
+# Inject phase skills content at {{SKILLS_BLOCK}} placeholder in the rendered prompt.
+# Uses temp-file + awk getline pattern to safely handle multi-line skill content.
+# No-op when placeholder is absent (opt-in per template).
+# Silently skips skills not registered or whose files are missing.
+eaw_apply_skills_block_to_prompt() {
+	local phase_file="$1"
+	local output_file="$2"
+	local registry_file="$EAW_ROOT_DIR/skills/registry.yaml"
+	local tmp_skills tmp_output skill skill_rel skill_path
+
+	if ! grep -qF '{{SKILLS_BLOCK}}' "$output_file"; then
+		return 0
+	fi
+
+	[[ -n "$phase_file" && -f "$phase_file" ]] || {
+		sed -i '/^{{SKILLS_BLOCK}}$/d' "$output_file"
+		return 0
+	}
+
+	[[ -f "$registry_file" ]] || {
+		sed -i '/^{{SKILLS_BLOCK}}$/d' "$output_file"
+		return 0
+	}
+
+	tmp_skills="$(mktemp)"
+	while IFS= read -r skill; do
+		[[ -n "$skill" ]] || continue
+		skill_rel="$(awk -v sk="$skill" '
+			/^skills:[[:space:]]*$/ { in_s=1; next }
+			in_s && /^  [a-z_]+:/ {
+				name=substr($0,3)
+				sub(/:.*/, "", name)
+				cur=name
+				file=""
+			}
+			in_s && /^    file:/ && cur==sk { file=$2 }
+			in_s && file!="" && cur==sk { print file; exit }
+		' "$registry_file")"
+		[[ -z "$skill_rel" ]] && continue
+		skill_path="$EAW_ROOT_DIR/$skill_rel"
+		[[ -f "$skill_path" ]] || continue
+		printf "### Skill: %s\n\n" "$skill" >>"$tmp_skills"
+		cat "$skill_path" >>"$tmp_skills"
+		printf "\n\n" >>"$tmp_skills"
+	done < <(eaw_yaml_phase_skills "$phase_file")
+
+	if [[ ! -s "$tmp_skills" ]]; then
+		rm -f "$tmp_skills"
+		sed -i '/^{{SKILLS_BLOCK}}$/d' "$output_file"
+		return 0
+	fi
+
+	tmp_output="$(mktemp "${output_file}.XXXXXX")"
+	awk -v skills_file="$tmp_skills" '
+		/^{{SKILLS_BLOCK}}$/ {
+			while ((getline line < skills_file) > 0) print line
+			close(skills_file)
+			next
+		}
+		{ print }
+	' "$output_file" >"$tmp_output" || { rm -f "$tmp_skills" "$tmp_output"; return 1; }
+	mv "$tmp_output" "$output_file"
+	rm -f "$tmp_skills"
+}
 
 eaw_render_phase_prompt_template() {
 	local template_file="$1"
@@ -2200,6 +2264,7 @@ eaw_render_phase_prompt_template() {
 		' "$template_file" >"$output_file"
 
 	eaw_apply_context_block_to_prompt "$card" "$card_dir" "${EAW_CARD_WORKFLOW_CURRENT_PHASE_FILE:-}" "$output_file" || return 1
+	eaw_apply_skills_block_to_prompt "${EAW_CARD_WORKFLOW_CURRENT_PHASE_FILE:-}" "$output_file" || return 1
 	echo "RUNTIME: wrote_prompt=${output_file#$card_dir/}"
 }
 
