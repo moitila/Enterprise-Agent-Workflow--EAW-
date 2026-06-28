@@ -180,7 +180,7 @@ When `repo_ai_context.md` is absent:
 - never update `provenance.md` without citing the card and date
 - never read `context_sources/` for a repo not declared in `repos.conf`
 - never assume `repo_key` — always derive from `repos.conf` column 1
-- never confuse `out/<CARD>/context/onboarding/` (materialized, per-card) with `context_sources/onboarding/<repo_key>/` (published, shared)
+- never confuse `out/<CARD>/context/onboarding/` (curated copy for card execution, sourced from repo onboarding) with `context_sources/onboarding/<repo_key>/` (published, shared, per-repo — generated once and updated via refresh)
 
 ## Pre-check Before Any Operation
 
