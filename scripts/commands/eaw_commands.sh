@@ -2673,8 +2673,23 @@ cmd_next() {
 		phase_completed="$(eaw_state_phase_completed_for_next "$EAW_CARD_WORKFLOW_STATE_FILE")"
 		if [[ "$phase_completed" != "true" ]]; then
 			# AUTO-CLOSE INLINE (H02): replicate cmd_complete canonical sequence
-			# (a) [H04] validate phase artifacts — CA3 graceful block
-			if ! validation_output="$(eaw_validate_phase_completion_strict "$card" "$card_dir" "$current_phase" "$current_phase_file" 2>&1)"; then
+			# [614C] skip_when on final_phase: detect skip envelope, bypass artifact validation
+			local _fskip_po_file="${card_dir}/investigations/10_phase_output.json"
+			local _final_phase_skipped=false
+			if [[ -f "$_fskip_po_file" ]] && \
+			   grep -q '"status":"skipped"' "$_fskip_po_file" 2>/dev/null && \
+			   grep -q "\"phase_id\":\"${current_phase}\"" "$_fskip_po_file" 2>/dev/null; then
+				_final_phase_skipped=true
+				# Rewrite 20_handoff.json to match skip status so schema cross-check passes
+				local _fskip_code
+				_fskip_code="$(grep -o '"skip_reason_code":"[^"]*"' "$_fskip_po_file" 2>/dev/null | head -1 | sed 's/"skip_reason_code":"//;s/"//' || true)"
+				printf '{"from_phase":"%s","status":"skipped","code_origin":"inherited","messages":[{"type":"info","code":"PHASE_SKIPPED_BY_RULE","text":"Phase %s skipped by skip_when rule"}],"codes":["%s"]}\n' \
+					"$current_phase" "$current_phase" "${_fskip_code:-SKIP}" \
+					>"${card_dir}/investigations/20_handoff.json"
+			fi
+			# (a) [H04] validate phase artifacts — CA3 graceful block (skipped when phase was skipped via skip_when)
+			if [[ "$_final_phase_skipped" != "true" ]] && \
+			   ! validation_output="$(eaw_validate_phase_completion_strict "$card" "$card_dir" "$current_phase" "$current_phase_file" 2>&1)"; then
 				if [[ "$validation_output" == *"is incomplete; missing required artifacts:"* || "$validation_output" == *"is incomplete; unfilled required artifacts:"* || "$validation_output" == *"is incomplete; invalid required artifacts:"* ]]; then
 					local remain_reason="missing required artifacts"
 					if [[ "$validation_output" == *"is incomplete; unfilled required artifacts:"* ]]; then
