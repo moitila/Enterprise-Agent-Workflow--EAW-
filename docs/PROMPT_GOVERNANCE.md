@@ -98,12 +98,22 @@ Resultado esperado consolidado desta trilha:
 
 ## Operational Skill Surface
 
-O executor do EAW opera com três superfícies ortogonais e independentes ao executar uma fase de agente isolado:
+O EAW opera com tres superficies ortogonais e independentes ao preparar uma fase para execucao por agente externo:
 
 1. **Conteúdo do prompt** — selecionado via `phase.prompt.path` e resolução de `ACTIVE`. Imutável durante a execução da fase.
-2. **Contexto injetado** — selecionado via `phase.context` (`dynamic_context_template`, `onboarding_template`). Materializado sob `out/<CARD>/context/` antes da execução.
-3. **Skills operacionais** — declaradas via `phase.skills`. Carregadas pelo executor como contexto operacional do agente isolado, externas ao prompt e ao contexto injetado.
+2. **Contexto injetado** — selecionado via `phase.context` (`dynamic_context_template`, `onboarding_template`). Contexto dinamico e materializado sob `out/<CARD>/context/dynamic/`; onboarding e consumido preferencialmente por referencia a partir de `<EAW_WORKDIR>/context_sources/onboarding/<repo_key>/`.
+3. **Skills operacionais** — declaradas via `phase.skills`. Usadas pelo operador/orquestrador como contexto operacional do agente externo, externas ao prompt e ao contexto injetado.
 
-**Invariante de governança:** o executor não altera o conteúdo do prompt para incluir ou mencionar nomes de skills. `phase.skills` é ortogonal a `phase.prompt.path` e ao registro `ACTIVE`. A separação entre as três superfícies é absoluta e deve ser preservada em qualquer extensão futura do runtime.
+**Invariante de governança:** o shell runtime não altera o conteúdo do prompt para incluir ou mencionar nomes de skills. `phase.skills` é ortogonal a `phase.prompt.path` e ao registro `ACTIVE`. A separação entre as três superfícies é absoluta e deve ser preservada em qualquer extensão futura do runtime.
 
-Esta regra é de governança de prompts: skills equipam o agente operacionalmente, mas nunca como texto no prompt. A mecânica completa do ciclo de execução (Modo D) é definida em `docs/ARCHITECTURE.md` (Deterministic Agent Mode).
+Esta regra é de governança de prompts: skills equipam o agente operacionalmente, mas nunca como texto no prompt. A mecanica completa do ciclo de execucao (Modo D) e definida em `docs/ARCHITECTURE.md` e `docs/RUNTIME_CONTRACTS.md`.
+
+## Context Block Placeholder
+
+Quando uma fase produz um context block nao vazio, o template de prompt deve conter uma linha standalone exatamente igual a:
+
+```text
+{{CONTEXT_BLOCK}}
+```
+
+O runtime substitui somente essa linha standalone. Se o context block for nao vazio e o placeholder estiver ausente, a renderizacao falha com erro explicito. Se nao houver context block, o placeholder nao e obrigatorio.

@@ -17,6 +17,9 @@ Read the repository in this order if you want the full model:
 - `Manifesto`: `docs/manifesto.md` - philosophy, problem statement, and engineering posture
 - `Conceptual Model`: `docs/CONCEPTUAL_MODEL.md` - product positioning and the mental model that connects the system layers
 - `Architecture`: `docs/ARCHITECTURE.md` - runtime architecture, modules, and invariants
+- `CLI`: `docs/CLI.md` - public command contract for lifecycle and validation commands
+- `Runtime Contracts`: `docs/RUNTIME_CONTRACTS.md` - lifecycle, envelopes, finalization, and runtime/operator boundary
+- `Validation`: `docs/VALIDATION.md` - validation command scopes and non-guarantees
 - `Workflow YAML Contract`: `docs/WORKFLOW_YAML_CONTRACT.md` - declarative workflow model for `track`, `phase`, and `card_state`
 - `Prompt Governance`: `docs/PROMPT_GOVERNANCE.md` - prompt binding, `ACTIVE`, and provenance
 - `Contract`: `docs/CONTRACT.md` - public output, behavior, and compatibility contract
@@ -30,32 +33,24 @@ Ensure you have `bash`, `git`, `mktemp`, and optionally `rg` (ripgrep) installed
 chmod +x scripts/eaw scripts/lib.sh
 ```
 
-## Quickstart <!-- phase.yaml context ./scripts/eaw next 589 CONTEXT out/589/context/onboarding out/589/context/dynamic -->
+## Quickstart
 
 ```bash
 # from repo root
 ./scripts/eaw init
 ./scripts/eaw card 589 --track feature "Document context model adoption"
-cat > tracks/feature/phases/findings.yaml <<'EOF'
-id: findings
-description: Investigate the current card with bounded evidence.
-context:
-  dynamic_context_template: deterministic_baseline_v1
-  onboarding_template: repo_discovery
-tooling_hints:
-  execution_mode: deterministic
-EOF
 ./scripts/eaw next 589
+./scripts/eaw validate workflow --track feature
 ./scripts/eaw smoke
 ```
 
-Quickstart minimo de contexto:
+Safe quickstart notes:
 
-- declare o bloco `context` em `phase.yaml` para ativar `dynamic_context`
-- trate onboarding como opcional; a fonte fica no workspace em `context_sources/onboarding/<repo_key>/`
-- depois de `./scripts/eaw next 589`, confirme no prompt os blocos `CONTEXT - ONBOARDING` e `CONTEXT - DYNAMIC`
-- valide os artefatos materializados em `out/589/context/onboarding/` e `out/589/context/dynamic/`
-- use `docs/CONTEXT_MODEL.md` como contrato canonico e `docs/CONCEPTUAL_MODEL.md` como guia de migracao copiavel diretamente
+- do not overwrite official files under `tracks/` during quickstart;
+- use an installed track and let the runtime materialize the current phase;
+- use `./scripts/eaw next <CARD>` for normal lifecycle progression;
+- use `./scripts/eaw complete <CARD>` when you need to mark the current phase complete explicitly after required artifacts already exist;
+- use `docs/CLI.md`, `docs/RUNTIME_CONTRACTS.md`, and `docs/VALIDATION.md` as the public command and lifecycle contracts.
 
 `track` is the primary workflow classification for a card. The runtime stores the selected value in `card_state.track_id` and resolves the official workflow from `tracks/<track>/track.yaml`.
 
@@ -76,12 +71,14 @@ Future phase-driven note:
 ## Migration Path
 
 - Prefer `./scripts/eaw next <CARD>` as the primary lifecycle command.
-- In the current public CLI, phase completion is enforced through `phase.completion` when `next` runs. The repository does not document a public `./scripts/eaw complete <CARD>` command today, so documentation should describe the completion contract rather than an additional CLI step.
+- `./scripts/eaw complete <CARD>` is a supported public command for explicit current-phase completion after required artifacts already exist.
+- On the final phase, `next` can auto-close when validation gates pass; `complete` is the explicit operator completion path.
+- See `docs/CLI.md` and `docs/RUNTIME_CONTRACTS.md` for the difference between `next`, `complete`, and `run`.
 
 ## Test Scopes
 
-- `./scripts/eaw smoke` executes the baseline smoke suite only (`tests/smoke/smoke_baseline.sh`).
-- `./scripts/eaw test` executes a broader deterministic scope (`smoke + integration + lifecycle + golden`).
+- `./scripts/eaw smoke` executes the configured smoke wrapper scope. See `docs/TEST_STRATEGY.md` for the current suite composition.
+- `./scripts/eaw test` executes a broader deterministic scope. See `docs/VALIDATION.md` for validation command scope and `docs/TEST_STRATEGY.md` for test wrapper scope.
 - `tests/phase_engine_lifecycle.sh` is a dedicated lifecycle/integration-light suite for the phase engine. It is executed from the lifecycle aggregate suite.
 - Category wrappers are organized under:
   - `tests/smoke/`
@@ -119,7 +116,7 @@ Decision note:
 ## Context Pack
 
 The context model is active and documented for incremental adoption.
-Use `context` in `phase.yaml` to declare runtime-collected evidence, keep onboarding optional, and verify the materialized artifacts under `out/<CARD>/context/onboarding/` and `out/<CARD>/context/dynamic/`.
+Use `context` in `phase.yaml` to declare runtime-collected evidence. Onboarding has a sovereign workspace source at `<EAW_WORKDIR>/context_sources/onboarding/<repo_key>/` and is preferably consumed by reference through the context block. Runtime-derived dynamic context may be materialized under `out/<CARD>/context/dynamic/`.
 The canonical contract is `docs/CONTEXT_MODEL.md`; the migration path with examples copiaveis diretamente, checklist de migracao, track por track, fase por fase, sem bootstrap and bootstrap opcional lives in `docs/CONCEPTUAL_MODEL.md`.
 
 ## Config
@@ -147,7 +144,7 @@ Released versions and historical changes are tracked in `CHANGELOG.md`.
 ## Diagnostics
 
 - `./scripts/eaw doctor` — reports resolved directories, tools, and config status.
-- `./scripts/eaw validate` — validates config and template contract.
+- `./scripts/eaw validate` — validates workspace config, prompt availability, selected template contracts, card workflow summaries, and specific artifact gates. It is not a universal proof that a card is complete; see `docs/VALIDATION.md`.
 - `./scripts/eaw doctor-hardening` — advanced hardening diagnostics for prompt binding and canonical smoke checks.
 
 ## PT-BR
@@ -167,7 +164,8 @@ Nota sobre modelo phase-driven futuro:
 ### Caminho de Migracao
 
 - Prefira `./scripts/eaw next <CARD>` como comando principal do lifecycle.
-- Na CLI publica atual, a conclusao da fase e aplicada por `phase.completion` quando `next` executa. O repositorio nao documenta hoje um comando publico `./scripts/eaw complete <CARD>`, entao a documentacao deve descrever o contrato de conclusao em vez de um passo extra de CLI.
+- `./scripts/eaw complete <CARD>` e comando publico suportado para marcar explicitamente a fase atual como completa quando os artefatos obrigatorios ja existem.
+- Na fase final, `next` pode fazer auto-close quando as validacoes passam; `complete` e o caminho explicito do operador.
 
 ## Commit Governance (ECS)
 
@@ -217,24 +215,24 @@ Why this matters: making risk and scope explicit at commit time enables determin
 
 ## AI Integration Mode (EAW Mode D)
 
-EAW Mode D provides a deterministic path to integrate an external AI/assistant into the engineering workflow by generating complete, structured prompts and producing a test plan and action plan in a reproducible output folder.
+EAW Mode D provides a deterministic path to integrate an external AI/assistant into the engineering workflow by generating structured prompts and auditable phase artifacts in a reproducible output folder.
 
 This prompt pipeline coexists with the declarative lifecycle, where the runtime keeps per-card state in `current_phase` and advances the official workflow through `./scripts/eaw next <CARD>` based on `track.transitions`.
+
+The EAW shell runtime does not own LLM execution. It prepares deterministic phase execution surfaces: prompts, context blocks, runtime environment, validation gates, and state transitions. Agent execution is performed by the operator or orchestrator using the generated phase prompt and declared contracts.
 
 Workflow (example):
 
 1. Create a card: `./scripts/eaw card 12345 --track feature "Short title"`
 2. Fill the dossier following the template sections.
-3. Advance the card with `./scripts/eaw next 12345` so the declared prompt phases materialize their artifacts.
+3. Advance the card with `./scripts/eaw next 12345` so the declared phase surface and prompt artifacts are materialized.
 
 This produces deterministic files under `out/12345/`:
 
 - `feature_12345.md` — original dossier filename retained for deterministic compatibility; workflow classification still comes from `track` / `card_state.track_id`
-- `investigations/findings_agent_prompt.md` — findings prompt to feed to an assistant
-- `investigations/hypotheses_agent_prompt.md` — hypotheses prompt to feed to an assistant
-- `investigations/planning_agent_prompt.md` — planning prompt to feed to an assistant
+- `prompts/<prompt_alias>.md` — prompt artifacts to feed to an assistant
 - `TEST_PLAN_12345.md` — deterministic test plan produced by the analysis
 
-5. Copy the generated prompts under `out/12345/investigations/`, run each phase with your chosen agent, and capture outputs back into `out/12345/dev/` as needed (manual step). The generated artifacts are deterministic and versionable.
+5. Run each phase with your chosen agent or Codex process using the generated prompt, then capture required phase outputs back under `out/12345/` according to the phase contract. The generated artifacts are deterministic and versionable.
 
 Why Mode D: it standardizes how AI is given context and how outputs are captured for traceability, making AI-assisted changes auditable and safe for enterprise environments.

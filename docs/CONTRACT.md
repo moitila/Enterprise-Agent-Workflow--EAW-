@@ -7,6 +7,11 @@ Purpose
 Defines the inputs, outputs and operational rules for the Card Execution Engine (CE Engine).
 This is a _contract_ for callers and implementers — it does not change CLI or behaviour.
 
+Authoritative Package 1 references:
+- Public CLI lifecycle: `docs/CLI.md`
+- Runtime lifecycle, envelopes, and runtime/operator boundary: `docs/RUNTIME_CONTRACTS.md`
+- Validation command scopes: `docs/VALIDATION.md`
+
 Inputs
 ------
 - Command: `eaw <subcommand>` (no changes to CLI).
@@ -19,9 +24,36 @@ Inputs
 
 Command semantics
 -----------------
-Primary workflow classification remains the selected `track`, persisted as `card_state.track_id`. The declarative lifecycle advances through `card_state.current_phase` and `track.transitions`; `eaw next <CARD>` is the runtime command that first validates the current phase `completion` contract, then applies the transition and executes the destination phase using the declared workflow outputs and prompt bindings. The command sections below document the public CLI surface and the legacy compatibility modules that remain in the tree for internal reference.
+Primary workflow classification remains the selected `track`, persisted as `card_state.track_id`. The declarative lifecycle advances through `card_state.current_phase` and `track.transitions`; `eaw next <CARD>` is the normal runtime command that first validates the current phase `completion` contract, then applies the transition and materializes the destination phase using the declared workflow outputs and prompt bindings. The command sections below document the public CLI surface and the legacy compatibility modules that remain in the tree for internal reference.
 In the current runtime model, `eaw next <CARD>` is the phase-driven entrypoint. `eaw intake <CARD>`, `eaw analyze <CARD>`, and `eaw implement <CARD>` are no longer exposed by `scripts/eaw` as public commands.
-The current contract documents phase completion through `phase.completion` and the `eaw next <CARD>` transition gate. It does not define a public `eaw complete <CARD>` command in the current CLI surface, so callers should treat completion as part of the declarative phase contract rather than a separate command.
+The current contract documents phase completion through `phase.completion`, the `eaw next <CARD>` transition gate, and the supported public `eaw complete <CARD>` command. `complete` explicitly marks the current phase complete after validation. `next` remains the normal forward-progress command and can auto-close the final phase when validation gates already pass.
+
+### `eaw next`
+
+Syntax:
+`eaw next <CARD>`
+
+Behavior:
+- Loads the card workflow context from state and installed track YAML.
+- Materializes the current phase surface before validation.
+- Validates required artifacts declared by the current phase completion contract.
+- Leaves the card on the same `current_phase` when required artifacts are missing, scaffold-only, or invalid.
+- Validates envelope schema when envelope artifacts exist.
+- Advances through `track.transitions` when the current phase passes validation.
+- Materializes the destination phase and writes a destination context bundle when available.
+- On the final phase, auto-closes the workflow when validation passes and emits final completion journal events idempotently.
+
+### `eaw complete`
+
+Syntax:
+`eaw complete <CARD>`
+
+Behavior:
+- Loads the current workflow context.
+- Validates required current-phase artifacts with strict completion rules.
+- Validates envelope schema when envelope artifacts exist.
+- Marks the current phase complete without advancing to the next phase.
+- On the final phase, emits `card_completed` idempotently, writes card metrics, and generates follow-up candidates when applicable.
 
 ### `eaw run`
 
@@ -35,6 +67,7 @@ Behavior:
 - Appends `runtime/execution.log` entries in the observed key-value format `attempt=N|status=<...>|card=<...>|...`.
 - Stops with named outcomes `COMPLETED`, `TRACK_CONSISTENCY_ERROR`, `CARD_STATE_INVALID`, `NO_FORWARD_PROGRESS`, or `PHASE_EXECUTION_FAILED`.
 - Treats the declared workflow as the source of truth: it validates `track_id` and `current_phase` before iterating and does not call `intake`, `analyze`, or `implement` directly.
+- Does not own LLM execution. It orchestrates shell lifecycle transitions through `next`; agent work remains the responsibility of the operator/orchestrator.
 - Wave 1 scope is intentionally limited: `--resume`, `--from`, `--dry-run`, automatic retry, and extra metrics are out of scope.
 
 ### Legacy compatibility module: `intake`
@@ -95,9 +128,13 @@ Outputs
   - `execution.log` — phase execution log with format `phase|status|duration_ms|note`
   - `runtime/run_state.yaml` — run-level state snapshot written by `eaw run`, including `attempt`, `status`, `track_id`, `current_phase`, `phase_status`, `stop_reason`, and timestamp
   - `runtime/execution.log` — run-level operational log appended by `eaw run`; entries include `attempt=N` and status markers for completion or named aborts
+  - `runtime/context_bundle_<phase>.md` — derived destination-phase context bundle generated by `eaw next` when available; not a sovereign source
+  - `runtime/agent_bundle_<phase>.md` — derived destination-phase skill bundle generated by `eaw next` when available; not evidence that the shell spawned an LLM agent
   - `execution_journal.jsonl` — structured Execution Journal in JSON Lines format; one event per phase execution with fields `card_id`, `track`, `phase`, `timestamp`, `agent`, `mode`, `status`, `duration_ms`; schema documented in `docs/EXECUTION_JOURNAL.md`
+  - `card_metrics.json` — final metrics derived from execution journal completion events when final completion runs and journal data exists
+  - `_followup_candidates.md` — candidate follow-up list derived from `implementation/00_scope.lock.md` `Out of Scope` bullets when generated
   - `TEST_PLAN_<CARD>.md` — placeholder test plan
-  - `context/` — governed context artifacts materialized under `context/onboarding/` and `context/dynamic/` when the context model is active.
+  - `context/` — governed context artifacts. Runtime-derived dynamic context may be materialized under `context/dynamic/`; onboarding is preferably consumed by reference from `<EAW_WORKDIR>/context_sources/onboarding/<repo_key>/` unless a specific runtime or phase explicitly materializes it.
 
 Prompt declaration rule
 -----------------------

@@ -11,7 +11,7 @@ EAW v0.6.0 uses a modular shell architecture that keeps CLI behavior stable whil
 Main modules:
 - `scripts/eaw`: CLI entrypoint and command dispatcher
 - `scripts/eaw_core.sh`: shared execution primitives (including phase execution/logging)
-- `scripts/commands/*.sh`: command handlers (`init`, `feature|bug|spike`, `doctor`, `validate`, `intake`, `analyze`, `implement`)
+- `scripts/commands/*.sh`: command handlers (`init`, `card`, `next`, `complete`, `run`, `doctor`, `validate`, prompt governance, and compatibility modules)
 - `scripts/lib.sh`: shared utility functions
 
 The architecture is intentionally contract-first: internal modularization must not change public CLI, artifact names, or output layout.
@@ -35,31 +35,34 @@ For full-card orchestration, `./scripts/eaw run <CARD>` adds a run-level control
 - `./scripts/eaw run <CARD>` persists `run_state.yaml` fields such as `attempt`, `status`, `track_id`, `current_phase`, `phase_status`, and `stop_reason`, and appends run-level audit lines to `runtime/execution.log`.
 - Named run termination states are part of the observed runtime behavior: `COMPLETED`, `TRACK_CONSISTENCY_ERROR`, `CARD_STATE_INVALID`, `NO_FORWARD_PROGRESS`, and `PHASE_EXECUTION_FAILED`.
 - Prompt-oriented commands such as `intake`, `analyze`, and `implement` remain the deprecated compatibility surface that materializes the aggregated prompt flow for the same lifecycle during the transition to the phase-driven model, with planned removal in `v1.0`.
-- In the current runtime model, phase completion is validated through the phase `completion` contract when `next` runs; the architecture does not rely on a separate public `complete` CLI command.
+- In the current runtime model, phase completion is validated through the phase `completion` contract when `next` or `complete` runs. `complete` is a supported public command for explicit current-phase completion; `next` remains the normal progression command and can auto-close the final phase.
 - The current phase-driven executor is incremental: it scaffolds declared outputs, materializes any `phase.outputs.prompts` entries under `out/<CARD>/prompts/` using the declared alias as the filename, emits compatibility prompt artifacts for built-in prompt phases, and records execution in `execution.log`.
 
 ### Deterministic Agent Mode (Modo D)
 
-Modo D is the execution model in which EAW spawns an isolated agent for a specific phase, equipped with an explicit operational skill set, and governs the full cycle from phase entry to phase completion.
+Modo D is the execution model in which EAW prepares deterministic phase execution surfaces for an external agent or Codex process. The shell runtime governs state, prompts, context injection, validation gates, and transitions; the operator or orchestrator owns the actual LLM execution.
 
 **Cycle (authoritative definition):**
 
 ```
-next → load phase.yaml → read phase.skills → spawn isolated agent with skills → agent executes phase with prompt and injected context → next
+next → load phase.yaml → render prompt/context/runtime surface → operator/orchestrator runs external agent → artifacts are written → next or complete validates and advances
 ```
 
-**Executor role:** the executor (`./scripts/eaw next`) is the entry point and governor of the Modo D cycle. It reads `phase.skills`, resolves the effective skill set, spawns the isolated agent, and advances the card state after completion. The agent does not govern the cycle — it operates within the boundaries defined by the executor.
+**Shell runtime role:** `./scripts/eaw next` is the entry point and governor for deterministic shell state. It resolves track/phase YAML, renders prompts, injects non-empty context blocks, validates artifacts and envelopes, writes journal events, and advances card state. It must not be described as spawning an LLM agent unless that behavior is implemented in the dispatcher.
 
-**Current runtime state:** `implementation_executor` (feature track) operates under the Tier 1 skills fallback (`[workspace]`) because no phase.yaml in the current installation declares `phase.skills`. This is valid and expected; the Modo D cycle is active regardless of whether `phase.skills` is explicitly declared.
+**Operator/orchestrator role:** the operator or orchestration layer takes the generated prompt and declared contracts, runs the external agent, and ensures required artifacts are written back under `out/<CARD>/` before returning to `next` or `complete`.
 
-**Post-execution skills:** skills `reviewer` and `delivery` are post-execution capabilities. They are not loaded through `phase.skills` during normal execution phases. They operate outside the Modo D spawn cycle.
+**Current runtime state:** `phase.skills` is a workflow YAML contract surface for orchestration, not a guaranteed shell-spawn behavior. The current shell dispatcher does not semantically validate or load skills as part of an LLM spawn path.
 
-**Skills invariant:** the executor does not modify prompt content to mention or include skill names. Skills are provided to the agent as operational context external to the prompt and external to the injected context declared by `phase.context`. This separation is absolute.
+**Post-execution skills:** skills such as reviewer and delivery are post-execution capabilities. They operate outside the shell lifecycle unless an operator/orchestrator explicitly invokes them.
+
+**Skills invariant:** the shell runtime does not modify prompt content to mention or include skill names. `phase.skills` is external to `phase.prompt.path` and to injected context declared by `phase.context`.
 
 Cross-document references:
 - Formal contract for `phase.skills` field: `docs/WORKFLOW_YAML_CONTRACT.md` (Phase Skills Block).
 - Object model for Skill: `docs/CONCEPTUAL_MODEL.md` (Core Objects → Skill).
 - Prompt governance rule for skills/prompt orthogonality: `docs/PROMPT_GOVERNANCE.md` (Operational Skill Surface).
+- Runtime boundary: `docs/RUNTIME_CONTRACTS.md`.
 
 ## Deterministic Output Boundaries
 

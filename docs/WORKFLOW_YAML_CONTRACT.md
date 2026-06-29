@@ -110,6 +110,7 @@ Rules:
 - `track.final_phase` must not define a `next` transition.
 - Transition sources and targets must exist in `track.phases`.
 - Duplicate phases and duplicate transition sources are invalid.
+- `transitions.<phase>.skip_when` may declare handoff codes that cause the runtime to skip the next phase when a previous `20_handoff.json` exposes a matching code.
 - Tracks may introduce a preparatory `ingest` phase before `intake` to separate raw inputs from the structured intake artifact.
 - Historical aliases may be normalized by runtime helpers:
   - `hypoteses` -> `hypotheses`
@@ -173,7 +174,8 @@ Rules:
 - Each `phase.tooling_hints` entry is rendered as a textual hint inside a stable `## Tooling Hints` section in the final prompt only when the phase declares hints.
 - `context` is not free text; it declares what will be injected and must stay separate from execution hints.
 - Workspace-sourced onboarding context lives outside the target repository and is consumed by EAW before materialization.
-- Prompt injection must consume only context materialized under `out/<CARD>/context/`; `phase.yaml` must not imply direct contextual reads from the target repository.
+- Prompt injection must consume runtime-derived context from materialized `out/<CARD>/context/` artifacts and onboarding through the governed workspace source reference. `phase.yaml` must not imply ad hoc direct contextual reads from the target repository.
+- When context injection produces a non-empty context block, the prompt template must include a standalone line exactly equal to `{{CONTEXT_BLOCK}}`. If no context block is produced, that placeholder is not required.
 - Supported runtime placeholders inside `phase.tooling_hints` are normalized before prompt emission. The current deterministic tokens are `<CARD>`, `<WORKDIR>`, `<OUTDIR>`, `<CARD_DIR>`, `<TARGET_REPO>`, `{{CARD}}`, `{{EAW_WORKDIR}}`, `{{OUT_DIR}}`, `{{CARD_DIR}}`, and `{{TARGET_REPOS}}`.
 - The canonical model for stable repository context and runtime-derived operational context is documented in `docs/CONTEXT_MODEL.md`.
 - `context` and `tooling_hints` are separate contract surfaces: `tooling_hints` instruct execution, while `context` describes the evidence that must be collected and injected.
@@ -193,6 +195,8 @@ Free-form text, inline values, and extra keys are not permitted.
 Materialization rule: `dynamic_context_template` requires a materialized artifact under `out/<CARD>/context/dynamic/` before injection. `onboarding_template` is consumed by reference via the context block from the workspace source; it does not require per-card materialization. Contexto nao materializado nao pode ser injetado no prompt.
 
 Prompt consumption rule: when a phase declares `phase.context.onboarding_template`, the prompt must consume onboarding by reference via the context block sourced from the workspace source. Per-card artifact directories are not the consumption surface for onboarding.
+
+Prompt placeholder rule: if a non-empty context block is generated for a phase, the rendered prompt template must contain a standalone line exactly equal to `{{CONTEXT_BLOCK}}`. The runtime replaces only that standalone line. If the placeholder is absent while a context block is non-empty, rendering fails. If no context block is generated, the placeholder is not mandatory.
 
 Compatibility: phases that do not declare `phase.context` preserve the current behavior without any context injection (fallback: ausencia do bloco nao altera o comportamento da fase).
 
@@ -256,25 +260,25 @@ Error rules and fallbacks:
 
 Phase Skills Block
 ------------------
-The optional `phase.skills` block declares the list of skill names that the executor will load into the isolated agent for this phase. It is separate from `phase.context` and from `phase.tooling_hints`.
+The optional `phase.skills` block declares the list of skill names that an operator or orchestrator should make available to the external agent for this phase. It is separate from `phase.context` and from `phase.tooling_hints`.
 
 Permitted value:
 - A YAML list of skill name strings. An empty list (`[]`) is treated as absent.
 
-Semantics: each entry is the name of a skill file available in the workspace. The executor resolves each declared skill and makes it available to the isolated agent as operational context — external to the prompt and to the injected context.
+Semantics: each entry is the name of a skill file available in the workspace. Based on human architectural decision DECISION-002, this is an orchestration contract, not a guarantee that the shell dispatcher spawns an isolated agent or loads the skill automatically. Skill context remains external to the prompt and to injected context.
 
-Fallback: when `phase.skills` is absent or the list is empty, the executor applies the implicit fallback skill set `[workspace]`.
+Fallback: when `phase.skills` is absent or the list is empty, the operator/orchestrator should apply the implicit fallback skill set `[workspace]`.
 
-Auto-inclusion invariant: the `workspace` skill is always loaded by the executor regardless of whether it is declared. Declaring `workspace` explicitly in `phase.skills` is redundant but valid.
+Auto-inclusion invariant: the `workspace` skill should always be available to the agent regardless of whether it is declared. Declaring `workspace` explicitly in `phase.skills` is redundant but valid.
 
 Resolution order (skill routing tiers):
-- Tier 1 — fallback: when `phase.skills` is absent or empty, `[workspace]` is the effective skill set.
-- Tier 2 — declared: when `phase.skills` is present and non-empty, the declared list is the effective skill set (with `workspace` always present per the auto-inclusion invariant).
+- Tier 1 — fallback: when `phase.skills` is absent or empty, `[workspace]` is the effective skill set for operator/orchestrator execution.
+- Tier 2 — declared: when `phase.skills` is present and non-empty, the declared list is the effective skill set for operator/orchestrator execution (with `workspace` always present per the auto-inclusion invariant).
 - Tier 3 — track context override: reserved for future runtime versions. Not implemented in the current runtime. When implemented, it will not break Tier 1 or Tier 2 compatibility.
 
 Validation limitation (Known Limitation D-03): `workflow_validation.sh` accepts `phase.skills` without semantic validation. The structure of the list and the existence of each declared skill name are not verified in the current version of the validator. A malformed value (non-list, non-string items, undeclared skill name) passes the validator silently. This is expected behavior in the current runtime version.
 
-Current runtime state: `implementation_executor` (feature track) operates under Tier 1 fallback (`[workspace]`) because no phase.yaml in the current installation declares `phase.skills`. This is valid and expected prior to explicit skill declarations.
+Current shell runtime state: the dispatcher validates workflow structure but does not implement LLM spawning or semantic skill loading. Treat `phase.skills` as an orchestration contract until runtime code implements that behavior.
 
 Valid examples:
 
@@ -375,6 +379,7 @@ Field Meanings
 - `final_phase`: terminal workflow phase; it must not declare a `next` transition.
 - `phases`: ordered set of valid phase identifiers for the track.
 - `transitions`: deterministic mapping from the current phase to the next phase.
+- `skip_when`: optional transition-level list of handoff codes. When a code emitted by the previous phase matches, the runtime emits skipped envelopes for the next phase and advances to that skipped phase's target transition when present.
 - `prompt.path`: path used to bind a phase to a prompt family and ACTIVE candidate.
 
 Validation Behavior Observed in Runtime

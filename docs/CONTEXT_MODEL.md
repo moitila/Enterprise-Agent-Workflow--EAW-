@@ -19,13 +19,14 @@ It must not interpret evidence, conclude, replace findings, or introduce analyti
 
 ## Materialization Principle
 
-Context only exists for the system when it is materialized as an observable and auditable artifact.
-If a context element cannot be inspected in artifact form, it is not considered available for governed execution.
+Runtime-derived context only exists for the system when it is materialized as an observable and auditable artifact.
+Workspace onboarding is the exception: based on human architectural decision DECISION-003, its sovereign source is `<EAW_WORKDIR>/context_sources/onboarding/<repo_key>/` and preferred consumption is by reference through the prompt context block.
+Documentation must not promise automatic per-card onboarding materialization unless a specific runtime or phase explicitly generates it.
 
 ## Physical Location of Context Sources
 
 - `onboarding` source: `<EAW_WORKDIR>/context_sources/onboarding/<repo_key>/`
-- `onboarding` consumed: by reference via context block; not materialized per card
+- `onboarding` consumed: preferably by reference via context block; not automatically materialized per card
 - `dynamic_context` materialized: `out/<CARD>/context/dynamic/`
 - `templates`: `templates/context/<type>/<template_name>/`, versioned through `ACTIVE`
 
@@ -38,7 +39,7 @@ If a context element cannot be inspected in artifact form, it is not considered 
 
 ## Traceability
 
-Every injected context artifact must identify:
+Every injected context surface must identify:
 
 - its source (`onboarding`, `dynamic`, or `template`)
 - the template applied
@@ -79,7 +80,7 @@ Keep context small and auditable through runtime limits, exclusions, and score-d
 - prefer narrow file scopes over broad repository sweeps
 - rely on limits and exclusions to avoid inflating context with irrelevant files
 - keep score-based selection focused on the evidence needed by the current phase
-- validate the materialized artifacts under `out/<CARD>/context/` instead of assuming the prompt received the right inputs
+- validate dynamic artifacts under `out/<CARD>/context/dynamic/` and the onboarding source reference instead of assuming the prompt received the right inputs
 
 Low cost matters because context is only useful when an engineer can still inspect it.
 
