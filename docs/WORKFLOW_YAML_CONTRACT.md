@@ -324,7 +324,7 @@ Current runtime-compatible filename pattern:
 Runtime clarification:
 - `card_state.yaml` under `tracks/<track>/` is documentation/reference only.
 - New cards write mutable state to `out/<CARD>/state_card_*.yaml` (card root). The runtime falls back to `out/<CARD>/intake/state_card_*.yaml` for cards created before this change.
-- When a track declares `ingest`, raw source files can be collected under `out/<CARD>/ingest/` while mutable workflow state remains under `out/<CARD>/intake/state_card_*.yaml` for compatibility.
+- When a track declares `ingest`, raw source files can be collected under `out/<CARD>/ingest/` while mutable workflow state stays at `out/<CARD>/state_card_*.yaml`; `out/<CARD>/intake/state_card_*.yaml` is a compatibility fallback for older cards.
 - End-of-transition criterion: the fallback path (`out/<CARD>/intake/state_card_*.yaml`) may be removed when no active card in `EAW_OUT_DIR` contains a `state_card_*.yaml` exclusively under `intake/`. Verify with: `ls "$EAW_OUT_DIR"/*/intake/state_card_*.yaml 2>/dev/null`. Until this command returns no results, the fallback MUST remain in `eaw_load_card_workflow_context`.
 - Activation criterion per card (by design): the ingest transition is active for a card when `out/<CARD>/ingest/` exists. The runtime scaffolds this directory for cards created after `ingest` became the initial phase. Older cards without `ingest/` continue via the compatibility fallback `out/<CARD>/intake/` in `eaw_load_card_workflow_context`. No extra flag or YAML field is required; directory presence is the sole runtime indicator.
 - Official track resolution uses `tracks/<track>/track.yaml` and `tracks/<track>/phases/*.yaml`, not `tracks/<track>/card_state.yaml`.
@@ -387,7 +387,7 @@ Validation Behavior Observed in Runtime
 The current runtime validates at least the following:
 - the official tree under `tracks/<track>/` when a card state points to an installed track;
 - exactly one `track_*.yaml` file in the card intake directory;
-- exactly one `state_card_*.yaml` file in the card intake directory;
+- exactly one `state_card_*.yaml` file at the card root, or the compatibility fallback under the card intake directory for older cards;
 - at least one `phase_*.yaml` file in the card intake directory;
 - presence and consistency of required track and card state fields;
 - consistency between `track.phases`, phase files, and `track.transitions`;
@@ -402,7 +402,7 @@ Creating a New Track Without Reading Code
 4. Add `transitions.<phase>.next` for every non-final phase.
 5. For each phase, define `phase.id` and a valid `prompt.path` that resolves through ACTIVE.
 6. Create the card state file with matching `track_id` and an initial `current_phase`.
-7. In the current runtime model, place compatibility files under `out/<CARD>/intake/` using:
+7. For compatibility with older cards, keep legacy workflow files under `out/<CARD>/intake/` using:
    - `track_<name>.yaml`
    - `phase_<phase>.yaml`
    - `state_card_<name>.yaml`
@@ -417,10 +417,10 @@ Compatibility Notes
 - The current runtime remains compatible with the per-card model under `out/<CARD>/intake/**` as an explicit fallback.
 - Tracks may additionally use `out/<CARD>/ingest/**` as the primary raw-input area when `ingest` is declared explicitly in the track.
 - `tracks/<track>/card_state.yaml` is not runtime state; it is a template/example of the logical card-state structure for that track.
-- `state_card_*.yaml` under `out/<CARD>/intake/**` remains the mutable per-card state document for workflow progression.
+- New cards use `out/<CARD>/state_card_*.yaml` as the mutable per-card state document for workflow progression; `out/<CARD>/intake/state_card_*.yaml` remains only a compatibility fallback for older cards.
 - `out/<CARD>/investigations/00_intake.md` remains the structured intake artifact even when raw sources are first collected under `out/<CARD>/ingest/`.
 - `out/<CARD>/fixtures/**` are useful for validation and tests, but they are not permanent runtime configuration.
-- If product language refers to `card_state.yaml`, this should be read as the logical state document; current runtime compatibility still relies on `state_card_*.yaml`.
+- If product language refers to `card_state.yaml`, this should be read as the logical state document; the current runtime-compatible filename pattern is `state_card_*.yaml`.
 
 Non-Goals
 ---------
