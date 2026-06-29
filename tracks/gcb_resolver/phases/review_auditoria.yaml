@@ -1,0 +1,39 @@
+config_version: 1
+
+phase:
+  id: review_auditoria
+  name: Review e Auditoria
+  description: >
+    Verificar independentemente se toda a investigacao e rastreavel,
+    se nenhuma conclusao foi feita sem fonte, se descartes estao
+    documentados e se lacunas estao declaradas. Emitir relatorio
+    de auditoria. O agente executor desta fase deve ser diferente
+    do executor da fase sintese_resposta.
+
+  prompt:
+    active: 1
+    path: templates/prompts/gcb_resolver/review_auditoria/prompt_v<active>.md
+
+  skills:
+    - gcb_review_auditoria
+    - eaw_workspace
+
+  tooling_hints:
+    - Ler toda a arvore investigations/ (arquivos 01 a 08).
+    - Verificar: toda conclusao tem fonte; todo descarte tem motivo;
+      lacunas declaradas; confianca declarada; proxima acao declarada.
+    - Nao e autoavaliacao — agente executor deve ser diferente da fase anterior.
+    - EAW_WORKDIR obrigatorio: /home/user/Coringas/GCB/.eaw
+
+  outputs:
+    create_directories:
+      - investigations
+    create_artifacts:
+      - investigations/09_review_auditoria.md
+    prompts:
+      - review_auditoria
+
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - investigations/09_review_auditoria.md

@@ -1,0 +1,45 @@
+config_version: 1
+
+phase:
+  id: validacao_fontes
+  name: Validacao por Fontes
+  description: >
+    Testar hipoteses de resposta contra fontes materiais registradas.
+    Registrar resultado em estado obrigatorio por hipotese.
+    Estados validos: validada_com_fonte_local | validada_com_fonte_online |
+    descartada_com_fonte_local | descartada_com_fonte_online |
+    pendente_fonte_local | pendente_fonte_online |
+    pendente_upload_material | pendente_validacao_humana | inconclusiva.
+
+  prompt:
+    active: 1
+    path: templates/prompts/gcb_resolver/validacao_fontes/prompt_v<active>.md
+
+  skills:
+    - gcb_validacao_fontes
+    - gcb_ruas_logradouros
+    - gcb_historia_local
+    - gcb_consulta_acervo
+    - eaw_workspace
+
+  tooling_hints:
+    - Ler investigations/06_hipoteses_resposta.md.
+    - Fontes locais disponiveis: analiseContexto/fontes/ruas/rol_ruas.csv,
+      analiseContexto/extraido/ACERVO/ (acervo parcial).
+    - Toda validacao deve registrar fonte consultada, trecho e data de consulta.
+    - Hipotese pendente NAO pode ser promovida a conclusao.
+    - EAW_WORKDIR obrigatorio: /home/user/Coringas/GCB/.eaw
+
+  outputs:
+    create_directories:
+      - investigations
+      - fontes
+    create_artifacts:
+      - investigations/07_validacao_fontes.md
+    prompts:
+      - validacao_fontes
+
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - investigations/07_validacao_fontes.md

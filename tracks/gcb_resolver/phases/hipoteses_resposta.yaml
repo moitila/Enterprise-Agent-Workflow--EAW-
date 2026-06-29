@@ -1,0 +1,38 @@
+config_version: 1
+
+phase:
+  id: hipoteses_resposta
+  name: Hipoteses de Resposta
+  description: >
+    Para cada mecanismo hipotetico, derivar o alvo operacional candidato.
+    Registrar tipo de alvo, evidencias, fonte para validar e risco de
+    coincidencia. Nao concluir nesta fase — apenas gerar candidatos.
+
+  prompt:
+    active: 1
+    path: templates/prompts/gcb_resolver/hipoteses_resposta/prompt_v<active>.md
+
+  skills:
+    - gcb_hipoteses_resposta
+    - gcb_ruas_logradouros
+    - gcb_consulta_acervo
+    - eaw_workspace
+
+  tooling_hints:
+    - Ler investigations/05_hipoteses_mecanismo.md e investigations/04_entidades.md.
+    - Nao forccar endereco — o alvo pode ser objeto, acao, foto, video, senha, pessoa.
+    - Cada hipotese de resposta deve ter mecanismo associado.
+    - EAW_WORKDIR obrigatorio: /home/user/Coringas/GCB/.eaw
+
+  outputs:
+    create_directories:
+      - investigations
+    create_artifacts:
+      - investigations/06_hipoteses_resposta.md
+    prompts:
+      - hipoteses_resposta
+
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - investigations/06_hipoteses_resposta.md

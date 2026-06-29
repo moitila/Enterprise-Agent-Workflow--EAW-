@@ -1,0 +1,37 @@
+config_version: 1
+
+phase:
+  id: mapa_de_pistas
+  name: Mapa de Pistas
+  description: >
+    Localizar e catalogar todas as pistas candidatas no material disponivel.
+    Registrar localizacao (titulo, texto, imagem, suporte fisico, metadados,
+    sequencia, data etc.) e evidencia para cada pista. Nao gerar hipoteses
+    nesta fase.
+
+  prompt:
+    active: 1
+    path: templates/prompts/gcb_resolver/mapa_de_pistas/prompt_v<active>.md
+
+  skills:
+    - gcb_mapa_pistas
+    - gcb_consulta_acervo
+    - eaw_workspace
+
+  tooling_hints:
+    - Ler investigations/02_classificacao.md e arquivos extraidos em ingest/.
+    - Nao gerar hipoteses; apenas catalogar pistas com evidencia rastreavel.
+    - EAW_WORKDIR obrigatorio: /home/user/Coringas/GCB/.eaw
+
+  outputs:
+    create_directories:
+      - investigations
+    create_artifacts:
+      - investigations/03_mapa_pistas.md
+    prompts:
+      - mapa_de_pistas
+
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - investigations/03_mapa_pistas.md

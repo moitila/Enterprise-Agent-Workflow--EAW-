@@ -1,0 +1,39 @@
+config_version: 1
+
+phase:
+  id: ingestao_prova
+  name: Ingestao da Prova
+  description: >
+    Inventariar e catalogar todo o material bruto recebido da prova.
+    Separar papel documental de cada arquivo (enunciado, gabarito, resolucao,
+    apoio, evidencia_entrega, controle). Registrar qualidade de extracao.
+    Nao analisar conteudo semantico nesta fase.
+
+  prompt:
+    active: 1
+    path: templates/prompts/gcb_resolver/ingestao_prova/prompt_v<active>.md
+
+  skills:
+    - gcb_ingestao_prova
+    - eaw_workspace
+
+  tooling_hints:
+    - Ler somente out/<CARD>/ingest/ nesta fase.
+    - Nao analisar conteudo semantico; apenas inventariar e classificar papel documental.
+    - EAW_WORKDIR obrigatorio: /home/user/Coringas/GCB/.eaw
+
+  outputs:
+    create_directories:
+      - ingest
+      - investigations
+    create_artifacts:
+      - investigations/01_inventario_arquivos.md
+      - investigations/01_provenance.md
+    prompts:
+      - ingestao_prova
+
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - investigations/01_inventario_arquivos.md
+      - investigations/01_provenance.md

@@ -1,0 +1,38 @@
+config_version: 1
+
+phase:
+  id: normalizacao_entidades
+  name: Normalizacao de Entidades
+  description: >
+    Extrair e normalizar entidades mencionadas nas pistas: nomes proprios,
+    ruas/logradouros, datas, numeros, locais, musicas, filmes, objetos.
+    Verificar existencia no ROL de ruas quando aplicavel. Nao gerar
+    hipoteses nesta fase.
+
+  prompt:
+    active: 1
+    path: templates/prompts/gcb_resolver/normalizacao_entidades/prompt_v<active>.md
+
+  skills:
+    - gcb_normalizacao_entidades
+    - gcb_ruas_logradouros
+    - eaw_workspace
+
+  tooling_hints:
+    - Ler investigations/03_mapa_pistas.md.
+    - Verificar ruas contra analiseContexto/fontes/ruas/rol_ruas.csv quando disponivel.
+    - Registrar entidades pendentes quando fonte ausente; nao inventar.
+    - EAW_WORKDIR obrigatorio: /home/user/Coringas/GCB/.eaw
+
+  outputs:
+    create_directories:
+      - investigations
+    create_artifacts:
+      - investigations/04_entidades.md
+    prompts:
+      - normalizacao_entidades
+
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - investigations/04_entidades.md

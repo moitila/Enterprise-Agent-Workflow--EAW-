@@ -1,0 +1,57 @@
+config_version: 1
+
+track:
+  id: gcb_resolver
+  name: GCB Resolver Track
+  description: >
+    Track especializado para resolucao do componente investigativo de provas
+    da Gincana Cidade de Blumenau. Cobre enigmas, charadas, cifras, pistas
+    textuais/visuais/auditivas, referencias historico-geograficas locais
+    e validacao por fontes materiais.
+    NAO cobre provas puramente executivas (doacao, arrecadacao, logistica).
+
+  initial_phase: ingestao_prova
+  final_phase: review_auditoria
+
+  initial_outputs:
+    create_directories:
+      - ingest
+      - investigations
+      - fontes
+    create_artifacts: []
+
+  phases:
+    - ingestao_prova
+    - classificacao_semantica
+    - mapa_de_pistas
+    - normalizacao_entidades
+    - hipoteses_mecanismo
+    - hipoteses_resposta
+    - validacao_fontes
+    - sintese_resposta
+    - review_auditoria
+
+  transitions:
+    ingestao_prova:
+      next: classificacao_semantica
+    classificacao_semantica:
+      next: mapa_de_pistas
+      skip_when:
+        - PROVA_EXECUTIVA_SEM_ENIGMA
+    mapa_de_pistas:
+      next: normalizacao_entidades
+    normalizacao_entidades:
+      next: hipoteses_mecanismo
+    hipoteses_mecanismo:
+      next: hipoteses_resposta
+    hipoteses_resposta:
+      next: validacao_fontes
+    validacao_fontes:
+      next: sintese_resposta
+    sintese_resposta:
+      next: review_auditoria
+
+  rules:
+    one_prompt_per_phase: true
+    generated_artifacts_of_each_phase_must_be_non_empty: true
+    allow_manual_phase_skip: false

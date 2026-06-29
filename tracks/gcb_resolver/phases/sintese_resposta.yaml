@@ -1,0 +1,40 @@
+config_version: 1
+
+phase:
+  id: sintese_resposta
+  name: Sintese da Resposta
+  description: >
+    Produzir resposta operacional provavel ou declarar insuficiencia formal.
+    Inclui secao obrigatoria de descartes documentados. Enunciar: alvo,
+    evidencias, fontes, nivel de confianca (alto/medio/baixo/indeterminado),
+    lacunas restantes, proxima acao. Nunca transformar hipotese pendente
+    em resposta.
+
+  prompt:
+    active: 1
+    path: templates/prompts/gcb_resolver/sintese_resposta/prompt_v<active>.md
+
+  skills:
+    - gcb_sintese_resposta
+    - eaw_workspace
+
+  tooling_hints:
+    - Ler investigations/07_validacao_fontes.md como entrada principal.
+    - Se melhor hipotese estiver em estado pendente_* ou inconclusiva,
+      declarar explicitamente "Resposta nao concluida nesta simulacao".
+    - Separar fato observado / inferencia plausivel / hipotese nao confirmada / lacuna.
+    - Secao "Descartes Documentados" e obrigatoria mesmo que vazia.
+    - EAW_WORKDIR obrigatorio: /home/user/Coringas/GCB/.eaw
+
+  outputs:
+    create_directories:
+      - investigations
+    create_artifacts:
+      - investigations/08_sintese_final.md
+    prompts:
+      - sintese_resposta
+
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - investigations/08_sintese_final.md

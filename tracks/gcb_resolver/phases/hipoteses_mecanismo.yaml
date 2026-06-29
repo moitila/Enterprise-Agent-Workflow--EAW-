@@ -1,0 +1,37 @@
+config_version: 1
+
+phase:
+  id: hipoteses_mecanismo
+  name: Hipoteses de Mecanismo
+  description: >
+    Para cada pista candidata, classificar o mecanismo provavel de
+    transformacao em resposta (cifra, anagrama, acrostico, guia de ruas,
+    associacao historica etc.). Gerar multiplas hipoteses quando ambiguo.
+    Declarar fonte material necessaria para validar cada hipotese.
+
+  prompt:
+    active: 1
+    path: templates/prompts/gcb_resolver/hipoteses_mecanismo/prompt_v<active>.md
+
+  skills:
+    - gcb_hipoteses_mecanismo
+    - eaw_workspace
+
+  tooling_hints:
+    - Ler investigations/03_mapa_pistas.md e investigations/04_entidades.md.
+    - Toda hipotese deve ter pista que a sustenta e fonte para validar.
+    - Hipotese sem fonte vira pendencia, nao conclusao.
+    - EAW_WORKDIR obrigatorio: /home/user/Coringas/GCB/.eaw
+
+  outputs:
+    create_directories:
+      - investigations
+    create_artifacts:
+      - investigations/05_hipoteses_mecanismo.md
+    prompts:
+      - hipoteses_mecanismo
+
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - investigations/05_hipoteses_mecanismo.md

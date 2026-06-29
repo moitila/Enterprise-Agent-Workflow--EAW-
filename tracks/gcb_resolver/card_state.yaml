@@ -1,0 +1,14 @@
+# Reference template only.
+# The runtime does not read card state from tracks/<track>/card_state.yaml.
+# Real execution state is per-card in out/<CARD>/state_card_*.yaml.
+config_version: 1
+
+card_state:
+  card_id: CARD_TEMPLATE
+  track_id: gcb_resolver
+  current_phase: ingestao_prova
+  previous_phase: null
+  phase_status: in_progress
+  completed_phases: []
+  created_at: "2026-06-20T00:00:00Z"
+  updated_at: "2026-06-20T00:00:00Z"

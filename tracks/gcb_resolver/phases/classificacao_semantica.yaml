@@ -1,0 +1,36 @@
+config_version: 1
+
+phase:
+  id: classificacao_semantica
+  name: Classificacao Semantica
+  description: >
+    Classificar o tipo de prova, midias envolvidas, etapas provaveis e
+    mecanismo inicial de pista usando a taxonomia GCB. Separar provas com
+    enigma de provas puramente executivas. Emitir skip_when
+    PROVA_EXECUTIVA_SEM_ENIGMA quando aplicavel.
+
+  prompt:
+    active: 1
+    path: templates/prompts/gcb_resolver/classificacao_semantica/prompt_v<active>.md
+
+  skills:
+    - gcb_classificacao_prova
+    - eaw_workspace
+
+  tooling_hints:
+    - Ler investigations/01_inventario_arquivos.md e arquivos de enunciado em ingest/.
+    - Emitir skip_when PROVA_EXECUTIVA_SEM_ENIGMA somente com justificativa explicita.
+    - EAW_WORKDIR obrigatorio: /home/user/Coringas/GCB/.eaw
+
+  outputs:
+    create_directories:
+      - investigations
+    create_artifacts:
+      - investigations/02_classificacao.md
+    prompts:
+      - classificacao_semantica
+
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - investigations/02_classificacao.md
