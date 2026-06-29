@@ -10,20 +10,31 @@
      5. Se intake/ estiver vazio ou não mencionar repo: usar o primeiro entry de TARGET_REPOSITORIES
      6. Se ainda ambiguo: parar e reportar ao operador; nunca inferir -->
 
-## OBJETIVO
+ROLE
+
+- Operador de refresh de onboarding responsavel por detectar drift nos artefatos publicados.
+- Operar em modo analise: leitura ampla, escrita restrita aos artefatos da fase.
+
+OBJECTIVE
 
 Analisar os artefatos de onboarding publicados para o repositório alvo e produzir um `drift_report.md`
 estruturado, classificando cada artefato por severidade de drift. Quando nenhum drift for detectado,
 emitir `20_handoff.json` com o código `NO_DRIFT_DETECTED` para acionar o skip da fase `patch_onboarding`.
 
-## INSUMOS OBRIGATÓRIOS
+INPUT
 
 1. `$EAW_WORKDIR/context_sources/onboarding/<repo_key>/INDEX.md` — lista canônica de artefatos publicados
 2. `$EAW_WORKDIR/context_sources/onboarding/<repo_key>/provenance.md` — data e card da última geração
 3. Repositório alvo — leitura em modo read-only
 4. `$CARD_DIR/intake/` — ler todos os arquivos presentes na pasta antes de qualquer outra ação; contêm a declaração do operador sobre o card (repo alvo, escopo, contexto); usar para confirmar ou corrigir o `<repo_key>` derivado de `TARGET_REPOSITORIES`
 
-## ALGORITMO DE EXECUÇÃO
+OUTPUT
+
+- Escrever `$CARD_DIR/investigations/drift_report.md`.
+- Escrever `$CARD_DIR/investigations/20_handoff.json` somente quando nenhum drift for detectado.
+- Nao escrever no repositorio alvo.
+
+RULES
 
 ### Passo 1 — Identificar o repo alvo do card e ler artefatos de onboarding
 
@@ -136,7 +147,9 @@ Executar os seguintes 5 passos em ordem, sem pular:
 - Se **nenhum drift detectado** em nenhum artefato: emitir `$CARD_DIR/investigations/20_handoff.json` com código `NO_DRIFT_DETECTED`
 - Se **qualquer drift detectado**: não emitir `20_handoff.json`; a fase `patch_onboarding` será executada
 
-## SCHEMA OBRIGATÓRIO — `drift_report.md`
+OUTPUT_STRUCTURE
+
+### Schema obrigatorio — `drift_report.md`
 
 O arquivo `drift_report.md` DEVE conter exatamente as 4 seções abaixo, nesta ordem:
 
@@ -184,7 +197,9 @@ Decisão final sobre o estado geral do onboarding.
 - `## Artefatos sem Drift` deve listar todos os artefatos íntegros com justificativa — nunca deixar em branco
 - A seção `## Conclusão e Handoff Code` determina se `20_handoff.json` é emitido
 
-## SCHEMA DO `20_handoff.json` — Emitir apenas quando sem drift
+HANDOFF_PROTOCOL
+
+### Schema do `20_handoff.json` — emitir apenas quando sem drift
 
 Quando todos os artefatos estiverem íntegros, escrever `$CARD_DIR/investigations/20_handoff.json`:
 
@@ -201,7 +216,7 @@ Quando todos os artefatos estiverem íntegros, escrever `$CARD_DIR/investigation
 
 Quando drift detectado: **não emitir `20_handoff.json`**. O runtime avançará automaticamente para `patch_onboarding`.
 
-## WRITE SCOPE
+WRITE_SCOPE
 
 - Escrever **exclusivamente** em `$CARD_DIR/investigations/`:
   - `$CARD_DIR/investigations/drift_report.md` (obrigatório)
@@ -209,7 +224,7 @@ Quando drift detectado: **não emitir `20_handoff.json`**. O runtime avançará 
 - Nunca escrever no repositório alvo
 - Nunca escrever fora de `$CARD_DIR/`
 
-## READ SCOPE
+READ_SCOPE
 
 - `$EAW_WORKDIR/context_sources/onboarding/<repo_key>/` — leitura completa dos artefatos publicados
 - Repositório alvo (`TARGET_REPOS`) — leitura em read-only para evidência de drift
@@ -217,7 +232,7 @@ Quando drift detectado: **não emitir `20_handoff.json`**. O runtime avançará 
 - `$EAW_WORKDIR/config/repos.conf` — leitura para contar targets e detectar ambiguidade
 - `$CARD_DIR/` — leitura de contexto do card
 
-## GUARDRAILS
+FORBIDDEN
 
 - Nunca classificar drift sem ler o artefato e o código-fonte relevante
 - Nunca declarar `STALE_MAJOR` sem evidência lida do repositório alvo
@@ -225,3 +240,11 @@ Quando drift detectado: **não emitir `20_handoff.json`**. O runtime avançará 
 - Nunca omitir `repo_ai_context.md` do algoritmo de verificação
 - Nunca inventar paths em `## Artefatos Analisados` que não existam em `INDEX.md`
 - Não classificar ausência de `repo_ai_context.md` como drift quando não existem fontes IA nativas no repositório alvo
+
+FAIL_CONDITIONS
+
+- `<repo_key>` ambiguo ou ausente de `TARGET_REPOSITORIES`.
+- `INDEX.md` ou `provenance.md` ausente sem classificacao explicita no relatorio.
+- Drift declarado sem evidencia objetiva.
+- `NO_DRIFT_DETECTED` emitido quando qualquer drift existir.
+- `drift_report.md` ausente, vazio ou fora do schema obrigatorio.

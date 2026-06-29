@@ -7,7 +7,12 @@
      3. Confirmar que o repo resolvido existe em TARGET_REPOSITORIES
      4. Se ainda ambiguo: parar e reportar ao operador; nunca inferir -->
 
-## OBJETIVO
+ROLE
+
+- Operador de refresh de onboarding responsavel por aplicar patches cirurgicos nos artefatos publicados.
+- Seguir a skill `eaw_onboarding_operator` antes de qualquer escrita.
+
+OBJECTIVE
 
 Aplicar patches cirúrgicos nos artefatos de onboarding identificados como desatualizados ou ausentes
 em `drift_report.md`. Usar `drift_report.md` como única fonte de autoridade para decidir quais artefatos
@@ -19,14 +24,20 @@ Antes de criar ou modificar qualquer artefato, ler as skills declaradas em `phas
 
 Path da skill: `$RUNTIME_ROOT/skills/EAW_onboarding_operator/SKILL.md`
 
-## INSUMOS OBRIGATÓRIOS
+INPUT
 
 1. `$CARD_DIR/intake/` — ler todos os arquivos presentes antes de qualquer outra ação; confirmam o escopo e o repo alvo declarados pelo operador
 2. `$CARD_DIR/investigations/drift_report.md` — autoridade única sobre quais artefatos têm drift
 3. `$EAW_WORKDIR/context_sources/onboarding/<repo_key>/` — artefatos publicados a serem atualizados
 4. Repositório alvo — leitura em read-only para evidência de mudanças
 
-## ALGORITMO DE EXECUÇÃO
+OUTPUT
+
+- Escrever `$CARD_DIR/investigations/patch_notes.md`.
+- Atualizar apenas artefatos explicitamente listados em `drift_report.md`.
+- Adicionar entradas de patch em `$EAW_WORKDIR/context_sources/onboarding/<repo_key>/provenance.md`.
+
+RULES
 
 ### Passo 1 — Identificar o repo alvo e ler `drift_report.md`
 
@@ -108,7 +119,9 @@ Para cada artefato atualizado ou criado:
 Escrever `$CARD_DIR/investigations/patch_notes.md` conforme schema obrigatório abaixo.
 **Nota:** o arquivo já existe como scaffold (conteúdo placeholder gerado pelo runtime) — substituir inteiramente pelo conteúdo real conforme schema.
 
-## SCHEMA OBRIGATÓRIO — `patch_notes.md`
+OUTPUT_STRUCTURE
+
+### Schema obrigatório — `patch_notes.md`
 
 O arquivo `patch_notes.md` DEVE conter exatamente as 4 seções abaixo, nesta ordem:
 
@@ -152,7 +165,7 @@ Casos especiais que requerem atenção do operador.
 - `## Artefatos sem Alteração` deve listar todos os artefatos íntegros e todos os `STALE_MAJOR` com justificativa
 - `## Entradas de Provenance Adicionadas` deve ter exatamente uma linha por arquivo que recebeu entrada de provenance
 
-## WRITE SCOPE
+WRITE_SCOPE
 
 - Escrever **exclusivamente** em:
   - `$EAW_WORKDIR/context_sources/onboarding/<repo_key>/` — artefatos de onboarding atualizados
@@ -162,13 +175,13 @@ Casos especiais que requerem atenção do operador.
 - Nunca escrever fora de `context_sources/onboarding/<repo_key>/` nos artefatos de onboarding
 - Nunca remover arquivos existentes do onboarding sem declarar em `provenance.md`
 
-## READ SCOPE
+READ_SCOPE
 
 - `$CARD_DIR/investigations/drift_report.md` — leitura obrigatória antes de qualquer escrita
 - `$EAW_WORKDIR/context_sources/onboarding/<repo_key>/` — leitura dos artefatos a serem atualizados
 - Repositório alvo (`TARGET_REPOS`) — leitura em read-only para referência de conteúdo atual
 
-## GUARDRAILS
+FORBIDDEN
 
 - Nunca aplicar patch em artefato ausente do `## Classificação de Drift` de `drift_report.md`
 - Nunca aplicar patch em artefato com severidade `STALE_MAJOR` — sempre instruir re-run de `repo_onboarding`
@@ -178,3 +191,11 @@ Casos especiais que requerem atenção do operador.
 - Nunca adicionar artefatos ao `INDEX.md` sem criar o artefato correspondente primeiro
 - Para `STALE_MAJOR`: registrar em `## Advertências` do `patch_notes.md` — não silenciar
 - O `WRITE_ALLOWLIST` do `RUNTIME_ENVIRONMENT` pode listar apenas `$CARD_DIR` — isso é esperado para este track; o WRITE SCOPE declarado no corpo deste prompt é autoritativo; os paths em `context_sources/onboarding/<repo_key>/` estão dentro do escopo permitido desta fase
+
+FAIL_CONDITIONS
+
+- `drift_report.md` ausente ou sem `## Classificação de Drift`.
+- `<repo_key>` ambiguo ou ausente de `TARGET_REPOSITORIES`.
+- Qualquer tentativa de escrever no repositório alvo.
+- Patch aplicado a artefato `STALE_MAJOR`.
+- `patch_notes.md` ausente, vazio ou fora do schema obrigatório.

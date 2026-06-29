@@ -103,6 +103,13 @@ RULES
 - PASSO 6 — validacao:
   - test -s {{CARD_DIR}}/investigations/30_technical_decision.md — deve retornar 0.
 
+FORBIDDEN
+
+- Nao escrever em TARGET_REPOS ou RUNTIME_ROOT.
+- Nao criar branch, commit ou patch de codigo nesta fase.
+- Nao emitir recomendacao sem referencia a achados.
+- Nao transformar a decisao tecnica em implementacao direta.
+
 FAIL_CONDITIONS
 - Recomendacao sem referencia a achados → falha de rastreabilidade.
 - Alternativas ausentes (nenhuma documentada) → falha de completude.
@@ -110,7 +117,7 @@ FAIL_CONDITIONS
 - Qualquer proposta de implementacao direta nesta fase → falha de escopo.
 - Qualquer escrita em TARGET_REPOS → falha critica de escopo.
 
-RESPONSE_FORMAT
+OUTPUT_STRUCTURE
 Ao encerrar a fase, responder com:
 
 ```

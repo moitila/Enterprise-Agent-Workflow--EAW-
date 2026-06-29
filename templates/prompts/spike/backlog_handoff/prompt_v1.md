@@ -112,6 +112,13 @@ RULES
 - PASSO 6 — validacao:
   - test -s {{CARD_DIR}}/investigations/40_backlog_or_handoff.md — deve retornar 0.
 
+FORBIDDEN
+
+- Nao escrever em TARGET_REPOS ou RUNTIME_ROOT.
+- Nao criar branch, commit ou patch de codigo nesta fase.
+- Nao transformar backlog em implementacao direta.
+- Nao omitir criterios de aceite dos itens de continuidade.
+
 FAIL_CONDITIONS
 - Item de backlog sem criterio de aceite → falha de completude.
 - Status da spike ausente → falha estrutural.
@@ -120,7 +127,7 @@ FAIL_CONDITIONS
 - 40_backlog_or_handoff.md ausente ou vazio → bloqueio de fechamento da spike.
 - Secao "Rastreamento do pedido inicial ate a decisao" ausente ou sem entradas em `40_backlog_or_handoff.md` → falha de completude.
 
-RESPONSE_FORMAT
+OUTPUT_STRUCTURE
 Ao encerrar a fase, responder com:
 
 ```

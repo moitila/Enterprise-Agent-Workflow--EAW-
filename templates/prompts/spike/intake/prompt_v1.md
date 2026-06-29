@@ -122,6 +122,13 @@ RULES
   - test -s {{CARD_DIR}}/investigations/_intake_provenance.md — deve retornar 0.
   - test -f {{CARD_DIR}}/investigations/20_handoff.json — deve retornar 0.
 
+FORBIDDEN
+
+- Nao escrever fora de `{{CARD_DIR}}`.
+- Nao criar hipoteses nesta fase.
+- Nao acessar TARGET_REPOS para investigar codigo nesta fase.
+- Nao omitir `spike_mode` em `00_spike_intake.md`.
+
 FAIL_CONDITIONS
 - ingest/ ausente ou vazio → abortar com bloqueio.
 - 00_spike_intake.md contendo secao "Hipoteses" → falha de escopo (hipoteses pertencem a fase seguinte).
@@ -131,7 +138,7 @@ FAIL_CONDITIONS
 - `spike_mode` ausente ou com valor fora do conjunto `{repo, no_repo, research}` em `00_spike_intake.md` → falha de contrato.
 - `20_handoff.json` ausente ao final da fase → falha de handoff (runtime nao consegue avaliar skip_when).
 
-RESPONSE_FORMAT
+OUTPUT_STRUCTURE
 Ao encerrar a fase, responder com:
 
 ```

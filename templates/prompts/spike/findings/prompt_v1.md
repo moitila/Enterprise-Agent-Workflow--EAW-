@@ -120,6 +120,13 @@ RULES
   - test -s {{CARD_DIR}}/investigations/20_findings.md — deve retornar 0.
   - test -f {{CARD_DIR}}/investigations/20_handoff.json — deve retornar 0.
 
+FORBIDDEN
+
+- Nao escrever em TARGET_REPOS ou RUNTIME_ROOT.
+- Nao criar branch, commit ou patch de codigo nesta fase.
+- Nao confirmar hipotese sem evidencia concreta.
+- Nao emitir `SPIKE_INFEASIBLE` sem bloqueio tecnico total comprovado.
+
 FAIL_CONDITIONS
 - Achado sem fonte citada (arquivo + linha ou comando) → falha de rastreabilidade.
 - Hipotese "CONFIRMADA" sem evidencia concreta → falha de qualidade.
@@ -127,7 +134,7 @@ FAIL_CONDITIONS
 - Qualquer escrita em TARGET_REPOS → falha critica de escopo.
 - 20_handoff.json ausente ou malformado → bloqueio de avanco de fase.
 
-RESPONSE_FORMAT
+OUTPUT_STRUCTURE
 Ao encerrar a fase, responder com:
 
 ```

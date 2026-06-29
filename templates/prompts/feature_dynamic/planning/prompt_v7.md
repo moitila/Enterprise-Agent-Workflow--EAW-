@@ -33,7 +33,7 @@ INPUT
 - MODE: quando `EAW_WORKDIR` estiver vazio, saida em `OUT_DIR`; quando definido, saida isolada em `EAW_WORKDIR`.
 - EXECUTION_STRUCTURE: `RUNTIME_ROOT` nunca deve ser modificado; `TARGET_REPOS` somente leitura; `CARD_DIR` e o limite unico de escrita da fase.
 
-DYNAMIC_CONTEXT
+CONTEXT_USAGE
 - Before starting this phase, you MUST read all files in: {{CARD_DIR}}/context/dynamic/
 - The context directory is materialized by the dynamic_context phase before this phase runs.
 - Read every .md file present in that directory. Treat their content as authoritative context for this phase.

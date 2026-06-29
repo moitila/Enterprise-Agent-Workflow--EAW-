@@ -87,6 +87,13 @@ RULES
 - PASSO 5 — validacao:
   - test -s {{CARD_DIR}}/investigations/10_hypotheses.md — deve retornar 0.
 
+FORBIDDEN
+
+- Nao ler TARGET_REPOS nesta fase.
+- Nao escrever em TARGET_REPOS ou RUNTIME_ROOT.
+- Nao propor implementacao direta como hipotese.
+- Nao deixar testes de validacao em aberto.
+
 FAIL_CONDITIONS
 - 00_spike_intake.md ausente → abortar com bloqueio.
 - Menos de 3 hipoteses → falha de cobertura (amplie o escopo de investigacao).
@@ -95,7 +102,7 @@ FAIL_CONDITIONS
 - Hipotese propondo implementacao direta (ex: "refatorar X") → falha de escopo (hipoteses descrevem o problema, nao a solucao).
 - Qualquer escrita fora de {{CARD_DIR}} → falha critica de escopo.
 
-RESPONSE_FORMAT
+OUTPUT_STRUCTURE
 Ao encerrar a fase, responder com:
 
 ```

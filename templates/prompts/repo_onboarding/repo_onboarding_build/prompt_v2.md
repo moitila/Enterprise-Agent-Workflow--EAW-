@@ -157,7 +157,7 @@ OUTPUT_STRUCTURE
   - lacunas remanescentes
   - impactos para outras tracks
 
-HANDOFF_EMISSION
+HANDOFF_PROTOCOL
 - Ao final desta fase, SEMPRE escrever {{CARD_DIR}}/investigations/20_handoff.json.
 - O arquivo DEVE ser escrito em uma unica linha, compacto, sem espacos entre campos.
 - Quando fontes IA nativas NAO foram encontradas:
