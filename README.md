@@ -75,54 +75,23 @@ Future phase-driven note:
 
 ## Bootstrap / Getting Started
 
-Use a track `bootstrap` para inicializar um novo workspace EAW de forma guiada.
-
-### 1. Inicializar o workdir
-
-```sh
-eaw init --workdir <path>
-```
-
-O comando é idempotente — seguro para re-executar em workdir já existente.
-
-### 2. Exportar EAW_WORKDIR
-
-```sh
-export EAW_WORKDIR=<path>
-```
-
-Para persistir entre sessões, adicione ao `~/.bashrc` ou `~/.zshrc`:
-
-```sh
-echo 'export EAW_WORKDIR=<path>' >> ~/.bashrc
-source ~/.bashrc
-```
-
-> **Windows / PowerShell:** `$env:EAW_WORKDIR = "<path>"` e persista via PowerShell profile.
-
-### 3. Configurar repos
-
-Edite `$EAW_WORKDIR/config/repos.conf`. Cada linha:
+Para inicializar um novo workspace EAW, passe a skill `bootstrap_operator` ao seu agente.
+O agente executa todos os passos — não é necessário configurar nada manualmente nem criar um card.
 
 ```
-<name>|<absolute-path>|<role>
+Skill: skills/bootstrap_operator/SKILL.md
 ```
 
-`role` é `target` (repo de implementação) ou `infra` (tooling/infra, excluído do contexto do card).
+| Passo | O que o agente faz |
+|-------|--------------------|
+| `init_workspace` | `eaw init --workdir <path>` |
+| `configure_env` | `export EAW_WORKDIR=<path>` + persistência em shell config |
+| `configure_repos` | edita `repos.conf` com os repos declarados |
+| `validate_repos` | `git -C <path> rev-parse` para cada repo |
+| `validate_env` | `eaw validate` + `eaw doctor` |
 
-### 4. Validar repos
-
-```sh
-eaw validate
-```
-
-### 5. Diagnosticar o ambiente
-
-```sh
-eaw doctor
-```
-
-Resolva erros críticos reportados antes de criar o primeiro card.
+> **Modo governado (re-bootstrap):** se o workspace já existir e você quiser auditabilidade,
+> crie um card com `eaw card <ID> --track bootstrap`.
 
 ## Migration Path
 

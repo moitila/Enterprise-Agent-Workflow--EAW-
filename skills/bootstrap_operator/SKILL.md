@@ -2,51 +2,57 @@
 
 ## Objetivo
 
-Guiar o agente executor nas fases da track `bootstrap` do EAW. Cobre os comportamentos
-operacionais específicos para inicialização de workspaces EAW do zero.
+Guiar o agente na inicialização de um workspace EAW do zero, sem exigir card ou EAW_WORKDIR
+pré-existentes. Esta skill é executada diretamente pelo agente — o usuário não executa
+os passos manualmente.
 
-## Contexto de uso
+## Modo de uso
 
-Esta skill é declarada nas fases da track `bootstrap`. O agente executor deve aplicá-la
-ao executar qualquer fase dessa track. É complementar à skill `workspace` (workspace.md),
-que permanece obrigatória em toda execução EAW.
+Passe esta skill ao agente junto com o pedido de bootstrap:
 
-## Comportamentos por fase
+> "Bootstrap meu workspace EAW. Skill: `skills/bootstrap_operator/SKILL.md`"
 
-### init_workspace
-- Executar `eaw init --workdir <path>` com o path configurado pelo executor
+O agente executa os 5 passos em sequência. Nenhum card é necessário.
+
+> **Modo governado (opcional):** se o workspace já existir e você quiser auditabilidade,
+> crie um card com `eaw card <ID> --track bootstrap`. A track usa esta mesma skill.
+
+## Passos (execução direta, sem card)
+
+### 1. init_workspace
+- Perguntar ao executor o path desejado para o workdir
+- Executar `eaw init --workdir <path>` a partir do RUNTIME_ROOT
 - Confirmar criação de `<path>/config/`, `<path>/out/`, `<path>/templates/`
-- Registrar path efetivo e resultado do comando no artefato `bootstrap/init_workspace_report.md`
-- `eaw init` é idempotente — safe to re-run
+- `eaw init` é idempotente — seguro re-executar
+- Reportar path efetivo e resultado ao executor
 
-### configure_env
-- Instruir `export EAW_WORKDIR=<path>` no shell ativo
-- **Gate obrigatório**: `echo $EAW_WORKDIR` deve retornar o path configurado (instrução de prompt, H2)
+### 2. configure_env
+- Executar `export EAW_WORKDIR=<path>` no shell ativo
+- **Gate obrigatório**: `echo $EAW_WORKDIR` deve retornar o path — confirmar antes de prosseguir
 - Persistir em `~/.bashrc` ou `~/.zshrc` conforme shell do executor
-- Registrar path persistido e saída do gate no artefato `bootstrap/configure_env_report.md`
+- Windows/PowerShell: `$env:EAW_WORKDIR = "<path>"` e persistir via profile
 - NÃO modificar `scripts/` ou qualquer arquivo de runtime EAW
 
-### configure_repos
+### 3. configure_repos
 - Editar `$EAW_WORKDIR/config/repos.conf`
-- Formato de cada linha: `<name>|<absolute-path>|<role>` onde role é `target` ou `infra`
-- Validar que cada path existe como diretório antes de registrar
-- Registrar entradas adicionadas no artefato `bootstrap/configure_repos_report.md`
+- Formato por linha: `<name>|<absolute-path>|<role>` — role é `target` ou `infra`
+- Validar `test -d <absolute-path>` para cada entrada antes de registrar
+- Path inexistente é bloqueio — não registrar, reportar ao executor
 
-### validate_repos
-- Para cada repo em `repos.conf`: executar `git -C <path> rev-parse --is-inside-work-tree`
-- Validação é **instrução de prompt/shell** — NÃO modificar `cmd_validate.sh` (H3)
-- Falha em qualquer repo → registrar no artefato, NÃO prosseguir para próxima fase
-- Registrar resultado por repo (OK / FAIL) em `bootstrap/validate_repos_report.md`
+### 4. validate_repos
+- Para cada repo em `repos.conf`: `git -C <path> rev-parse --is-inside-work-tree`
+- NÃO modificar `cmd_validate.sh` — validação é instrução de shell direta
+- Falha em qualquer repo → reportar ao executor, não prosseguir
 
-### validate_env
-- Executar `eaw validate` e capturar saída completa
-- Executar `eaw doctor` e capturar saída completa
+### 5. validate_env
+- Executar `eaw validate` e capturar saída
+- Executar `eaw doctor` e capturar saída
 - Confirmar ausência de erros críticos (warnings são aceitáveis)
-- Registrar saídas e conclusão em `bootstrap/validate_env_report.md`
+- Reportar conclusão ao executor
 
 ## Limites absolutos
 
 - NÃO modificar `scripts/`, `lib.sh`, `eaw_core.sh`, `cmd_*.sh`
-- NÃO escrever fora da allowlist declarada em `implementation/00_scope.lock.md`
-- NÃO assumir papel de repo por nome; sempre consultar `repos.conf`
-- NÃO executar múltiplas fases em paralelo
+- NÃO assumir papel de repo por nome; sempre ler `repos.conf`
+- NÃO prosseguir se gate de `echo $EAW_WORKDIR` falhar
+- NÃO prosseguir se qualquer repo falhar em `git rev-parse`
