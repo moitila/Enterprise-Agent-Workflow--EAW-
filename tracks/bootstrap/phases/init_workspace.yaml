@@ -1,0 +1,26 @@
+config_version: 1
+
+phase:
+  id: init_workspace
+  name: Init Workspace
+  description: Initialize the EAW workspace directory using eaw init --workdir.
+
+  skills:
+    - bootstrap_operator
+
+  prompt:
+    active: 1
+    path: templates/prompts/bootstrap/init_workspace/prompt_v1.md
+
+  outputs:
+    create_directories:
+      - bootstrap
+    create_artifacts:
+      - bootstrap/init_workspace_report.md
+    prompts:
+      - init_workspace
+
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - bootstrap/init_workspace_report.md

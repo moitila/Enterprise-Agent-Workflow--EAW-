@@ -36,3 +36,7 @@ skills:
   eaw_spike_operator:
     file: skills/eaw_spike_operator/SKILL.md
     description: Spike investigation concept, modes and research policy for spike track agents.
+
+  bootstrap_operator:
+    file: skills/bootstrap_operator/SKILL.md
+    description: Bootstrap track operator skill — workspace init, env config, repos registration, repo git validation and environment health check.

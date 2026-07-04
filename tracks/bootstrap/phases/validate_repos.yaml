@@ -1,0 +1,27 @@
+config_version: 1
+
+phase:
+  id: validate_repos
+  name: Validate Repos
+  description: >
+    Validate that each repo registered in repos.conf is a valid git repository.
+    Validation is performed via prompt instruction (git -C <path> rev-parse
+    --is-inside-work-tree), not via cmd_validate.sh modification (H3).
+
+  skills:
+    - bootstrap_operator
+
+  prompt:
+    active: 1
+    path: templates/prompts/bootstrap/validate_repos/prompt_v1.md
+
+  outputs:
+    create_artifacts:
+      - bootstrap/validate_repos_report.md
+    prompts:
+      - validate_repos
+
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - bootstrap/validate_repos_report.md

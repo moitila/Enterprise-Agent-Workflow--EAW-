@@ -73,6 +73,57 @@ Future phase-driven note:
 - the current phase-driven executor is incremental: it scaffolds declared outputs, materializes `outputs.prompts` under `out/<CARD>/prompts/`, emits compatibility prompt artifacts for the built-in prompt phases, and records execution in `execution.log`;
 - future iterations can refine pre-conditions, completion criteria, and the distinction between manual and automatic phases without requiring new top-level commands.
 
+## Bootstrap / Getting Started
+
+Use a track `bootstrap` para inicializar um novo workspace EAW de forma guiada.
+
+### 1. Inicializar o workdir
+
+```sh
+eaw init --workdir <path>
+```
+
+O comando é idempotente — seguro para re-executar em workdir já existente.
+
+### 2. Exportar EAW_WORKDIR
+
+```sh
+export EAW_WORKDIR=<path>
+```
+
+Para persistir entre sessões, adicione ao `~/.bashrc` ou `~/.zshrc`:
+
+```sh
+echo 'export EAW_WORKDIR=<path>' >> ~/.bashrc
+source ~/.bashrc
+```
+
+> **Windows / PowerShell:** `$env:EAW_WORKDIR = "<path>"` e persista via PowerShell profile.
+
+### 3. Configurar repos
+
+Edite `$EAW_WORKDIR/config/repos.conf`. Cada linha:
+
+```
+<name>|<absolute-path>|<role>
+```
+
+`role` é `target` (repo de implementação) ou `infra` (tooling/infra, excluído do contexto do card).
+
+### 4. Validar repos
+
+```sh
+eaw validate
+```
+
+### 5. Diagnosticar o ambiente
+
+```sh
+eaw doctor
+```
+
+Resolva erros críticos reportados antes de criar o primeiro card.
+
 ## Migration Path
 
 - Prefer `./scripts/eaw next <CARD>` as the primary lifecycle command.

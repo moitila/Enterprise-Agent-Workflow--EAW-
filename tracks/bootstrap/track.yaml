@@ -1,0 +1,38 @@
+config_version: 1
+
+track:
+  id: bootstrap
+  name: Bootstrap Track
+  description: >
+    Guided EAW workspace initialization track. Bootstraps a new EAW environment:
+    initializes workdir, configures environment variables, registers repositories,
+    validates repository integrity, and confirms environment health.
+  initial_phase: init_workspace
+  final_phase: validate_env
+
+  initial_outputs:
+    create_directories:
+      - bootstrap
+    create_artifacts: []
+
+  phases:
+    - init_workspace
+    - configure_env
+    - configure_repos
+    - validate_repos
+    - validate_env
+
+  transitions:
+    init_workspace:
+      next: configure_env
+    configure_env:
+      next: configure_repos
+    configure_repos:
+      next: validate_repos
+    validate_repos:
+      next: validate_env
+
+  rules:
+    one_prompt_per_phase: true
+    generated_artifacts_of_each_phase_must_be_non_empty: true
+    allow_manual_phase_skip: false

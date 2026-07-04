@@ -1,0 +1,24 @@
+config_version: 1
+
+phase:
+  id: configure_repos
+  name: Configure Repos
+  description: Register target and infra repositories in repos.conf.
+
+  skills:
+    - bootstrap_operator
+
+  prompt:
+    active: 1
+    path: templates/prompts/bootstrap/configure_repos/prompt_v1.md
+
+  outputs:
+    create_artifacts:
+      - bootstrap/configure_repos_report.md
+    prompts:
+      - configure_repos
+
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - bootstrap/configure_repos_report.md
