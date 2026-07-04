@@ -19,3 +19,5 @@ tracks:
     status: installed
   - track_id: repo_onboarding_refresh
     status: installed
+  - track_id: bootstrap
+    status: installed

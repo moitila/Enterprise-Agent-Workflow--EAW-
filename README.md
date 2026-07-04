@@ -73,6 +73,26 @@ Future phase-driven note:
 - the current phase-driven executor is incremental: it scaffolds declared outputs, materializes `outputs.prompts` under `out/<CARD>/prompts/`, emits compatibility prompt artifacts for the built-in prompt phases, and records execution in `execution.log`;
 - future iterations can refine pre-conditions, completion criteria, and the distinction between manual and automatic phases without requiring new top-level commands.
 
+## Bootstrap / Getting Started
+
+Para inicializar um novo workspace EAW, passe a skill `bootstrap_operator` ao seu agente.
+O agente executa todos os passos — não é necessário configurar nada manualmente nem criar um card.
+
+```
+Skill: skills/bootstrap_operator/SKILL.md
+```
+
+| Passo | O que o agente faz |
+|-------|--------------------|
+| `init_workspace` | `eaw init --workdir <path>` |
+| `configure_env` | `export EAW_WORKDIR=<path>` + persistência em shell config |
+| `configure_repos` | edita `repos.conf` com os repos declarados |
+| `validate_repos` | `git -C <path> rev-parse` para cada repo |
+| `validate_env` | `eaw validate` + `eaw doctor` |
+
+> **Modo governado (re-bootstrap):** se o workspace já existir e você quiser auditabilidade,
+> crie um card com `eaw card <ID> --track bootstrap`.
+
 ## Migration Path
 
 - Prefer `./scripts/eaw next <CARD>` as the primary lifecycle command.
