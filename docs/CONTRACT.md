@@ -124,6 +124,7 @@ Outputs
   - `investigations/20_findings.md` — findings stage scaffold
   - `investigations/30_hypotheses.md` — hypotheses stage scaffold
   - `investigations/40_next_steps.md` — next-steps stage scaffold
+  - `investigations/_context_summary.md` — derived, accumulated per-phase traceability summary when not excluded by track policy; not a sovereign source
   - `prompts/<prompt_alias>.md` — phase-driven prompt file generated from `outputs.prompts`; the filename matches the declared alias exactly
   - `execution.log` — phase execution log with format `phase|status|duration_ms|note`
   - `runtime/run_state.yaml` — run-level state snapshot written by `eaw run`, including `attempt`, `status`, `track_id`, `current_phase`, `phase_status`, `stop_reason`, and timestamp

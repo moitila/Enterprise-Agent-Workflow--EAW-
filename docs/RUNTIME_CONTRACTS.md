@@ -132,6 +132,20 @@ Skipped handoff uses `status: "skipped"`, `code_origin: "inherited"`, and an inf
 
 Final-phase special case: when the final phase already has a skipped `10_phase_output.json`, `next` rewrites `20_handoff.json` to matching skipped status and bypasses artifact completion validation before final auto-close.
 
+## Context Summary
+
+The runtime can append a derived traceability view at:
+
+```text
+out/<CARD>/investigations/_context_summary.md
+```
+
+For each phase emission, the context summary reads `investigations/10_phase_output.json`. It records the phase status, using `unknown` when no status is available, and includes the phase summary only when that value is non-empty. Each emission appends a section for the phase, so the file is an accumulated execution trace rather than a current-state snapshot.
+
+The runtime emits this summary during `eaw next` transitions and during final-phase completion. A track can set `context_summary_policy: excluded`; in that case, absence of the file is intentional. This policy exclusion does not define the behavior of write failures.
+
+The context summary is not a sovereign source and does not control workflow state, transitions, or routing. Handoff envelopes and track transitions retain those responsibilities. Context and agent bundles remain separate derived views with their documented failure behavior, and card metrics remain derived from execution journal events.
+
 ## Context Sources
 
 Based on human architectural decision DECISION-003: onboarding has a sovereign workspace source at:
@@ -220,6 +234,7 @@ Key runtime artifacts:
 |---|---|---|
 | `state_card_*.yaml` | runtime | Mutable workflow state. |
 | `investigations/*.md` | phase/agent/runtime | Phase work artifacts. |
+| `investigations/_context_summary.md` | runtime | Derived, accumulated per-phase traceability summary when not excluded by track policy. |
 | `investigations/10_phase_output.json` | phase/agent/runtime | Phase output envelope. |
 | `investigations/20_handoff.json` | phase/agent/runtime | Handoff envelope and transition codes. |
 | `prompts/<alias>.md` | runtime | Rendered phase prompt. |
