@@ -2000,6 +2000,10 @@ EOF
 ## Risks
 EOF
 		;;
+	investigations/20_handoff.json)
+		printf '{"from_phase":"%s","status":"completed","messages":[],"codes":[]}\n' \
+			"$phase_id" >"$target_path"
+		;;
 	*.json)
 		echo '{}' >"$target_path"
 		;;
