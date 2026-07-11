@@ -2335,21 +2335,31 @@ eaw_render_phase_prompt_template() {
 	eaw_apply_context_block_to_prompt "$card" "$card_dir" "${EAW_CARD_WORKFLOW_CURRENT_PHASE_FILE:-}" "$output_file" || return 1
 	eaw_apply_skills_block_to_prompt "${EAW_CARD_WORKFLOW_CURRENT_PHASE_FILE:-}" "$output_file" || return 1
 	echo "RUNTIME: wrote_prompt=${output_file#$card_dir/}"
-	# CI Feedback block (appended when ci_feedback_enabled=true in EAW_CONF)
+	# CI Feedback — template-based (appended when ci_feedback_enabled=true in EAW_CONF)
 	local _ci_feedback_enabled
 	_ci_feedback_enabled="$(eaw_read_ci_feedback_flag)"
 	if [[ "$_ci_feedback_enabled" == "true" ]]; then
-		cat >>"$output_file" <<CIFEEDBACK
+		local _ci_tmpl_dir="${EAW_ROOT_DIR}/templates/ci_feedback"
+		local _ci_tmpl_file="${_ci_tmpl_dir}/feedback_prompt_v1.md"
+		local _ci_prompt_output
+		_ci_prompt_output="$(dirname "$output_file")/ci_feedback_prompt.md"
+		if [[ -f "$_ci_tmpl_file" ]]; then
+			sed \
+				-e "s|{{CARD}}|${card}|g" \
+				-e "s|{{TRACK}}|${track_id}|g" \
+				-e "s|{{PHASE}}|${step_id}|g" \
+				-e "s|{{EAW_WORKDIR}}|${EAW_WORKDIR}|g" \
+				"$_ci_tmpl_file" > "$_ci_prompt_output"
+			cat >>"$output_file" <<EAW_CI_FEEDBACK_REF
 
 ## CI FEEDBACK (enabled)
 
-After completing this phase, write a feedback file at:
-${EAW_WORKDIR}/ci_feedback/${track_id}/${step_id}/feedback_${card}.md
+After completing this phase, execute the feedback prompt at:
+$(basename "$(dirname "$output_file")")/ci_feedback_prompt.md
 
-Use the format defined in skills/EAW_operator/lessons.md.
-Fill only the sections with relevant observations. Empty sections = no issue found.
-This is an ADDITIONAL output — it does NOT replace any required phase artifacts.
-CIFEEDBACK
+Write the result to: ${EAW_WORKDIR}/ci_feedback/${track_id}/${step_id}/feedback_${card}.md
+EAW_CI_FEEDBACK_REF
+		fi
 	fi
 }
 
