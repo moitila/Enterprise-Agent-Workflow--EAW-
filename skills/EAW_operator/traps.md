@@ -11,6 +11,7 @@ Traps aprendidas em execuções reais. Incluir no Mandatory Delegation Context d
 ## Delegação
 
 - **Delegar template em vez de prompt renderizado**: sempre usar `out/<CARD>/prompts/`, nunca `templates/prompts/`
+- **Orquestrador escrevendo prompt custom**: o orquestrador NUNCA escreve o prompt do subagente manualmente. O conteúdo de `out/<CARD>/prompts/<phase>.md` deve ser passado verbatim. Escrever um prompt próprio em vez de usar o renderizado: (1) perde o bloco PHASE_CONTRACTS, (2) perde o bloco CI FEEDBACK, (3) diverge do contrato da fase.
 - **workspace.md não repassada ao subagente**: sem ela, agente mistura papéis `infra` e `target`
 - **Agente isolado operando CLI**: agente isolado de fase NÃO roda `./scripts/eaw`; apenas o orquestrador roda
 

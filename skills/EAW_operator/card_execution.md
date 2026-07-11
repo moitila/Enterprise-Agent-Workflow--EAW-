@@ -209,6 +209,7 @@ Se houver conflito entre prompt/plano e `scope lock`/allowlist:
 - Nunca deixar o subagente inferir `target` vs `infra` por nome de repositorio
 - Nunca deixar o subagente escolher repo de escrita diferente do definido por `scope lock`/allowlist
 - Nunca aceitar plano ou validacao que aponte para repo diferente da allowlist sem bloquear a execucao
+- **Nunca escrever o prompt do subagente manualmente**: o prompt renderizado em `out/<CARD>/prompts/<phase>.md` é o contrato soberano da fase — deve ser passado verbatim ao subagente. Skills e contexto complementar (workspace.md, traps.md) são adicionados ao contexto, nunca substituem nem modificam o conteúdo do prompt renderizado.
 
 ## Runtime authority
 
