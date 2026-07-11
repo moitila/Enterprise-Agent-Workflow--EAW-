@@ -49,6 +49,7 @@ WRITE_SCOPE
 - A whitelist de escrita desta fase limita somente este agente de planning e nao define a allowlist soberana de implementacao.
 
 RULES
+- Os artefatos de saida `00_scope.lock.md` e `10_change_plan.md` sao criados pelo runtime como scaffolds vazios antes desta fase. Substitua o conteudo inteiramente — nao trate os scaffolds como rascunhos a editar.
 - Executar pre-check em fail-fast:
   - `set -euo pipefail`
   - `cd "{{RUNTIME_ROOT}}"`
@@ -63,6 +64,7 @@ RULES
 - PASSO 2 - GERAR 10_change_plan.md:
   - Incluir `# Change Plan - Card {{CARD}}`, `## Objetivo de Execucao`, `## Hipotese(s) Selecionada(s)`, `## Assuncoes Explicitas`, `## Steps`, `## Validacao Tecnica Obrigatoria` e `## Rollback`.
   - Em cada Step numerado, incluir objetivo, tipo, arquivos envolvidos, justificativa referenciando `40_next_steps.md` e hipoteses `H[0-9]+`, e validacao tecnica obrigatoria.
+  - Comandos EAW validos para passos de validacao no change_plan: `eaw next <CARD>`, `eaw card <CARD> --track <TRACK>`, `eaw status <CARD>`, `eaw validate`. Nao usar outros subcomandos — o unico mecanismo de execucao e `eaw next`.
 - PASSO 3 - GERAR 00_scope.lock.md:
   - Incluir `# Scope Lock - Card {{CARD}}`, `## Base Obrigatoria`, `## Hipotese(s) Base`, `## Contexto`, `## In Scope`, `## Out of Scope`, `## Allowlist de Escrita` e `## Regra de Escrita`.
   - Preencher `## Allowlist de Escrita` com paths explicitos, fechados e sem glob dos arquivos reais em TARGET_REPOS autorizados para a implementacao.
