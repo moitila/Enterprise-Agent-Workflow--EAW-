@@ -2335,22 +2335,11 @@ eaw_render_phase_prompt_template() {
 	eaw_apply_context_block_to_prompt "$card" "$card_dir" "${EAW_CARD_WORKFLOW_CURRENT_PHASE_FILE:-}" "$output_file" || return 1
 	eaw_apply_skills_block_to_prompt "${EAW_CARD_WORKFLOW_CURRENT_PHASE_FILE:-}" "$output_file" || return 1
 	echo "RUNTIME: wrote_prompt=${output_file#$card_dir/}"
-	# CI Feedback — template-based (appended when ci_feedback_enabled=true in EAW_CONF)
-	local _ci_feedback_enabled
-	_ci_feedback_enabled="$(eaw_read_ci_feedback_flag)"
-	if [[ "$_ci_feedback_enabled" == "true" ]]; then
-		local _ci_tmpl_dir="${EAW_ROOT_DIR}/templates/ci_feedback"
-		local _ci_tmpl_file="${_ci_tmpl_dir}/feedback_prompt_v1.md"
-		local _ci_prompt_output
-		_ci_prompt_output="$(dirname "$output_file")/ci_feedback_prompt.md"
-		if [[ -f "$_ci_tmpl_file" ]]; then
-			sed \
-				-e "s|{{CARD}}|${card}|g" \
-				-e "s|{{TRACK}}|${track_id}|g" \
-				-e "s|{{PHASE}}|${step_id}|g" \
-				-e "s|{{EAW_WORKDIR}}|${EAW_WORKDIR}|g" \
-				"$_ci_tmpl_file" > "$_ci_prompt_output"
-			cat >>"$output_file" <<EAW_CI_FEEDBACK_REF
+	# CI Feedback reference (appended when ci_feedback_prompt.md was created at card init)
+	local _ci_prompt_output
+	_ci_prompt_output="$(dirname "$output_file")/ci_feedback_prompt.md"
+	if [[ -f "$_ci_prompt_output" ]]; then
+		cat >>"$output_file" <<EAW_CI_FEEDBACK_REF
 
 ## CI FEEDBACK (enabled)
 
@@ -2359,7 +2348,6 @@ $(basename "$(dirname "$output_file")")/ci_feedback_prompt.md
 
 Write the result to: ${EAW_WORKDIR}/ci_feedback/${track_id}/${step_id}/feedback_${card}.md
 EAW_CI_FEEDBACK_REF
-		fi
 	fi
 }
 
@@ -2741,6 +2729,22 @@ cmd_card() {
 
 	if eaw_card_has_workflow_config "$outdir"; then
 		eaw_materialize_current_phase "$card" || return 1
+	fi
+
+	# CI Feedback prompt — render once at card creation
+	if [[ "$(eaw_read_ci_feedback_flag)" == "true" ]]; then
+		local _ci_tmpl="${EAW_ROOT_DIR}/templates/ci_feedback/feedback_prompt_v1.md"
+		local _ci_out="${outdir}/prompts/ci_feedback_prompt.md"
+		if [[ -f "$_ci_tmpl" ]] && [[ ! -f "$_ci_out" ]]; then
+			mkdir -p "$(dirname "$_ci_out")"
+			sed \
+				-e "s|{{CARD}}|${card}|g" \
+				-e "s|{{TRACK}}|${track_id}|g" \
+				-e "s|{{PHASE}}|init|g" \
+				-e "s|{{EAW_WORKDIR}}|${EAW_WORKDIR}|g" \
+				"$_ci_tmpl" > "$_ci_out"
+			echo "RUNTIME: ci_feedback_prompt created for card=$card"
+		fi
 	fi
 }
 
