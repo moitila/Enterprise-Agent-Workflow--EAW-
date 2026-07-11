@@ -39,6 +39,11 @@ Para executar um card:
 
 2. Validar `EAW_WORKDIR`, `repos.conf`, papeis `target`/`infra` e `./scripts/eaw` conforme `workspace.md`
 
+2b. Antes de cada `next`, rodar `./scripts/eaw preflight <CARD_ID>`:
+   - PASS → prosseguir com `next`
+   - FAIL → corrigir as falhas reportadas antes de avançar
+   - `preflight` valida o ambiente; `next` avança a fase — não são substitutos
+
 3. Rodar:
    ./scripts/eaw next <CARD_ID>
 
@@ -95,6 +100,13 @@ Para executar um card:
     - cruzar com o relatorio do agente para identificar causa
     - reportar bloqueio ao executor
     - nao forcar avanco manual
+
+### CI Feedback (quando ci_feedback_enabled=true em eaw.conf)
+- O prompt renderizado já contém instrução para o agente isolado produzir
+  `$EAW_WORKDIR/ci_feedback/<track>/<phase>/feedback_<CARD>.md`
+- Ao final do card, o orquestrador pode ler todos os feedbacks da sessão e
+  escrever síntese em `$EAW_WORKDIR/ci_feedback/_synthesis/<track>_<phase>.md`
+- Consulte `skills/EAW_operator/lessons.md` para classificação e síntese
 
 ## Skill Routing
 
@@ -162,6 +174,11 @@ Se houver conflito entre prompt/plano e `scope lock`/allowlist:
 - devolver controle ao operador
 - nunca improvisar mudando repo alvo, write set ou superficie de validacao
 
+### Divergência skill vs prompt renderizado
+- **Fatos operacionais do card** (EAW_WORKDIR, CARD_DIR, paths, repos): prompt renderizado prevalece
+- **Regras comportamentais** (fail-fast, limites de escrita, papéis target/infra): `workspace.md` prevalece
+- **Conflito entre dois fatos operacionais**: parar e reportar ao orquestrador — nunca resolver localmente
+
 ## Rules
 
 - Cada fase deve ser executada por um agente com contexto isolado
@@ -192,6 +209,8 @@ Se houver conflito entre prompt/plano e `scope lock`/allowlist:
 - Nunca deixar o subagente inferir `target` vs `infra` por nome de repositorio
 - Nunca deixar o subagente escolher repo de escrita diferente do definido por `scope lock`/allowlist
 - Nunca aceitar plano ou validacao que aponte para repo diferente da allowlist sem bloquear a execucao
+- **Nunca escrever o prompt do subagente manualmente**: o prompt renderizado em `out/<CARD>/prompts/<phase>.md` é o contrato soberano da fase — deve ser passado verbatim ao subagente. Skills e contexto complementar (workspace.md, traps.md) são adicionados ao contexto, nunca substituem nem modificam o conteúdo do prompt renderizado.
+- **Fluxo de passaçem do prompt**: ler `out/<CARD>/prompts/<phase>.md` de forma mecânica (sem interpretar) e passar o conteúdo bruto ao subagente. Com CI feedback ativo, o subagente valida a qualidade do prompt e reporta em `ci_feedback/` — o orquestrador não precisa pré-validar o conteúdo.
 
 ## Runtime authority
 
@@ -262,19 +281,9 @@ mencionar está incorreta.
 - Mencionar skills dentro do prompt da fase (skills são contexto do agente, não conteúdo do prompt)
 - Deixar de incluir `workspace` no agente isolado
 
-## Operational Traps (learned)
+### Operational Traps
 
-Estas armadilhas foram identificadas em execuções reais e devem ser conhecidas pelo executor:
-
-- **Delegar o template original em vez do prompt renderizado**: o template tem placeholders nao resolvidos (`{{TARGET_REPOS}}`, `{{CONTEXT_BLOCK}}`, etc.); o subagente ficará sem contexto operacional. Sempre usar o arquivo gerado em `out/<CARD>/prompts/`, nunca o template de `templates/prompts/`.
-- `workspace.md` deve ser repassada ao subagente junto do prompt; sem isso, o agente tende a misturar `infra` e `target` e nao aplica fail-fast
-- Se `scope lock` e validacao tecnica apontarem para repositorios diferentes, isso e bloqueio estrutural do card, nao decisao local do executor
-- Artefatos vazios (0 bytes ou contendo apenas template/scaffold) não devem passar phase completion; se o runtime aceitar, registrar como bug do runtime
-- Erros de `awk`/`sed` nos scripts do runtime podem ser silenciosos; verificar exit codes após cada comando do runtime
-- Quando CI falha por dependência não publicada (ex: classes do framework não disponíveis no maven), classificar como "expected dependency gap" e não como regressão
-- Cards multi-repo exigem ordem explícita de merge; nunca assumir merge paralelo sem verificar o grafo de dependências
-- Se o prompt da fase referencia repos que não estão em `repos.conf`, o agente isolado deve falhar, não improvisar
-- **PATH corrompido após subagente**: salvar `SAFE_PATH="$PATH"` antes de delegar; restaurar com `export PATH="$SAFE_PATH"` antes de chamar `./scripts/eaw next`. Se PATH for corrompido, `next` falha com `/usr/bin/env: 'bash': No such file or directory`.
+Ver skill dedicada: `skills/EAW_operator/traps.md`
 
 ## Fail-fast
 

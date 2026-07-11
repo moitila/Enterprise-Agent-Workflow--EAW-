@@ -1,14 +1,79 @@
 # Enterprise Agent Workflow (EAW)
 
-EAW is a deterministic AI-assisted engineering system for governing work by card. It combines workflow tracks, phase contracts, per-card state, prompt governance, context collection, and auditable artifacts so engineering teams can use AI with rigor in complex systems.
+EAW is an agentic workflow framework for governing work by card, track, phase, prompt and artifact. It provides deterministic execution through workflow tracks, phase contracts, per-card state, prompt governance, context collection and auditable artifacts — so teams can operate AI with rigor in any knowledge-work process.
+
+The built-in tracks are software-engineering-oriented, but the model is not limited to software. Any process that can be described through phases, prompts and YAML contracts can be governed with EAW.
 
 ## What is EAW
 
-EAW helps engineers turn a card into a governed execution flow. The runtime resolves the selected `track`, persists workflow state in `card_state.track_id` and `current_phase`, binds phase prompts through `ACTIVE`, collects repository context from target repos, and writes deterministic artifacts under `out/<CARD>/` for traceability and review.
+EAW helps operators turn a request into a governed execution flow. The runtime resolves the selected `track`, persists workflow state in `card_state.track_id` and `current_phase`, binds phase prompts through `ACTIVE`, collects repository context from target repos, and writes deterministic artifacts under `out/<CARD>/` for traceability and review.
+
+## Operational Roles
+
+EAW separates three distinct roles:
+
+| Role | Responsibility |
+|------|----------------|
+| **Human requester** | Defines objective, context, constraints and intent. Chooses the track, feeds the card ingest area, and reviews artifacts. |
+| **EAW operator / orchestrator** | Runs the CLI (`doctor`, `tracks`, `card`, `next`, `status`). Controls phase progression and delivers the rendered phase prompt to the isolated agent. Today this is typically a human assisted by Copilot or another AI assistant. |
+| **Isolated phase agent** | Receives the rendered phase prompt. Produces the artifacts required by the phase contract. Does **not** run the CLI. Does **not** decide phase transitions. |
+
+> EAW is not limited to software engineering. Tracks can be created for any process that can be described through phases, prompts and YAML contracts.
+
+## Agentic Execution Model
+
+After each `./scripts/eaw next <CARD>`, the runtime materializes the phase prompt at:
+
+```
+out/<CARD>/prompts/<phase_alias>.md
+```
+
+This prompt is the handoff artifact to the isolated agent responsible for that phase. The agent reads the prompt, executes the phase work, writes the required artifacts back into the card directory, and returns control to the EAW operator.
+
+The operator then calls `./scripts/eaw next <CARD>` again. The runtime validates the phase artifacts, advances `current_phase`, and materializes the next prompt — repeating until the track reaches completion.
+
+Artifacts produced by isolated agents are written under `out/<CARD>/` in directories declared by the phase contract (`investigations/`, `implementation/`, `context/`, etc.). The operator never modifies these artifacts manually — they are the authoritative output of the phase.
 
 ## Architecture
 
 Canonical architecture document: `docs/ARCHITECTURE.md`.
+
+## Installation (bash)
+
+Ensure you have `bash`, `git`, `mktemp`, and optionally `rg` (ripgrep) installed.
+
+```bash
+# make scripts executable (on Unix)
+chmod +x scripts/eaw scripts/lib.sh
+```
+
+## Quickstart
+
+EAW is operated through an agentic workflow. The human defines the goal; the EAW operator/orchestrator runs the CLI; the isolated phase agent executes each phase using the generated prompt.
+
+> **Do not edit `tracks/`, `templates/`, `scripts/` or runtime contracts during normal card execution.** Track and prompt changes are framework maintenance tasks, not part of regular card use.
+
+```bash
+# 1. Initialize or validate the workspace
+./scripts/eaw doctor
+
+# 2. See available tracks
+./scripts/eaw tracks
+
+# 3. Create a card with the appropriate track
+./scripts/eaw card <CARD> --track <TRACK> "<TITLE>"
+
+# 4. Advance the card — generates the phase prompt
+./scripts/eaw next <CARD>
+
+# 5. Deliver the generated prompt to an isolated agent
+# Prompt is at: out/<CARD>/prompts/<phase_alias>.md
+
+# 6. Repeat next + agent until the card completes
+./scripts/eaw status <CARD>
+```
+
+These commands are run by the **EAW operator/orchestrator**, not by the isolated phase agent.
 
 ## Documentation Map
 
@@ -21,41 +86,54 @@ Read the repository in this order if you want the full model:
 - `Prompt Governance`: `docs/PROMPT_GOVERNANCE.md` - prompt binding, `ACTIVE`, and provenance
 - `Contract`: `docs/CONTRACT.md` - public output, behavior, and compatibility contract
 
-## Installation (bash)
+## Available Tracks
 
-Ensure you have `bash`, `git`, `mktemp`, and optionally `rg` (ripgrep) installed.
+Run `./scripts/eaw tracks` to list all installed tracks. Current tracks:
 
-```bash
-# make scripts executable (on Unix)
-chmod +x scripts/eaw scripts/lib.sh
+| Track | Use when | Not when |
+|-------|----------|----------|
+| `spike` | You need to investigate before deciding | You already know exactly what to change |
+| `feature` | The functional demand is clear and scoped | The question is still exploratory |
+| `feature_dynamic` | Feature with dynamic context collection enabled | Static context is sufficient |
+| `bug` | There is a defect with symptoms, logs or evidence | It is a new feature in disguise |
+| `bug_ONBOARD` | Bug investigation requires onboarding a new repo first | Repo is already onboarded |
+| `repo_onboarding` | EAW needs to learn a new repository | An onboarding already exists for that repo |
+| `repo_onboarding_refresh` | An existing onboarding may be outdated | You want to regenerate everything from scratch |
+| `ARCH_REFACTOR` | Architectural refactoring with governed phases | Small or non-architectural change |
+| `ARCH_REFACTOR_ONBOARD` | Arch refactor that requires onboarding the target repo first | Repo is already onboarded |
+| `standard` | Generic flow with no specialized track | A more specific track fits better |
+
+## Feeding a Card
+
+Every card starts with raw material in the ingest directory:
+
+```
+$EAW_WORKDIR/out/<CARD>/ingest/
 ```
 
-## Quickstart <!-- phase.yaml context ./scripts/eaw next 589 CONTEXT out/589/context/onboarding out/589/context/dynamic -->
+Place there the original request, prints, logs, links, constraints and business context. Example:
 
 ```bash
-# from repo root
-./scripts/eaw init
-./scripts/eaw card 589 --track feature "Document context model adoption"
-cat > tracks/feature/phases/findings.yaml <<'EOF'
-id: findings
-description: Investigate the current card with bounded evidence.
-context:
-  dynamic_context_template: deterministic_baseline_v1
-  onboarding_template: repo_discovery
-tooling_hints:
-  execution_mode: deterministic
+mkdir -p "$EAW_WORKDIR/out/1001/ingest"
+
+cat > "$EAW_WORKDIR/out/1001/ingest/raw_card_explication.md" <<'EOF'
+Original request:
+...
+
+Context:
+...
+
+Constraints:
+...
 EOF
-./scripts/eaw next 589
-./scripts/eaw smoke
 ```
+The file name is flexible, but `raw_card_explication.md` is the recommended convention used by EAW operator skills.
 
-Quickstart minimo de contexto:
+The ingest material is consumed by the first phase of the track. Do not put code or runtime artifacts there — only the human-provided context.
 
-- declare o bloco `context` em `phase.yaml` para ativar `dynamic_context`
-- trate onboarding como opcional; a fonte fica no workspace em `context_sources/onboarding/<repo_key>/`
-- depois de `./scripts/eaw next 589`, confirme no prompt os blocos `CONTEXT - ONBOARDING` e `CONTEXT - DYNAMIC`
-- valide os artefatos materializados em `out/589/context/onboarding/` e `out/589/context/dynamic/`
-- use `docs/CONTEXT_MODEL.md` como contrato canonico e `docs/CONCEPTUAL_MODEL.md` como guia de migracao copiavel diretamente
+## Runtime Reference
+
+> The following sections describe EAW's runtime internals, lifecycle contracts and YAML model. If you are **using** EAW (not maintaining or extending it), jump to [Bootstrap / Getting Started](#bootstrap--getting-started).
 
 `track` is the primary workflow classification for a card. The runtime stores the selected value in `card_state.track_id` and resolves the official workflow from `tracks/<track>/track.yaml`.
 
@@ -90,24 +168,6 @@ Skill: skills/bootstrap_operator/SKILL.md
 | `validate_repos` | `git -C <path> rev-parse` para cada repo |
 | `validate_env` | `eaw validate` + `eaw doctor` |
 
-> **Modo governado (re-bootstrap):** se o workspace já existir e você quiser auditabilidade,
-> crie um card com `eaw card <ID> --track bootstrap`.
-
-## Migration Path
-
-- Prefer `./scripts/eaw next <CARD>` as the primary lifecycle command.
-- In the current public CLI, phase completion is enforced through `phase.completion` when `next` runs. The repository does not document a public `./scripts/eaw complete <CARD>` command today, so documentation should describe the completion contract rather than an additional CLI step.
-
-## Test Scopes
-
-- `./scripts/eaw smoke` executes the baseline smoke suite only (`tests/smoke/smoke_baseline.sh`).
-- `./scripts/eaw test` executes a broader deterministic scope (`smoke + integration + lifecycle + golden`).
-- `tests/phase_engine_lifecycle.sh` is a dedicated lifecycle/integration-light suite for the phase engine. It is executed from the lifecycle aggregate suite.
-- Category wrappers are organized under:
-  - `tests/smoke/`
-  - `tests/integration/`
-  - `tests/lifecycle/`
-  - `tests/golden/`
 
 If you are on Windows and using PowerShell, run via `bash`:
 
@@ -115,6 +175,15 @@ If you are on Windows and using PowerShell, run via `bash`:
 bash ./scripts/eaw init
 bash ./scripts/eaw card 999999 --track bug "Smoke test"
 ```
+
+## First Card
+
+Once your workspace is bootstrapped, see:
+
+- **[docs/GETTING_STARTED.md](docs/GETTING_STARTED.md)** — mental model, roles and the EAW cycle
+- **[docs/QUICKSTART.md](docs/QUICKSTART.md)** — zero-to-first-card executable guide
+
+Use the zero-to-first-card checklist: `docs/checklists/zero-to-first-card.md`
 
 ## Output structure
 
@@ -167,18 +236,19 @@ Released versions and historical changes are tracked in `CHANGELOG.md`.
 ## Diagnostics
 
 - `./scripts/eaw doctor` — reports resolved directories, tools, and config status.
+- `./scripts/eaw preflight <CARD>` — validates EAW_WORKDIR, repos.conf (.git checks), runtime root and phase prompts before execution.
 - `./scripts/eaw validate` — validates config and template contract.
 - `./scripts/eaw doctor-hardening` — advanced hardening diagnostics for prompt binding and canonical smoke checks.
 
 ## PT-BR
 
-EAW é um sistema determinístico de engenharia assistida por IA para governar trabalho por card. O runtime combina `track`, `phase`, estado por card em `card_state.track_id` e `current_phase`, governança de prompts por `ACTIVE`, coleta de contexto e artefatos auditáveis em `out/<CARD>/`.
+EAW é um framework agentic de workflow para governar trabalho por card, track, fase, prompt e artefato. O runtime combina `track`, `phase`, estado por card em `card_state.track_id` e `current_phase`, governança de prompts por `ACTIVE`, coleta de contexto e artefatos auditáveis em `out/<CARD>/`.
 
 Para usar: `./scripts/eaw init`, depois `./scripts/eaw card <CARD> --track <TRACK> ["<TITLE>"]`, avance o lifecycle com `./scripts/eaw next <CARD>` quando quiser progredir a fase declarada. O valor escolhido em `--track` torna-se `card_state.track_id`, o workflow oficial e resolvido por `tracks/<track>/track.yaml` e a proxima fase vem de `track.transitions`.
 
 Semantica atual de fase:
 - entrar em uma fase significa que o estado do card agora aponta para aquela fase declarativa do workflow;
-- `./scripts/eaw next <CARD>` executa a transicao declarativa de estado e depois executa a fase de destino com base nos outputs declarados e nos bindings de prompt do runtime;
+- `./scripts/eaw next <CARD>` materializa a fase atual, valida o contrato de conclusao (phase.completion) e so avanca para a proxima fase quando os artefatos obrigatorios estao completos;
 
 Nota sobre modelo phase-driven futuro:
 - o executor phase-driven atual e incremental: cria artefatos declarados, emite prompts das fases conhecidas e registra a execucao em `execution.log`;
@@ -234,27 +304,3 @@ bash governance/scripts/install-hooks.sh
 If a hook already exists, run the installer with `--force` to overwrite.
 
 Why this matters: making risk and scope explicit at commit time enables deterministic CI gating, review triage, and stronger audit trails required by enterprise governance.
-
-## AI Integration Mode (EAW Mode D)
-
-EAW Mode D provides a deterministic path to integrate an external AI/assistant into the engineering workflow by generating complete, structured prompts and producing a test plan and action plan in a reproducible output folder.
-
-This prompt pipeline coexists with the declarative lifecycle, where the runtime keeps per-card state in `current_phase` and advances the official workflow through `./scripts/eaw next <CARD>` based on `track.transitions`.
-
-Workflow (example):
-
-1. Create a card: `./scripts/eaw card 12345 --track feature "Short title"`
-2. Fill the dossier following the template sections.
-3. Advance the card with `./scripts/eaw next 12345` so the declared prompt phases materialize their artifacts.
-
-This produces deterministic files under `out/12345/`:
-
-- `feature_12345.md` — original dossier filename retained for deterministic compatibility; workflow classification still comes from `track` / `card_state.track_id`
-- `investigations/findings_agent_prompt.md` — findings prompt to feed to an assistant
-- `investigations/hypotheses_agent_prompt.md` — hypotheses prompt to feed to an assistant
-- `investigations/planning_agent_prompt.md` — planning prompt to feed to an assistant
-- `TEST_PLAN_12345.md` — deterministic test plan produced by the analysis
-
-5. Copy the generated prompts under `out/12345/investigations/`, run each phase with your chosen agent, and capture outputs back into `out/12345/dev/` as needed (manual step). The generated artifacts are deterministic and versionable.
-
-Why Mode D: it standardizes how AI is given context and how outputs are captured for traceability, making AI-assisted changes auditable and safe for enterprise environments.

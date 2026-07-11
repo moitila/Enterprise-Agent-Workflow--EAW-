@@ -79,6 +79,8 @@ source "$SCRIPT_DIR/commands/cmd_test_suites.sh"
 source "$SCRIPT_DIR/commands/cmd_rollback.sh"
 # shellcheck disable=SC1091
 source "$SCRIPT_DIR/commands/cmd_ingest_pr.sh"
+# shellcheck disable=SC1091
+source "$SCRIPT_DIR/commands/cmd_preflight.sh"
 
 main() {
 	if [[ $# -lt 1 ]]; then
@@ -210,6 +212,13 @@ main() {
 	ingest-pr)
 		validate_runtime_workdir
 		cmd_ingest_pr "${@:2}"
+		;;
+	preflight)
+		if [[ $# -ne 2 ]]; then
+			die "usage: eaw preflight <CARD>"
+		fi
+		validate_runtime_workdir
+		cmd_preflight "$2"
 		;;
 	--help | -h)
 		usage

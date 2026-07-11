@@ -5,7 +5,7 @@ ROLE
 
 OBJECTIVE
 - Preencher `00_intake.md` com base nas evidencias existentes em `ingest/` quando esse diretorio existir, usando `intake/` apenas como fallback compativel.
-- Classificar o card como BUG, FEATURE ou SPIKE usando apenas a presenca de `intake_bug.md`, `intake_feature.md` ou `intake_spike.md` no diretorio de entrada efetivamente selecionado.
+- Ler todos os arquivos encontrados em `ingest/` ou `intake/` — nao filtrar por nome de arquivo.
 
 INPUT
 - CARD={{CARD}}
@@ -41,8 +41,7 @@ WRITE_SCOPE
 RULES
 - Executar o pre-check: `cd "{{RUNTIME_ROOT}}"`, `test -f ./scripts/eaw`, `test -f "{{CONFIG_SOURCE}}"` e validar que `{{CARD_DIR}}/ingest` ou `{{CARD_DIR}}/intake` existe.
 - Selecionar `{{CARD_DIR}}/ingest` como diretorio de entrada quando existir; caso contrario selecionar `{{CARD_DIR}}/intake` como fallback compativel.
-- Se `intake_bug.md` existir no diretorio selecionado -> classificar como BUG; se `intake_feature.md` existir no diretorio selecionado -> classificar como FEATURE; se `intake_spike.md` existir no diretorio selecionado -> classificar como SPIKE.
-- Se a classificacao for ambigua, registrar pergunta em aberto e nao assumir.
+- Ler todos os arquivos encontrados no diretorio de entrada selecionado — nao depender de nomes especificos de arquivo.
 - Listar recursivamente os arquivos do diretorio de entrada selecionado em ordem lexicografica.
 - Registrar em `_intake_provenance.md`: diretorio de entrada selecionado, arquivos encontrados, arquivos consumidos, arquivos ignorados com motivo, lacunas detectadas e observacoes de processo.
 - Preencher `00_intake.md` somente com fatos observaveis.

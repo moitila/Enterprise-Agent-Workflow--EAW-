@@ -39,4 +39,4 @@ skills:
 
   bootstrap_operator:
     file: skills/bootstrap_operator/SKILL.md
-    description: Bootstrap track operator skill — workspace init, env config, repos registration, repo git validation and environment health check.
+    description: Bootstrap operator skill — workspace init, env config, repos registration, git validation and environment health check (skill-only, no track required).

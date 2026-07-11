@@ -75,6 +75,13 @@ cmd_doctor() {
 		echo "  EAW_SMOKE_SH: OK ($EAW_SMOKE_SH)"
 	fi
 
+	if [[ -f "${EAW_ROOT_DIR}/.git/hooks/commit-msg" ]]; then
+		echo "  git hook: commit-msg installed"
+	else
+		echo "  git hook: commit-msg not found"
+		echo "    run: bash governance/scripts/install-hooks.sh"
+	fi
+
 	if [[ "$errors" -gt 0 ]]; then
 		status="ERROR"
 	elif [[ "$warnings" -gt 0 ]]; then

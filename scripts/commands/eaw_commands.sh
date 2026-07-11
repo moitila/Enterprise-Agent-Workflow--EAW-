@@ -13,6 +13,7 @@ Example:
   eaw card <CARD> --track <TRACK> ["<TITLE>"]
   eaw run <CARD>
   eaw next <CARD>
+  eaw preflight <CARD>
   eaw status <CARD> | eaw status --all
   eaw tracks
   eaw tracks install
@@ -1999,6 +2000,10 @@ EOF
 ## Risks
 EOF
 		;;
+	investigations/20_handoff.json)
+		printf '{"from_phase":"%s","status":"completed","messages":[],"codes":[]}\n' \
+			"$phase_id" >"$target_path"
+		;;
 	*.json)
 		echo '{}' >"$target_path"
 		;;
@@ -2165,6 +2170,17 @@ eaw_apply_context_block_to_prompt() {
 		|| { rm -f "$tmp_file"; return 1; }
 	mv "$tmp_file" "$output_file" || return 1
 }
+# Read ci_feedback_enabled flag from EAW_CONF.
+# Returns "true" if the flag is explicitly set to true, "false" otherwise.
+# Safe to call even when EAW_CONF is not set or the file does not exist.
+eaw_read_ci_feedback_flag() {
+	local conf_file="${EAW_CONF:-}"
+	[[ -f "$conf_file" ]] || { echo "false"; return; }
+	local val
+	val="$(grep -E '^ci_feedback_enabled=' "$conf_file" 2>/dev/null | tail -1 | sed 's/^ci_feedback_enabled=//' | tr -d '[:space:]')"
+	[[ "$val" == "true" ]] && echo "true" || echo "false"
+}
+
 # Inject phase skills content at {{SKILLS_BLOCK}} placeholder in the rendered prompt.
 # Uses temp-file + awk getline pattern to safely handle multi-line skill content.
 # No-op when placeholder is absent (opt-in per template).
@@ -2319,6 +2335,44 @@ eaw_render_phase_prompt_template() {
 	eaw_apply_context_block_to_prompt "$card" "$card_dir" "${EAW_CARD_WORKFLOW_CURRENT_PHASE_FILE:-}" "$output_file" || return 1
 	eaw_apply_skills_block_to_prompt "${EAW_CARD_WORKFLOW_CURRENT_PHASE_FILE:-}" "$output_file" || return 1
 	echo "RUNTIME: wrote_prompt=${output_file#$card_dir/}"
+	# PHASE_CONTRACTS block — inject required artifacts and handoff schema from phase.yaml
+	if [[ -n "${phase_file:-}" && -f "$phase_file" ]]; then
+		local _artifacts
+		_artifacts="$(eaw_phase_completion_required_artifacts "$phase_file" 2>/dev/null)"
+		if [[ -n "$_artifacts" ]]; then
+			{
+				echo ""
+				echo "PHASE_CONTRACTS"
+				echo ""
+				echo "REQUIRED_ARTIFACTS:"
+				while IFS= read -r _a; do
+					[[ -n "$_a" ]] && echo "- $_a"
+				done <<<"$_artifacts"
+				if grep -q '20_handoff.json' <<<"$_artifacts"; then
+					echo ""
+					echo "HANDOFF_SCHEMA (for 20_handoff.json):"
+					printf '{"from_phase":"%s","status":"completed","messages":[],"codes":[]}\n' "${step_id}"
+				fi
+				local _strategy
+				_strategy="$(eaw_yaml_phase_completion_strategy "$phase_file" 2>/dev/null || true)"
+				[[ -n "$_strategy" ]] && echo "" && echo "COMPLETION_STRATEGY: ${_strategy}"
+			} >>"$output_file"
+		fi
+	fi
+	# CI Feedback reference (appended when ci_feedback_prompt.md was created at card init)
+	local _ci_prompt_output
+	_ci_prompt_output="$(dirname "$output_file")/ci_feedback_prompt.md"
+	if [[ -f "$_ci_prompt_output" ]]; then
+		cat >>"$output_file" <<EAW_CI_FEEDBACK_REF
+
+## CI FEEDBACK (enabled)
+
+After completing this phase, execute the feedback prompt at:
+$(basename "$(dirname "$output_file")")/ci_feedback_prompt.md
+
+Write the result to: ${EAW_WORKDIR}/ci_feedback/${track_id}/${step_id}/feedback_${card}.md
+EAW_CI_FEEDBACK_REF
+	fi
 }
 
 eaw_primary_target_repo() {
@@ -2699,6 +2753,22 @@ cmd_card() {
 
 	if eaw_card_has_workflow_config "$outdir"; then
 		eaw_materialize_current_phase "$card" || return 1
+	fi
+
+	# CI Feedback prompt — render once at card creation
+	if [[ "$(eaw_read_ci_feedback_flag)" == "true" ]]; then
+		local _ci_tmpl="${EAW_ROOT_DIR}/templates/ci_feedback/feedback_prompt_v1.md"
+		local _ci_out="${outdir}/prompts/ci_feedback_prompt.md"
+		if [[ -f "$_ci_tmpl" ]] && [[ ! -f "$_ci_out" ]]; then
+			mkdir -p "$(dirname "$_ci_out")"
+			sed \
+				-e "s|{{CARD}}|${card}|g" \
+				-e "s|{{TRACK}}|${track_id}|g" \
+				-e "s|{{PHASE}}|card_init|g" \
+				-e "s|{{EAW_WORKDIR}}|${EAW_WORKDIR}|g" \
+				"$_ci_tmpl" > "$_ci_out"
+			echo "RUNTIME: ci_feedback_prompt created for card=$card"
+		fi
 	fi
 }
 

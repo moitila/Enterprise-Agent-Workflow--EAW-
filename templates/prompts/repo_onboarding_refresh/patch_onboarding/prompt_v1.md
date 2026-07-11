@@ -190,7 +190,6 @@ FORBIDDEN
 - Nunca escrever no repositório alvo
 - Nunca adicionar artefatos ao `INDEX.md` sem criar o artefato correspondente primeiro
 - Para `STALE_MAJOR`: registrar em `## Advertências` do `patch_notes.md` — não silenciar
-- O `WRITE_ALLOWLIST` do `RUNTIME_ENVIRONMENT` pode listar apenas `$CARD_DIR` — isso é esperado para este track; o WRITE SCOPE declarado no corpo deste prompt é autoritativo; os paths em `context_sources/onboarding/<repo_key>/` estão dentro do escopo permitido desta fase
 
 FAIL_CONDITIONS
 

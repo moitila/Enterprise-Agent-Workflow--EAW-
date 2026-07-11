@@ -43,6 +43,7 @@ WRITE_SCOPE
 - Escrever somente `{{CARD_DIR}}/investigations/30_hypotheses.md`.
 
 RULES
+- O artefato de saida `30_hypotheses.md` e criado pelo runtime como scaffold vazio antes desta fase. Substitua o conteudo inteiramente — nao trate o scaffold como rascunho a editar.
 - Executar pre-check em fail-fast:
   - `set -euo pipefail`
   - `cd "{{RUNTIME_ROOT}}"`

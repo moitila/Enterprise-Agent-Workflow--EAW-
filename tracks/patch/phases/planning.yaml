@@ -1,0 +1,26 @@
+config_version: 1
+
+phase:
+  id: planning
+  name: Planning
+  description: Produzir scope lock e change plan a partir dos insumos coletados na fase ingest.
+
+  prompt:
+    active: 1
+    path: templates/prompts/patch/planning/prompt_v<active>.md
+
+  outputs:
+    create_directories:
+      - prompts
+      - implementation
+    create_artifacts:
+      - implementation/00_scope.lock.md
+      - implementation/10_change_plan.md
+    prompts:
+      - planning
+
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - implementation/00_scope.lock.md
+      - implementation/10_change_plan.md

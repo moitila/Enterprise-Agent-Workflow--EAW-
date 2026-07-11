@@ -14,9 +14,6 @@ Passe esta skill ao agente junto com o pedido de bootstrap:
 
 O agente executa os 5 passos em sequência. Nenhum card é necessário.
 
-> **Modo governado (opcional):** se o workspace já existir e você quiser auditabilidade,
-> crie um card com `eaw card <ID> --track bootstrap`. A track usa esta mesma skill.
-
 ## Passos (execução direta, sem card)
 
 ### 1. init_workspace

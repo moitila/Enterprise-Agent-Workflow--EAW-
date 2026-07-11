@@ -63,6 +63,7 @@ OUTPUT_STRUCTURE
 READ_SCOPE
 - Ler `{{CARD_DIR}}/investigations/00_spike_intake.md` — fonte autoritativa desta fase.
 - Nao ler TARGET_REPOS nesta fase.
+- Fontes externas sao bem-vindas para informar hipoteses: documentacao oficial, RFCs, benchmarks, comparativos de tecnologia. Registrar referencia em cada hipotese que for embasada por fonte externa.
 
 WRITE_SCOPE
 - Escrever somente em `{{CARD_DIR}}/investigations/10_hypotheses.md`.
