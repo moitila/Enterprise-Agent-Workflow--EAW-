@@ -176,6 +176,15 @@ bash ./scripts/eaw init
 bash ./scripts/eaw card 999999 --track bug "Smoke test"
 ```
 
+## First Card
+
+Once your workspace is bootstrapped, see:
+
+- **[docs/GETTING_STARTED.md](docs/GETTING_STARTED.md)** — mental model, roles and the EAW cycle
+- **[docs/QUICKSTART.md](docs/QUICKSTART.md)** — zero-to-first-card executable guide
+
+Use the zero-to-first-card checklist: `docs/checklists/zero-to-first-card.md`
+
 ## Output structure
 
 - `out/<CARD>/<TYPE>_<CARD>.md` — the generated dossier; this filename is a deterministic compatibility convention, while workflow classification remains `track` / `card_state.track_id`
