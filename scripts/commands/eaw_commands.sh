@@ -2335,6 +2335,30 @@ eaw_render_phase_prompt_template() {
 	eaw_apply_context_block_to_prompt "$card" "$card_dir" "${EAW_CARD_WORKFLOW_CURRENT_PHASE_FILE:-}" "$output_file" || return 1
 	eaw_apply_skills_block_to_prompt "${EAW_CARD_WORKFLOW_CURRENT_PHASE_FILE:-}" "$output_file" || return 1
 	echo "RUNTIME: wrote_prompt=${output_file#$card_dir/}"
+	# PHASE_CONTRACTS block — inject required artifacts and handoff schema from phase.yaml
+	if [[ -n "${phase_file:-}" && -f "$phase_file" ]]; then
+		local _artifacts
+		_artifacts="$(eaw_phase_completion_required_artifacts "$phase_file" 2>/dev/null)"
+		if [[ -n "$_artifacts" ]]; then
+			{
+				echo ""
+				echo "PHASE_CONTRACTS"
+				echo ""
+				echo "REQUIRED_ARTIFACTS:"
+				while IFS= read -r _a; do
+					[[ -n "$_a" ]] && echo "- $_a"
+				done <<<"$_artifacts"
+				if grep -q '20_handoff.json' <<<"$_artifacts"; then
+					echo ""
+					echo "HANDOFF_SCHEMA (for 20_handoff.json):"
+					printf '{"from_phase":"%s","status":"completed","messages":[],"codes":[]}\n' "${step_id}"
+				fi
+				local _strategy
+				_strategy="$(eaw_yaml_phase_completion_strategy "$phase_file" 2>/dev/null || true)"
+				[[ -n "$_strategy" ]] && echo "" && echo "COMPLETION_STRATEGY: ${_strategy}"
+			} >>"$output_file"
+		fi
+	fi
 	# CI Feedback reference (appended when ci_feedback_prompt.md was created at card init)
 	local _ci_prompt_output
 	_ci_prompt_output="$(dirname "$output_file")/ci_feedback_prompt.md"
