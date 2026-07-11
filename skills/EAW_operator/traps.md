@@ -12,6 +12,7 @@ Traps aprendidas em execuções reais. Incluir no Mandatory Delegation Context d
 
 - **Delegar template em vez de prompt renderizado**: sempre usar `out/<CARD>/prompts/`, nunca `templates/prompts/`
 - **Orquestrador escrevendo prompt custom**: o orquestrador NUNCA escreve o prompt do subagente manualmente. O conteúdo de `out/<CARD>/prompts/<phase>.md` deve ser passado verbatim. Escrever um prompt próprio em vez de usar o renderizado: (1) perde o bloco PHASE_CONTRACTS, (2) perde o bloco CI FEEDBACK, (3) diverge do contrato da fase.
+- **Batchear múltiplas fases em um único subagente**: cada fase exige um agente isolado próprio. Batchear 2+ fases em um subagente: (1) invalida o CI feedback (o agente não sabe qual `<phase>` usar em cada momento), (2) mistura contextos e responsabilidades, (3) viola o princípio de isolamento do EAW. O custo de tokens não justifica o batching — o EAW é uma ferramenta para problemas complexos, não para otimizar tokens.
 - **workspace.md não repassada ao subagente**: sem ela, agente mistura papéis `infra` e `target`
 - **Agente isolado operando CLI**: agente isolado de fase NÃO roda `./scripts/eaw`; apenas o orquestrador roda
 
