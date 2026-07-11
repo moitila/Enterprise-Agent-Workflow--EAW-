@@ -162,6 +162,11 @@ Se houver conflito entre prompt/plano e `scope lock`/allowlist:
 - devolver controle ao operador
 - nunca improvisar mudando repo alvo, write set ou superficie de validacao
 
+### Divergência skill vs prompt renderizado
+- **Fatos operacionais do card** (EAW_WORKDIR, CARD_DIR, paths, repos): prompt renderizado prevalece
+- **Regras comportamentais** (fail-fast, limites de escrita, papéis target/infra): `workspace.md` prevalece
+- **Conflito entre dois fatos operacionais**: parar e reportar ao orquestrador — nunca resolver localmente
+
 ## Rules
 
 - Cada fase deve ser executada por um agente com contexto isolado
@@ -262,19 +267,9 @@ mencionar está incorreta.
 - Mencionar skills dentro do prompt da fase (skills são contexto do agente, não conteúdo do prompt)
 - Deixar de incluir `workspace` no agente isolado
 
-## Operational Traps (learned)
+### Operational Traps
 
-Estas armadilhas foram identificadas em execuções reais e devem ser conhecidas pelo executor:
-
-- **Delegar o template original em vez do prompt renderizado**: o template tem placeholders nao resolvidos (`{{TARGET_REPOS}}`, `{{CONTEXT_BLOCK}}`, etc.); o subagente ficará sem contexto operacional. Sempre usar o arquivo gerado em `out/<CARD>/prompts/`, nunca o template de `templates/prompts/`.
-- `workspace.md` deve ser repassada ao subagente junto do prompt; sem isso, o agente tende a misturar `infra` e `target` e nao aplica fail-fast
-- Se `scope lock` e validacao tecnica apontarem para repositorios diferentes, isso e bloqueio estrutural do card, nao decisao local do executor
-- Artefatos vazios (0 bytes ou contendo apenas template/scaffold) não devem passar phase completion; se o runtime aceitar, registrar como bug do runtime
-- Erros de `awk`/`sed` nos scripts do runtime podem ser silenciosos; verificar exit codes após cada comando do runtime
-- Quando CI falha por dependência não publicada (ex: classes do framework não disponíveis no maven), classificar como "expected dependency gap" e não como regressão
-- Cards multi-repo exigem ordem explícita de merge; nunca assumir merge paralelo sem verificar o grafo de dependências
-- Se o prompt da fase referencia repos que não estão em `repos.conf`, o agente isolado deve falhar, não improvisar
-- **PATH corrompido após subagente**: salvar `SAFE_PATH="$PATH"` antes de delegar; restaurar com `export PATH="$SAFE_PATH"` antes de chamar `./scripts/eaw next`. Se PATH for corrompido, `next` falha com `/usr/bin/env: 'bash': No such file or directory`.
+Ver skill dedicada: `skills/EAW_operator/traps.md`
 
 ## Fail-fast
 
