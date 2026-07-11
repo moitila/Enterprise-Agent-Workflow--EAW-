@@ -6,7 +6,7 @@ The built-in tracks are software-engineering-oriented, but the model is not limi
 
 ## What is EAW
 
-EAW helps engineers turn a card into a governed execution flow. The runtime resolves the selected `track`, persists workflow state in `card_state.track_id` and `current_phase`, binds phase prompts through `ACTIVE`, collects repository context from target repos, and writes deterministic artifacts under `out/<CARD>/` for traceability and review.
+EAW helps operators turn a request into a governed execution flow. The runtime resolves the selected `track`, persists workflow state in `card_state.track_id` and `current_phase`, binds phase prompts through `ACTIVE`, collects repository context from target repos, and writes deterministic artifacts under `out/<CARD>/` for traceability and review.
 
 ## Operational Roles
 
@@ -37,17 +37,6 @@ Artifacts produced by isolated agents are written under `out/<CARD>/` in directo
 ## Architecture
 
 Canonical architecture document: `docs/ARCHITECTURE.md`.
-
-## Documentation Map
-
-Read the repository in this order if you want the full model:
-
-- `Manifesto`: `docs/manifesto.md` - philosophy, problem statement, and engineering posture
-- `Conceptual Model`: `docs/CONCEPTUAL_MODEL.md` - product positioning and the mental model that connects the system layers
-- `Architecture`: `docs/ARCHITECTURE.md` - runtime architecture, modules, and invariants
-- `Workflow YAML Contract`: `docs/WORKFLOW_YAML_CONTRACT.md` - declarative workflow model for `track`, `phase`, and `card_state`
-- `Prompt Governance`: `docs/PROMPT_GOVERNANCE.md` - prompt binding, `ACTIVE`, and provenance
-- `Contract`: `docs/CONTRACT.md` - public output, behavior, and compatibility contract
 
 ## Installation (bash)
 
@@ -85,6 +74,17 @@ EAW is operated through an agentic workflow. The human defines the goal; the EAW
 ```
 
 These commands are run by the **EAW operator/orchestrator**, not by the isolated phase agent.
+
+## Documentation Map
+
+Read the repository in this order if you want the full model:
+
+- `Manifesto`: `docs/manifesto.md` - philosophy, problem statement, and engineering posture
+- `Conceptual Model`: `docs/CONCEPTUAL_MODEL.md` - product positioning and the mental model that connects the system layers
+- `Architecture`: `docs/ARCHITECTURE.md` - runtime architecture, modules, and invariants
+- `Workflow YAML Contract`: `docs/WORKFLOW_YAML_CONTRACT.md` - declarative workflow model for `track`, `phase`, and `card_state`
+- `Prompt Governance`: `docs/PROMPT_GOVERNANCE.md` - prompt binding, `ACTIVE`, and provenance
+- `Contract`: `docs/CONTRACT.md` - public output, behavior, and compatibility contract
 
 ## Available Tracks
 
@@ -233,7 +233,7 @@ Released versions and historical changes are tracked in `CHANGELOG.md`.
 
 ## PT-BR
 
-EAW é um sistema determinístico de engenharia assistida por IA para governar trabalho por card. O runtime combina `track`, `phase`, estado por card em `card_state.track_id` e `current_phase`, governança de prompts por `ACTIVE`, coleta de contexto e artefatos auditáveis em `out/<CARD>/`.
+EAW é um framework agentic de workflow para governar trabalho por card, track, fase, prompt e artefato. O runtime combina `track`, `phase`, estado por card em `card_state.track_id` e `current_phase`, governança de prompts por `ACTIVE`, coleta de contexto e artefatos auditáveis em `out/<CARD>/`.
 
 Para usar: `./scripts/eaw init`, depois `./scripts/eaw card <CARD> --track <TRACK> ["<TITLE>"]`, avance o lifecycle com `./scripts/eaw next <CARD>` quando quiser progredir a fase declarada. O valor escolhido em `--track` torna-se `card_state.track_id`, o workflow oficial e resolvido por `tracks/<track>/track.yaml` e a proxima fase vem de `track.transitions`.
 
