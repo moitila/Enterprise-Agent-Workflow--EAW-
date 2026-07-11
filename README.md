@@ -90,24 +90,6 @@ Skill: skills/bootstrap_operator/SKILL.md
 | `validate_repos` | `git -C <path> rev-parse` para cada repo |
 | `validate_env` | `eaw validate` + `eaw doctor` |
 
-> **Modo governado (re-bootstrap):** se o workspace já existir e você quiser auditabilidade,
-> crie um card com `eaw card <ID> --track bootstrap`.
-
-## Migration Path
-
-- Prefer `./scripts/eaw next <CARD>` as the primary lifecycle command.
-- In the current public CLI, phase completion is enforced through `phase.completion` when `next` runs. The repository does not document a public `./scripts/eaw complete <CARD>` command today, so documentation should describe the completion contract rather than an additional CLI step.
-
-## Test Scopes
-
-- `./scripts/eaw smoke` executes the baseline smoke suite only (`tests/smoke/smoke_baseline.sh`).
-- `./scripts/eaw test` executes a broader deterministic scope (`smoke + integration + lifecycle + golden`).
-- `tests/phase_engine_lifecycle.sh` is a dedicated lifecycle/integration-light suite for the phase engine. It is executed from the lifecycle aggregate suite.
-- Category wrappers are organized under:
-  - `tests/smoke/`
-  - `tests/integration/`
-  - `tests/lifecycle/`
-  - `tests/golden/`
 
 If you are on Windows and using PowerShell, run via `bash`:
 
