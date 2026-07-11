@@ -2170,6 +2170,17 @@ eaw_apply_context_block_to_prompt() {
 		|| { rm -f "$tmp_file"; return 1; }
 	mv "$tmp_file" "$output_file" || return 1
 }
+# Read ci_feedback_enabled flag from EAW_CONF.
+# Returns "true" if the flag is explicitly set to true, "false" otherwise.
+# Safe to call even when EAW_CONF is not set or the file does not exist.
+eaw_read_ci_feedback_flag() {
+	local conf_file="${EAW_CONF:-}"
+	[[ -f "$conf_file" ]] || { echo "false"; return; }
+	local val
+	val="$(grep -E '^ci_feedback_enabled=' "$conf_file" 2>/dev/null | tail -1 | sed 's/^ci_feedback_enabled=//' | tr -d '[:space:]')"
+	[[ "$val" == "true" ]] && echo "true" || echo "false"
+}
+
 # Inject phase skills content at {{SKILLS_BLOCK}} placeholder in the rendered prompt.
 # Uses temp-file + awk getline pattern to safely handle multi-line skill content.
 # No-op when placeholder is absent (opt-in per template).
@@ -2324,6 +2335,22 @@ eaw_render_phase_prompt_template() {
 	eaw_apply_context_block_to_prompt "$card" "$card_dir" "${EAW_CARD_WORKFLOW_CURRENT_PHASE_FILE:-}" "$output_file" || return 1
 	eaw_apply_skills_block_to_prompt "${EAW_CARD_WORKFLOW_CURRENT_PHASE_FILE:-}" "$output_file" || return 1
 	echo "RUNTIME: wrote_prompt=${output_file#$card_dir/}"
+	# CI Feedback block (appended when ci_feedback_enabled=true in EAW_CONF)
+	local _ci_feedback_enabled
+	_ci_feedback_enabled="$(eaw_read_ci_feedback_flag)"
+	if [[ "$_ci_feedback_enabled" == "true" ]]; then
+		cat >>"$output_file" <<CIFEEDBACK
+
+## CI FEEDBACK (enabled)
+
+After completing this phase, write a feedback file at:
+${EAW_WORKDIR}/ci_feedback/${track_id}/${step_id}/feedback_${card}.md
+
+Use the format defined in skills/EAW_operator/lessons.md.
+Fill only the sections with relevant observations. Empty sections = no issue found.
+This is an ADDITIONAL output — it does NOT replace any required phase artifacts.
+CIFEEDBACK
+	fi
 }
 
 eaw_primary_target_repo() {

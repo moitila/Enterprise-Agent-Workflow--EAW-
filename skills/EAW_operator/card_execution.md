@@ -101,6 +101,13 @@ Para executar um card:
     - reportar bloqueio ao executor
     - nao forcar avanco manual
 
+### CI Feedback (quando ci_feedback_enabled=true em eaw.conf)
+- O prompt renderizado já contém instrução para o agente isolado produzir
+  `$EAW_WORKDIR/ci_feedback/<track>/<phase>/feedback_<CARD>.md`
+- Ao final do card, o orquestrador pode ler todos os feedbacks da sessão e
+  escrever síntese em `$EAW_WORKDIR/ci_feedback/_synthesis/<track>_<phase>.md`
+- Consulte `skills/EAW_operator/lessons.md` para classificação e síntese
+
 ## Skill Routing
 
 O orquestrador é responsável por equipar cada agente isolado com as skills declaradas na fase.
