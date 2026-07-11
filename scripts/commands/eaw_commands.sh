@@ -13,6 +13,7 @@ Example:
   eaw card <CARD> --track <TRACK> ["<TITLE>"]
   eaw run <CARD>
   eaw next <CARD>
+  eaw preflight <CARD>
   eaw status <CARD> | eaw status --all
   eaw tracks
   eaw tracks install

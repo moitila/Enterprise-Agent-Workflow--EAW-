@@ -227,6 +227,7 @@ Released versions and historical changes are tracked in `CHANGELOG.md`.
 ## Diagnostics
 
 - `./scripts/eaw doctor` — reports resolved directories, tools, and config status.
+- `./scripts/eaw preflight <CARD>` — validates EAW_WORKDIR, repos.conf (.git checks), runtime root and phase prompts before execution.
 - `./scripts/eaw validate` — validates config and template contract.
 - `./scripts/eaw doctor-hardening` — advanced hardening diagnostics for prompt binding and canonical smoke checks.
 
