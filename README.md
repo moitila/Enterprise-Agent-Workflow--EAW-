@@ -6,6 +6,18 @@ EAW is a deterministic AI-assisted engineering system for governing work by card
 
 EAW helps engineers turn a card into a governed execution flow. The runtime resolves the selected `track`, persists workflow state in `card_state.track_id` and `current_phase`, binds phase prompts through `ACTIVE`, collects repository context from target repos, and writes deterministic artifacts under `out/<CARD>/` for traceability and review.
 
+## Operational Roles
+
+EAW separates three distinct roles:
+
+| Role | Responsibility |
+|------|----------------|
+| **Human requester** | Defines objective, context, constraints and intent. Chooses the track, feeds the card ingest area, and reviews artifacts. |
+| **EAW operator / orchestrator** | Runs the CLI (`doctor`, `tracks`, `card`, `next`, `status`). Controls phase progression and delivers the rendered phase prompt to the isolated agent. Today this is typically a human assisted by Copilot or another AI assistant. |
+| **Isolated phase agent** | Receives the rendered phase prompt. Produces the artifacts required by the phase contract. Does **not** run the CLI. Does **not** decide phase transitions. |
+
+> EAW is not limited to software engineering. Tracks can be created for any process that can be described through phases, prompts and YAML contracts.
+
 ## Architecture
 
 Canonical architecture document: `docs/ARCHITECTURE.md`.
@@ -30,32 +42,81 @@ Ensure you have `bash`, `git`, `mktemp`, and optionally `rg` (ripgrep) installed
 chmod +x scripts/eaw scripts/lib.sh
 ```
 
-## Quickstart <!-- phase.yaml context ./scripts/eaw next 589 CONTEXT out/589/context/onboarding out/589/context/dynamic -->
+## Quickstart
+
+EAW is operated through an agentic workflow. The human defines the goal; the EAW operator/orchestrator runs the CLI; the isolated phase agent executes each phase using the generated prompt.
+
+> **Do not edit `tracks/`, `templates/`, `scripts/` or runtime contracts during normal card execution.** Track and prompt changes are framework maintenance tasks, not part of regular card use.
 
 ```bash
-# from repo root
-./scripts/eaw init
-./scripts/eaw card 589 --track feature "Document context model adoption"
-cat > tracks/feature/phases/findings.yaml <<'EOF'
-id: findings
-description: Investigate the current card with bounded evidence.
-context:
-  dynamic_context_template: deterministic_baseline_v1
-  onboarding_template: repo_discovery
-tooling_hints:
-  execution_mode: deterministic
-EOF
-./scripts/eaw next 589
-./scripts/eaw smoke
+# 1. Initialize or validate the workspace
+./scripts/eaw doctor
+
+# 2. See available tracks
+./scripts/eaw tracks
+
+# 3. Create a card with the appropriate track
+./scripts/eaw card <CARD> --track <TRACK> "<TITLE>"
+
+# 4. Advance the card — generates the phase prompt
+./scripts/eaw next <CARD>
+
+# 5. Deliver the generated prompt to an isolated agent
+# Prompt is at: out/<CARD>/prompts/<phase_alias>.md
+
+# 6. Repeat next + agent until the card completes
+./scripts/eaw status <CARD>
 ```
 
-Quickstart minimo de contexto:
+These commands are run by the **EAW operator/orchestrator**, not by the isolated phase agent.
 
-- declare o bloco `context` em `phase.yaml` para ativar `dynamic_context`
-- trate onboarding como opcional; a fonte fica no workspace em `context_sources/onboarding/<repo_key>/`
-- depois de `./scripts/eaw next 589`, confirme no prompt os blocos `CONTEXT - ONBOARDING` e `CONTEXT - DYNAMIC`
-- valide os artefatos materializados em `out/589/context/onboarding/` e `out/589/context/dynamic/`
-- use `docs/CONTEXT_MODEL.md` como contrato canonico e `docs/CONCEPTUAL_MODEL.md` como guia de migracao copiavel diretamente
+## Available Tracks
+
+Run `./scripts/eaw tracks` to list all installed tracks. Current tracks:
+
+| Track | Use when | Not when |
+|-------|----------|----------|
+| `spike` | You need to investigate before deciding | You already know exactly what to change |
+| `feature` | The functional demand is clear and scoped | The question is still exploratory |
+| `feature_dynamic` | Feature with dynamic context collection enabled | Static context is sufficient |
+| `bug` | There is a defect with symptoms, logs or evidence | It is a new feature in disguise |
+| `bug_ONBOARD` | Bug investigation requires onboarding a new repo first | Repo is already onboarded |
+| `repo_onboarding` | EAW needs to learn a new repository | An onboarding already exists for that repo |
+| `repo_onboarding_refresh` | An existing onboarding may be outdated | You want to regenerate everything from scratch |
+| `ARCH_REFACTOR` | Architectural refactoring with governed phases | Small or non-architectural change |
+| `ARCH_REFACTOR_ONBOARD` | Arch refactor that requires onboarding the target repo first | Repo is already onboarded |
+| `standard` | Generic flow with no specialized track | A more specific track fits better |
+
+## Feeding a Card
+
+Every card starts with raw material in the ingest directory:
+
+```
+$EAW_WORKDIR/out/<CARD>/ingest/
+```
+
+Place there the original request, prints, logs, links, constraints and business context. Example:
+
+```bash
+mkdir -p "$EAW_WORKDIR/out/1001/ingest"
+
+cat > "$EAW_WORKDIR/out/1001/ingest/raw_request.md" <<'EOF'
+Original request:
+...
+
+Context:
+...
+
+Constraints:
+...
+EOF
+```
+
+The ingest material is consumed by the first phase of the track. Do not put code or runtime artifacts there — only the human-provided context.
+
+## Runtime Reference
+
+> The following sections describe EAW's runtime internals, lifecycle contracts and YAML model. If you are **using** EAW (not maintaining or extending it), jump to [Bootstrap / Getting Started](#bootstrap--getting-started).
 
 `track` is the primary workflow classification for a card. The runtime stores the selected value in `card_state.track_id` and resolves the official workflow from `tracks/<track>/track.yaml`.
 
@@ -217,26 +278,16 @@ If a hook already exists, run the installer with `--force` to overwrite.
 
 Why this matters: making risk and scope explicit at commit time enables deterministic CI gating, review triage, and stronger audit trails required by enterprise governance.
 
-## AI Integration Mode (EAW Mode D)
+## Agentic Execution Model
 
-EAW Mode D provides a deterministic path to integrate an external AI/assistant into the engineering workflow by generating complete, structured prompts and producing a test plan and action plan in a reproducible output folder.
+After each `./scripts/eaw next <CARD>`, the runtime materializes the phase prompt at:
 
-This prompt pipeline coexists with the declarative lifecycle, where the runtime keeps per-card state in `current_phase` and advances the official workflow through `./scripts/eaw next <CARD>` based on `track.transitions`.
+```
+out/<CARD>/prompts/<phase_alias>.md
+```
 
-Workflow (example):
+This prompt is the handoff artifact to the isolated agent responsible for that phase. The agent reads the prompt, executes the phase work, writes the required artifacts back into the card directory, and returns control to the EAW operator.
 
-1. Create a card: `./scripts/eaw card 12345 --track feature "Short title"`
-2. Fill the dossier following the template sections.
-3. Advance the card with `./scripts/eaw next 12345` so the declared prompt phases materialize their artifacts.
+The operator then calls `./scripts/eaw next <CARD>` again. The runtime validates the phase artifacts, advances `current_phase`, and materializes the next prompt — repeating until the track reaches completion.
 
-This produces deterministic files under `out/12345/`:
-
-- `feature_12345.md` — original dossier filename retained for deterministic compatibility; workflow classification still comes from `track` / `card_state.track_id`
-- `investigations/findings_agent_prompt.md` — findings prompt to feed to an assistant
-- `investigations/hypotheses_agent_prompt.md` — hypotheses prompt to feed to an assistant
-- `investigations/planning_agent_prompt.md` — planning prompt to feed to an assistant
-- `TEST_PLAN_12345.md` — deterministic test plan produced by the analysis
-
-5. Copy the generated prompts under `out/12345/investigations/`, run each phase with your chosen agent, and capture outputs back into `out/12345/dev/` as needed (manual step). The generated artifacts are deterministic and versionable.
-
-Why Mode D: it standardizes how AI is given context and how outputs are captured for traceability, making AI-assisted changes auditable and safe for enterprise environments.
+Artifacts produced by isolated agents are written under `out/<CARD>/` in directories declared by the phase contract (`investigations/`, `implementation/`, `context/`, etc.). The operator never modifies these artifacts manually — they are the authoritative output of the phase.
