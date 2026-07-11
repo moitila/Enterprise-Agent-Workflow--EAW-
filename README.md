@@ -1,6 +1,8 @@
 # Enterprise Agent Workflow (EAW)
 
-EAW is a deterministic AI-assisted engineering system for governing work by card. It combines workflow tracks, phase contracts, per-card state, prompt governance, context collection, and auditable artifacts so engineering teams can use AI with rigor in complex systems.
+EAW is an agentic workflow framework for governing work by card, track, phase, prompt and artifact. It provides deterministic execution through workflow tracks, phase contracts, per-card state, prompt governance, context collection and auditable artifacts — so teams can operate AI with rigor in any knowledge-work process.
+
+The built-in tracks are software-engineering-oriented, but the model is not limited to software. Any process that can be described through phases, prompts and YAML contracts can be governed with EAW.
 
 ## What is EAW
 
@@ -17,6 +19,20 @@ EAW separates three distinct roles:
 | **Isolated phase agent** | Receives the rendered phase prompt. Produces the artifacts required by the phase contract. Does **not** run the CLI. Does **not** decide phase transitions. |
 
 > EAW is not limited to software engineering. Tracks can be created for any process that can be described through phases, prompts and YAML contracts.
+
+## Agentic Execution Model
+
+After each `./scripts/eaw next <CARD>`, the runtime materializes the phase prompt at:
+
+```
+out/<CARD>/prompts/<phase_alias>.md
+```
+
+This prompt is the handoff artifact to the isolated agent responsible for that phase. The agent reads the prompt, executes the phase work, writes the required artifacts back into the card directory, and returns control to the EAW operator.
+
+The operator then calls `./scripts/eaw next <CARD>` again. The runtime validates the phase artifacts, advances `current_phase`, and materializes the next prompt — repeating until the track reaches completion.
+
+Artifacts produced by isolated agents are written under `out/<CARD>/` in directories declared by the phase contract (`investigations/`, `implementation/`, `context/`, etc.). The operator never modifies these artifacts manually — they are the authoritative output of the phase.
 
 ## Architecture
 
@@ -100,7 +116,7 @@ Place there the original request, prints, logs, links, constraints and business 
 ```bash
 mkdir -p "$EAW_WORKDIR/out/1001/ingest"
 
-cat > "$EAW_WORKDIR/out/1001/ingest/raw_request.md" <<'EOF'
+cat > "$EAW_WORKDIR/out/1001/ingest/raw_card_explication.md" <<'EOF'
 Original request:
 ...
 
@@ -111,6 +127,7 @@ Constraints:
 ...
 EOF
 ```
+The file name is flexible, but `raw_card_explication.md` is the recommended convention used by EAW operator skills.
 
 The ingest material is consumed by the first phase of the track. Do not put code or runtime artifacts there — only the human-provided context.
 
@@ -221,7 +238,7 @@ Para usar: `./scripts/eaw init`, depois `./scripts/eaw card <CARD> --track <TRAC
 
 Semantica atual de fase:
 - entrar em uma fase significa que o estado do card agora aponta para aquela fase declarativa do workflow;
-- `./scripts/eaw next <CARD>` executa a transicao declarativa de estado e depois executa a fase de destino com base nos outputs declarados e nos bindings de prompt do runtime;
+- `./scripts/eaw next <CARD>` materializa a fase atual, valida o contrato de conclusao (phase.completion) e so avanca para a proxima fase quando os artefatos obrigatorios estao completos;
 
 Nota sobre modelo phase-driven futuro:
 - o executor phase-driven atual e incremental: cria artefatos declarados, emite prompts das fases conhecidas e registra a execucao em `execution.log`;
@@ -277,17 +294,3 @@ bash governance/scripts/install-hooks.sh
 If a hook already exists, run the installer with `--force` to overwrite.
 
 Why this matters: making risk and scope explicit at commit time enables deterministic CI gating, review triage, and stronger audit trails required by enterprise governance.
-
-## Agentic Execution Model
-
-After each `./scripts/eaw next <CARD>`, the runtime materializes the phase prompt at:
-
-```
-out/<CARD>/prompts/<phase_alias>.md
-```
-
-This prompt is the handoff artifact to the isolated agent responsible for that phase. The agent reads the prompt, executes the phase work, writes the required artifacts back into the card directory, and returns control to the EAW operator.
-
-The operator then calls `./scripts/eaw next <CARD>` again. The runtime validates the phase artifacts, advances `current_phase`, and materializes the next prompt — repeating until the track reaches completion.
-
-Artifacts produced by isolated agents are written under `out/<CARD>/` in directories declared by the phase contract (`investigations/`, `implementation/`, `context/`, etc.). The operator never modifies these artifacts manually — they are the authoritative output of the phase.
