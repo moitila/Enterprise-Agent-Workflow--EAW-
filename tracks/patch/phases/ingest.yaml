@@ -1,0 +1,25 @@
+config_version: 1
+
+phase:
+  id: ingest
+  name: Ingest
+  description: Coletar e normalizar os insumos brutos do card antes da fase de planejamento.
+
+  prompt:
+    active: 1
+    path: templates/prompts/patch/ingest/prompt_v<active>.md
+
+  tooling_hints:
+    - Tratar `out/<CARD>/ingest/` como a origem primaria de insumos brutos quando existir.
+
+  outputs:
+    create_directories:
+      - ingest
+      - implementation
+    create_artifacts:
+      - ingest/00_intake.md
+
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - ingest/00_intake.md

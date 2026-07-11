@@ -1,0 +1,30 @@
+config_version: 1
+
+track:
+  id: patch
+  name: Patch Track
+  description: Track para mudancas pequenas (1-3 arquivos, escopo claro) com governanca EAW sem fases de investigacao completa.
+  initial_phase: ingest
+  final_phase: implementation_executor
+
+  initial_outputs:
+    create_directories:
+      - ingest
+      - investigations
+      - implementation
+
+  phases:
+    - ingest
+    - planning
+    - implementation_executor
+
+  transitions:
+    ingest:
+      next: planning
+      emit_phase_output: true
+      emit_handoff: true
+    planning:
+      next: implementation_executor
+      emit_phase_output: true
+      emit_handoff: true
+      consume_previous: true
