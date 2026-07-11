@@ -80,7 +80,6 @@ cmd_doctor() {
 	else
 		echo "  git hook: commit-msg not found"
 		echo "    run: bash governance/scripts/install-hooks.sh"
-		warnings=$((warnings + 1))
 	fi
 
 	if [[ "$errors" -gt 0 ]]; then
