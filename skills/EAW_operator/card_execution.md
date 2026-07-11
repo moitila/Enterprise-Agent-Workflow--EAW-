@@ -39,6 +39,11 @@ Para executar um card:
 
 2. Validar `EAW_WORKDIR`, `repos.conf`, papeis `target`/`infra` e `./scripts/eaw` conforme `workspace.md`
 
+2b. Antes de cada `next`, rodar `./scripts/eaw preflight <CARD_ID>`:
+   - PASS → prosseguir com `next`
+   - FAIL → corrigir as falhas reportadas antes de avançar
+   - `preflight` valida o ambiente; `next` avança a fase — não são substitutos
+
 3. Rodar:
    ./scripts/eaw next <CARD_ID>
 

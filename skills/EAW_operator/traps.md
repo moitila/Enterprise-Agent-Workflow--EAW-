@@ -19,6 +19,12 @@ Traps aprendidas em execuções reais. Incluir no Mandatory Delegation Context d
 - **Artefatos vazios (0 bytes / só scaffold)**: não devem passar phase completion; verificar `wc -c` > 0
 - **Handoff JSON com strings em messages**: `"messages": ["string"]` → runtime rejeita; usar `"messages": []`
 - **Artefato derivado fora da allowlist**: builds podem regenerar; manter se reverter quebra o build; registrar em `_warnings.md`
+- **Handoff JSON sem envelope completo**: `handoff.json` não pode ser `{}`. Usar sempre:
+  `{"from_phase":"<phase>","status":"completed","messages":[],"codes":[]}` .
+  Envelope incompleto causa `envelope schema validation failed` no runtime.
+- **dynamic_context com nomes customizados**: a fase exige nomes fixos:
+  `00_scope_manifest.md`, `20_candidate_files.txt`, `30_target_snippets.md`, `40_warnings.md`.
+  Não criar nomes por item de backlog — isso não satisfaz `phase.completion`.
 
 ## CI / Runtime
 
