@@ -10,7 +10,7 @@ phase:
     path: templates/prompts/patch/ingest/prompt_v<active>.md
 
   tooling_hints:
-    - Tratar `out/<CARD>/ingest/` como a origem primaria de insumos brutos quando existir.
+    - Tratar `out/<CARD>/ingest/` como a origem primaria de insumos brutos para a fase `planning`.
 
   outputs:
     create_directories:

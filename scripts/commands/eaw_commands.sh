@@ -2764,7 +2764,7 @@ cmd_card() {
 			sed \
 				-e "s|{{CARD}}|${card}|g" \
 				-e "s|{{TRACK}}|${track_id}|g" \
-				-e "s|{{PHASE}}|init|g" \
+				-e "s|{{PHASE}}|card_init|g" \
 				-e "s|{{EAW_WORKDIR}}|${EAW_WORKDIR}|g" \
 				"$_ci_tmpl" > "$_ci_out"
 			echo "RUNTIME: ci_feedback_prompt created for card=$card"
