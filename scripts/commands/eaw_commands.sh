@@ -1926,6 +1926,7 @@ RUNTIME_ENVIRONMENT
 CARD_ID: $card
 TRACK_ID: $track_id
 STEP_ID: $step_id
+CANONICAL_PATH: $PATH
 WORKDIR: $workdir
 CARD_DIR: $card_dir
 OUT_DIR: $EAW_OUT_DIR
@@ -2774,6 +2775,10 @@ cmd_next() {
 	local card_dir="$EAW_OUT_DIR/$card"
 	local current_phase current_phase_file next_phase completed_phases phase_started_at previous_phase validation_output
 	local phase_completed
+	local _eaw_safe_path="$PATH"
+	# Bake value at set-time (not lazy): avoids unbound-variable when trap fires in outer scope.
+	# Self-clears after firing so the trap does not persist beyond cmd_next.
+	trap "export PATH='${_eaw_safe_path}'; trap - RETURN" RETURN
 
 	if ! eaw_card_has_workflow_config "$card_dir"; then
 		echo "ERROR: card ${card} is missing canonical workflow YAMLs in $card_dir/intake (MVP requires canonical YAML structure)" >&2

@@ -63,13 +63,10 @@ Para executar um card:
    NAO reinjetar manualmente `repos.conf`, `RUNTIME_ROOT`, `EAW_WORKDIR`, `OUT_DIR` ou `CARD_DIR`:
    esses valores ja estao no prompt renderizado via `{{RUNTIME_ENVIRONMENT}}` e `{{TARGET_REPOS}}`.
 
-6a. Antes de spawnar o subagente, salvar o ambiente crítico do orquestrador:
-    ```bash
-    SAFE_PATH="$PATH"
-    SAFE_EAW_WORKDIR="$EAW_WORKDIR"
-    SAFE_PWD="$PWD"
-    ```
-    Isso garante que o retorno do subagente não deixe PATH, EAW_WORKDIR ou PWD corrompidos.
+> **Nota histórica (EAW_PATH_ISOLATION):** O isolamento de PATH era gerenciado
+> manualmente (passo 6a — salvar variáveis de ambiente do orquestrador antes do spawn)
+> até a implementação de EAW_PATH_ISOLATION. O runtime `cmd_next` agora executa
+> save/restore automático de `$PATH` via `trap RETURN`. O passo 6a foi removido em 2026-07-13.
 
 7. Executar a fase no agente isolado
 
@@ -80,14 +77,9 @@ Para executar um card:
    - comportamentos inesperados (ex: PATH corrompido, permissao negada, artefato ausente)
    O orquestrador usa esse relatorio para decidir se chama `next` ou reporta bloqueio.
 
-8b. Antes de chamar `next` novamente, restaurar o ambiente do orquestrador:
-    ```bash
-    export PATH="$SAFE_PATH"
-    export EAW_WORKDIR="$SAFE_EAW_WORKDIR"
-    cd "$SAFE_PWD"
-    ```
-    Sem restauração, `PATH` pode conter apenas um path de repositório target, fazendo com que
-    `./scripts/eaw next` falhe com `/usr/bin/env: 'bash': No such file or directory` (exit 126).
+> **Nota histórica (EAW_PATH_ISOLATION):** O workaround de restaurar PATH manualmente
+> antes de cada `next` (passo 8b) foi removido em 2026-07-13. O runtime `cmd_next`
+> gerencia save/restore automático de `$PATH` via `trap RETURN` desde EAW_PATH_ISOLATION.
 
 9. Apos receber o relatorio, chamar novamente:
    ./scripts/eaw next <CARD_ID>
