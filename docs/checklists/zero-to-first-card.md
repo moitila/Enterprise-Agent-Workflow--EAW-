@@ -20,6 +20,7 @@ Check each item before moving to the next section.
 - [ ] Workspace initialized (`eaw init --workdir <path>` or equivalent)
 - [ ] `EAW_WORKDIR` exported and persisted in shell
 - [ ] `eaw doctor` returns no critical errors
+- [ ] Repository onboarded (`eaw card <REPO_KEY> --track repo_onboarding` — populates `context_sources/onboarding/<repo_key>/`)
 
 ---
 

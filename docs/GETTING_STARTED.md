@@ -67,6 +67,27 @@ distinct actors, and distinct responsibilities.
 > For the full vocabulary (14 concepts including `operator`, `allowlist`, `handoff`, `skill`),
 > see `docs/CONCEPTUAL_MODEL.md`.
 
+> For operational definitions of advanced concepts (`write_allowlist`, `scope.lock`,
+> `handoff.json`, `phase.skills`, `preflight` vs `doctor`),
+> see [`docs/CONCEPTS.md`](CONCEPTS.md).
+
+## Repository Roles
+
+Each repository registered in `repos.conf` carries a role that determines how EAW treats it during card execution:
+
+| Role | Behavior | When to use |
+|---|---|---|
+| `target` | Included in `TARGET_REPOSITORIES`; the implement agent may write to files within this repo (subject to WRITE_ALLOWLIST) | Any repo where the card will produce changes |
+| `infra` | Excluded from `TARGET_REPOSITORIES`; treated as runtime infrastructure, not modified by card agents | The EAW runtime itself, shared tooling, or repos that are read-only context for the card |
+
+**When to change a role**: change `target` → `infra` if the repo is runtime infrastructure that card agents must not modify. Change `infra` → `target` if the card needs to produce artifacts (docs, code, config) inside that repo — and declare the target paths explicitly in `implementation/10_change_plan.md` (Involved Files section).
+
+> Note: a missing role in `repos.conf` defaults to `target`. Source: `docs/CONTRACT.md`.
+
+> For the AI orientation policy of this framework (skills as primary AI context mechanism,
+> `CLAUDE.md` absence rationale, `AGENTS.md` guidance for target repos), see
+> [docs/AI_ORIENTATION.md](AI_ORIENTATION.md).
+
 ---
 
 ## Common Misconceptions

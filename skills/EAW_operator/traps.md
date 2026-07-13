@@ -21,7 +21,7 @@ Traps aprendidas em execuções reais. Incluir no Mandatory Delegation Context d
 ## Artefatos
 
 - **Artefatos vazios (0 bytes / só scaffold)**: não devem passar phase completion; verificar `wc -c` > 0
-- **Handoff JSON com strings em messages**: `"messages": ["string"]` → runtime rejeita; usar `"messages": []`
+- **Handoff JSON com strings em messages**: `"messages": ["string"]` → runtime rejeita com `envelope schema validation failed`; usar `"messages": []` sempre. O bloco `PHASE_CONTRACTS` do prompt já emite aviso `CRITICAL` após o schema — não ignorar. `messages[]` é para uso interno do runtime; agentes não devem populá-lo.
 - **Artefato derivado fora da allowlist**: builds podem regenerar; manter se reverter quebra o build; registrar em `_warnings.md`
 - **Handoff JSON sem envelope completo**: `handoff.json` não pode ser `{}`. Usar sempre:
   `{"from_phase":"<phase>","status":"completed","messages":[],"codes":[]}` .
@@ -36,3 +36,8 @@ Traps aprendidas em execuções reais. Incluir no Mandatory Delegation Context d
 - **Cards multi-repo exigem ordem explícita de merge**: nunca assumir merge paralelo
 - **Prompt da fase referencia repo não listado em repos.conf**: falhar, não improvisar
 - **scope.lock não parseável pelo runtime**: preencher com allowlist no formato correto antes de chamar `next`
+- **`ci_feedback_prompt.md` com fase errada** *(corrigido em runtime — 2026-07-13)*: anteriormente renderizado uma vez com `card_init` hardcoded. Agora re-renderizado por fase em `eaw_render_phase_prompt_template` com o `step_id` correto. Se encontrar `card_init` em `ci_feedback_prompt.md`, o runtime está desatualizado.
+
+## Repos
+
+- **Role `target`/`infra` é por contexto, não global**: o mesmo repo pode ser `target` em um card (quando o card trabalha sobre ele) e `infra` em outro (quando é apenas tooling). Mudar `repos.conf` antes de criar cards que trabalham sobre o repo; restaurar após. Não há suporte a dual-role no mesmo `repos.conf`.
