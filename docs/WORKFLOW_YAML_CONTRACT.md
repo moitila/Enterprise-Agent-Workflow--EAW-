@@ -395,12 +395,38 @@ Creating a New Track Without Reading Code
 2. Choose explicit phase IDs and keep them consistent across `track.phases`, `transitions`, and phase file names.
 3. Set `initial_phase` to the first phase and `final_phase` to the terminal phase.
 4. Add `transitions.<phase>.next` for every non-final phase.
-5. For each phase, define `phase.id` and a valid `prompt.path` that resolves through ACTIVE.
+5. For each phase, define `phase.id`, set `prompt.active` to the version number (e.g. `1`), and set `prompt.path` to `templates/prompts/<track>/<phase>/prompt_v<active>.md`. Create the corresponding prompt file at that exact path — the runtime resolves the path using the `active` field and will fail if the file is absent.
 6. Create the card state file with matching `track_id` and an initial `current_phase`.
-7. In the current runtime model, place compatibility files under `out/<CARD>/intake/` using:
-   - `track_<name>.yaml`
-   - `phase_<phase>.yaml`
-   - `state_card_<name>.yaml`
+7. Optionally declare `skip_when` in the transition of the phase that **completes** (not the phase to be skipped). This allows conditional phase skipping based on codes emitted in `20_handoff.json`. When using `skip_when`, `contract: emit_handoff: true` is mandatory — without it, skip never triggers:
+
+   ```yaml
+   transitions:
+     <phase_que_completa>:
+       next: <fase_alvo>
+       skip_when:
+         - CODIGO_A
+       contract:
+         emit_handoff: true
+   ```
+
+8. Optionally declare `phase.skills` to list the skills injected into the isolated agent for a phase. Omit if no additional skills are needed:
+
+   ```yaml
+   phase:
+     id: <phase_id>
+     skills:
+       - eaw_card_execution
+   ```
+
+9. After creating all track files and prompt templates, register the track by running:
+
+   ```bash
+   ./scripts/eaw tracks install
+   ```
+
+   This validates the track against the minimum workflow contract and registers it in `tracks/tracks.yaml`. A track not registered here is not recognized by the runtime.
+
+For authoritative details and advanced options, see [`skills/EAW_track_creator/SKILL.md`](../skills/EAW_track_creator/SKILL.md).
 
 For example, `eaw card 123 --track standard` creates a card whose primary classification is `card_state.track_id: standard`, and `eaw card 124 --track bug "Fix race condition"` does the same for the `bug` track.
 
@@ -408,7 +434,7 @@ Compatibility Notes
 -------------------
 - This document does not change the current runtime behavior.
 - The current runtime resolves `tracks/<track>/track.yaml` and `tracks/<track>/phases/*.yaml` as the official source when the referenced track is installed in the repository.
-- The repository currently ships official tracks for `standard`, `feature`, `bug`, and `spike`. New tracks can be added by placing a valid `tracks/<track_id>/` tree in the repository; no changes to the core are required.
+- The repository currently ships official tracks for `standard`, `feature`, `bug`, and `spike`. New tracks can be added by placing a valid `tracks/<track_id>/` tree in the repository and running `eaw tracks install` to register the track in `tracks/tracks.yaml`.
 - The current runtime remains compatible with the per-card model under `out/<CARD>/intake/**` as an explicit fallback.
 - Tracks may additionally use `out/<CARD>/ingest/**` as the primary raw-input area when `ingest` is declared explicitly in the track.
 - `tracks/<track>/card_state.yaml` is not runtime state; it is a template/example of the logical card-state structure for that track.

@@ -1926,6 +1926,7 @@ RUNTIME_ENVIRONMENT
 CARD_ID: $card
 TRACK_ID: $track_id
 STEP_ID: $step_id
+CANONICAL_PATH: $PATH
 WORKDIR: $workdir
 CARD_DIR: $card_dir
 OUT_DIR: $EAW_OUT_DIR
@@ -2352,6 +2353,7 @@ eaw_render_phase_prompt_template() {
 					echo ""
 					echo "HANDOFF_SCHEMA (for 20_handoff.json):"
 					printf '{"from_phase":"%s","status":"completed","messages":[],"codes":[]}\n' "${step_id}"
+					echo "CRITICAL: messages MUST always be [] — plain strings are rejected by the runtime. Use codes[] for machine-readable signals only."
 				fi
 				local _strategy
 				_strategy="$(eaw_yaml_phase_completion_strategy "$phase_file" 2>/dev/null || true)"
@@ -2359,9 +2361,19 @@ eaw_render_phase_prompt_template() {
 			} >>"$output_file"
 		fi
 	fi
-	# CI Feedback reference (appended when ci_feedback_prompt.md was created at card init)
+	# CI Feedback reference — re-render per phase with correct step_id
 	local _ci_prompt_output
 	_ci_prompt_output="$(dirname "$output_file")/ci_feedback_prompt.md"
+	local _ci_tmpl_path="${EAW_ROOT_DIR}/templates/ci_feedback/feedback_prompt_v1.md"
+	if [[ -f "$_ci_tmpl_path" ]] && [[ "$(eaw_read_ci_feedback_flag)" == "true" ]]; then
+		mkdir -p "$(dirname "$_ci_prompt_output")"
+		sed \
+			-e "s|{{CARD}}|${card}|g" \
+			-e "s|{{TRACK}}|${track_id}|g" \
+			-e "s|{{PHASE}}|${step_id}|g" \
+			-e "s|{{EAW_WORKDIR}}|${EAW_WORKDIR}|g" \
+			"$_ci_tmpl_path" > "$_ci_prompt_output"
+	fi
 	if [[ -f "$_ci_prompt_output" ]]; then
 		cat >>"$output_file" <<EAW_CI_FEEDBACK_REF
 
@@ -2755,21 +2767,7 @@ cmd_card() {
 		eaw_materialize_current_phase "$card" || return 1
 	fi
 
-	# CI Feedback prompt — render once at card creation
-	if [[ "$(eaw_read_ci_feedback_flag)" == "true" ]]; then
-		local _ci_tmpl="${EAW_ROOT_DIR}/templates/ci_feedback/feedback_prompt_v1.md"
-		local _ci_out="${outdir}/prompts/ci_feedback_prompt.md"
-		if [[ -f "$_ci_tmpl" ]] && [[ ! -f "$_ci_out" ]]; then
-			mkdir -p "$(dirname "$_ci_out")"
-			sed \
-				-e "s|{{CARD}}|${card}|g" \
-				-e "s|{{TRACK}}|${track_id}|g" \
-				-e "s|{{PHASE}}|card_init|g" \
-				-e "s|{{EAW_WORKDIR}}|${EAW_WORKDIR}|g" \
-				"$_ci_tmpl" > "$_ci_out"
-			echo "RUNTIME: ci_feedback_prompt created for card=$card"
-		fi
-	fi
+	# ci_feedback_prompt.md is now rendered per-phase in eaw_render_phase_prompt_template
 }
 
 cmd_next() {
@@ -2777,6 +2775,10 @@ cmd_next() {
 	local card_dir="$EAW_OUT_DIR/$card"
 	local current_phase current_phase_file next_phase completed_phases phase_started_at previous_phase validation_output
 	local phase_completed
+	local _eaw_safe_path="$PATH"
+	# Bake value at set-time (not lazy): avoids unbound-variable when trap fires in outer scope.
+	# Self-clears after firing so the trap does not persist beyond cmd_next.
+	trap "export PATH='${_eaw_safe_path}'; trap - RETURN" RETURN
 
 	if ! eaw_card_has_workflow_config "$card_dir"; then
 		echo "ERROR: card ${card} is missing canonical workflow YAMLs in $card_dir/intake (MVP requires canonical YAML structure)" >&2

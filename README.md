@@ -168,6 +168,12 @@ Skill: skills/bootstrap_operator/SKILL.md
 | `validate_repos` | `git -C <path> rev-parse` para cada repo |
 | `validate_env` | `eaw validate` + `eaw doctor` |
 
+Para criar novos tracks customizados, passe a skill `EAW_track_creator` ao seu agente.
+
+```
+Skill: skills/EAW_track_creator/SKILL.md
+```
+
 
 If you are on Windows and using PowerShell, run via `bash`:
 
@@ -182,6 +188,7 @@ Once your workspace is bootstrapped, see:
 
 - **[docs/GETTING_STARTED.md](docs/GETTING_STARTED.md)** — mental model, roles and the EAW cycle
 - **[docs/QUICKSTART.md](docs/QUICKSTART.md)** — zero-to-first-card executable guide
+- **[docs/AI_ORIENTATION.md](docs/AI_ORIENTATION.md)** — AI orientation policy (skills as primary mechanism, `CLAUDE.md` absence rationale, `AGENTS.md` guidance for target repos)
 
 Use the zero-to-first-card checklist: `docs/checklists/zero-to-first-card.md`
 

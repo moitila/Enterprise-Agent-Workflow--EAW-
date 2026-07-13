@@ -63,13 +63,10 @@ Para executar um card:
    NAO reinjetar manualmente `repos.conf`, `RUNTIME_ROOT`, `EAW_WORKDIR`, `OUT_DIR` ou `CARD_DIR`:
    esses valores ja estao no prompt renderizado via `{{RUNTIME_ENVIRONMENT}}` e `{{TARGET_REPOS}}`.
 
-6a. Antes de spawnar o subagente, salvar o ambiente crítico do orquestrador:
-    ```bash
-    SAFE_PATH="$PATH"
-    SAFE_EAW_WORKDIR="$EAW_WORKDIR"
-    SAFE_PWD="$PWD"
-    ```
-    Isso garante que o retorno do subagente não deixe PATH, EAW_WORKDIR ou PWD corrompidos.
+> **Nota histórica (EAW_PATH_ISOLATION):** O isolamento de PATH era gerenciado
+> manualmente (passo 6a — salvar variáveis de ambiente do orquestrador antes do spawn)
+> até a implementação de EAW_PATH_ISOLATION. O runtime `cmd_next` agora executa
+> save/restore automático de `$PATH` via `trap RETURN`. O passo 6a foi removido em 2026-07-13.
 
 7. Executar a fase no agente isolado
 
@@ -80,14 +77,9 @@ Para executar um card:
    - comportamentos inesperados (ex: PATH corrompido, permissao negada, artefato ausente)
    O orquestrador usa esse relatorio para decidir se chama `next` ou reporta bloqueio.
 
-8b. Antes de chamar `next` novamente, restaurar o ambiente do orquestrador:
-    ```bash
-    export PATH="$SAFE_PATH"
-    export EAW_WORKDIR="$SAFE_EAW_WORKDIR"
-    cd "$SAFE_PWD"
-    ```
-    Sem restauração, `PATH` pode conter apenas um path de repositório target, fazendo com que
-    `./scripts/eaw next` falhe com `/usr/bin/env: 'bash': No such file or directory` (exit 126).
+> **Nota histórica (EAW_PATH_ISOLATION):** O workaround de restaurar PATH manualmente
+> antes de cada `next` (passo 8b) foi removido em 2026-07-13. O runtime `cmd_next`
+> gerencia save/restore automático de `$PATH` via `trap RETURN` desde EAW_PATH_ISOLATION.
 
 9. Apos receber o relatorio, chamar novamente:
    ./scripts/eaw next <CARD_ID>
@@ -210,7 +202,7 @@ Se houver conflito entre prompt/plano e `scope lock`/allowlist:
 - Nunca deixar o subagente escolher repo de escrita diferente do definido por `scope lock`/allowlist
 - Nunca aceitar plano ou validacao que aponte para repo diferente da allowlist sem bloquear a execucao
 - **Nunca escrever o prompt do subagente manualmente**: o prompt renderizado em `out/<CARD>/prompts/<phase>.md` é o contrato soberano da fase — deve ser passado verbatim ao subagente. Skills e contexto complementar (workspace.md, traps.md) são adicionados ao contexto, nunca substituem nem modificam o conteúdo do prompt renderizado.
-- **Fluxo de passaçem do prompt**: ler `out/<CARD>/prompts/<phase>.md` de forma mecânica (sem interpretar) e passar o conteúdo bruto ao subagente. Com CI feedback ativo, o subagente valida a qualidade do prompt e reporta em `ci_feedback/` — o orquestrador não precisa pré-validar o conteúdo.
+- **Fluxo de passagem do prompt**: ler `out/<CARD>/prompts/<phase>.md` de forma mecânica (sem interpretar) e passar o conteúdo bruto ao subagente. Com CI feedback ativo, o subagente valida a qualidade do prompt e reporta em `ci_feedback/` — o orquestrador não precisa pré-validar o conteúdo. **Ler para entender é o erro**: qualquer compreensão do conteúdo habilita reescrita, resumo ou seleção parcial — que são violações.
 
 ## Runtime authority
 
