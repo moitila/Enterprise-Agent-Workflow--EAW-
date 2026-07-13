@@ -210,7 +210,7 @@ Se houver conflito entre prompt/plano e `scope lock`/allowlist:
 - Nunca deixar o subagente escolher repo de escrita diferente do definido por `scope lock`/allowlist
 - Nunca aceitar plano ou validacao que aponte para repo diferente da allowlist sem bloquear a execucao
 - **Nunca escrever o prompt do subagente manualmente**: o prompt renderizado em `out/<CARD>/prompts/<phase>.md` é o contrato soberano da fase — deve ser passado verbatim ao subagente. Skills e contexto complementar (workspace.md, traps.md) são adicionados ao contexto, nunca substituem nem modificam o conteúdo do prompt renderizado.
-- **Fluxo de passaçem do prompt**: ler `out/<CARD>/prompts/<phase>.md` de forma mecânica (sem interpretar) e passar o conteúdo bruto ao subagente. Com CI feedback ativo, o subagente valida a qualidade do prompt e reporta em `ci_feedback/` — o orquestrador não precisa pré-validar o conteúdo.
+- **Fluxo de passagem do prompt**: ler `out/<CARD>/prompts/<phase>.md` de forma mecânica (sem interpretar) e passar o conteúdo bruto ao subagente. Com CI feedback ativo, o subagente valida a qualidade do prompt e reporta em `ci_feedback/` — o orquestrador não precisa pré-validar o conteúdo. **Ler para entender é o erro**: qualquer compreensão do conteúdo habilita reescrita, resumo ou seleção parcial — que são violações.
 
 ## Runtime authority
 
