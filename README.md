@@ -221,13 +221,16 @@ The canonical contract is `docs/CONTEXT_MODEL.md`; the migration path with examp
 
 ## Config
 
-- `config/repos.conf` — map of repoKey to path with optional role (created by `eaw init` from `repos.example.conf`)
+- `config/repos.conf` — map of repoKey to path with explicit role (created by `eaw init` from commented examples in `repos.example.conf`)
 - `config/search.conf` — symbol search patterns (created by `eaw init`)
+- `config/eaw.conf` — optional formal config; generated defaults include `config_version=1` and `ci_feedback_enabled=false`
 
 Edit `config/repos.conf` to point to your local repositories.
 - Legacy format: `key|path` (defaults to role `target`)
 - New format: `key|path|role`, where `role` is `target` or `infra`
 - Only `target` repositories are processed during context and search collection.
+- Keep starter examples commented until replacing `/absolute/path/to/...` placeholders, and prefer an explicit role on every active line to avoid target acidental.
+- `ci_feedback_enabled=true` enables per-phase feedback prompts and optional writes to `$EAW_WORKDIR/ci_feedback/<track>/<phase>/feedback_<CARD>.md`; with `ci_feedback_enabled=false`, this flow remains disabled. When there are sem observacoes / no observations, no feedback file is expected.
 
 ## No proprietary code
 

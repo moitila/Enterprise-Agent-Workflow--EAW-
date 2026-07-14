@@ -17,6 +17,12 @@ trap cleanup EXIT
 
 ./scripts/eaw init --workdir "$tmp" >/dev/null
 
+grep -Fq "ci_feedback_enabled=false" "$tmp/config/eaw.conf" || fail "init should write ci_feedback_enabled=false"
+if rg -n '^[^#[:space:]].*\|.*\|target' "$tmp/config/repos.conf" >/dev/null; then
+	fail "init should not seed an active target repo"
+fi
+rg -n '^# [a-z0-9_-]+\|/absolute/path/to/[^|]+\|(target|infra)$' "$tmp/config/repos.conf" >/dev/null || fail "init should seed commented absolute-path repo examples with explicit roles"
+
 rm -f "$tmp/config/eaw.conf"
 doctor_out="$(EAW_WORKDIR="$tmp" EAW_SMOKE_SH=/bin/true ./scripts/eaw doctor)"
 validate_out="$(EAW_WORKDIR="$tmp" ./scripts/eaw validate)"

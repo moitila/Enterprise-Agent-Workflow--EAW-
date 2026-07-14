@@ -84,6 +84,15 @@ Each repository registered in `repos.conf` carries a role that determines how EA
 
 > Note: a missing role in `repos.conf` defaults to `target`. Source: `docs/CONTRACT.md`.
 
+Safe starter entries should stay commented until configured with absolute paths and papel explicito:
+
+```text
+# app|/absolute/path/to/app|target
+# shared-infra|/absolute/path/to/shared-infra|infra
+```
+
+Do not leave placeholder entries active. An active line without an explicit role can become an accidental target repository.
+
 > For the AI orientation policy of this framework (skills as primary AI context mechanism,
 > `CLAUDE.md` absence rationale, `AGENTS.md` guidance for target repos), see
 > [docs/AI_ORIENTATION.md](AI_ORIENTATION.md).

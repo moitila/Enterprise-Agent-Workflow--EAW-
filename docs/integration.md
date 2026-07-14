@@ -151,12 +151,27 @@ Example:
 
 ```text
 config_version=1
+ci_feedback_enabled=false
 ```
 
 Rules:
 - If `eaw.conf` is missing, EAW keeps working, `validate` emits an informational line, and warnings remain `0`.
 - If `eaw.conf` exists without `config_version`, `validate` prints an upgrade instruction.
 - If `config_version` is older than required, `validate` warns and suggests `init --upgrade`.
+- `ci_feedback_enabled=false` is the safe default and keeps CI feedback prompts disabled.
+- `ci_feedback_enabled=true` renders the feedback prompt per phase and allows the isolated agent to write optional feedback at `$EAW_WORKDIR/ci_feedback/<track>/<phase>/feedback_<CARD>.md`.
+- When there are sem observacoes / no observations, no feedback file is expected.
+
+## Safe `repos.conf` example
+
+`repos.conf` examples are commented by default. Uncomment only after replacing placeholders with local absolute paths and an explicit role:
+
+```text
+# app|/absolute/path/to/app|target
+# shared-infra|/absolute/path/to/shared-infra|infra
+```
+
+Use `target` only for repositories the card may modify through its allowlist. Use `infra` for runtime/tooling repositories. Keeping examples commented and role-explicit avoids target acidental during bootstrap.
 
 ## Path resolution rules
 

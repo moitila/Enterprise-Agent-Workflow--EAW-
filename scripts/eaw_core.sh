@@ -49,6 +49,11 @@ eaw_conf_optional_formal_contract_note() {
 	printf "contrato opcional formal ativo (defaults v1)"
 }
 
+default_eaw_conf_content() {
+	printf "config_version=%s\n" "$REQUIRED_CONFIG_VERSION"
+	printf "ci_feedback_enabled=false\n"
+}
+
 check_config_version_validate() {
 	local warnings_ref="$1"
 	if [[ ! -f "$EAW_CONF" ]]; then
@@ -93,7 +98,7 @@ write_eaw_conf_if_needed() {
 	local new_conf="$cfg/eaw.conf.new"
 
 	if [[ ! -f "$conf" ]]; then
-		printf "config_version=%s\n" "$REQUIRED_CONFIG_VERSION" >"$conf"
+		default_eaw_conf_content >"$conf"
 		echo "Created $conf"
 		return 0
 	fi
@@ -101,12 +106,12 @@ write_eaw_conf_if_needed() {
 	local current_v
 	if current_v="$(read_config_version "$conf")"; then
 		if [[ "$current_v" =~ ^[0-9]+$ ]] && [[ "$current_v" -lt "$REQUIRED_CONFIG_VERSION" ]] && [[ "$upgrade" == "true" ]]; then
-			printf "config_version=%s\n" "$REQUIRED_CONFIG_VERSION" >"$new_conf"
+			default_eaw_conf_content >"$new_conf"
 			echo "$conf has older config_version=$current_v; wrote upgrade hint to $new_conf"
 		fi
 	else
 		if [[ "$upgrade" == "true" ]]; then
-			printf "config_version=%s\n" "$REQUIRED_CONFIG_VERSION" >"$new_conf"
+			default_eaw_conf_content >"$new_conf"
 			echo "$conf is missing config_version; wrote $new_conf"
 		else
 			echo "$conf exists but config_version is missing; run: ./scripts/eaw init --workdir \"$workdir\" --upgrade"
@@ -114,7 +119,7 @@ write_eaw_conf_if_needed() {
 	fi
 
 	if [[ "$force" == "true" ]]; then
-		printf "config_version=%s\n" "$REQUIRED_CONFIG_VERSION" >"$conf"
+		default_eaw_conf_content >"$conf"
 		echo "Created $conf"
 	fi
 }
@@ -133,9 +138,11 @@ init_workspace_workdir() {
 	ensure_dir "$out"
 
 	write_or_skip "$repos_conf" "$force" "# Format: key|path|role(optional)
-# Example:
-# backend|/absolute/path/to/repo|target
-# shared-infra|/absolute/path/to/infra|infra"
+# role values: target, infra
+# Keep examples commented until you replace placeholders with local absolute paths.
+# Use an explicit role on every active entry to avoid accidental target repos.
+# app|/absolute/path/to/app|target
+# shared-infra|/absolute/path/to/shared-infra|infra"
 
 	if [[ -f "$default_search" ]]; then
 		if [[ -f "$search_conf" && "$force" != "true" ]]; then
