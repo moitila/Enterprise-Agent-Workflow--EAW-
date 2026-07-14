@@ -99,6 +99,7 @@ Run `./scripts/eaw tracks` to list all installed tracks. Current tracks:
 | `bug_ONBOARD` | Bug investigation requires onboarding a new repo first | Repo is already onboarded |
 | `repo_onboarding` | EAW needs to learn a new repository | An onboarding already exists for that repo |
 | `repo_onboarding_refresh` | An existing onboarding may be outdated | You want to regenerate everything from scratch |
+| `patch` | You need a small, scoped correction with low blast radius | The work needs broader feature, bug, spike, or architecture flow |
 | `ARCH_REFACTOR` | Architectural refactoring with governed phases | Small or non-architectural change |
 | `ARCH_REFACTOR_ONBOARD` | Arch refactor that requires onboarding the target repo first | Repo is already onboarded |
 | `standard` | Generic flow with no specialized track | A more specific track fits better |
@@ -137,7 +138,7 @@ The ingest material is consumed by the first phase of the track. Do not put code
 
 `track` is the primary workflow classification for a card. The runtime stores the selected value in `card_state.track_id` and resolves the official workflow from `tracks/<track>/track.yaml`.
 
-The declarative lifecycle advances through `current_phase` and `track.transitions`. `./scripts/eaw card <CARD> --track <TRACK>` materializes the initial phase declared by the selected track as soon as the card is created. `./scripts/eaw next <CARD>` first materializes the current phase, then evaluates the declared `completion` contract for that same phase, remains in place when required artifacts are still missing or still contain only scaffold/template content, and only then applies `track.transitions` and materializes the destination phase. Phases may also declare prompt artifacts directly in `outputs.prompts`, which the runtime materializes under `out/<CARD>/prompts/` using the declared alias as the filename (`<alias>.md`) while preserving compatibility prompt artifacts. The public CLI centers on `next`, `run`, `complete`, `validate`, `doctor`, and prompt-governance commands.
+The declarative lifecycle advances through `current_phase` and `track.transitions`. `./scripts/eaw card <CARD> --track <TRACK>` materializes the initial phase declared by the selected track as soon as the card is created. `./scripts/eaw next <CARD>` first materializes the current phase, then evaluates the declared `completion` contract for that same phase, remains in place when required artifacts are still missing or still contain only scaffold/template content, and only then applies `track.transitions` and materializes the destination phase. Phases may also declare prompt artifacts directly in `outputs.prompts`, which the runtime materializes under `out/<CARD>/prompts/` using the declared alias as the filename (`<alias>.md`) while preserving compatibility prompt artifacts. The public CLI centers on `next`, `run`, `complete`, `validate`, `doctor`, and prompt-governance commands; `./scripts/eaw complete <CARD>` is an escape/standalone closure command, while normal lifecycle closure happens through `eaw next` auto-close on the final phase.
 
 `./scripts/eaw run <CARD>` is the deterministic orchestration entrypoint for executing a card end-to-end through the declared workflow. It uses `./scripts/eaw next <CARD>` as the only progression mechanism, persists `out/<CARD>/runtime/run_state.yaml` and `out/<CARD>/runtime/execution.log`, and names terminal outcomes with `stop_reason`. Wave 1 is intentionally minimal: no `--resume`, `--from`, `--dry-run`, automatic retry, extra metrics, or new runtime architecture are part of the documented contract.
 
@@ -145,7 +146,7 @@ Current phase semantics:
 - entering a phase means the card state now points to that declarative workflow phase;
 - `./scripts/eaw card <CARD> --track <TRACK>` materializes the initial declarative phase immediately after card creation;
 - `./scripts/eaw next <CARD>` materializes the current phase, validates that phase against `phase.completion`, stays on the same `current_phase` when required artifacts are missing or unfilled, and otherwise performs the declarative state transition before materializing the destination phase;
-- `next` is the primary lifecycle interface for declared phase progression.
+- `next` is the primary lifecycle interface for declared phase progression and performs auto-close when the final phase contract is satisfied.
 
 Future phase-driven note:
 - the current phase-driven executor is incremental: it scaffolds declared outputs, materializes `outputs.prompts` under `out/<CARD>/prompts/`, emits compatibility prompt artifacts for the built-in prompt phases, and records execution in `execution.log`;
@@ -242,7 +243,7 @@ Released versions and historical changes are tracked in `CHANGELOG.md`.
 
 ## Diagnostics
 
-- `./scripts/eaw doctor` — reports resolved directories, tools, and config status.
+- `./scripts/eaw doctor` — reports effective directories, tools, and config status.
 - `./scripts/eaw preflight <CARD>` — validates EAW_WORKDIR, repos.conf (.git checks), runtime root and phase prompts before execution.
 - `./scripts/eaw validate` — validates config and template contract.
 - `./scripts/eaw doctor-hardening` — advanced hardening diagnostics for prompt binding and canonical smoke checks.
@@ -251,7 +252,7 @@ Released versions and historical changes are tracked in `CHANGELOG.md`.
 
 EAW é um framework agentic de workflow para governar trabalho por card, track, fase, prompt e artefato. O runtime combina `track`, `phase`, estado por card em `card_state.track_id` e `current_phase`, governança de prompts por `ACTIVE`, coleta de contexto e artefatos auditáveis em `out/<CARD>/`.
 
-Para usar: `./scripts/eaw init`, depois `./scripts/eaw card <CARD> --track <TRACK> ["<TITLE>"]`, avance o lifecycle com `./scripts/eaw next <CARD>` quando quiser progredir a fase declarada. O valor escolhido em `--track` torna-se `card_state.track_id`, o workflow oficial e resolvido por `tracks/<track>/track.yaml` e a proxima fase vem de `track.transitions`.
+Para usar: `./scripts/eaw init`, depois `./scripts/eaw card <CARD> --track <TRACK> ["<TITLE>"]`, avance o lifecycle com `./scripts/eaw next <CARD>` quando quiser progredir a fase declarada. O valor escolhido em `--track` torna-se `card_state.track_id`, o workflow oficial vem de `tracks/<track>/track.yaml` e a proxima fase vem de `track.transitions`.
 
 Semantica atual de fase:
 - entrar em uma fase significa que o estado do card agora aponta para aquela fase declarativa do workflow;
@@ -264,7 +265,7 @@ Nota sobre modelo phase-driven futuro:
 ### Caminho de Migracao
 
 - Prefira `./scripts/eaw next <CARD>` como comando principal do lifecycle.
-- Na CLI publica atual, a conclusao da fase e aplicada por `phase.completion` quando `next` executa. O repositorio nao documenta hoje um comando publico `./scripts/eaw complete <CARD>`, entao a documentacao deve descrever o contrato de conclusao em vez de um passo extra de CLI.
+- Na CLI publica atual, a conclusao normal da fase e aplicada por `phase.completion` quando `next` executa, incluindo auto-close na fase final. Use `./scripts/eaw complete <CARD>` apenas como comando de fechamento escape/standalone, nao como o caminho principal do lifecycle.
 
 ## Commit Governance (ECS)
 

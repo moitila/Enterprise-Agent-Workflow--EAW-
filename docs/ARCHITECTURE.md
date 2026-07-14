@@ -35,20 +35,20 @@ For full-card orchestration, `./scripts/eaw run <CARD>` adds a run-level control
 - `./scripts/eaw run <CARD>` persists `run_state.yaml` fields such as `attempt`, `status`, `track_id`, `current_phase`, `phase_status`, and `stop_reason`, and appends run-level audit lines to `runtime/execution.log`.
 - Named run termination states are part of the observed runtime behavior: `COMPLETED`, `TRACK_CONSISTENCY_ERROR`, `CARD_STATE_INVALID`, `NO_FORWARD_PROGRESS`, and `PHASE_EXECUTION_FAILED`.
 - Prompt-oriented commands such as `intake`, `analyze`, and `implement` remain the deprecated compatibility surface that materializes the aggregated prompt flow for the same lifecycle during the transition to the phase-driven model, with planned removal in `v1.0`.
-- In the current runtime model, phase completion is validated through the phase `completion` contract when `next` runs; the architecture does not rely on a separate public `complete` CLI command.
+- In the current runtime model, phase completion is validated through the phase `completion` contract when `next` runs, including auto-close on the final phase. `complete` remains an escape/standalone closure command, not the normal lifecycle path.
 - The current phase-driven executor is incremental: it scaffolds declared outputs, materializes any `phase.outputs.prompts` entries under `out/<CARD>/prompts/` using the declared alias as the filename, emits compatibility prompt artifacts for built-in prompt phases, and records execution in `execution.log`.
 
 ### Deterministic Agent Mode (Modo D)
 
-Modo D is the execution model in which EAW spawns an isolated agent for a specific phase, equipped with an explicit operational skill set, and governs the full cycle from phase entry to phase completion.
+Modo D is the execution model in which EAW materializes the phase prompt and context for a specific phase, and the EAW operator/orchestrator hands that material to an isolated agent equipped with the required operational skill set.
 
 **Cycle (authoritative definition):**
 
 ```
-next → load phase.yaml → read phase.skills → spawn isolated agent with skills → agent executes phase with prompt and injected context → next
+next → load phase.yaml → read phase.skills → materialize prompt/context → operator/orchestrator hands off to isolated agent → agent executes phase with prompt and injected context → next
 ```
 
-**Executor role:** the executor (`./scripts/eaw next`) is the entry point and governor of the Modo D cycle. It reads `phase.skills`, resolves the effective skill set, spawns the isolated agent, and advances the card state after completion. The agent does not govern the cycle — it operates within the boundaries defined by the executor.
+**Executor role:** the executor (`./scripts/eaw next`) is the entry point and governor of the Modo D cycle. It reads `phase.skills`, resolves the effective skill set, materializes the prompt/context handoff, and advances the card state after completion. The agent does not govern the cycle — it operates within the boundaries defined by the executor and the operator/orchestrator handoff.
 
 **Current runtime state:** `implementation_executor` (feature track) operates under the Tier 1 skills fallback (`[workspace]`) because no phase.yaml in the current installation declares `phase.skills`. This is valid and expected; the Modo D cycle is active regardless of whether `phase.skills` is explicitly declared.
 

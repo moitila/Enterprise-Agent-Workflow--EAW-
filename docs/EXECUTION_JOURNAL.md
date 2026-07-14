@@ -39,9 +39,9 @@ Example events (schema v2):
 
 Each phase execution produces one `phase_started` event followed by one `phase_completed` event. If a phase is aborted before `run_phase()` returns, the `phase_completed` event may be absent — readers must tolerate unpaired `phase_started` events.
 
-**`track_completed`:** Emitted by `cmd_next` when `current_phase` equals `final_phase` (as declared in `track.yaml`). Signals that the track workflow has reached its terminal state. `status` is `"OK"`, `duration_ms` is `0` (not applicable at track level), and `phase` contains the name of the terminal phase. Emission is idempotent: `cmd_next` checks for an existing `track_completed` event in the journal before emitting and skips if one is already present.
+**`track_completed`:** Emitted by `cmd_next` when `current_phase` equals `final_phase` (as declared in `track.yaml`) and the final phase completion contract is satisfied. Signals normal lifecycle auto-close: the track workflow has reached its terminal state through `eaw next <CARD>`. `status` is `"OK"`, `duration_ms` is `0` (not applicable at track level), and `phase` contains the name of the terminal phase. Emission is idempotent: `cmd_next` checks for an existing `track_completed` event in the journal before emitting and skips if one is already present.
 
-**`card_completed`:** Emitted by `cmd_complete` (`eaw complete <CARD>`) when `current_phase` equals `final_phase` and the phase artifacts pass explicit validation. Represents the operator-affirmed closure of the card as a unit of work — distinct from `track_completed`, which is emitted automatically by `cmd_next` when the workflow reaches its terminal state without additional artifact validation. `status` is `"OK"`, `duration_ms` is `0`, and `phase` contains the name of the terminal phase. Emission is idempotent: repeated calls to `eaw complete` emit the event exactly once.
+**`card_completed`:** Emitted by `cmd_complete` (`eaw complete <CARD>`) when used as an escape/standalone closure command, `current_phase` equals `final_phase`, and the phase artifacts pass explicit validation. Represents the operator-affirmed closure of the card as a unit of work outside the normal lifecycle path; the normal path closes through `cmd_next` auto-close and emits `track_completed`. `status` is `"OK"`, `duration_ms` is `0`, and `phase` contains the name of the terminal phase. Emission is idempotent: repeated standalone calls to `eaw complete` emit the event exactly once.
 
 ## Semantics
 
@@ -103,5 +103,5 @@ The investigation for card 595 confirmed an observable pattern of repeated phase
 
 - Observed fact: `execution_journal.jsonl` is append-only and can contain repeated `phase_started` / `phase_completed` pairs for the same phase.
 - Remaining hypothesis set: external reexecution of the phase chain, possible supervisor or scheduler requeue, or agent reemission of the same phase.
-- Unresolved gap: the available evidence does not prove whether the retries came from the agent, the runtime, or an external condition.
+- Open gap: the available evidence does not prove whether the retries came from the agent, the runtime, or an external condition.
 - Operational consequence: this document remains descriptive only; it does not authorize any retry-policy change, runtime gate change, or other behavioral modification.

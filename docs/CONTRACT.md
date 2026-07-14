@@ -19,9 +19,9 @@ Inputs
 
 Command semantics
 -----------------
-Primary workflow classification remains the selected `track`, persisted as `card_state.track_id`. The declarative lifecycle advances through `card_state.current_phase` and `track.transitions`; `eaw next <CARD>` is the runtime command that first validates the current phase `completion` contract, then applies the transition and executes the destination phase using the declared workflow outputs and prompt bindings. The command sections below document the public CLI surface and the legacy compatibility modules that remain in the tree for internal reference.
+Primary workflow classification remains the selected `track`, persisted as `card_state.track_id`. The declarative lifecycle advances through `card_state.current_phase` and `track.transitions`; `eaw next <CARD>` is the runtime command that first validates the current phase `completion` contract, then applies the transition and executes the destination phase using the declared workflow outputs and prompt bindings. When the validated phase is the final phase, `eaw next <CARD>` performs normal lifecycle auto-close. The command sections below document the public CLI surface and the legacy compatibility modules that remain in the tree for internal reference.
 In the current runtime model, `eaw next <CARD>` is the phase-driven entrypoint. `eaw intake <CARD>`, `eaw analyze <CARD>`, and `eaw implement <CARD>` are no longer exposed by `scripts/eaw` as public commands.
-The current contract documents phase completion through `phase.completion` and the `eaw next <CARD>` transition gate. It does not define a public `eaw complete <CARD>` command in the current CLI surface, so callers should treat completion as part of the declarative phase contract rather than a separate command.
+The current contract documents phase completion through `phase.completion` and the `eaw next <CARD>` transition gate. `eaw complete <CARD>` is reserved as an escape/standalone closure command; callers should treat `eaw next` as the normal lifecycle path.
 
 ### `eaw run`
 
@@ -129,12 +129,12 @@ Operational rules / invariants
   - Fatal errors must exit non-zero and include contextual message (file:function:line:command).
   - Best-effort collections (git/status, rg/grep) are tolerated; failures are recorded in `_warnings.txt` but do not fail the run.
   - Write scope is enforced per phase; when violated, runtime emits `WRITE_SCOPE_VIOLATION: phase=<...> command=<...> blocked_path=<...>` and returns exit code `97`.
-  - Prompt binding is resolved through `templates/prompts/<track>/<phase>/ACTIVE`; missing file, empty value, invalid version, or missing `prompt_vN.meta` are fatal validation scenarios for prompt resolution.
+  - Prompt binding is selected through `templates/prompts/<track>/<phase>/ACTIVE`; missing file, empty value, invalid version, or missing `prompt_vN.meta` are fatal validation scenarios for prompt selection.
 - Side effects limited to `out/<CARD>/` and temporary resources; no global state is mutated beyond `config/` during runtime.
 
 Prompt provenance
 -----------------
-- Runtime records resolved prompt bindings in `out/<CARD>/provenance/prompts_used.yaml`.
+- Runtime records selected prompt bindings in `out/<CARD>/provenance/prompts_used.yaml`.
 - This provenance file is part of deterministic observability for prompt lifecycle execution.
 - The canonical context model is documented in `docs/CONTEXT_MODEL.md`.
 - Workspace-sourced onboarding context is maintained for the repository under `<EAW_WORKDIR>/context_sources/onboarding/<repo_key>/` and consumed by reference via the context block; it is not materialized per card.

@@ -10,10 +10,11 @@ Use it to understand what the system is, what each documentation layer is for, a
 AI is useful in engineering, but ungoverned use creates drift, weak traceability, and unsafe changes in complex systems.
 
 EAW exists to make AI-assisted engineering auditable and repeatable by card. Instead of treating a request as an open-ended conversation, EAW turns it into a governed flow with explicit state, bounded prompts, context collection, and deterministic output artifacts.
+Although its built-in tracks are software-engineering-oriented, the same model is not limited to software: EAW can govern any knowledge-work process that can be expressed through cards, phases, prompts, contracts, and artifacts.
 
 ## What EAW Is
 
-EAW is a deterministic AI-assisted engineering system with these core layers:
+EAW is an agentic workflow framework implemented today as a deterministic AI-assisted engineering runtime with these core layers:
 
 1. Philosophy
    Defined by `docs/manifesto.md`.
