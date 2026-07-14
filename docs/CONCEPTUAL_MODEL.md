@@ -7,9 +7,9 @@ Use it to understand what the system is, what each documentation layer is for, a
 
 ## What Problem EAW Solves
 
-AI is useful in engineering, but ungoverned use creates drift, weak traceability, and unsafe changes in complex systems.
+AI is useful in engineering and other knowledge-work, but ungoverned use creates drift, weak traceability, and unsafe changes in complex systems.
 
-EAW exists to make AI-assisted engineering auditable and repeatable by card. Instead of treating a request as an open-ended conversation, EAW turns it into a governed flow with explicit state, bounded prompts, context collection, and deterministic output artifacts.
+EAW exists to make AI-assisted governed work auditable and repeatable by card. Instead of treating a request as an open-ended conversation, EAW turns it into a governed flow with explicit state, bounded prompts, context collection, and deterministic output artifacts.
 Although its built-in tracks are software-engineering-oriented, the same model is not limited to software: EAW can govern any knowledge-work process that can be expressed through cards, phases, prompts, contracts, and artifacts.
 
 ## What EAW Is
@@ -125,12 +125,12 @@ If you are new to EAW, use this sequence:
 
 ## Product Positioning
 
-EAW should be described as a governed AI-assisted engineering system, implemented today as a deterministic shell-based runtime with formal documentation and output contracts.
+EAW should be described as an agentic workflow framework for governed AI-assisted work, implemented today as a deterministic shell-based runtime with formal documentation and output contracts.
 
 That wording matters:
 
 - `governed` highlights bounded execution and auditability
-- `AI-assisted engineering` reflects the role of prompts and context engineering
+- `AI-assisted work` reflects the role of prompts and context engineering without limiting the model to software
 - `system` reflects the combination of runtime, contracts, state, and governance
 - `shell-based runtime` is an implementation choice, not the whole product identity
 

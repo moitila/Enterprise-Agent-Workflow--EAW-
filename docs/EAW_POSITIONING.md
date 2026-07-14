@@ -22,19 +22,20 @@ O EAW existe para resolver esses problemas de forma deterministica, por meio de 
 
 ## 1. Definicao objetiva do EAW
 
-O Enterprise Agent Workflow (EAW) e um sistema de governanca deterministica para trabalho de engenharia orientado por card.
+O Enterprise Agent Workflow (EAW) e um framework agentico de workflow governado para trabalho orientado por card.
 
 Ele organiza a execucao em `track -> phase -> prompt -> artifacts`, controla o contexto injetado em cada fase, limita a superficie de escrita, valida contratos de execucao e produz trilha auditavel em `out/<CARD>/`.
 
 O EAW nao e definido pelo agente que executa a fase. Ele e definido pelo runtime, pelo modelo de card, pelos contratos de fase, pelos prompts versionados e pelos artefatos observaveis gerados durante a execucao.
 
-Em termos praticos, o EAW existe para transformar trabalho com agentes em um fluxo governado, reproduzivel e auditavel.
+Em termos praticos, o EAW existe para transformar trabalho com agentes em um processo governado, reproduzivel e auditavel. As tracks atuais sao orientadas a engenharia de software, mas o modelo se aplica a qualquer knowledge-work que possa ser governado por cards, fases, prompts, contratos e artefatos.
 
 ## 2. O que o EAW e
 
 O EAW e:
 
 - um sistema de execucao governada por card
+- um framework agentico de workflow para processo governado, reproduzivel e auditavel
 - um runtime CLI que avanca trabalho fase a fase por comandos como `next`, `run`, `validate` e `complete`
 - um mecanismo de orquestracao deterministica baseado em `track.yaml`, `phase.yaml`, estado do card e prompts ativos
 - um sistema de contratos explicitos de fase, incluindo artefatos obrigatorios, estrategia de completion, limites de leitura, limites de escrita, fail-fast e validacoes
@@ -57,7 +58,7 @@ Capacidades reais do EAW:
 
 O EAW nao e:
 
-- um framework de agentes
+- um runtime de autonomia multiagente
 - um runtime de raciocinio multiagente
 - um sistema de coordenacao cognitiva entre agentes
 - um orchestrator generico de tools para LLM
@@ -78,7 +79,7 @@ Negacoes importantes:
 
 ## 4. Papel arquitetural
 
-O papel arquitetural correto do EAW e de control plane de trabalho de engenharia orientado por agentes.
+O papel arquitetural correto do EAW e de control plane de trabalho governado orientado por agentes.
 
 Ele define:
 
