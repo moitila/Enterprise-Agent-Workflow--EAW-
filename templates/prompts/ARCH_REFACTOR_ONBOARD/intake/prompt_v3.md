@@ -196,7 +196,7 @@ RULES
 
 SIMPLE_ALIGNMENT_HANDOFF
 
-- Apos produzir `00_intake.md` e `_intake_provenance.md`, avaliar se o card atende aos criterios de alinhamento simples definidos em `/home/user/dev/EAW-tool/docs/ARCH_REFACTOR_handoff_codes_v1.md`.
+- Apos produzir `00_intake.md` e `_intake_provenance.md`, avaliar se o card atende aos criterios de alinhamento simples definidos em `docs/ARCH_REFACTOR_handoff_codes_v1.md`.
 - O card tem alinhamento simples quando TODOS os criterios abaixo forem atendidos simultaneamente:
   1. A classificacao do contexto e `ALINHAMENTO_A_PADRAO`
   2. O escopo afeta no maximo 2 arquivos no mesmo modulo

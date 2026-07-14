@@ -2,8 +2,8 @@
 Enterprise Agent Workflow (EAW)
 
 Status: OFFICIAL
-Scope: Intake prompt generation
-Applies to: `eaw intake`
+Scope: Intake prompt generation (phase-driven)
+Applies to: fluxo normal `eaw next <CARD>`; a superficie legada de intake e mantida apenas como compatibilidade/deprecated
 
 ---
 
@@ -25,7 +25,7 @@ Nenhum prompt pode violar este contrato.
 
 ## 2. Header Oficial (v2.1)
 
-O prompt de `eaw intake` deve iniciar com o HEADER v2.1, sem modificacoes estruturais.
+O prompt da fase Intake deve iniciar com o HEADER v2.1, sem modificacoes estruturais.
 
 ```text
 === EAW INTAKE PROMPT (CARD {{CARD}} | ROUND {{ROUND}}) ===
@@ -37,7 +37,7 @@ OUT_DIR={{OUT_DIR}}
 CARD_DIR={{CARD_DIR}}
 INTAKE_DIR=out/<CARD>/intake/**
 PROVENANCE_FILE=investigations/_intake_provenance.md
-EXECUTION_COMMAND=eaw intake {{CARD}}
+EXECUTION_COMMAND=eaw next {{CARD}}
 
 MODE:
 - When EAW_WORKDIR is empty -> outputs under OUT_DIR.
@@ -124,7 +124,7 @@ Este contrato nao altera:
 - Modo workspace
 - Suporte multi-repo
 
-Backward compatibility preservada.
+Backward compatibility preservada. Quando mencionada em documentacao historica, a superficie de comando direta da fase e somente compatibilidade/deprecated; o fluxo operacional normal e phase-driven via `eaw next <CARD>`.
 
 ## 9. Evolucao
 
@@ -139,4 +139,4 @@ Qualquer alteracao neste contrato deve:
 
 `PROMPT_CONTRACT_v1.2` esta oficialmente ativo.
 
-O prompt de `eaw intake` deve obedecer integralmente a este contrato.
+O prompt da fase Intake deve obedecer integralmente a este contrato.

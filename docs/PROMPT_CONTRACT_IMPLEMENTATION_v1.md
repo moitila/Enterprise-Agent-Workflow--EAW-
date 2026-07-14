@@ -3,7 +3,7 @@ Enterprise Agent Workflow (EAW)
 
 Status: OFFICIAL
 Scope: Implementation prompt generation
-Applies to: `eaw implement`
+Applies to: fluxo normal `eaw next <CARD>`; a superficie direta de Implementation e mantida apenas como compatibilidade/deprecated
 
 ---
 
@@ -95,10 +95,10 @@ Nenhuma etapa fora desta sequencia pode ser adicionada pelo prompt.
 | Artefato obrigatorio | `implementation/20_patch_notes.md` | Permanece parte do layout oficial da fase |
 | Gate obrigatorio | `investigations/20_findings.md`, `investigations/30_hypotheses.md`, `investigations/40_next_steps.md`, `implementation/00_scope.lock.md`, `implementation/10_change_plan.md` | Devem, em conjunto, cobrir o objetivo soberano do card antes da execucao corretiva |
 | Boundary de escrita | `implementation/` | Artefatos da fase ficam confinados a este diretorio |
-| Dependencia runtime | `/home/user/dev/EAW-tool/scripts/commands/cmd_implement.sh` | Fonte de verdade de execucao no runtime |
-| Espelho no repositorio | `scripts/commands/cmd_implement.sh` | Espelho versionado em `EAW-dev`, atualmente identico ao runtime |
+| Dependencia runtime | `RUNTIME_ROOT/scripts/commands/cmd_implement.sh` | Fonte de verdade de execucao no runtime validado por `./scripts/eaw` |
+| Espelho no repositorio | `scripts/commands/cmd_implement.sh` | Espelho versionado no target repo, atualmente identico ao runtime validado |
 
-Nao ha permissao para alterar `prompts/`, `scripts/commands/`, `EAW-tool` ou qualquer layout externo da trilha como parte deste contrato.
+Nao ha permissao para alterar `prompts/`, `scripts/commands/`, repositorios fora da allowlist ou qualquer layout externo da trilha como parte deste contrato.
 
 ## 6. Rastreabilidade Obrigatoria
 
@@ -143,10 +143,10 @@ Este contrato nao altera:
 - CLI externa
 - Layout de diretorios
 - Templates em `prompts/`
-- Runtime em `EAW-tool`
+- Runtime em `RUNTIME_ROOT`, validado pela existencia de `./scripts/eaw`
 - Suporte multi-repo
 
-Backward compatibility preservada.
+Backward compatibility preservada. Quando mencionada em documentacao historica, a superficie direta de Implementation e somente compatibilidade/deprecated; o fluxo operacional normal e phase-driven via `eaw next <CARD>`.
 
 ## 9. Evolucao
 
@@ -161,4 +161,4 @@ Qualquer alteracao neste contrato deve:
 
 `PROMPT_CONTRACT_IMPLEMENTATION_v1` passa a definir o contrato oficial da fase Implementation.
 
-O prompt de `eaw implement` deve obedecer integralmente a este contrato.
+O prompt da fase Implementation deve obedecer integralmente a este contrato.

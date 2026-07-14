@@ -3,7 +3,7 @@ Enterprise Agent Workflow (EAW)
 
 Status: OFFICIAL
 Scope: Intake phase
-Applies to: `eaw intake`
+Applies to: fluxo normal `eaw next <CARD>`; a superficie direta de intake e mantida apenas como compatibilidade/deprecated
 
 ---
 
@@ -24,13 +24,13 @@ Seu proposito e:
 | --- | --- | --- |
 | Entrada obrigatoria | `out/<CARD>/ingest/` | Quando existir, deve ser tratada como origem primaria dos insumos brutos |
 | Compatibilidade de entrada | `out/<CARD>/intake/` | Pode ser usada como fallback temporario durante a transicao |
-| Artefato runtime | `out/<CARD>/investigations/intake_agent_prompt.round_<N>.md` | Prompt auxiliar emitido por `eaw intake <CARD> [--round=N]` |
+| Artefato runtime | `out/<CARD>/investigations/intake_agent_prompt.round_<N>.md` | Prompt auxiliar emitido pelo runtime da fase Intake |
 | Saida obrigatoria do fluxo | `out/<CARD>/investigations/00_intake.md` | Artefato preenchido a partir do prompt gerado e das evidencias de `intake/` |
 | Saida obrigatoria do fluxo | `out/<CARD>/investigations/_intake_provenance.md` | Proveniencia obrigatoria do intake |
 
 ## 3. Inputs Obrigatorios e Dependencias de Runtime
 
-- Runtime root: `EAW-tool/scripts/eaw`
+- Runtime root: `RUNTIME_ROOT`, validado pela existencia de `./scripts/eaw`
 - Implementacao observada da fase: `scripts/commands/cmd_intake.sh`
 - Template efetivo observado: `templates/prompts/default/intake/prompt_v{ACTIVE}.md` (resolvido via `ACTIVE`)
 - Contrato estrutural complementar do prompt: `docs/PROMPT_CONTRACT_v1.md`
@@ -39,6 +39,8 @@ Seu proposito e:
 - Diretorio de compatibilidade observado por card: `out/<CARD>/intake/`
 - Parametro obrigatorio: `<CARD>`
 - Parametro opcional observado: `--round=N`
+- Superficie operacional normal: `eaw next <CARD>` em modo phase-driven
+- Superficie direta historica: compatibilidade/deprecated para operadores e automacoes legadas
 
 ## 4. READ_SCOPE
 
@@ -75,7 +77,7 @@ Seu proposito e:
 - Ausencia simultanea de `"$CARD_DIR/ingest"` e `"$CARD_DIR/intake"`.
 - Template de header nao encontrado no path primario nem no fallback.
 - Template de body nao encontrado no path primario nem no fallback.
-- Uso invalido da CLI fora de `eaw intake <CARD> [--round=N]`.
+- Uso invalido da CLI fora da superficie phase-driven `eaw next <CARD>` ou da superficie direta historica de compatibilidade/deprecated.
 - Qualquer tentativa de escrita fora do perimetro permitido da fase.
 
 ## 8. Fonte de Verdade Observavel do Runtime

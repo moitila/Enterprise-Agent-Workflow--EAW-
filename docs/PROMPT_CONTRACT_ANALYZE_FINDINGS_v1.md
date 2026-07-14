@@ -48,7 +48,7 @@ Seu proposito e:
 - Nao executar doctor ou validate como requisito da subfase Findings.
 - Produzir `20_findings.md` com estrutura equivalente ao template e ao prompt ativos, preservando as secoes observadas para contexto confirmado, evidencias coletadas, criterios de aceite identificados, comportamentos observados, divergencias identificadas e lacunas de informacao.
 - Em cada evidencia, registrar arquivo, comando executado, trecho relevante e interpretacao objetiva.
-- A consistencia de execucao e garantida pelo eaw next como regra de orquestracao, sem substituir o contrato visivel desta fase.
+- A consistencia de execucao e garantida por `eaw next <CARD>` como regra de orquestracao phase-driven, sem substituir o contrato visivel desta fase.
 - Retornar rastreabilidade de execucao com arquivos lidos, arquivos alterados, saida literal dos testes e confirmacao de que nenhuma hipotese ou plano foi criado.
 
 ## 6. Condicoes de Falha
@@ -62,7 +62,7 @@ Seu proposito e:
 
 ## 7. Dependencias de Runtime
 
-- Runtime root: `EAW-tool/scripts/eaw`
+- Runtime root: `RUNTIME_ROOT`, validado pela existencia de `./scripts/eaw`
 - Implementacao observada da fase: `scripts/commands/cmd_analyze.sh`
 - Binding operacional da fase: `tracks/feature/phases/findings.yaml` com `active: 4`
 - Template efetivo da subfase: `templates/prompts/feature/findings/prompt_v4.md`

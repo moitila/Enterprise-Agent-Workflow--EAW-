@@ -3,7 +3,7 @@ Enterprise Agent Workflow (EAW)
 
 Status: OFFICIAL
 Scope: Analyze subphase `planning`
-Applies to: `eaw analyze` -> `investigations/planning_agent_prompt.md`
+Applies to: fluxo normal `eaw next <CARD>`; a superficie direta de Analyze e mantida apenas como compatibilidade/deprecated -> `investigations/planning_agent_prompt.md`
 
 ---
 
@@ -25,7 +25,7 @@ Seu proposito e:
 | Entrada obrigatoria | `investigations/00_intake.md` | Deve existir antes do inicio da subfase |
 | Entrada obrigatoria | `investigations/20_findings.md` | Deve existir antes do inicio da subfase |
 | Entrada obrigatoria | `investigations/30_hypotheses.md` | Deve existir antes do inicio da subfase |
-| Artefato runtime | `investigations/planning_agent_prompt.md` | Prompt auxiliar emitido por `eaw analyze` |
+| Artefato runtime | `investigations/planning_agent_prompt.md` | Prompt auxiliar emitido pelo runtime da subfase Planning |
 | Saida obrigatoria | `investigations/40_next_steps.md` | Registra hipoteses `H[0-9]+` selecionadas, objetivo, estrategia, plano atomico, criterios de aceite, riscos e rollback |
 | Saida opcional | `investigations/_warnings.md` | Permitida somente se necessario |
 
@@ -43,7 +43,7 @@ Seu proposito e:
 
 ## 5. Regras Obrigatorias
 
-- Executar o pre-check com `cd "$EAW_ROOT_DIR"`, `test -f ./scripts/eaw` e `test -f "$CONFIG_SOURCE"`.
+- Executar o pre-check com `cd "$RUNTIME_ROOT"`, `test -f ./scripts/eaw` e `test -f "$CONFIG_SOURCE"`.
 - Confirmar a existencia de `00_intake.md`, `20_findings.md` e `30_hypotheses.md`; se qualquer um estiver ausente, bloquear.
 - Produzir `40_next_steps.md` com as secoes `# 40_next_steps`, `## Hipotese(s) Selecionada(s)`, `## Objetivo da Iteracao`, `## Estrategia`, `## Plano Atomico`, `## Criterios de Aceite`, `## Riscos e Mitigacao` e `## Rollback`.
 - Em `Hipotese(s) Selecionada(s)`, listar explicitamente identificadores `H[0-9]+` extraidos de `30_hypotheses.md`.
@@ -64,7 +64,7 @@ Seu proposito e:
 
 ## 7. Dependencias de Runtime
 
-- Runtime root: `EAW-tool/scripts/eaw`
+- Runtime root: `RUNTIME_ROOT`, validado pela existencia de `./scripts/eaw`
 - Implementacao observada da fase: `scripts/commands/cmd_analyze.sh`
 - Template efetivo da subfase: `templates/prompts/default/analyze_planning/prompt_v{ACTIVE}.md` (resolvido via `ACTIVE`)
 - Contrato consolidado complementar: `docs/PROMPT_CONTRACT_ANALYZE_v1.md`

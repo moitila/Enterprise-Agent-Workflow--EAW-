@@ -13,7 +13,7 @@ Caminho absoluto para um script executavel no ambiente do operador.
 Exemplo:
 
 ```
-EAW_SMOKE_SH=/home/user/dev/EAW-tool/tests/smoke_runtime.sh
+EAW_SMOKE_SH=/path/to/operator-controlled/smoke_runtime.sh
 ```
 
 ### Forma de injecao

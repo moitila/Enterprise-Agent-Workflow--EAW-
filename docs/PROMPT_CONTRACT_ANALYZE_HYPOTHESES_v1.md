@@ -3,7 +3,7 @@ Enterprise Agent Workflow (EAW)
 
 Status: OFFICIAL
 Scope: Analyze subphase `hypotheses`
-Applies to: `eaw analyze` -> `investigations/hypotheses_agent_prompt.md`
+Applies to: fluxo normal `eaw next <CARD>`; a superficie direta de Analyze e mantida apenas como compatibilidade/deprecated -> `investigations/hypotheses_agent_prompt.md`
 
 ---
 
@@ -24,7 +24,7 @@ Seu proposito e:
 | --- | --- | --- |
 | Entrada obrigatoria | `investigations/00_intake.md` | Deve existir antes do inicio da subfase |
 | Entrada obrigatoria | `investigations/20_findings.md` | Deve existir antes do inicio da subfase |
-| Artefato runtime | `investigations/hypotheses_agent_prompt.md` | Prompt auxiliar emitido por `eaw analyze` |
+| Artefato runtime | `investigations/hypotheses_agent_prompt.md` | Prompt auxiliar emitido pelo runtime da subfase Hypotheses |
 | Saida obrigatoria | `investigations/30_hypotheses.md` | Registra coverage map, hipoteses `H[0-9]+`, ranking, risco residual e provenance |
 
 ## 3. READ_SCOPE
@@ -40,7 +40,7 @@ Seu proposito e:
 
 ## 5. Regras Obrigatorias
 
-- Executar o pre-check com `cd "$EAW_ROOT_DIR"`, `test -f ./scripts/eaw` e `test -f "$CONFIG_SOURCE"`.
+- Executar o pre-check com `cd "$RUNTIME_ROOT"`, `test -f ./scripts/eaw` e `test -f "$CONFIG_SOURCE"`.
 - Confirmar a existencia de `investigations/00_intake.md` e `investigations/20_findings.md`; se faltar qualquer um, abortar.
 - Criar a secao `## Coverage Map` listando os criterios identificados.
 - Recomenda-se produzir entre 5 e 10 hipoteses no formato `H[0-9]+` (ex.: H1, H2, H3), mantendo aderencia ao prompt e ao comportamento observado do runtime.
@@ -62,7 +62,7 @@ Seu proposito e:
 
 ## 7. Dependencias de Runtime
 
-- Runtime root: `EAW-tool/scripts/eaw`
+- Runtime root: `RUNTIME_ROOT`, validado pela existencia de `./scripts/eaw`
 - Implementacao observada da fase: `scripts/commands/cmd_analyze.sh`
 - Template efetivo da subfase: `templates/prompts/default/analyze_hypotheses/prompt_v{ACTIVE}.md` (resolvido via `ACTIVE`)
 - Contrato consolidado complementar: `docs/PROMPT_CONTRACT_ANALYZE_v1.md`

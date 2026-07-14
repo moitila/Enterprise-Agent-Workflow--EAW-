@@ -3,7 +3,7 @@ Enterprise Agent Workflow (EAW)
 
 Status: OFFICIAL
 Scope: Analyze prompt generation
-Applies to: `eaw analyze`
+Applies to: fluxo normal `eaw next <CARD>`; a superficie direta de Analyze e mantida apenas como compatibilidade/deprecated
 
 ---
 
@@ -25,7 +25,7 @@ Nenhum prompt de Analyze pode violar este contrato.
 
 ## 2. Header Oficial (v1)
 
-O prompt de `eaw analyze` deve iniciar com o bloco `RUNTIME_ENVIRONMENT` antes de `ROLE`, sem modificacoes estruturais nem secoes extras fora do contrato:
+O prompt da fase Analyze deve iniciar com o bloco `RUNTIME_ENVIRONMENT` antes de `ROLE`, sem modificacoes estruturais nem secoes extras fora do contrato:
 
 ```text
 RUNTIME_ENVIRONMENT
@@ -94,10 +94,10 @@ Nenhuma etapa fora desta sequencia pode ser adicionada pelo prompt.
 | Saida obrigatoria | `investigations/30_hypotheses.md` | Formaliza hipoteses rastreaveis via `H[0-9]+` |
 | Saida obrigatoria | `investigations/40_next_steps.md` | Define proximo passo deterministico para Implementation |
 | Dependencia de baseline | `docs/PROMPT_CONTRACT_v1.md` | Define o nivel minimo de rigor estrutural |
-| Dependencia runtime | `/home/user/dev/EAW-tool/scripts/commands/cmd_analyze.sh` | Fonte de verdade de execucao no runtime |
-| Espelho no repositorio | `scripts/commands/cmd_analyze.sh` | Espelho versionado em `EAW-dev`, atualmente identico ao runtime |
+| Dependencia runtime | `RUNTIME_ROOT/scripts/commands/cmd_analyze.sh` | Fonte de verdade de execucao no runtime validado por `./scripts/eaw` |
+| Espelho no repositorio | `scripts/commands/cmd_analyze.sh` | Espelho versionado no target repo, atualmente identico ao runtime validado |
 
-Nao ha permissao para escrever em `prompts/`, `scripts/commands/`, `docs/` fora do proprio contrato, ou em `EAW-tool`.
+Nao ha permissao para escrever em `prompts/`, `scripts/commands/`, `docs/` fora do proprio contrato, ou fora do target repo autorizado pela allowlist.
 
 ## 6. Rastreabilidade Obrigatoria
 
@@ -135,10 +135,10 @@ Este contrato nao altera:
 - CLI externa
 - Layout de diretorios
 - Templates em `prompts/`
-- Runtime em `EAW-tool`
+- Runtime em `RUNTIME_ROOT`, validado pela existencia de `./scripts/eaw`
 - Suporte multi-repo
 
-Backward compatibility preservada.
+Backward compatibility preservada. Quando mencionada em documentacao historica, a superficie direta de Analyze e somente compatibilidade/deprecated; o fluxo operacional normal e phase-driven via `eaw next <CARD>`.
 
 ## 9. Evolucao
 
@@ -153,4 +153,4 @@ Qualquer alteracao neste contrato deve:
 
 `PROMPT_CONTRACT_ANALYZE_v1` passa a definir o contrato oficial da fase Analyze.
 
-O prompt de `eaw analyze` deve obedecer integralmente a este contrato.
+O prompt da fase Analyze deve obedecer integralmente a este contrato.
