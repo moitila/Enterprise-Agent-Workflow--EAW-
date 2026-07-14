@@ -271,11 +271,11 @@ Nota sobre modelo phase-driven futuro:
 
 This repository uses the EAW Commit Standard (ECS) to ensure commits are traceable and auditable. ECS is compatible with Conventional Commits and requires a small metadata block in the commit body.
 
-To install the repository hook locally (Ubuntu / Linux / WSL):
+To install the repository hook locally, use the canonical Governance Layer installer (Ubuntu / Linux / WSL):
 
 ```bash
-chmod +x scripts/install-hooks.sh
-bash scripts/install-hooks.sh
+chmod +x governance/scripts/install-hooks.sh
+bash governance/scripts/install-hooks.sh
 ```
 
 After installing, commits will be validated. Example of a valid commit message:

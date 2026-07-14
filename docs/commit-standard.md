@@ -81,4 +81,4 @@ This pattern balances developer ergonomics and enterprise requirements: it is li
 
 ## Enforcement
 
-The repository includes a `hooks/commit-msg` script that enforces ECS at commit time. Install it by running `scripts/install-hooks.sh` or ensure CI runs the same validation.
+The repository includes the canonical `governance/hooks/commit-msg` hook that enforces ECS at commit time. Install it by running `governance/scripts/install-hooks.sh` or ensure CI runs the same validation.
