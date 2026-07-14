@@ -5,6 +5,10 @@ skills:
     file: skills/EAW_operator/workspace.md
     description: Workspace/runtime root, repos.conf, EAW_WORKDIR and fail-fast operational context.
 
+  eaw_lessons:
+    file: skills/EAW_operator/lessons.md
+    description: Continuous improvement lessons and recurring operational guidance for EAW agents.
+
   eaw_card_execution:
     file: skills/EAW_operator/card_execution.md
     description: Card execution and next-phase orchestration guidance.
@@ -36,6 +40,10 @@ skills:
   eaw_spike_operator:
     file: skills/eaw_spike_operator/SKILL.md
     description: Spike investigation concept, modes and research policy for spike track agents.
+
+  quick_start_operator:
+    file: skills/quick_start_operator/SKILL.md
+    description: Quick-start workflow guidance for operating EAW in a prepared workspace.
 
   bootstrap_operator:
     file: skills/bootstrap_operator/SKILL.md
