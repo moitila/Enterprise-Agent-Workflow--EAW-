@@ -23,5 +23,9 @@ phase:
   completion:
     strategy: required_artifacts_exist
     required_artifacts:
-      - investigations/00_intake.md
-      - investigations/_intake_provenance.md
+      - path: investigations/00_intake.md
+        min_bytes: 500
+        validation_mode: blocking
+      - path: investigations/_intake_provenance.md
+        min_bytes: 500
+        validation_mode: blocking

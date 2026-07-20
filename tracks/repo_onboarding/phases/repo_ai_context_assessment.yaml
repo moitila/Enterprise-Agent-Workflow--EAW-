@@ -28,4 +28,6 @@ phase:
   completion:
     strategy: required_artifacts_exist
     required_artifacts:
-      - investigations/30_repo_ai_context_assessment.md
+      - path: investigations/30_repo_ai_context_assessment.md
+        min_bytes: 500
+        validation_mode: blocking

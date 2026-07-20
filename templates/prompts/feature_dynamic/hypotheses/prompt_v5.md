@@ -30,7 +30,7 @@ INPUT
 
 Before generating hypotheses, you MUST read the repository onboarding located at:
 
-{{EAW_WORKDIR}}/context_sources/onboarding/<resolved_repo_key>/
+{{EAW_WORKDIR}}/context_sources/onboarding/{{RESOLVED_REPO_KEY}}/
 
 Priority order:
 

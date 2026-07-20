@@ -39,7 +39,7 @@ MANDATORY CONTEXT CONSUMPTION
 
 You MUST read and use the materialized repository onboarding located at:
 
-{{EAW_WORKDIR}}/context_sources/onboarding/<resolved_repo_key>/
+{{EAW_WORKDIR}}/context_sources/onboarding/{{RESOLVED_REPO_KEY}}/
 
 Priority reading order:
 
@@ -50,7 +50,7 @@ Priority reading order:
 
 If additional onboarding files are materialized for the card, they may also be consulted when relevant.
 
-Do NOT require unpublished conventional filenames such as `INDEX.md` or `80_execution_contract.md` when they are absent from `{{EAW_WORKDIR}}/context_sources/onboarding/<resolved_repo_key>/`.
+Do NOT require unpublished conventional filenames such as `INDEX.md` or `80_execution_contract.md` when they are absent from `{{EAW_WORKDIR}}/context_sources/onboarding/{{RESOLVED_REPO_KEY}}/`.
 
 Then, depending on the task and the files actually published:
 
@@ -139,7 +139,7 @@ OUTPUT
 READ_SCOPE
 
 - Ler recursivamente apenas `{{CARD_DIR}}/ingest`
-- Ler `{{EAW_WORKDIR}}/context_sources/onboarding/<resolved_repo_key>/` somente apos resolver exatamente um `resolved_repo_key`
+- Ler `{{EAW_WORKDIR}}/context_sources/onboarding/{{RESOLVED_REPO_KEY}}/` somente apos resolver exatamente um `resolved_repo_key`
 - Para imagens, descrever somente o visivel sem OCR especulativo
 - Nao ler `{{CARD_DIR}}/investigations`
 - Nao ler TARGET_REPOS
@@ -207,7 +207,7 @@ FAIL_CONDITIONS
 - Falhar se qualquer item do PRECHECK falhar.
 - Falhar se `{{CARD_DIR}}/ingest` nao existir.
 - Falhar se o repositorio alvo do card nao puder ser resolvido de forma unica contra `TARGET_REPOS`.
-- Falhar se qualquer arquivo for lido fora de `{{CARD_DIR}}/ingest`, `{{EAW_WORKDIR}}/context_sources/onboarding/<resolved_repo_key>/` e `TARGET_REPOS`.
+- Falhar se qualquer arquivo for lido fora de `{{CARD_DIR}}/ingest`, `{{EAW_WORKDIR}}/context_sources/onboarding/{{RESOLVED_REPO_KEY}}/` e `TARGET_REPOS`.
 - Falhar se qualquer arquivo for escrito fora da WRITE_ALLOWLIST.
 - Falhar se `sources.md`, `review_evidence.raw.md` ou `review_evidence.normalized.md` nao existirem ao final.
 - Falhar se `review_evidence.normalized.md` contiver solucao, plano, validacao de codigo ou decisao arquitetural.

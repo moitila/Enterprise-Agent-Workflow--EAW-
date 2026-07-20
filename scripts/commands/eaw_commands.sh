@@ -2295,6 +2295,9 @@ eaw_render_phase_prompt_template() {
 		tooling_hints_serialized="${tooling_hints//$'\n'/__EAW_TOOLING_HINT_NL__}"
 	fi
 
+	local resolved_repo_key
+	resolved_repo_key="$(printf "%s\n" "$target_repos" | awk 'NF { sub(/^[[:space:]]*-[[:space:]]/, ""); print $1; exit }')"
+
 	assert_write_scope "workflow_phase" "write phase prompt" "$output_file" "$card_dir"
 	ensure_dir "$(dirname "$output_file")"
 
@@ -2317,6 +2320,7 @@ eaw_render_phase_prompt_template() {
 		-v critical_paths="$critical_paths" \
 		-v runtime_environment="$runtime_environment" \
 		-v tooling_hints="$tooling_hints_serialized" \
+		-v resolved_repo_key="$resolved_repo_key" \
 		'
 		{
 			if ($0 == "{{RUNTIME_ENVIRONMENT}}") {
@@ -2355,6 +2359,10 @@ eaw_render_phase_prompt_template() {
 			gsub(/\{\{STEP_ID\}\}/, step_id)
 			gsub(/\{\{WRITE_ALLOWLIST\}\}/, write_allowlist)
 			gsub(/\{\{CRITICAL_PATHS\}\}/, critical_paths)
+			gsub(/<resolved_repo_key>/, resolved_repo_key)
+			gsub(/\{\{RESOLVED_REPO_KEY\}\}/, resolved_repo_key)
+			gsub(/\{\{TARGET_REPOS\}\}/, target_repos)
+			gsub(/\{\{EXCLUDED_REPOS\}\}/, excluded_repos)
 			print
 		}
 		' "$template_file" >"$output_file"
@@ -2362,6 +2370,7 @@ eaw_render_phase_prompt_template() {
 	eaw_apply_context_block_to_prompt "$card" "$card_dir" "${EAW_CARD_WORKFLOW_CURRENT_PHASE_FILE:-}" "$output_file" || return 1
 	eaw_apply_skills_block_to_prompt "${EAW_CARD_WORKFLOW_CURRENT_PHASE_FILE:-}" "$output_file" || return 1
 	echo "RUNTIME: wrote_prompt=${output_file#$card_dir/}"
+	eaw_lint_rendered_prompt "$output_file"
 	# PHASE_CONTRACTS block — inject required artifacts and handoff schema from phase.yaml
 	if [[ -n "${phase_file:-}" && -f "$phase_file" ]]; then
 		local _artifacts
@@ -2392,6 +2401,10 @@ eaw_render_phase_prompt_template() {
 	_ci_prompt_output="$(dirname "$output_file")/ci_feedback_prompt.md"
 	local _ci_tmpl_path="${EAW_ROOT_DIR}/templates/ci_feedback/feedback_prompt_v1.md"
 	if [[ -f "$_ci_tmpl_path" ]] && [[ "$(eaw_read_ci_feedback_flag)" == "true" ]]; then
+		if [[ -z "${step_id:-}" ]]; then
+			echo "ERROR: step_id is empty in eaw_render_phase_prompt_template; ci_feedback_prompt generation skipped" >&2
+			return 1
+		fi
 		mkdir -p "$(dirname "$_ci_prompt_output")"
 		sed \
 			-e "s|{{CARD}}|${card}|g" \
@@ -2411,6 +2424,17 @@ $(basename "$(dirname "$output_file")")/ci_feedback_prompt.md
 Write the result to: ${EAW_WORKDIR}/ci_feedback/${track_id}/${step_id}/feedback_${card}.md
 EAW_CI_FEEDBACK_REF
 	fi
+}
+
+eaw_lint_rendered_prompt() {
+	local output_file="$1"
+	local residual
+	residual="$(grep -Eon '\{\{[A-Z_]+\}\}|<[a-z][a-z_]*>' "$output_file" 2>/dev/null || true)"
+	if [[ -n "$residual" ]]; then
+		echo "WARNING: unresolved template variables in ${output_file}:"
+		printf "%s\n" "$residual"
+	fi
+	return 0
 }
 
 eaw_primary_target_repo() {
@@ -2617,7 +2641,7 @@ eaw_mark_current_phase_complete_for_wrapper() {
 	phase_status="$(eaw_state_phase_status_for_next)"
 	phase_started_at="$(eaw_state_scalar_or_default "$EAW_CARD_WORKFLOW_STATE_FILE" "phase_started_at" "null")"
 
-	if ! eaw_validate_phase_completion "$card" "$card_dir" "$current_phase" "$current_phase_file"; then
+	if ! eaw_validate_phase_completion_strict "$card" "$card_dir" "$current_phase" "$current_phase_file"; then
 		return 1
 	fi
 	if [[ "$phase_status" == "COMPLETE" ]]; then
@@ -2654,7 +2678,7 @@ eaw_advance_to_next_phase_for_wrapper() {
 		return 0
 	fi
 
-	if ! eaw_validate_phase_completion "$card" "$card_dir" "$current_phase" "$current_phase_file"; then
+	if ! eaw_validate_phase_completion_strict "$card" "$card_dir" "$current_phase" "$current_phase_file"; then
 		return 1
 	fi
 
