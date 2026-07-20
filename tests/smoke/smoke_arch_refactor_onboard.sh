@@ -81,6 +81,14 @@ write_markdown_artifact() {
 Scenario: ${scenario}
 
 This artifact is intentionally non-scaffold content for the AR-07 smoke harness.
+It includes enough concrete detail to satisfy the runtime meaningful-content gate.
+The smoke is not validating prose quality here; it is validating that completed
+phases with non-template artifacts can advance through the workflow transitions.
+This paragraph names the phase output, the scenario, and the expected transition
+behavior so the artifact is clearly different from the generated scaffold.
+Additional deterministic filler keeps the artifact above the default size floor
+without depending on timestamps, filesystem paths, or environment-specific data.
+The result should remain stable across Linux CI, Windows checkouts, and WSL runs.
 EOF
 }
 
@@ -90,9 +98,7 @@ write_handoff() {
 	local phase="$3"
 	local code="$4"
 	mkdir -p "$(dirname "$(state_file "$workdir" "$card")")/investigations"
-	cat >"$(dirname "$(state_file "$workdir" "$card")")/investigations/20_handoff.json" <<EOF
-{"from_phase":"${phase}","status":"completed","messages":[],"codes":["${code}"]}
-EOF
+	printf '{"from_phase":"%s","status":"completed","messages":[{"type":"info","code":"AR07_SMOKE_HANDOFF","text":"AR-07 smoke handoff for %s: deterministic narrative confirms that the phase produced substantive evidence before advancing. This JSON intentionally stays above the default meaningful-content size floor while preserving the skip code contract. The runtime should read the codes array exactly as before; this message only makes the fixture representative of a real phase handoff. Validation context: source artifacts were populated, phase outputs were reviewed, and the next transition is expected to be selected deterministically. The handoff remains stable across environments because it avoids timestamps, absolute paths, random values, and command output."}],"codes":["%s"]}\n' "$phase" "$phase" "$code" >"$(dirname "$(state_file "$workdir" "$card")")/investigations/20_handoff.json"
 }
 
 write_empty_handoff() {
@@ -100,9 +106,7 @@ write_empty_handoff() {
 	local card="$2"
 	local phase="$3"
 	mkdir -p "$(dirname "$(state_file "$workdir" "$card")")/investigations"
-	cat >"$(dirname "$(state_file "$workdir" "$card")")/investigations/20_handoff.json" <<EOF
-{"from_phase":"${phase}","status":"completed","messages":[],"codes":[]}
-EOF
+	printf '{"from_phase":"%s","status":"completed","messages":[{"type":"info","code":"AR07_SMOKE_NO_SKIP","text":"AR-07 smoke handoff for %s: no skip code was emitted, so the normal transition path should be used. This fixture is intentionally substantive because completion validation rejects placeholder-sized JSON artifacts. The message documents that the phase completed its review, wrote required markdown artifacts, and left transition selection to the track. The codes array remains empty to preserve the no-skip semantics exercised by the full-flow scenario. All content is deterministic and independent of local paths, timestamps, shell output, or repository-specific state."}],"codes":[]}\n' "$phase" "$phase" >"$(dirname "$(state_file "$workdir" "$card")")/investigations/20_handoff.json"
 }
 
 prime_phase() {
@@ -353,6 +357,9 @@ run_onboarding_variant_scenario() {
 	create_card "$workdir" "$card"
 
 	prime_phase "$workdir" "$card" "planning" "implementation_planning" $'    - ingest\n    - intake\n    - findings\n    - hypotheses\n    - planning\n'
+	fill_findings_artifact "$workdir" "$card"
+	fill_hypotheses_artifact "$workdir" "$card"
+	fill_planning_artifact "$workdir" "$card"
 	fill_implementation_planning_artifacts "$workdir" "$card"
 
 	if [[ "$onboarding_mode" == "present" ]]; then

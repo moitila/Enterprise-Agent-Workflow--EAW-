@@ -70,11 +70,33 @@ EOF
 write_intake_artifact() {
 	local workdir="$1"
 	local card="$2"
+	local repo_key="$3"
 	mkdir -p "$workdir/out/$card/investigations"
 	cat >"$workdir/out/$card/investigations/00_intake.md" <<EOF
 # 00_intake
 
 Smoke intake for ${card}.
+
+## Repositorio principal de onboarding
+
+${repo_key}
+
+## Evidencias fornecidas
+
+The bug_ONBOARD smoke fixture writes deterministic intake evidence so prompt rendering
+can resolve the onboarding repository key without inference. This content is intentionally
+larger than the meaningful-content threshold used by completion validation.
+
+## Impacto / Escopo
+
+The scenario exercises transition routing and onboarding context resolution only. It avoids
+timestamps, random values, absolute host-specific assumptions, and command output so the
+fixture remains stable in Linux CI and local Windows/WSL validation.
+
+## Perguntas em aberto
+
+None for the smoke fixture. The repository key above is explicit and should be consumed by
+the renderer when replacing resolved onboarding placeholders.
 EOF
 }
 
@@ -95,6 +117,19 @@ write_findings_artifact() {
 # 20_findings
 
 Smoke findings for ${card}.
+
+The findings artifact is intentionally substantive because the runtime completion gate
+rejects placeholder-sized phase outputs. This fixture records that the current behavior was
+reviewed, the onboarding context contract was considered, and the transition code in the
+handoff should determine whether hypotheses are skipped or executed.
+
+The content is deterministic and independent of timestamps, random values, local absolute
+paths, or command output. Its purpose is to prove that a filled findings phase can advance
+through bug_ONBOARD transitions while preserving the same skip-code semantics as the older
+short fixture.
+
+The smoke does not validate prose quality here. It validates that meaningful content,
+handoff envelope validation, and transition routing compose without blocking the workflow.
 EOF
 }
 
@@ -106,6 +141,16 @@ write_hypotheses_artifact() {
 # 30_hypotheses
 
 Smoke hypotheses for ${card}.
+
+The hypotheses artifact is intentionally longer than a scaffold so completion validation can
+distinguish real phase output from generated placeholder content. It documents that the
+findings phase completed, no environment-specific data is required, and planning should be
+materialized through the normal track transition.
+
+This deterministic fixture keeps the test focused on workflow behavior. It includes enough
+context to satisfy the meaningful-content gate without relying on repository internals,
+timestamps, shell output, or random values. The expected result is a stable transition from
+hypotheses to planning once this artifact exists.
 EOF
 }
 
@@ -125,9 +170,7 @@ write_handoff() {
 		fi
 	done
 	mkdir -p "$workdir/out/$card/investigations"
-	cat >"$workdir/out/$card/investigations/20_handoff.json" <<EOF
-{"from_phase":"findings","status":"completed","messages":[],"codes":[${codes_json}]}
-EOF
+	printf '{"from_phase":"findings","status":"completed","messages":[{"type":"info","code":"BO06_SMOKE_HANDOFF","text":"bug_ONBOARD smoke handoff: findings completed with deterministic evidence and transition codes preserved for routing. This message keeps the envelope above the meaningful-content threshold while avoiding timestamps, random values, local paths, or command output. The runtime should continue to read the codes array exactly as before and choose hypotheses or planning according to the track skip rules. The fixture is representative of a real phase handoff and remains stable across CI and local validation environments."}],"codes":[%s]}\n' "$codes_json" >"$workdir/out/$card/investigations/20_handoff.json"
 }
 
 seed_onboarding_source() {
@@ -204,7 +247,7 @@ run_full_flow_scenario() {
 	write_repos_conf "$workdir" "$repo_key" "$repo_dir"
 	create_card "$workdir" "$card"
 	prime_findings_state "$workdir" "$card"
-	write_intake_artifact "$workdir" "$card"
+	write_intake_artifact "$workdir" "$card" "$repo_key"
 	write_findings_artifact "$workdir" "$card"
 	write_handoff "$workdir" "$card" "REGRESSION_CLEAR"
 
@@ -233,7 +276,7 @@ run_skip_root_cause_scenario() {
 	write_repos_conf "$workdir" "$repo_key" "$repo_dir"
 	create_card "$workdir" "$card"
 	prime_findings_state "$workdir" "$card"
-	write_intake_artifact "$workdir" "$card"
+	write_intake_artifact "$workdir" "$card" "$repo_key"
 	write_findings_artifact "$workdir" "$card"
 	write_handoff "$workdir" "$card" "ROOT_CAUSE_CONFIRMED"
 
@@ -257,7 +300,7 @@ run_regression_clear_matrix_scenario() {
 	write_repos_conf "$workdir" "$repo_key" "$repo_dir"
 	create_card "$workdir" "$card"
 	prime_findings_state "$workdir" "$card"
-	write_intake_artifact "$workdir" "$card"
+	write_intake_artifact "$workdir" "$card" "$repo_key"
 	write_findings_artifact "$workdir" "$card"
 	write_handoff "$workdir" "$card" "REGRESSION_CLEAR"
 
@@ -279,7 +322,7 @@ run_regression_clear_matrix_scenario() {
 	write_repos_conf "$workdir" "$repo_key" "$repo_dir"
 	create_card "$workdir" "$card"
 	prime_findings_state "$workdir" "$card"
-	write_intake_artifact "$workdir" "$card"
+	write_intake_artifact "$workdir" "$card" "$repo_key"
 	write_findings_artifact "$workdir" "$card"
 	write_handoff "$workdir" "$card" "ROOT_CAUSE_CONFIRMED"
 
@@ -303,7 +346,7 @@ run_debug_first_scenario() {
 	write_repos_conf "$workdir" "$repo_key" "$repo_dir"
 	create_card "$workdir" "$card"
 	prime_findings_state "$workdir" "$card"
-	write_intake_artifact "$workdir" "$card"
+	write_intake_artifact "$workdir" "$card" "$repo_key"
 	write_ingest_artifact "$workdir" "$card"
 	write_findings_artifact "$workdir" "$card"
 	write_handoff "$workdir" "$card" "REGRESSION_CLEAR"
@@ -333,7 +376,7 @@ run_source_absent_scenario() {
 	write_repos_conf "$workdir" "$repo_key" "$repo_dir"
 	create_card "$workdir" "$card"
 	prime_findings_state "$workdir" "$card"
-	write_intake_artifact "$workdir" "$card"
+	write_intake_artifact "$workdir" "$card" "$repo_key"
 	write_ingest_artifact "$workdir" "$card"
 	write_findings_artifact "$workdir" "$card"
 	write_handoff "$workdir" "$card" "REGRESSION_CLEAR"

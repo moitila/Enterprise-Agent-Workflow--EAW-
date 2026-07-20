@@ -52,13 +52,15 @@ grep -F "initial_phase: ingest" "$REPO_ROOT/tracks/feature/track.yaml" >/dev/nul
 
 "$REPO_ROOT/scripts/eaw" card 501 --track feature "Ingest phase smoke" >/dev/null
 test -d "$EAW_WORKDIR/out/501/ingest"
-test -f "$EAW_WORKDIR/out/501/ingest/sources.md"
+test ! -f "$EAW_WORKDIR/out/501/ingest/sources.md"
 test -d "$EAW_WORKDIR/out/501/intake"
 test -d "$EAW_WORKDIR/out/501/investigations"
 # feature ingest smoke must exercise `eaw next`
 next_output="$("$REPO_ROOT/scripts/eaw" next 501 2>&1)"
 grep -F "phase 'ingest' is incomplete; unfilled required artifacts" <<<"$next_output" >/dev/null
 grep -F "CARD 501: ingest remains current; unfilled required artifacts" <<<"$next_output" >/dev/null
+test -f "$EAW_WORKDIR/out/501/investigations/00_intake.md"
+test -f "$EAW_WORKDIR/out/501/investigations/_intake_provenance.md"
 feature_prompt="$EAW_WORKDIR/out/501/prompts/ingest.md"
 test -f "$feature_prompt"
 grep -F 'INGEST_DIR=`out/<CARD>/ingest/`' "$feature_prompt" >/dev/null

@@ -147,6 +147,19 @@ write_findings_artifact() {
 
 - dedicated smoke harness absent
 - skip contracts already published
+
+This feature_dynamic smoke findings artifact is intentionally substantive so the
+meaningful-content completion gate can distinguish it from a generated scaffold. The
+scenario validates transition behavior, skip-code routing, and deterministic prompt
+materialization after dynamic context has already completed.
+
+The fixture records that findings reviewed the current workflow state, confirmed the
+relevant contracts, and produced enough evidence for the next phase to proceed. It avoids
+timestamps, random values, absolute local paths, and command output so the result remains
+stable across Linux CI and local Windows/WSL runs.
+
+The assertions below still own the behavioral expectations; this prose only satisfies the
+runtime artifact contract introduced for BL-CI-03.
 EOF
 }
 
@@ -174,6 +187,15 @@ DOMINANTE: H1
 
 ## Provenance
 - smoke fixture
+
+Additional deterministic context keeps this hypotheses artifact above the minimum content
+floor enforced by the runtime. The smoke validates that a normal findings result advances
+to hypotheses, that this hypotheses output can then advance to planning, and that the
+handoff envelope remains available for downstream phases.
+
+The content intentionally avoids environment-specific data. It is not meant to model a real
+analysis in depth; it is a stable fixture proving that meaningful phase output and transition
+routing work together.
 EOF
 }
 
@@ -206,6 +228,11 @@ Use findings and current contracts only.
 
 ## Rollback
 - remove dedicated harness and smoke hook
+
+This planning artifact includes enough deterministic detail to satisfy the runtime
+meaningful-content gate before advancing to implementation planning. The test remains
+focused on transition mechanics and does not depend on timestamps, local paths, random
+values, or shell output.
 EOF
 }
 
@@ -215,9 +242,7 @@ write_phase_output() {
 	local phase="$3"
 	local summary="$4"
 	mkdir -p "$workdir/out/$card/investigations"
-	cat >"$workdir/out/$card/investigations/10_phase_output.json" <<EOF
-{"phase_id":"${phase}","status":"completed","summary":"${summary}"}
-EOF
+	printf '{"phase_id":"%s","status":"completed","summary":"%s. The feature_dynamic smoke writes a substantive phase output envelope so runtime completion validation can reject placeholder-sized JSON while accepting deterministic test fixtures. This envelope records that the phase completed, produced the associated markdown artifact, preserved stable transition context, and avoided timestamps, random values, absolute local paths, or command output. Its only purpose is to satisfy the formal artifact contract while keeping the behavioral assertions focused on workflow transitions and prompt determinism across CI and local validation environments."}\n' "$phase" "$summary" >"$workdir/out/$card/investigations/10_phase_output.json"
 }
 
 write_handoff() {
@@ -235,9 +260,7 @@ write_handoff() {
 		fi
 	done
 	mkdir -p "$workdir/out/$card/investigations"
-	cat >"$workdir/out/$card/investigations/20_handoff.json" <<EOF
-{"from_phase":"${phase}","status":"completed","messages":[],"codes":[${codes_json}]}
-EOF
+	printf '{"from_phase":"%s","status":"completed","messages":[{"type":"info","code":"FD08_SMOKE_HANDOFF","text":"feature_dynamic smoke handoff: phase output completed with deterministic evidence and transition codes preserved for routing. This message keeps the envelope above the meaningful-content threshold while avoiding timestamps, random values, local paths, or command output. The runtime should continue to read the codes array exactly as before and choose the next phase according to the track skip rules. The fixture is representative of a real handoff and remains stable across CI and local validation environments."}],"codes":[%s]}\n' "$phase" "$codes_json" >"$workdir/out/$card/investigations/20_handoff.json"
 }
 
 prepare_findings_ready_card() {

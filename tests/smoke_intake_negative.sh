@@ -91,10 +91,25 @@ EAW_WORKDIR="$scenario_e_workdir" ./scripts/eaw card "$card_findings_deferred" -
 cat >>"$scenario_e_workdir/out/$card_findings_deferred/investigations/00_intake.md" <<'EOF'
 
 Scenario E intake preenchido para teste.
+Este conteudo adicional e deterministico existe para satisfazer o contrato de
+conteudo minimo antes da transicao intake -> findings. O foco do cenario E nao
+e validar a qualidade do intake, mas sim garantir que o prompt de findings seja
+materializado sem ocupar antecipadamente o caminho investigations/20_findings.md.
+O texto evita timestamps, caminhos locais, valores aleatorios e saidas de comando
+para permanecer estavel em CI Linux e validacao local. A fase deve avancar porque
+os artefatos de intake foram preenchidos de forma substantiva, permitindo que o
+teste negativo seguinte verifique exclusivamente a ausencia do findings artifact.
 EOF
 cat >>"$scenario_e_workdir/out/$card_findings_deferred/investigations/_intake_provenance.md" <<'EOF'
 
 Scenario E provenance preenchido para teste.
+Este bloco de provenance acompanha o intake substantivo do cenario E e tambem
+fica acima do limite minimo de conteudo exigido pelo runtime. Ele documenta que
+o fixture foi preparado manualmente, que nao depende de estado externo, e que a
+proxima verificacao deve observar apenas a materializacao do prompt de findings.
+O conteudo e propositalmente estavel e nao inclui timestamps, caminhos absolutos,
+valores aleatorios ou saidas de comandos. Assim o teste continua cobrindo a regra
+de artifact deferred sem ser bloqueado pela validacao de conteudo minimo.
 EOF
 
 scenario_e_output="$(EAW_WORKDIR="$scenario_e_workdir" ./scripts/eaw next "$card_findings_deferred" 2>&1)"
