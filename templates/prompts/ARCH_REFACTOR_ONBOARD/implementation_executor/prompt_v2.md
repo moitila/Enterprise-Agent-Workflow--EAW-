@@ -46,7 +46,7 @@ MANDATORY CONTEXT CONSUMPTION
 
 You MUST read and use the repository onboarding located at:
 
-{{EAW_WORKDIR}}/context_sources/onboarding/<resolved_repo_key>/
+{{EAW_WORKDIR}}/context_sources/onboarding/{{RESOLVED_REPO_KEY}}/
 
 Priority reading order:
 
@@ -103,7 +103,7 @@ EXECUTION CONTRACT (MANDATORY)
 
 Follow:
 
-{{EAW_WORKDIR}}/context_sources/onboarding/<resolved_repo_key>/80_execution_contract.md
+{{EAW_WORKDIR}}/context_sources/onboarding/{{RESOLVED_REPO_KEY}}/80_execution_contract.md
 
 Including:
 
@@ -171,7 +171,7 @@ OUTPUT
 READ_SCOPE
 
 - Ler somente os artefatos do card e os TARGET_REPOS necessarios para os steps aprovados
-- Ler `{{EAW_WORKDIR}}/context_sources/onboarding/<resolved_repo_key>/` para aplicar a governanca obrigatoria do template, apos resolver exatamente um `resolved_repo_key`
+- Ler `{{EAW_WORKDIR}}/context_sources/onboarding/{{RESOLVED_REPO_KEY}}/` para aplicar a governanca obrigatoria do template, apos resolver exatamente um `resolved_repo_key`
 - Tratar `40_next_steps.md`, `00_scope.lock.md` e `10_change_plan.md` como fonte de verdade
 - Ler `_warnings.md` quando existir para aplicar restricoes operacionais
 
@@ -219,7 +219,7 @@ FAIL_CONDITIONS
 - Falhar se qualquer artefato obrigatorio estiver ausente.
 - Falhar se a validacao estrutural pre-execucao falhar.
 - Falhar se o repositorio alvo do card nao puder ser resolvido de forma unica contra `TARGET_REPOS`.
-- Falhar se houver leitura fora de `{{CARD_DIR}}`, `{{EAW_WORKDIR}}/context_sources/onboarding/<resolved_repo_key>/` e dos TARGET_REPOS necessarios aos steps.
+- Falhar se houver leitura fora de `{{CARD_DIR}}`, `{{EAW_WORKDIR}}/context_sources/onboarding/{{RESOLVED_REPO_KEY}}/` e dos TARGET_REPOS necessarios aos steps.
 - Falhar se qualquer escrita ocorrer fora da allowlist soberana ou fora dos artefatos permitidos da fase.
 - Falhar se `bash -n` ou qualquer comando de validacao obrigatoria falhar.
 - Falhar imediatamente se houver necessidade de decidir design, completar lacuna do plano ou inventar estrutura.

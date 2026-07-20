@@ -24,6 +24,12 @@ phase:
   completion:
     strategy: required_artifacts_exist
     required_artifacts:
-      - ingest/sources.md
-      - ingest/review_evidence.raw.md
-      - ingest/review_evidence.normalized.md
+      - path: ingest/sources.md
+        min_bytes: 500
+        validation_mode: blocking
+      - path: ingest/review_evidence.raw.md
+        min_bytes: 500
+        validation_mode: blocking
+      - path: ingest/review_evidence.normalized.md
+        min_bytes: 500
+        validation_mode: blocking

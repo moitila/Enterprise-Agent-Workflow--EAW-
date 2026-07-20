@@ -40,7 +40,7 @@ CONTEXTUAL SUPPORT ONLY
 
 You MAY consult materialized repository onboarding:
 
-{{EAW_WORKDIR}}/context_sources/onboarding/<resolved_repo_key>/
+{{EAW_WORKDIR}}/context_sources/onboarding/{{RESOLVED_REPO_KEY}}/
 
 Before consulting onboarding:
 
@@ -85,7 +85,7 @@ OUTPUT
 READ_SCOPE
 
 - Ler `{{CARD_DIR}}`
-- Ler `{{EAW_WORKDIR}}/context_sources/onboarding/<resolved_repo_key>/` apenas como suporte contextual, apos resolver exatamente um `resolved_repo_key`
+- Ler `{{EAW_WORKDIR}}/context_sources/onboarding/{{RESOLVED_REPO_KEY}}/` apenas como suporte contextual, apos resolver exatamente um `resolved_repo_key`
 - Ler TARGET_REPOS apenas em modo read-only e apenas para validar alguma evidencia complementar ja apontada pelo findings
 
 WRITE_SCOPE
@@ -137,6 +137,6 @@ FAIL_CONDITIONS
 - Falhar se intake ou findings estiverem ausentes.
 - Falhar se `30_hypotheses.md` nao existir ao final.
 - Falhar se o repositorio alvo do card nao puder ser resolvido de forma unica contra `TARGET_REPOS`.
-- Falhar se houver leitura fora de `{{CARD_DIR}}`, `{{EAW_WORKDIR}}/context_sources/onboarding/<resolved_repo_key>/` e TARGET_REPOS.
+- Falhar se houver leitura fora de `{{CARD_DIR}}`, `{{EAW_WORKDIR}}/context_sources/onboarding/{{RESOLVED_REPO_KEY}}/` e TARGET_REPOS.
 - Falhar se houver escrita fora da WRITE_ALLOWLIST.
 - Falhar se o documento contiver plano, implementacao, escolha de solucao ou arquitetura alvo.

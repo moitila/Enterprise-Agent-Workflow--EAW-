@@ -31,5 +31,9 @@ phase:
   completion:
     strategy: required_artifacts_exist
     required_artifacts:
-      - investigations/20_findings.md
-      - investigations/20_handoff.json
+      - path: investigations/20_findings.md
+        min_bytes: 500
+        validation_mode: blocking
+      - path: investigations/20_handoff.json
+        min_bytes: 500
+        validation_mode: blocking
