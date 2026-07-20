@@ -1574,6 +1574,36 @@ eaw_render_phase_template_with_card() {
 	sed "s/<CARD>/${card}/g" "$template_file" >"$output_file"
 }
 
+eaw_prune_deferred_investigation_artifact_seed() {
+	local artifact_path="$1"
+	local rel_path="$2"
+	local card="$3"
+	local template_path="$EAW_TEMPLATES_DIR/$(basename "$rel_path")"
+
+	[[ -f "$artifact_path" ]] || return 1
+	[[ -f "$template_path" ]] || return 1
+	if cmp -s "$artifact_path" "$template_path" || \
+		cmp -s "$artifact_path" <(sed "s/<CARD>/${card}/g" "$template_path"); then
+		rm -f "$artifact_path"
+		echo "RUNTIME: deferred_artifact_seed_removed=$rel_path"
+		return 0
+	fi
+	return 1
+}
+
+eaw_remove_deferred_investigation_artifact_scaffolds() {
+	local card_dir="$1"
+	local card="$2"
+	local rel_path
+
+	for rel_path in \
+		investigations/20_findings.md \
+		investigations/30_hypotheses.md \
+		investigations/40_next_steps.md; do
+		eaw_prune_deferred_investigation_artifact_seed "$card_dir/$rel_path" "$rel_path" "$card" || true
+	done
+}
+
 eaw_detect_card_template_type() {
 	local card="$1"
 	local card_dir="$2"
@@ -1954,6 +1984,7 @@ eaw_scaffold_phase_artifact() {
 	target_dir="$(dirname "$target_path")"
 	assert_write_scope "workflow_phase" "ensure_dir artifact_parent" "$target_dir" "$card_dir"
 	ensure_dir "$target_dir"
+	eaw_prune_deferred_investigation_artifact_seed "$target_path" "$rel_path" "$card" || true
 
 	if [[ -f "$target_path" ]]; then
 		echo "RUNTIME: phase=$phase_id preserve_artifact=$rel_path"
@@ -1965,14 +1996,9 @@ eaw_scaffold_phase_artifact() {
 		type="$(eaw_detect_card_template_type "$card" "$card_dir")"
 		eaw_render_phase_template_with_card "$EAW_TEMPLATES_DIR/intake_${type}.md" "$target_path" "$card"
 		;;
-	investigations/20_findings.md)
-		eaw_render_phase_template_with_card "$EAW_TEMPLATES_DIR/20_findings.md" "$target_path" "$card"
-		;;
-	investigations/30_hypotheses.md)
-		eaw_render_phase_template_with_card "$EAW_TEMPLATES_DIR/30_hypotheses.md" "$target_path" "$card"
-		;;
-	investigations/40_next_steps.md)
-		eaw_render_phase_template_with_card "$EAW_TEMPLATES_DIR/40_next_steps.md" "$target_path" "$card"
+	investigations/20_findings.md|investigations/30_hypotheses.md|investigations/40_next_steps.md)
+		echo "RUNTIME: phase=$phase_id deferred_artifact=$rel_path"
+		return 0
 		;;
 	implementation/00_scope.lock.md)
 		cat >"$target_path" <<EOF
@@ -2753,6 +2779,7 @@ cmd_card() {
 	run_phase "load_config" false phase_load_config "$outdir"
 	run_phase "resolve_repos" false phase_resolve_repos
 	run_phase "finalize" false phase_finalize "$card" "$outdir"
+	eaw_remove_deferred_investigation_artifact_scaffolds "$outdir" "$card"
 	eaw_capture_git_snapshot "$card" "$outdir"
 
 	# 620: persist parent_card_id in state
