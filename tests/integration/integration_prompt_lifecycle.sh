@@ -138,17 +138,148 @@ test ! -f "$EAW_WORKDIR/out/499/prompts/intake.md"
 printf "v2\n" >"$default_intake_dir/ACTIVE"
 
 "$RUNTIME_ROOT/scripts/eaw" card 500 --track standard "Prompt lifecycle integration" >/dev/null
-printf "# intake ok\n" >"$EAW_WORKDIR/out/500/investigations/00_intake.md"
-printf "# provenance ok\n" >"$EAW_WORKDIR/out/500/investigations/_intake_provenance.md"
+cat >"$EAW_WORKDIR/out/500/investigations/00_intake.md" <<'EOF'
+# intake ok
+
+Prompt lifecycle integration fixture with deterministic substantive content. This intake
+artifact is intentionally larger than the minimum content gate so the test can focus on
+prompt binding and provenance behavior rather than placeholder rejection. It avoids
+timestamps, random values, local absolute paths, and command output.
+
+The fixture confirms that the standard track can advance from intake after active prompt
+bindings are switched to v2. The resulting prompts should include the ACTIVE_BINDING_OK
+markers injected above, and provenance should record each prompt phase once.
+EOF
+cat >"$EAW_WORKDIR/out/500/investigations/_intake_provenance.md" <<'EOF'
+# provenance ok
+
+Prompt lifecycle integration provenance fixture. This file documents that the intake
+artifact was prepared by the test harness, that no external context is required, and that
+the workflow should advance only because both intake artifacts are meaningfully filled.
+
+The text is deterministic and intentionally above the runtime content floor so it remains
+stable across Linux CI and local validation while exercising prompt lifecycle behavior.
+It also records that the active prompt files were copied into an isolated runtime root,
+that the card was created after ACTIVE was moved to v2, and that the expected next action is
+to materialize findings without mutating the prompt template source. This additional detail
+keeps the fixture representative of a real provenance note instead of a short placeholder.
+EOF
 "$RUNTIME_ROOT/scripts/eaw" next 500 >/dev/null
-printf "# findings ok\n" >"$EAW_WORKDIR/out/500/investigations/20_findings.md"
+cat >"$EAW_WORKDIR/out/500/investigations/20_findings.md" <<'EOF'
+# findings ok
+
+Prompt lifecycle integration findings fixture with enough deterministic detail to satisfy
+the content gate. The test does not validate findings prose quality; it validates that the
+active default/analyze_findings prompt binding is materialized and recorded in provenance.
+
+The content avoids timestamps, random values, command output, and local paths. It simply
+represents a completed findings phase so the lifecycle can advance to hypotheses.
+The findings phase confirms the card scaffold, active prompt binding, rendered prompt
+location, and provenance flow are all available. It also records that no target repository
+mutation is required for this integration fixture. The next phase should be hypotheses, and
+the test will verify the default/analyze_hypotheses marker after materialization.
+EOF
 "$RUNTIME_ROOT/scripts/eaw" next 500 >/dev/null
-printf "# hypotheses ok\n" >"$EAW_WORKDIR/out/500/investigations/30_hypotheses.md"
+cat >"$EAW_WORKDIR/out/500/investigations/30_hypotheses.md" <<'EOF'
+# hypotheses ok
+
+Prompt lifecycle integration hypotheses fixture. This deterministic artifact is long enough
+for the meaningful-content validator and exists only to allow the standard workflow to
+advance into planning while preserving the prompt binding assertions below.
+
+The test expects the default/analyze_hypotheses v2 prompt marker to appear in the rendered
+prompt and in provenance. No environment-specific data is required.
+The selected hypothesis is that prompt lifecycle binding remains stable across sequential
+phase transitions. This fixture intentionally uses deterministic prose so the runtime can
+distinguish it from a placeholder while the integration continues to focus on rendered
+prompt markers rather than domain analysis content.
+EOF
 "$RUNTIME_ROOT/scripts/eaw" next 500 >/dev/null
-printf "# planning ok\n" >"$EAW_WORKDIR/out/500/investigations/40_next_steps.md"
+cat >"$EAW_WORKDIR/out/500/investigations/40_next_steps.md" <<'EOF'
+# planning ok
+
+Prompt lifecycle integration planning fixture with deterministic substantive content. It
+allows the workflow to advance to implementation planning after the active planning prompt
+binding has been changed to v2.
+
+The artifact intentionally avoids timestamps, random values, local paths, and command
+output. Its role is to be a stable completed planning output for prompt lifecycle checks.
+The plan is to continue into implementation planning, materialize the implementation
+planning prompt from the active v2 binding, and then produce the two implementation planning
+artifacts required by the standard track. The final assertions verify prompt provenance for
+each phase and ensure duplicate phase records are not emitted.
+EOF
 "$RUNTIME_ROOT/scripts/eaw" next 500 >/dev/null
-printf "# scope lock ok\n" >"$EAW_WORKDIR/out/500/implementation/00_scope.lock.md"
-printf "# change plan ok\n" >"$EAW_WORKDIR/out/500/implementation/10_change_plan.md"
+mkdir -p "$EAW_WORKDIR/out/500/implementation"
+cat >"$EAW_WORKDIR/out/500/implementation/00_scope.lock.md" <<'EOF'
+# scope lock ok
+
+## Base Obrigatoria
+
+Prompt lifecycle integration uses the rendered prompt provenance as the base.
+
+## Hipotese(s) Base
+
+The active prompt binding selected for each default phase should be reflected in rendered prompts.
+
+## Contexto
+
+This fixture is deterministic and does not require repository writes outside the test card.
+
+## In Scope
+
+Validate prompt materialization, provenance entries, and implementation executor prompt binding.
+
+## Out of Scope
+
+No production source files are modified by this integration fixture.
+
+## Allowlist de Escrita
+
+write_allowlist:
+  - tests/integration/integration_prompt_lifecycle.sh
+
+## Regra de Escrita
+
+Prompt lifecycle integration scope lock fixture. This deterministic content is above the
+runtime minimum and represents a completed implementation planning artifact so the test can
+advance to implementation executor and verify prompt binding provenance.
+EOF
+cat >"$EAW_WORKDIR/out/500/implementation/10_change_plan.md" <<'EOF'
+# change plan ok
+
+## Objetivo de Execucao
+
+Advance the standard workflow through implementation executor prompt materialization.
+
+## Hipotese(s) Selecionada(s)
+
+The v2 prompt binding is selected consistently for every default prompt phase.
+
+## Assuncoes Explicitas
+
+The test runtime is isolated, deterministic, and does not depend on external repositories.
+
+## Steps
+
+1. Verify rendered prompt markers.
+2. Verify provenance entries for each phase.
+3. Verify duplicate prompt provenance records are not emitted.
+
+## Validacao Tecnica Obrigatoria
+
+The integration script itself performs the assertions after all prompts are materialized.
+
+## Rollback
+
+Remove the temporary fixture runtime directory created by the test harness.
+
+Prompt lifecycle integration change plan fixture. The plan is intentionally substantive and
+stable: verify rendered prompt markers, verify provenance entries, and avoid external state.
+
+This artifact exists only to satisfy the formal implementation planning completion gate so
+the test can validate default/implementation_executor prompt binding behavior.
+EOF
 "$RUNTIME_ROOT/scripts/eaw" next 500 >/dev/null
 
 test -f "$EAW_WORKDIR/out/500/prompts/intake.md"
