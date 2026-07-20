@@ -138,7 +138,7 @@ The ingest material is consumed by the first phase of the track. Do not put code
 
 `track` is the primary workflow classification for a card. The runtime stores the selected value in `card_state.track_id` and resolves the official workflow from `tracks/<track>/track.yaml`.
 
-The declarative lifecycle advances through `current_phase` and `track.transitions`. `./scripts/eaw card <CARD> --track <TRACK>` materializes the initial phase declared by the selected track as soon as the card is created. `./scripts/eaw next <CARD>` first materializes the current phase, then evaluates the declared `completion` contract for that same phase, remains in place when required artifacts are still missing or still contain only scaffold/template content, and only then applies `track.transitions` and materializes the destination phase. Phases may also declare prompt artifacts directly in `outputs.prompts`, which the runtime materializes under `out/<CARD>/prompts/` using the declared alias as the filename (`<alias>.md`) while preserving compatibility prompt artifacts. The public CLI centers on `next`, `run`, `complete`, `validate`, `doctor`, and prompt-governance commands; `./scripts/eaw complete <CARD>` is an escape/standalone closure command, while normal lifecycle closure happens through `eaw next` auto-close on the final phase.
+The declarative lifecycle advances through `current_phase` and `track.transitions`. `./scripts/eaw card <CARD> --track <TRACK>` materializes the initial phase declared by the selected track as soon as the card is created. `./scripts/eaw next <CARD>` first materializes the current phase, then evaluates the declared `completion` contract for that same phase, remains in place when required artifacts are still missing or still contain only scaffold/template content, and only then applies `track.transitions` and materializes the destination phase. Phases may also declare prompt artifacts directly in `outputs.prompts`, which the runtime materializes under `out/<CARD>/prompts/` using the declared alias as the filename (`<alias>.md`) while preserving compatibility prompt artifacts. Agent-owned investigation Markdown artifacts can remain absent until the isolated phase agent performs the first substantive write; missing or scaffold-only content still blocks completion. The public CLI centers on `next`, `run`, `complete`, `validate`, `doctor`, and prompt-governance commands; `./scripts/eaw complete <CARD>` is an escape/standalone closure command, while normal lifecycle closure happens through `eaw next` auto-close on the final phase.
 
 `./scripts/eaw run <CARD>` is the deterministic orchestration entrypoint for executing a card end-to-end through the declared workflow. It uses `./scripts/eaw next <CARD>` as the only progression mechanism, persists `out/<CARD>/runtime/run_state.yaml` and `out/<CARD>/runtime/execution.log`, and names terminal outcomes with `stop_reason`. Wave 1 is intentionally minimal: no `--resume`, `--from`, `--dry-run`, automatic retry, extra metrics, or new runtime architecture are part of the documented contract.
 
@@ -149,7 +149,7 @@ Current phase semantics:
 - `next` is the primary lifecycle interface for declared phase progression and performs auto-close when the final phase contract is satisfied.
 
 Future phase-driven note:
-- the current phase-driven executor is incremental: it scaffolds declared outputs, materializes `outputs.prompts` under `out/<CARD>/prompts/`, emits compatibility prompt artifacts for the built-in prompt phases, and records execution in `execution.log`;
+- the current phase-driven executor is incremental: it scaffolds only the outputs whose first materialization belongs to the runtime, materializes `outputs.prompts` under `out/<CARD>/prompts/`, leaves agent-owned investigation Markdown artifacts absent until the first phase write, emits compatibility prompt artifacts for the built-in prompt phases, and records execution in `execution.log`;
 - future iterations can refine pre-conditions, completion criteria, and the distinction between manual and automatic phases without requiring new top-level commands.
 
 ## Bootstrap / Getting Started
@@ -198,9 +198,9 @@ Use the zero-to-first-card checklist: `docs/checklists/zero-to-first-card.md`
 - `out/<CARD>/<TYPE>_<CARD>.md` — the generated dossier; this filename is a deterministic compatibility convention, while workflow classification remains `track` / `card_state.track_id`
 - `out/<CARD>/investigations/00_intake.md` — intake for investigation flow
 - `out/<CARD>/investigations/10_baseline.md` — baseline checklist and initial evidence
-- `out/<CARD>/investigations/20_findings.md` — findings and collected artifacts
-- `out/<CARD>/investigations/30_hypotheses.md` — hypotheses and validation plan
-- `out/<CARD>/investigations/40_next_steps.md` — final diagnosis, risks, and action plan
+- `out/<CARD>/investigations/20_findings.md` — findings and collected artifacts, written by the findings phase agent on its first substantive write
+- `out/<CARD>/investigations/30_hypotheses.md` — hypotheses and validation plan, written by the hypotheses phase agent on its first substantive write
+- `out/<CARD>/investigations/40_next_steps.md` — final diagnosis, risks, and action plan, written by the planning phase agent on its first substantive write
 - `out/<CARD>/prompts/<prompt_alias>.md` — phase-driven prompt artifact generated from `outputs.prompts`; the file name matches the declared alias exactly
 - `out/<CARD>/execution.log` — deterministic phase execution log (`phase|status|duration_ms|note`)
 - `out/<CARD>/runtime/run_state.yaml` — `eaw run` state snapshot with `attempt`, `status`, `track_id`, `current_phase`, `phase_status`, `stop_reason`, and timestamp

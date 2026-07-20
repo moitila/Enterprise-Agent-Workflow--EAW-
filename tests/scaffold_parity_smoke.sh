@@ -18,6 +18,13 @@ assert_state_scaffold() {
 	[[ -n "$state_file" ]] || fail "missing canonical state scaffold in card root: $card_dir"
 }
 
+assert_investigation_markdown_deferred() {
+	local card_dir="$1"
+	test ! -f "$card_dir/investigations/20_findings.md" || fail "20_findings.md should remain absent in scaffold: $card_dir"
+	test ! -f "$card_dir/investigations/30_hypotheses.md" || fail "30_hypotheses.md should remain absent in scaffold: $card_dir"
+	test ! -f "$card_dir/investigations/40_next_steps.md" || fail "40_next_steps.md should remain absent in scaffold: $card_dir"
+}
+
 capture_tree() {
 	local card_dir="$1"
 	local out_file="$2"
@@ -41,6 +48,7 @@ main() {
 
 	EAW_WORKDIR="" EAW_OUT_DIR="$normal_out" ./scripts/eaw card "$CARD_ID" --track bug "scaffold test normal" >/dev/null
 	assert_state_scaffold "$normal_card"
+	assert_investigation_markdown_deferred "$normal_card"
 
 	./scripts/eaw init --workdir "$ws" --upgrade >/dev/null
 	cat >"$ws/config/repos.conf" <<EOF
@@ -48,6 +56,7 @@ local-main|$REPO_ROOT|target
 EOF
 	EAW_WORKDIR="$ws" ./scripts/eaw card "$CARD_ID" --track bug "scaffold test workspace" >/dev/null
 	assert_state_scaffold "$ws_card"
+	assert_investigation_markdown_deferred "$ws_card"
 
 	local normal_paths ws_paths normal_norm ws_norm
 	normal_paths="$TMP_ROOT/normal.paths"
