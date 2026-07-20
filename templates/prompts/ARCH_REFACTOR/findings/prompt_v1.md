@@ -17,6 +17,7 @@ RUNTIME_ENVIRONMENT
   - {{CARD_DIR}}/investigations/20_handoff.json
 - PRECHECK:
   - set -euo pipefail
+  - echo "$PATH" | grep -qE '^(/usr|/bin|/home)' || export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
   - cd "{{RUNTIME_ROOT}}"
   - test -f ./scripts/eaw
   - test -f "{{CONFIG_SOURCE}}"

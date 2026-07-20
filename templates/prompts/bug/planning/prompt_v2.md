@@ -50,6 +50,7 @@ RULES
 - O artefato de saida `40_next_steps.md` e criado pelo runtime como scaffold vazio antes desta fase. Substitua o conteudo inteiramente — nao trate o scaffold como rascunho a editar.
 - Executar pre-check em fail-fast:
   - `set -euo pipefail`
+  - `echo "$PATH" | grep -qE '^(/usr|/bin|/home)' || export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin`
   - `cd "{{RUNTIME_ROOT}}"`
   - `test -f ./scripts/eaw`
   - `test -f "{{CONFIG_SOURCE}}"`

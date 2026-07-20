@@ -52,6 +52,7 @@ RULES
 - Os artefatos de saida `00_scope.lock.md` e `10_change_plan.md` sao criados pelo runtime como scaffolds vazios antes desta fase. Substitua o conteudo inteiramente — nao trate os scaffolds como rascunhos a editar.
 - Executar pre-check em fail-fast:
   - `set -euo pipefail`
+  - `echo "$PATH" | grep -qE '^(/usr|/bin|/home)' || export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin`
   - `cd "{{RUNTIME_ROOT}}"`
   - `test -f ./scripts/eaw`
   - `test -f "{{CONFIG_SOURCE}}"`

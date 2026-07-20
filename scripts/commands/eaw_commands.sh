@@ -1591,19 +1591,6 @@ eaw_prune_deferred_investigation_artifact_seed() {
 	return 1
 }
 
-eaw_remove_deferred_investigation_artifact_scaffolds() {
-	local card_dir="$1"
-	local card="$2"
-	local rel_path
-
-	for rel_path in \
-		investigations/20_findings.md \
-		investigations/30_hypotheses.md \
-		investigations/40_next_steps.md; do
-		eaw_prune_deferred_investigation_artifact_seed "$card_dir/$rel_path" "$rel_path" "$card" || true
-	done
-}
-
 eaw_detect_card_template_type() {
 	local card="$1"
 	local card_dir="$2"
@@ -2298,6 +2285,23 @@ eaw_render_phase_prompt_template() {
 	local resolved_repo_key
 	resolved_repo_key="$(printf "%s\n" "$target_repos" | awk 'NF { sub(/^[[:space:]]*-[[:space:]]/, ""); print $1; exit }')"
 
+	# BL-CI-16: for bug_ONBOARD track, override resolved_repo_key from investigations/00_intake.md.
+	# The correct onboarding repo is stored in '## Repositorio principal de onboarding' by the intake agent.
+	# Falls back silently to target_repos resolution when 00_intake.md does not yet exist (intake phase).
+	if [[ "$track_id" == "bug_ONBOARD" ]]; then
+		local _intake_md_bl16="$card_dir/investigations/00_intake.md"
+		if [[ -f "$_intake_md_bl16" ]]; then
+			local _onboarding_repo_bl16
+			_onboarding_repo_bl16="$(awk '/^## Repositorio principal de onboarding/{found=1; next} found && /^[^#]/{gsub(/^[[:space:]]+|[[:space:]]+$/, ""); if ($0 != "") {print; exit}} found && /^##/{exit}' "$_intake_md_bl16")"
+			if [[ -n "$_onboarding_repo_bl16" ]]; then
+				resolved_repo_key="$_onboarding_repo_bl16"
+			else
+				echo "ERROR: bug_ONBOARD: campo '## Repositorio principal de onboarding' vazio em $_intake_md_bl16; abortando renderizacao." >&2
+				return 1
+			fi
+		fi
+	fi
+
 	assert_write_scope "workflow_phase" "write phase prompt" "$output_file" "$card_dir"
 	ensure_dir "$(dirname "$output_file")"
 
@@ -2422,6 +2426,8 @@ After completing this phase, execute the feedback prompt at:
 $(basename "$(dirname "$output_file")")/ci_feedback_prompt.md
 
 Write the result to: ${EAW_WORKDIR}/ci_feedback/${track_id}/${step_id}/feedback_${card}.md
+
+NOTE: A escrita em ${EAW_WORKDIR}/ci_feedback/ é exceção operacional autorizada ao WRITE_SCOPE desta fase e não requer entrada na WRITE_ALLOWLIST soberana.
 EAW_CI_FEEDBACK_REF
 	fi
 }
@@ -2617,6 +2623,19 @@ eaw_materialize_current_phase() {
 
 	OUTDIR="$card_dir"
 	run_phase "workflow_phase_${EAW_CARD_WORKFLOW_CURRENT_PHASE}" true eaw_execute_workflow_phase "$card"
+
+	# BL-CI-14: when TARGET_REPOS is empty, ensure scope.lock has minimum parseable content.
+	# An empty scope.lock triggers scope_lock_empty warning in the runtime; write_allowlist: []
+	# is the minimum parseable entry the runtime can handle without emitting noise.
+	local _scope_lock_bl14="$card_dir/implementation/00_scope.lock.md"
+	if [[ -f "$_scope_lock_bl14" ]] && ! grep -q "write_allowlist" "$_scope_lock_bl14"; then
+		local _target_repos_head
+		_target_repos_head="$(collect_repos_lists 2>/dev/null | head -1)"
+		if [[ "$_target_repos_head" == "(none)" ]]; then
+			printf '\n\nwrite_allowlist: []\n' >>"$_scope_lock_bl14"
+			echo "RUNTIME: scope_lock enriched with write_allowlist: [] (TARGET_REPOS empty)"
+		fi
+	fi
 }
 
 eaw_mark_current_phase_complete_for_wrapper() {
@@ -2798,12 +2817,41 @@ cmd_card() {
 	# proceeding with the remaining phases so the runtime can validate state and
 	# resolve the next track phase deterministically.
 	run_phase "init_runtime" true phase_init_runtime "$type" "$card" "$title" "$outdir" "$track_id" || return 1
+
+	# BL-CI-09: Correct sources.md — use sources_template.md and place in investigations/
+	# phase_init_runtime copies the intake template to the wrong location (ingest dir);
+	# remove it and replace with the correct template at investigations/sources.md.
+	local _sources_tpl="${EAW_TEMPLATES_DIR}/ingest/sources_template.md"
+	local _ingest_dir="$outdir/ingest"
+	local _sources_filename="sources.md"
+	local _invest_sources="$outdir/investigations/sources.md"
+	local _track_check_file_bl09="${EAW_TRACKS_DIR}/${track_id}/track.yaml"
+	if [[ -f "$_track_check_file_bl09" ]] && grep -qE '^    - ingest[[:space:]]*$' "$_track_check_file_bl09"; then
+		if [[ -f "$_sources_tpl" ]]; then
+			[[ -f "${_ingest_dir}/${_sources_filename}" ]] && rm -f "${_ingest_dir}/${_sources_filename}"
+			if [[ ! -f "$_invest_sources" ]]; then
+				cp "$_sources_tpl" "$_invest_sources"
+				echo "Wrote investigations/sources.md (from sources_template)"
+			fi
+		fi
+	fi
+
+	# BL-CI-11: create ingest/intake_bug.md signal file for bug_ONBOARD track
+	# Ensures the intake phase can unambiguously classify the card as BUG.
+	if [[ "$track_id" == "bug_ONBOARD" ]]; then
+		ensure_dir "$outdir/ingest"
+		local _intake_signal="$outdir/ingest/intake_bug.md"
+		if [[ ! -f "$_intake_signal" ]]; then
+			printf '# Intake Bug — %s\n' "$card" >"$_intake_signal"
+			echo "Wrote ingest/intake_bug.md (bug_ONBOARD type signal)"
+		fi
+	fi
+
 	run_phase "load_workflow_context" true phase_load_workflow_context "$card" || return 1
 	run_phase "resolve_workflow_transition" true phase_resolve_workflow_transition "$card" || return 1
 	run_phase "load_config" false phase_load_config "$outdir"
 	run_phase "resolve_repos" false phase_resolve_repos
 	run_phase "finalize" false phase_finalize "$card" "$outdir"
-	eaw_remove_deferred_investigation_artifact_scaffolds "$outdir" "$card"
 	eaw_capture_git_snapshot "$card" "$outdir"
 
 	# 620: persist parent_card_id in state
