@@ -36,6 +36,7 @@ Traps aprendidas em execuções reais. Incluir no Mandatory Delegation Context d
 - **Cards multi-repo exigem ordem explícita de merge**: nunca assumir merge paralelo
 - **Prompt da fase referencia repo não listado em repos.conf**: falhar, não improvisar
 - **scope.lock não parseável pelo runtime**: preencher com allowlist no formato correto antes de chamar `next`
+- **`scope_lock_empty` — TARGET_REPOS: (none)** *(BL-CI-14)*: quando todos os repos são `infra` e nenhum é `target`, o scaffold de `implementation/00_scope.lock.md` gerado é mínimo (sem `write_allowlist`). O runtime detecta "scope.lock presente mas não parseável" e emite `scope_lock_empty`. A correção (runtime ≥ BL-CI-14) injeta `write_allowlist: []` automaticamente. Em runtimes mais antigos, adicionar manualmente `write_allowlist: []` ao `00_scope.lock.md` antes de chamar `next`.
 - **`ci_feedback_prompt.md` com fase errada** *(corrigido em runtime — 2026-07-13)*: anteriormente renderizado uma vez com `card_init` hardcoded. Agora re-renderizado por fase em `eaw_render_phase_prompt_template` com o `step_id` correto. Se encontrar `card_init` em `ci_feedback_prompt.md`, o runtime está desatualizado.
 
 ## Repos

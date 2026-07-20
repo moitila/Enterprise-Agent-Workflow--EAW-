@@ -17,6 +17,7 @@ RUNTIME_ENVIRONMENT
   - /home/user/dev/.eaw/out/<CARD>/investigations/30_hypotheses.md
 - PRECHECK:
   - set -euo pipefail
+  - echo "$PATH" | grep -qE '^(/usr|/bin|/home)' || export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
   - cd "{{RUNTIME_ROOT}}"
   - test -f ./scripts/eaw
   - test -f "{{CONFIG_SOURCE}}"

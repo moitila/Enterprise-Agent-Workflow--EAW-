@@ -22,7 +22,7 @@ INPUT
 - WARNINGS:
 {{WARNINGS_BLOCK}}
 - REQUIRED_ARTIFACTS:
-  - `{{CARD_DIR}}/investigations/00_intake.md`
+  - `{{CARD_DIR}}/investigations/00_spike_intake.md`
   - `{{CARD_DIR}}/investigations/20_findings.md`
   - `{{CARD_DIR}}/investigations/30_hypotheses.md`
 - MODE: quando `EAW_WORKDIR` estiver vazio, saida em `OUT_DIR`; quando definido, saida isolada em `EAW_WORKDIR`.
@@ -49,10 +49,11 @@ WRITE_SCOPE
 RULES
 - Executar pre-check em fail-fast:
   - `set -euo pipefail`
+  - `echo "$PATH" | grep -qE '^(/usr|/bin|/home)' || export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin`
   - `cd "{{RUNTIME_ROOT}}"`
   - `test -f ./scripts/eaw`
   - `test -f "{{CONFIG_SOURCE}}"`
-- Confirmar existencia de `00_intake.md`, `20_findings.md` e `30_hypotheses.md`; se qualquer um estiver ausente, bloquear.
+- Confirmar existencia de `00_spike_intake.md`, `20_findings.md` e `30_hypotheses.md`; se qualquer um estiver ausente, bloquear.
 - PASSO 1 - ESTRUTURAR 40_next_steps.md:
   - Produzir `40_next_steps.md` com as secoes `# 40_next_steps`, `## Hipotese(s) Selecionada(s)`, `## Objetivo da Iteracao`, `## Estrategia`, `## Plano Atomico`, `## Criterios de Aceite`, `## Riscos e Mitigacao` e `## Rollback`.
 - PASSO 2 - SELECIONAR HIPOTESES:

@@ -14,7 +14,15 @@ track:
       - investigations
       - intake
       - context
+      - ingest
     create_artifacts: []
+
+  # BL-CI-11: card_init artifacts created during cmd_card scaffold.
+  # ingest/intake_bug.md is the type signal file that tells the intake phase
+  # this is a BUG card, preventing classification ambiguity.
+  card_init:
+    create_artifacts:
+      - ingest/intake_bug.md
 
   phases:
     - intake

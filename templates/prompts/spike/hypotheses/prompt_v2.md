@@ -21,7 +21,7 @@ INPUT
 - WARNINGS:
 {{WARNINGS_BLOCK}}
 - REQUIRED_ARTIFACTS:
-  - `{{CARD_DIR}}/investigations/00_intake.md`
+  - `{{CARD_DIR}}/investigations/00_spike_intake.md`
   - `{{CARD_DIR}}/investigations/20_findings.md`
 - MODE: quando `EAW_WORKDIR` estiver vazio, saida em `OUT_DIR`; quando definido, saida isolada em `EAW_WORKDIR`.
 - EXECUTION_STRUCTURE: `RUNTIME_ROOT` nunca deve ser modificado; `TARGET_REPOS` somente leitura; `CARD_DIR` e o limite unico de escrita da fase.
@@ -48,7 +48,7 @@ RULES
   - `cd "{{RUNTIME_ROOT}}"`
   - `test -f ./scripts/eaw`
   - `test -f "{{CONFIG_SOURCE}}"`
-- Confirmar existencia de `{{CARD_DIR}}/investigations/00_intake.md` e `{{CARD_DIR}}/investigations/20_findings.md`; se faltar qualquer um, abortar.
+- Confirmar existencia de `{{CARD_DIR}}/investigations/00_spike_intake.md` e `{{CARD_DIR}}/investigations/20_findings.md`; se faltar qualquer um, abortar.
 - PASSO 1 - EXTRACAO FORMAL:
   - Extrair criterios de aceite, regras deterministicas, comportamentos esperados, comportamentos observados divergentes e contratos de erro.
   - Criar secao `## Coverage Map` listando cada criterio identificado.
