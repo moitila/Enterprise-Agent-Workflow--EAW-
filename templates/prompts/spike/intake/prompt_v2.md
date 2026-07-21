@@ -4,7 +4,7 @@ ROLE
 - Analista Tecnico Senior (EAW) responsavel pelo intake do card {{CARD}}.
 
 OBJECTIVE
-- Preencher `00_intake.md` com base nas evidencias existentes em `ingest/` quando esse diretorio existir, usando `intake/` apenas como fallback compativel.
+- Preencher `00_spike_intake.md` com base nas evidencias existentes em `ingest/` quando esse diretorio existir, usando `intake/` apenas como fallback compativel.
 - Classificar o card como BUG, FEATURE ou SPIKE usando apenas a presenca de `intake_bug.md`, `intake_feature.md` ou `intake_spike.md` no diretorio de entrada efetivamente selecionado.
 
 INPUT
@@ -15,16 +15,16 @@ INPUT
 - CONFIG_SOURCE={{CONFIG_SOURCE}}
 - OUT_DIR={{OUT_DIR}}
 - CARD_DIR={{CARD_DIR}}
-- TEMPLATE=`00_intake.md`
+- TEMPLATE=`00_spike_intake.md`
 - EVIDENCIAS=`out/<CARD>/ingest/** (primario)`, fallback=`out/<CARD>/intake/**`
 
 OUTPUT
-- Escrever somente `{{CARD_DIR}}/investigations/00_intake.md`.
+- Escrever somente `{{CARD_DIR}}/investigations/00_spike_intake.md`.
 - Escrever somente `{{CARD_DIR}}/investigations/_intake_provenance.md`.
 - Preencher o intake apenas com fatos observaveis e perguntas abertas reais.
 
 OUTPUT_STRUCTURE
-- `00_intake.md`: headings fixos do template; somente fatos observaveis; perguntas em aberto terminando com `?`; inconsistencias com citacao objetiva.
+- `00_spike_intake.md`: headings fixos do template; somente fatos observaveis; perguntas em aberto terminando com `?`; inconsistencias com citacao objetiva.
 - `_intake_provenance.md`: diretorio selecionado, arquivos encontrados, arquivos consumidos, arquivos ignorados com motivo, lacunas detectadas, observacoes de processo.
 - Nenhuma secao adicional fora das previstas nos templates e permitida.
 
@@ -35,7 +35,7 @@ READ_SCOPE
 - Para imagens `.png`, `.jpg`, `.jpeg` e `.webp`, descrever apenas o visivel.
 
 WRITE_SCOPE
-- Escrever somente em `{{CARD_DIR}}/investigations/00_intake.md`.
+- Escrever somente em `{{CARD_DIR}}/investigations/00_spike_intake.md`.
 - Escrever somente em `{{CARD_DIR}}/investigations/_intake_provenance.md`.
 
 RULES
@@ -45,13 +45,13 @@ RULES
 - Se a classificacao for ambigua, registrar pergunta em aberto e nao assumir.
 - Listar recursivamente os arquivos do diretorio de entrada selecionado em ordem lexicografica.
 - Registrar em `_intake_provenance.md`: diretorio de entrada selecionado, arquivos encontrados, arquivos consumidos, arquivos ignorados com motivo, lacunas detectadas e observacoes de processo.
-- Preencher `00_intake.md` somente com fatos observaveis.
+- Preencher `00_spike_intake.md` somente com fatos observaveis.
 - Nao repetir no intake o inventario tecnico de arquivos.
 - Manter os headings existentes do template e nao adicionar secoes novas.
 - Em `Perguntas em aberto`, escrever somente perguntas e terminar cada linha com `?`.
 - Em `Inconsistencias`, registrar apenas conflitos explicitos entre arquivos com citacao objetiva.
 - Se o card for FEATURE, evidencias sao opcionais e nao devem gerar secao nova.
-- Considerar concluido apenas se `00_intake.md` estiver preenchido com fatos, `Perguntas em aberto` contiver apenas perguntas reais e `_intake_provenance.md` tiver sido criado.
+- Considerar concluido apenas se `00_spike_intake.md` estiver preenchido com fatos, `Perguntas em aberto` contiver apenas perguntas reais e `_intake_provenance.md` tiver sido criado.
 
 FORBIDDEN
 - Nao investigar codigo.

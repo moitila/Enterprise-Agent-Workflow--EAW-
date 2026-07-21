@@ -256,6 +256,14 @@ eaw_phase_completion_artifact_has_meaningful_content() {
 		return 1
 	fi
 	rm -f "$scaffold_file" "$source_scaffold_file"
+	# Size floor: reject if below minimum regardless of scaffold identity
+	local size_check_min="${SIZE_FLOOR:-500}"
+	local file_size
+	file_size="$(wc -c < "$file" 2>/dev/null || echo 0)"
+	if [[ "$file_size" -lt "$size_check_min" ]]; then
+		rm -f "$scaffold_file"
+		return 1   # below size floor → not meaningful
+	fi
 	return 0
 }
 
@@ -314,6 +322,8 @@ eaw_phase_completion_evaluate_required_artifacts_substantive() {
 		done <<<"$metadata"
 		[[ -n "$validation_mode" ]] || validation_mode="warning"
 		failed=0
+		# Apply global default when min_bytes not declared per-artifact in YAML
+		min_bytes="${min_bytes:-500}"
 		if [[ -n "$min_bytes" && -e "$card_dir/$rel_path" ]]; then
 			file_size="$(wc -c <"$card_dir/$rel_path")"
 			if [[ "$file_size" -lt "$min_bytes" ]]; then

@@ -26,6 +26,31 @@ Antes de criar o card:
      - derivar um card novo? (ex: `12345A`, `12345B`, `12345_v2`)
    - Nunca criar card duplicado silenciosamente
 
+## Predecessores (cards spike ou outros cards com artefatos relevantes)
+
+Quando um novo card **depende de um card predecessor** (ex: um card feature que implementa decisões tomadas em um spike), os artefatos do predecessor devem ser copiados para `ingest/` do novo card **antes de executar a primeira fase via `./scripts/eaw next`**.
+
+Procedimento obrigatório:
+
+1. Identificar o predecessor a partir de `raw_card_explication.md` do card atual
+   - O predecessor geralmente é referenciado por nome de card ou descrição no insumo fornecido pelo executor
+2. Localizar os artefatos relevantes do predecessor em seu `OUT_DIR`:
+   - `out/<PREDECESSOR_ID>/investigations/` — findings, hypotheses, decisions
+   - `out/<PREDECESSOR_ID>/implementation/` — scope.lock, change_plan, patch_notes
+3. Copiar os artefatos relevantes para `ingest/` do card dependente:
+   ```
+   cp out/<PREDECESSOR_ID>/investigations/20_findings.md   out/<CARD_ID>/ingest/predecessor_findings.md
+   cp out/<PREDECESSOR_ID>/investigations/30_hypotheses.md out/<CARD_ID>/ingest/predecessor_hypotheses.md
+   cp out/<PREDECESSOR_ID>/investigations/40_next_steps.md out/<CARD_ID>/ingest/predecessor_decisions.md
+   ```
+4. Executar `./scripts/eaw next <CARD_ID>` somente **depois** de copiar os artefatos
+
+**Sem essa cópia, agentes de findings/hypotheses/planning terão contexto incompleto e serão forçados a reinferir decisões técnicas já tomadas no spike predecessor, gerando divergência e retrabalho.**
+
+Exceções:
+- Se o predecessor ainda não concluiu a fase relevante, registrar a lacuna em `raw_card_explication.md` e aguardar
+- A cópia é manual; o runtime não automatiza esse processo
+
 ## Rules
 
 - **EAW_WORKDIR deve ser resolvido antes de criar o card.** O runtime usa `EAW_WORKDIR` para decidir onde criar `out/<CARD_ID>/`. Se `EAW_WORKDIR` não estiver exportado, o runtime faz fallback para o diretório do próprio repo tool (`eaw/out/`) — que é o lugar errado quando existe um workspace separado (ex: `.eaw/`).

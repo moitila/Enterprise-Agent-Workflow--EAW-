@@ -34,4 +34,6 @@ phase:
   completion:
     strategy: required_artifacts_exist
     required_artifacts:
-      - investigations/30_technical_decision.md
+      - path: investigations/30_technical_decision.md
+        min_bytes: 500
+        validation_mode: blocking

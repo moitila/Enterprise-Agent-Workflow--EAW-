@@ -17,6 +17,7 @@ CONTEXT_USAGE
   - {{CARD_DIR}}/investigations/_warnings.md
 - PRECHECK:
   - set -euo pipefail
+  - echo "$PATH" | grep -qE '^(/usr|/bin|/home)' || export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
   - cd "{{RUNTIME_ROOT}}"
   - test -f ./scripts/eaw
   - test -f "{{CONFIG_SOURCE}}"
@@ -39,7 +40,7 @@ CONTEXTUAL ONBOARDING USAGE
 
 You MUST consult the materialized repository onboarding located at:
 
-{{EAW_WORKDIR}}/context_sources/onboarding/<resolved_repo_key>/
+{{EAW_WORKDIR}}/context_sources/onboarding/{{RESOLVED_REPO_KEY}}/
 
 Before consulting onboarding:
 
@@ -115,7 +116,7 @@ OUTPUT
 READ_SCOPE
 
 - Ler `{{CARD_DIR}}`
-- Ler `{{EAW_WORKDIR}}/context_sources/onboarding/<resolved_repo_key>/` apenas para validacao contextual, apos resolver exatamente um `resolved_repo_key`
+- Ler `{{EAW_WORKDIR}}/context_sources/onboarding/{{RESOLVED_REPO_KEY}}/` apenas para validacao contextual, apos resolver exatamente um `resolved_repo_key`
 - Ler TARGET_REPOS apenas em modo read-only
 - Coletar evidencias factuais, contratos, trechos curtos de codigo, logs relevantes e padroes comparaveis
 
@@ -197,7 +198,7 @@ FAIL_CONDITIONS
 - Falhar se qualquer item do PRECHECK falhar.
 - Falhar se `{{CARD_DIR}}/investigations/00_intake.md` nao existir.
 - Falhar se o repositorio alvo do card nao puder ser resolvido de forma unica contra `TARGET_REPOS`.
-- Falhar se houver leitura fora de `{{CARD_DIR}}`, `{{EAW_WORKDIR}}/context_sources/onboarding/<resolved_repo_key>/` e TARGET_REPOS.
+- Falhar se houver leitura fora de `{{CARD_DIR}}`, `{{EAW_WORKDIR}}/context_sources/onboarding/{{RESOLVED_REPO_KEY}}/` e TARGET_REPOS.
 - Falhar se houver escrita fora da WRITE_ALLOWLIST.
 - Falhar se `20_findings.md` nao existir ao final.
 - Falhar se `20_findings.md` contiver hipotese, plano, sugestao de implementacao ou decisao arquitetural nova.

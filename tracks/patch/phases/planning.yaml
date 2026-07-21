@@ -22,5 +22,24 @@ phase:
   completion:
     strategy: required_artifacts_exist
     required_artifacts:
-      - implementation/00_scope.lock.md
-      - implementation/10_change_plan.md
+      - path: implementation/00_scope.lock.md
+        min_bytes: 500
+        validation_mode: blocking
+        required_sections:
+          - "## Base Obrigatoria"
+          - "## Hipotese(s) Base"
+          - "## Contexto"
+          - "## In Scope"
+          - "## Out of Scope"
+          - "## Allowlist de Escrita"
+          - "## Regra de Escrita"
+      - path: implementation/10_change_plan.md
+        min_bytes: 500
+        validation_mode: blocking
+        required_sections:
+          - "## Objetivo de Execucao"
+          - "## Hipotese(s) Selecionada(s)"
+          - "## Assuncoes Explicitas"
+          - "## Steps"
+          - "## Validacao Tecnica Obrigatoria"
+          - "## Rollback"

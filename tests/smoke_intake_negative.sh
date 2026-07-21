@@ -23,6 +23,7 @@ card_template_missing="4013A"
 card_round_invalid="4013B"
 card_workdir_invalid="4013C"
 card_ingest_and_intake_missing="9901"
+card_findings_deferred="9902"
 
 # Scenario A: missing canonical card workflow scaffold
 isolated_root="$tmpdir/isolated_root"
@@ -82,5 +83,44 @@ set -e
 [[ $scenario_d_rc -eq 0 ]] || fail "scenario D expected zero exit code (unfilled artifacts are non-fatal)"
 grep -Fq "ingest remains current; unfilled required artifacts" <<<"$scenario_d_output" || fail "scenario D missing expected ingest artifact message"
 assert_no_repo_residue "$card_ingest_and_intake_missing"
+
+# Scenario E: findings prompt is materialized without occupying the findings artifact path.
+scenario_e_workdir="$tmpdir/scenario-e-workdir"
+./scripts/eaw init --workdir "$scenario_e_workdir" --force >/dev/null
+EAW_WORKDIR="$scenario_e_workdir" ./scripts/eaw card "$card_findings_deferred" --track bug >/dev/null 2>&1
+cat >>"$scenario_e_workdir/out/$card_findings_deferred/investigations/00_intake.md" <<'EOF'
+
+Scenario E intake preenchido para teste.
+Este conteudo adicional e deterministico existe para satisfazer o contrato de
+conteudo minimo antes da transicao intake -> findings. O foco do cenario E nao
+e validar a qualidade do intake, mas sim garantir que o prompt de findings seja
+materializado sem ocupar antecipadamente o caminho investigations/20_findings.md.
+O texto evita timestamps, caminhos locais, valores aleatorios e saidas de comando
+para permanecer estavel em CI Linux e validacao local. A fase deve avancar porque
+os artefatos de intake foram preenchidos de forma substantiva, permitindo que o
+teste negativo seguinte verifique exclusivamente a ausencia do findings artifact.
+EOF
+cat >>"$scenario_e_workdir/out/$card_findings_deferred/investigations/_intake_provenance.md" <<'EOF'
+
+Scenario E provenance preenchido para teste.
+Este bloco de provenance acompanha o intake substantivo do cenario E e tambem
+fica acima do limite minimo de conteudo exigido pelo runtime. Ele documenta que
+o fixture foi preparado manualmente, que nao depende de estado externo, e que a
+proxima verificacao deve observar apenas a materializacao do prompt de findings.
+O conteudo e propositalmente estavel e nao inclui timestamps, caminhos absolutos,
+valores aleatorios ou saidas de comandos. Assim o teste continua cobrindo a regra
+de artifact deferred sem ser bloqueado pela validacao de conteudo minimo.
+EOF
+
+scenario_e_output="$(EAW_WORKDIR="$scenario_e_workdir" ./scripts/eaw next "$card_findings_deferred" 2>&1)"
+grep -Fq "CARD $card_findings_deferred: intake -> findings" <<<"$scenario_e_output" || fail "scenario E missing intake->findings transition summary"
+grep -Fq "RUNTIME: phase=findings deferred_artifact=investigations/20_findings.md" <<<"$scenario_e_output" || fail "scenario E missing deferred findings artifact trace"
+test ! -f "$scenario_e_workdir/out/$card_findings_deferred/investigations/20_findings.md" || fail "scenario E findings artifact should remain absent before first write"
+test -f "$scenario_e_workdir/out/$card_findings_deferred/prompts/findings.md" || fail "scenario E missing findings prompt after transition"
+
+scenario_e_gate_output="$(EAW_WORKDIR="$scenario_e_workdir" ./scripts/eaw next "$card_findings_deferred" 2>&1)"
+grep -Fq "findings remains current; missing required artifacts" <<<"$scenario_e_gate_output" || fail "scenario E missing findings gate summary"
+grep -Fq "missing required artifacts: investigations/20_findings.md" <<<"$scenario_e_gate_output" || fail "scenario E missing strict findings artifact gate"
+assert_no_repo_residue "$card_findings_deferred"
 
 printf "OK\n"

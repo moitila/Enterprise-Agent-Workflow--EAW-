@@ -22,7 +22,7 @@ INPUT
 - WARNINGS:
 {{WARNINGS_BLOCK}}
 - REQUIRED_ARTIFACTS:
-  - `out/{{CARD}}/investigations/00_intake.md`
+  - `out/{{CARD}}/investigations/00_spike_intake.md`
   - `out/{{CARD}}/investigations/20_findings.md`
   - `out/{{CARD}}/investigations/30_hypotheses.md`
   - `out/{{CARD}}/investigations/40_next_steps.md`
@@ -53,6 +53,7 @@ WRITE_SCOPE
 RULES
 - Executar pre-check em fail-fast:
   - `set -euo pipefail`
+  - `echo "$PATH" | grep -qE '^(/usr|/bin|/home)' || export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin`
   - `cd "{{RUNTIME_ROOT}}"`
   - `test -f ./scripts/eaw`
   - `test -f "{{CONFIG_SOURCE}}"`

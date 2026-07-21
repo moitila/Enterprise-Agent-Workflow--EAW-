@@ -21,7 +21,7 @@ INPUT
 {{EXCLUDED_REPOS}}
 - WARNINGS:
 {{WARNINGS_BLOCK}}
-- REQUIRED_ARTIFACT=`{{CARD_DIR}}/investigations/00_intake.md`
+- REQUIRED_ARTIFACT=`{{CARD_DIR}}/investigations/00_spike_intake.md`
 - MODE: quando `EAW_WORKDIR` estiver vazio, saida em `OUT_DIR`; quando definido, saida isolada em `EAW_WORKDIR`.
 - EXECUTION_STRUCTURE: `RUNTIME_ROOT` nunca deve ser modificado; `TARGET_REPOS` somente leitura; `CARD_DIR` e o limite unico de escrita da fase.
 
@@ -52,7 +52,7 @@ RULES
   - `cd "{{RUNTIME_ROOT}}"`
   - `test -f ./scripts/eaw`
   - `test -f "{{CONFIG_SOURCE}}"`
-- Confirmar existencia de `{{CARD_DIR}}/investigations/00_intake.md`; se faltar, abortar.
+- Confirmar existencia de `{{CARD_DIR}}/investigations/00_spike_intake.md`; se faltar, abortar.
 - PASSO 1 - BASELINE:
   - Executar `export EAW_WORKDIR="{{EAW_WORKDIR}}"`.
   - Executar `./scripts/eaw doctor`.
@@ -90,7 +90,7 @@ FAIL_CONDITIONS
 - Falhar em qualquer erro de pre-check ou comando critico (fail-fast).
 - Falhar se `./scripts/eaw` nao existir em `{{RUNTIME_ROOT}}`.
 - Falhar se `{{CONFIG_SOURCE}}` nao existir.
-- Falhar se `{{CARD_DIR}}/investigations/00_intake.md` nao existir.
+- Falhar se `{{CARD_DIR}}/investigations/00_spike_intake.md` nao existir.
 - Falhar se `{{CARD_DIR}}/investigations/20_findings.md` nao existir ao final.
 - Falhar em qualquer tentativa de leitura fora de `{{CARD_DIR}}` e TARGET_REPOS.
 - Falhar em qualquer tentativa de escrita fora da whitelist (`{{CARD_DIR}}/investigations/20_findings.md` e `{{CARD_DIR}}/investigations/_warnings.md`).

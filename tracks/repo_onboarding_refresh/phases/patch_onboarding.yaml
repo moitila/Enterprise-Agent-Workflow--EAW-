@@ -32,4 +32,6 @@ phase:
   completion:
     strategy: required_artifacts_exist
     required_artifacts:
-      - investigations/patch_notes.md
+      - path: investigations/patch_notes.md
+        min_bytes: 500
+        validation_mode: blocking

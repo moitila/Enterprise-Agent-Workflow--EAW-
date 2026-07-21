@@ -5,6 +5,8 @@ issues below, write a feedback file at:
 
   {{EAW_WORKDIR}}/ci_feedback/{{TRACK}}/{{PHASE}}/feedback_{{CARD}}.md
 
+NOTE: A escrita em {{EAW_WORKDIR}}/ci_feedback/ é exceção operacional autorizada ao WRITE_SCOPE desta fase e não requer entrada na WRITE_ALLOWLIST soberana.
+
 If you have no observations, skip this step entirely — do not create an empty file.
 
 ## Feedback format

@@ -29,5 +29,9 @@ phase:
   completion:
     strategy: required_artifacts_exist
     required_artifacts:
-      - context/onboarding_handoff.md
-      - investigations/40_repo_onboarding_refine.md
+      - path: context/onboarding_handoff.md
+        min_bytes: 500
+        validation_mode: blocking
+      - path: investigations/40_repo_onboarding_refine.md
+        min_bytes: 500
+        validation_mode: blocking
