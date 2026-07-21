@@ -80,12 +80,19 @@ EOF
 # 20_findings
 
 Fixture artifact for workflow prompt.path validation.
+This artifact is intentionally substantive so workflow validation can pass the required
+artifact content gate while the test focuses on prompt.path resolution. It records that the
+card is already positioned at findings, that the official track phase should resolve its
+prompt phase from the phase YAML, and that validation should report the expected prompt
+path summary without treating the fixture as scaffold-only content.
+
+The content avoids timestamps, random values, local absolute paths, and command output so
+the smoke remains deterministic across CI and local validation environments. No behavioral
+assertion depends on this prose beyond satisfying the formal completion contract.
 EOF
 
 	if [[ "$track" == "feature" ]]; then
-		cat >"$investigations_dir/20_handoff.json" <<'EOF'
-{"status":"fixture","source":"workflow_prompt_path_smoke"}
-EOF
+		printf '{"from_phase":"findings","status":"completed","messages":[{"type":"info","code":"WORKFLOW_PROMPT_PATH_SMOKE","text":"workflow_prompt_path_smoke feature handoff: findings fixture is complete and deterministic so validate can focus on prompt.path summaries. This envelope stays above the content threshold, preserves an empty codes array for normal transition behavior, and avoids timestamps, random values, local paths, or command output. It is representative of a real completed handoff without changing the test assertions."}],"codes":[]}\n' >"$investigations_dir/20_handoff.json"
 	fi
 }
 
@@ -100,12 +107,15 @@ write_findings_completion_artifacts() {
 # 20_findings
 
 Fixture artifact for workflow prompt.path validation.
+This artifact is intentionally substantive so completion validation accepts the findings
+phase while the smoke verifies prompt.path behavior. It documents a completed findings
+phase, keeps the fixture deterministic, and avoids timestamps, random values, local paths,
+and command output. The assertions still own the behavior: validate should pass and report
+the prompt phase and prompt path derived from the current track phase.
 EOF
 
 	if [[ "$track" == "feature" ]]; then
-		cat >"$investigations_dir/20_handoff.json" <<'EOF'
-{"status":"fixture","source":"workflow_prompt_path_smoke"}
-EOF
+		printf '{"from_phase":"findings","status":"completed","messages":[{"type":"info","code":"WORKFLOW_PROMPT_PATH_SMOKE","text":"workflow_prompt_path_smoke feature completion handoff: findings is complete, no skip code is emitted, and validate should focus on prompt.path summaries. The message keeps this JSON above the content floor and deterministic across CI and local runs by avoiding timestamps, random values, absolute paths, and command output."}],"codes":[]}\n' >"$investigations_dir/20_handoff.json"
 	fi
 }
 

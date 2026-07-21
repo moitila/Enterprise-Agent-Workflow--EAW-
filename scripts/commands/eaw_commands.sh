@@ -2622,7 +2622,7 @@ eaw_materialize_current_phase() {
 	fi
 
 	OUTDIR="$card_dir"
-	run_phase "workflow_phase_${EAW_CARD_WORKFLOW_CURRENT_PHASE}" true eaw_execute_workflow_phase "$card"
+	run_phase "workflow_phase_${EAW_CARD_WORKFLOW_CURRENT_PHASE}" true eaw_execute_workflow_phase "$card" || return 1
 
 	# BL-CI-14: when TARGET_REPOS is empty, ensure scope.lock has minimum parseable content.
 	# An empty scope.lock triggers scope_lock_empty warning in the runtime; write_allowlist: []
