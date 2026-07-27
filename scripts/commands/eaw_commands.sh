@@ -2292,7 +2292,7 @@ eaw_render_phase_prompt_template() {
 		local _intake_md_bl16="$card_dir/investigations/00_intake.md"
 		if [[ -f "$_intake_md_bl16" ]]; then
 			local _onboarding_repo_bl16
-			_onboarding_repo_bl16="$(awk '/^## Repositorio principal de onboarding/{found=1; next} found && /^[^#]/{gsub(/^[[:space:]]+|[[:space:]]+$/, ""); if ($0 != "") {print; exit}} found && /^##/{exit}' "$_intake_md_bl16")"
+			_onboarding_repo_bl16="$(awk '/^## Repositorio principal de onboarding/{found=1; next} /^## Reposit.*rio principal de onboarding/{found=1; next} found && /^[[:space:]]*$/{next} found && /^#/{exit} found {gsub(/^[[:space:]]+|[[:space:]]+$/, ""); if ($0 != "") {print; exit}}' "$_intake_md_bl16")"
 			if [[ -n "$_onboarding_repo_bl16" ]]; then
 				resolved_repo_key="$_onboarding_repo_bl16"
 			else
@@ -2622,7 +2622,7 @@ eaw_materialize_current_phase() {
 	fi
 
 	OUTDIR="$card_dir"
-	run_phase "workflow_phase_${EAW_CARD_WORKFLOW_CURRENT_PHASE}" true eaw_execute_workflow_phase "$card"
+	run_phase "workflow_phase_${EAW_CARD_WORKFLOW_CURRENT_PHASE}" true eaw_execute_workflow_phase "$card" || return 1
 
 	# BL-CI-14: when TARGET_REPOS is empty, ensure scope.lock has minimum parseable content.
 	# An empty scope.lock triggers scope_lock_empty warning in the runtime; write_allowlist: []
@@ -2819,19 +2819,19 @@ cmd_card() {
 	run_phase "init_runtime" true phase_init_runtime "$type" "$card" "$title" "$outdir" "$track_id" || return 1
 
 	# BL-CI-09: Correct sources.md — use sources_template.md and place in investigations/
-	# phase_init_runtime copies the intake template to the wrong location (ingest dir);
-	# remove it and replace with the correct template at investigations/sources.md.
+	# phase_init_runtime may seed ingest/sources.md from the intake template;
+	# replace it with the canonical ingest sources template in place.
 	local _sources_tpl="${EAW_TEMPLATES_DIR}/ingest/sources_template.md"
 	local _ingest_dir="$outdir/ingest"
 	local _sources_filename="sources.md"
-	local _invest_sources="$outdir/investigations/sources.md"
+	local _ingest_sources="${_ingest_dir}/${_sources_filename}"
 	local _track_check_file_bl09="${EAW_TRACKS_DIR}/${track_id}/track.yaml"
 	if [[ -f "$_track_check_file_bl09" ]] && grep -qE '^    - ingest[[:space:]]*$' "$_track_check_file_bl09"; then
 		if [[ -f "$_sources_tpl" ]]; then
-			[[ -f "${_ingest_dir}/${_sources_filename}" ]] && rm -f "${_ingest_dir}/${_sources_filename}"
-			if [[ ! -f "$_invest_sources" ]]; then
-				cp "$_sources_tpl" "$_invest_sources"
-				echo "Wrote investigations/sources.md (from sources_template)"
+			ensure_dir "$_ingest_dir"
+			if [[ ! -f "$_ingest_sources" ]] || ! cmp -s "$_sources_tpl" "$_ingest_sources"; then
+				cp "$_sources_tpl" "$_ingest_sources"
+				echo "Wrote ingest/sources.md (from sources_template)"
 			fi
 		fi
 	fi

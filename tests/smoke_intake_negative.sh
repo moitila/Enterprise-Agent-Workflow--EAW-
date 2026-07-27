@@ -9,6 +9,18 @@ fail() {
 	exit 1
 }
 
+pad_markdown_artifact() {
+	local path="$1"
+	while [[ "$(wc -c <"$path")" -lt 600 ]]; do
+		cat >>"$path" <<'EOF'
+
+Fixture deterministico com conteudo substantivo para satisfazer o gate de
+artefatos preenchidos. Este texto existe para que o smoke valide transicoes e
+criacao diferida de prompts sem depender de placeholders pequenos.
+EOF
+	done
+}
+
 tmpdir="$(mktemp -d)"
 trap 'rm -rf "$tmpdir"' EXIT
 
@@ -92,10 +104,12 @@ cat >>"$scenario_e_workdir/out/$card_findings_deferred/investigations/00_intake.
 
 Scenario E intake preenchido para teste.
 EOF
+pad_markdown_artifact "$scenario_e_workdir/out/$card_findings_deferred/investigations/00_intake.md"
 cat >>"$scenario_e_workdir/out/$card_findings_deferred/investigations/_intake_provenance.md" <<'EOF'
 
 Scenario E provenance preenchido para teste.
 EOF
+pad_markdown_artifact "$scenario_e_workdir/out/$card_findings_deferred/investigations/_intake_provenance.md"
 
 scenario_e_output="$(EAW_WORKDIR="$scenario_e_workdir" ./scripts/eaw next "$card_findings_deferred" 2>&1)"
 grep -Fq "CARD $card_findings_deferred: intake -> findings" <<<"$scenario_e_output" || fail "scenario E missing intake->findings transition summary"

@@ -8,6 +8,18 @@ fail() {
 	exit 1
 }
 
+pad_markdown_artifact() {
+	local path="$1"
+	while [[ "$(wc -c <"$path")" -lt 600 ]]; do
+		cat >>"$path" <<'EOF'
+
+Fixture deterministico com conteudo substantivo para satisfazer o gate de
+artefatos preenchidos. Este teste valida avancos de fase e materializacao
+de prompts sem depender de placeholders pequenos.
+EOF
+	done
+}
+
 init_workdir() {
 	local workdir="$1"
 	"$REPO_ROOT/scripts/eaw" init --workdir "$workdir" --force >/dev/null
@@ -60,10 +72,12 @@ cat >>"$workdir/out/$feature_card/investigations/00_intake.md" <<'EOF'
 Feature intake preenchido para teste.
 Referencia textual mantida: out/<CARD>/investigations/00_intake.md
 EOF
+pad_markdown_artifact "$workdir/out/$feature_card/investigations/00_intake.md"
 cat >>"$workdir/out/$feature_card/investigations/_intake_provenance.md" <<'EOF'
 
 Fonte: teste automatizado.
 EOF
+pad_markdown_artifact "$workdir/out/$feature_card/investigations/_intake_provenance.md"
 
 next_output="$(EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" next "$feature_card" 2>&1)" || fail "feature next command failed after ingest artifacts were filled"
 
@@ -99,6 +113,7 @@ cat >>"$dynamic_context_manifest" <<'EOF'
 
 Dynamic context preenchido para teste.
 EOF
+pad_markdown_artifact "$dynamic_context_manifest"
 
 next_output="$(EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" next "$feature_card" 2>&1)" || fail "feature next command failed after dynamic_context was filled"
 grep -Fq "current_phase: findings" "$state_file" || fail "feature card did not advance to findings after dynamic_context fill"
@@ -126,6 +141,7 @@ cat >"$findings_file" <<'EOF'
 Findings preenchido para teste.
 Referencia textual mantida: out/<CARD>/investigations/20_findings.md
 EOF
+pad_markdown_artifact "$findings_file"
 cat >"$findings_handoff_file" <<'EOF'
 {"from_phase":"findings","status":"completed","messages":[],"codes":[]}
 EOF

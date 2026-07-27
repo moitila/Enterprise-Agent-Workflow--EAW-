@@ -52,6 +52,18 @@ bootstrap_card() {
 		"$workdir/out/$card/implementation"
 }
 
+pad_markdown_artifact() {
+	local path="$1"
+	while [[ "$(wc -c <"$path")" -lt 600 ]]; do
+		cat >>"$path" <<EOF
+
+Este fixture mantem conteudo deterministico e substantivo para validar o ciclo
+de vida da track sem depender de placeholders pequenos. O smoke deve exercitar
+transicoes, skip codes e determinismo com artefatos realistas.
+EOF
+	done
+}
+
 state_file() {
 	local workdir="$1"
 	local card="$2"
@@ -101,11 +113,13 @@ write_ingest_artifact() {
 
 FD-08 smoke fixture for ${card}.
 EOF
+	pad_markdown_artifact "$workdir/out/$card/ingest/raw_card_explication.md"
 	cat >"$workdir/out/$card/ingest/sources.md" <<EOF
 # Sources
 
 FD-08 smoke input for ${card}.
 EOF
+	pad_markdown_artifact "$workdir/out/$card/ingest/sources.md"
 }
 
 write_intake_artifact() {
@@ -118,6 +132,7 @@ write_intake_artifact() {
 - criar tests/smoke/smoke_feature_dynamic.sh
 - validar fluxo completo, skip legitimo e determinismo
 EOF
+	pad_markdown_artifact "$workdir/out/$card/investigations/00_intake.md"
 }
 
 write_dynamic_context_artifacts() {
@@ -130,12 +145,14 @@ write_dynamic_context_artifacts() {
 
 template: deterministic_baseline_v1
 EOF
+	pad_markdown_artifact "$dynamic_dir/00_scope_manifest.md"
 	: >"$dynamic_dir/20_candidate_files.txt"
 	cat >"$dynamic_dir/30_target_snippets.md" <<EOF
 # Target Snippets
 
 Nenhum snippet selecionado.
 EOF
+	pad_markdown_artifact "$dynamic_dir/30_target_snippets.md"
 }
 
 write_findings_artifact() {
@@ -148,6 +165,7 @@ write_findings_artifact() {
 - dedicated smoke harness absent
 - skip contracts already published
 EOF
+	pad_markdown_artifact "$workdir/out/$card/investigations/20_findings.md"
 }
 
 write_hypotheses_artifact() {
@@ -175,6 +193,7 @@ DOMINANTE: H1
 ## Provenance
 - smoke fixture
 EOF
+	pad_markdown_artifact "$workdir/out/$card/investigations/30_hypotheses.md"
 }
 
 write_planning_artifact() {
@@ -207,6 +226,7 @@ Use findings and current contracts only.
 ## Rollback
 - remove dedicated harness and smoke hook
 EOF
+	pad_markdown_artifact "$workdir/out/$card/investigations/40_next_steps.md"
 }
 
 write_phase_output() {

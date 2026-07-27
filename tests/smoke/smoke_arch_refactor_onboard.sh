@@ -82,6 +82,19 @@ Scenario: ${scenario}
 
 This artifact is intentionally non-scaffold content for the AR-07 smoke harness.
 EOF
+	while [[ "$(wc -c <"$path")" -lt 600 ]]; do
+		cat >>"$path" <<EOF
+The smoke fixture keeps deterministic content above the minimum phase content gate so this test validates lifecycle transitions instead of failing on placeholder-sized artifacts.
+EOF
+	done
+}
+
+fixture_note() {
+	local note="Deterministic AR-07 smoke handoff content. This field keeps the JSON artifact above the minimum content gate while preserving messages and codes as the machine-readable transition fields."
+	while [[ "${#note}" -lt 700 ]]; do
+		note="${note} Additional deterministic text keeps the fixture stable and above the phase content gate without changing runtime semantics."
+	done
+	printf "%s" "$note"
 }
 
 write_handoff() {
@@ -89,9 +102,11 @@ write_handoff() {
 	local card="$2"
 	local phase="$3"
 	local code="$4"
+	local note
+	note="$(fixture_note)"
 	mkdir -p "$(dirname "$(state_file "$workdir" "$card")")/investigations"
 	cat >"$(dirname "$(state_file "$workdir" "$card")")/investigations/20_handoff.json" <<EOF
-{"from_phase":"${phase}","status":"completed","messages":[],"codes":["${code}"]}
+{"from_phase":"${phase}","status":"completed","messages":[],"codes":["${code}"],"notes":"${note}"}
 EOF
 }
 
@@ -99,9 +114,11 @@ write_empty_handoff() {
 	local workdir="$1"
 	local card="$2"
 	local phase="$3"
+	local note
+	note="$(fixture_note)"
 	mkdir -p "$(dirname "$(state_file "$workdir" "$card")")/investigations"
 	cat >"$(dirname "$(state_file "$workdir" "$card")")/investigations/20_handoff.json" <<EOF
-{"from_phase":"${phase}","status":"completed","messages":[],"codes":[]}
+{"from_phase":"${phase}","status":"completed","messages":[],"codes":[],"notes":"${note}"}
 EOF
 }
 
@@ -353,6 +370,9 @@ run_onboarding_variant_scenario() {
 	create_card "$workdir" "$card"
 
 	prime_phase "$workdir" "$card" "planning" "implementation_planning" $'    - ingest\n    - intake\n    - findings\n    - hypotheses\n    - planning\n'
+	fill_findings_artifact "$workdir" "$card"
+	fill_hypotheses_artifact "$workdir" "$card"
+	fill_planning_artifact "$workdir" "$card"
 	fill_implementation_planning_artifacts "$workdir" "$card"
 
 	if [[ "$onboarding_mode" == "present" ]]; then

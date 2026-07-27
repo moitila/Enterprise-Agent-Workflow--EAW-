@@ -38,6 +38,18 @@ ${repo_key}|${repo_dir}|target
 EOF
 }
 
+pad_markdown_artifact() {
+	local path="$1"
+	while [[ "$(wc -c <"$path")" -lt 600 ]]; do
+		cat >>"$path" <<EOF
+
+Este fixture mantem conteudo deterministico e substantivo para validar o ciclo
+de vida da track sem depender de placeholders pequenos. A intencao do smoke e
+exercitar transicoes, gates e renderizacao de prompts com entradas realistas.
+EOF
+	done
+}
+
 create_card() {
 	local workdir="$1"
 	local card="$2"
@@ -70,43 +82,63 @@ EOF
 write_intake_artifact() {
 	local workdir="$1"
 	local card="$2"
+	local repo_key="$3"
+	local path="$workdir/out/$card/investigations/00_intake.md"
 	mkdir -p "$workdir/out/$card/investigations"
-	cat >"$workdir/out/$card/investigations/00_intake.md" <<EOF
+	cat >"$path" <<EOF
 # 00_intake
 
 Smoke intake for ${card}.
+
+## Repositorio principal de onboarding
+
+${repo_key}
+
+## Evidencias iniciais
+
+Fixture deterministico para validar a transicao do bug_ONBOARD sem depender de
+renderizacao manual do agente. O conteudo declara o repositorio de onboarding
+que deve ser usado pelo runtime ao montar prompts posteriores e mantem material
+substantivo suficiente para diferenciar este artefato do scaffold inicial.
 EOF
+	pad_markdown_artifact "$path"
 }
 
 write_ingest_artifact() {
 	local workdir="$1"
 	local card="$2"
+	local path="$workdir/out/$card/ingest/sources.md"
 	mkdir -p "$workdir/out/$card/ingest"
-	cat >"$workdir/out/$card/ingest/sources.md" <<EOF
+	cat >"$path" <<EOF
 Smoke sources for ${card}.
 EOF
+	pad_markdown_artifact "$path"
 }
 
 write_findings_artifact() {
 	local workdir="$1"
 	local card="$2"
+	local path="$workdir/out/$card/investigations/20_findings.md"
 	mkdir -p "$workdir/out/$card/investigations"
-	cat >"$workdir/out/$card/investigations/20_findings.md" <<EOF
+	cat >"$path" <<EOF
 # 20_findings
 
 Smoke findings for ${card}.
 EOF
+	pad_markdown_artifact "$path"
 }
 
 write_hypotheses_artifact() {
 	local workdir="$1"
 	local card="$2"
+	local path="$workdir/out/$card/investigations/30_hypotheses.md"
 	mkdir -p "$workdir/out/$card/investigations"
-	cat >"$workdir/out/$card/investigations/30_hypotheses.md" <<EOF
+	cat >"$path" <<EOF
 # 30_hypotheses
 
 Smoke hypotheses for ${card}.
 EOF
+	pad_markdown_artifact "$path"
 }
 
 write_handoff() {
@@ -204,7 +236,7 @@ run_full_flow_scenario() {
 	write_repos_conf "$workdir" "$repo_key" "$repo_dir"
 	create_card "$workdir" "$card"
 	prime_findings_state "$workdir" "$card"
-	write_intake_artifact "$workdir" "$card"
+	write_intake_artifact "$workdir" "$card" "$repo_key"
 	write_findings_artifact "$workdir" "$card"
 	write_handoff "$workdir" "$card" "REGRESSION_CLEAR"
 
@@ -233,7 +265,7 @@ run_skip_root_cause_scenario() {
 	write_repos_conf "$workdir" "$repo_key" "$repo_dir"
 	create_card "$workdir" "$card"
 	prime_findings_state "$workdir" "$card"
-	write_intake_artifact "$workdir" "$card"
+	write_intake_artifact "$workdir" "$card" "$repo_key"
 	write_findings_artifact "$workdir" "$card"
 	write_handoff "$workdir" "$card" "ROOT_CAUSE_CONFIRMED"
 
@@ -257,7 +289,7 @@ run_regression_clear_matrix_scenario() {
 	write_repos_conf "$workdir" "$repo_key" "$repo_dir"
 	create_card "$workdir" "$card"
 	prime_findings_state "$workdir" "$card"
-	write_intake_artifact "$workdir" "$card"
+	write_intake_artifact "$workdir" "$card" "$repo_key"
 	write_findings_artifact "$workdir" "$card"
 	write_handoff "$workdir" "$card" "REGRESSION_CLEAR"
 
@@ -279,7 +311,7 @@ run_regression_clear_matrix_scenario() {
 	write_repos_conf "$workdir" "$repo_key" "$repo_dir"
 	create_card "$workdir" "$card"
 	prime_findings_state "$workdir" "$card"
-	write_intake_artifact "$workdir" "$card"
+	write_intake_artifact "$workdir" "$card" "$repo_key"
 	write_findings_artifact "$workdir" "$card"
 	write_handoff "$workdir" "$card" "ROOT_CAUSE_CONFIRMED"
 
@@ -303,7 +335,7 @@ run_debug_first_scenario() {
 	write_repos_conf "$workdir" "$repo_key" "$repo_dir"
 	create_card "$workdir" "$card"
 	prime_findings_state "$workdir" "$card"
-	write_intake_artifact "$workdir" "$card"
+	write_intake_artifact "$workdir" "$card" "$repo_key"
 	write_ingest_artifact "$workdir" "$card"
 	write_findings_artifact "$workdir" "$card"
 	write_handoff "$workdir" "$card" "REGRESSION_CLEAR"
@@ -333,7 +365,7 @@ run_source_absent_scenario() {
 	write_repos_conf "$workdir" "$repo_key" "$repo_dir"
 	create_card "$workdir" "$card"
 	prime_findings_state "$workdir" "$card"
-	write_intake_artifact "$workdir" "$card"
+	write_intake_artifact "$workdir" "$card" "$repo_key"
 	write_ingest_artifact "$workdir" "$card"
 	write_findings_artifact "$workdir" "$card"
 	write_handoff "$workdir" "$card" "REGRESSION_CLEAR"
