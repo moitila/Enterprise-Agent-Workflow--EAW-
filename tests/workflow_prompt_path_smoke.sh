@@ -14,6 +14,18 @@ fail() {
 	exit 1
 }
 
+pad_markdown_artifact() {
+	local path="$1"
+	while [[ "$(wc -c <"$path")" -lt 600 ]]; do
+		cat >>"$path" <<'EOF'
+
+Fixture deterministico com conteudo substantivo para satisfazer o gate de
+artefatos preenchidos. Este smoke valida resolucao de prompt.path e resumo de
+workflow, nao o tamanho minimo de placeholders.
+EOF
+	done
+}
+
 init_workdir() {
 	local workdir="$1"
 	"$EAW_BIN" init --workdir "$workdir" --force >/dev/null
@@ -81,10 +93,11 @@ EOF
 
 Fixture artifact for workflow prompt.path validation.
 EOF
+	pad_markdown_artifact "$investigations_dir/20_findings.md"
 
 	if [[ "$track" == "feature" ]]; then
 		cat >"$investigations_dir/20_handoff.json" <<'EOF'
-{"status":"fixture","source":"workflow_prompt_path_smoke"}
+{"from_phase":"findings","status":"completed","messages":[],"codes":[]}
 EOF
 	fi
 }
@@ -101,10 +114,11 @@ write_findings_completion_artifacts() {
 
 Fixture artifact for workflow prompt.path validation.
 EOF
+	pad_markdown_artifact "$investigations_dir/20_findings.md"
 
 	if [[ "$track" == "feature" ]]; then
 		cat >"$investigations_dir/20_handoff.json" <<'EOF'
-{"status":"fixture","source":"workflow_prompt_path_smoke"}
+{"from_phase":"findings","status":"completed","messages":[],"codes":[]}
 EOF
 	fi
 }

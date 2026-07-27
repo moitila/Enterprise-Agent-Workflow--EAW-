@@ -59,6 +59,18 @@ run_onboarding_runtime_suite() {
 	printf 'local-main|/home/user/dev/EAW-dev|target\n' >"$workdir/config/repos.conf"
 	prepare_feature_planning_with_onboarding "$runtime_root"
 
+	pad_markdown_artifact() {
+		local path="$1"
+		while [[ "$(wc -c <"$path")" -lt 600 ]]; do
+			cat >>"$path" <<'EOF'
+
+Fixture deterministico com conteudo substantivo para satisfazer o gate de
+artefatos preenchidos. Este texto mantem o teste focado em onboarding por
+referencia e avancos de fase, nao em placeholders pequenos.
+EOF
+		done
+	}
+
 	advance_feature_card_to_planning() {
 		local card_id="$1"
 		local card_dir="$workdir/out/$card_id"
@@ -67,10 +79,12 @@ run_onboarding_runtime_suite() {
 
 Intake preenchido para onboarding runtime suite.
 EOF
+		pad_markdown_artifact "$card_dir/investigations/00_intake.md"
 		cat >>"$card_dir/investigations/_intake_provenance.md" <<'EOF'
 
 Fonte: onboarding runtime suite.
 EOF
+		pad_markdown_artifact "$card_dir/investigations/_intake_provenance.md"
 		EAW_WORKDIR="$workdir" "$eaw_bin" next "$card_id" >/dev/null
 		EAW_WORKDIR="$workdir" "$eaw_bin" next "$card_id" >/dev/null
 
@@ -78,12 +92,14 @@ EOF
 
 Dynamic context preenchido para onboarding runtime suite.
 EOF
+		pad_markdown_artifact "$card_dir/context/dynamic/00_scope_manifest.md"
 		EAW_WORKDIR="$workdir" "$eaw_bin" next "$card_id" >/dev/null
 
 		cat >>"$card_dir/investigations/20_findings.md" <<'EOF'
 
 Findings preenchido para onboarding runtime suite.
 EOF
+		pad_markdown_artifact "$card_dir/investigations/20_findings.md"
 		cat >"$card_dir/investigations/20_handoff.json" <<'EOF'
 {"from_phase":"findings","status":"completed","messages":[],"codes":[]}
 EOF
@@ -93,6 +109,7 @@ EOF
 
 Hypotheses preenchido para onboarding runtime suite.
 EOF
+		pad_markdown_artifact "$card_dir/investigations/30_hypotheses.md"
 		EAW_WORKDIR="$workdir" "$eaw_bin" next "$card_id" >/dev/null
 	}
 
@@ -130,6 +147,7 @@ EOF
 	rm "$workdir/context_sources/onboarding/local-main/a.md"
 	printf 'fresh\n' >"$workdir/context_sources/onboarding/local-main/b.md"
 	printf "# planning ok\n" >"$workdir/out/$card/investigations/40_next_steps.md"
+	pad_markdown_artifact "$workdir/out/$card/investigations/40_next_steps.md"
 	EAW_WORKDIR="$workdir" "$eaw_bin" next "$card" >/dev/null
 	test ! -e "$workdir/out/$card/context/onboarding" || fail "rerun should keep repo_discovery onboarding non-materialized"
 

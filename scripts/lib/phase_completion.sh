@@ -242,6 +242,25 @@ eaw_phase_completion_artifact_has_meaningful_content() {
 		return 1
 	fi
 
+	if [[ "$rel_path" == "investigations/20_handoff.json" ]]; then
+		local normalized
+		normalized="$(tr -d '\n\r\t ' <"$file" 2>/dev/null || true)"
+		[[ "$normalized" == *'"from_phase":"'* ]] || return 1
+		[[ "$normalized" == *'"status":"completed"'* || "$normalized" == *'"status":"skipped"'* || "$normalized" == *'"status":"failed"'* ]] || return 1
+		[[ "$normalized" == *'"messages":['* ]] || return 1
+		[[ "$normalized" == *'"codes":['* ]] || return 1
+		return 0
+	fi
+
+	if [[ "$rel_path" == "investigations/10_phase_output.json" ]]; then
+		local normalized
+		normalized="$(tr -d '\n\r\t ' <"$file" 2>/dev/null || true)"
+		[[ "$normalized" == *'"phase_id":"'* ]] || return 1
+		[[ "$normalized" == *'"status":"'* ]] || return 1
+		[[ "$normalized" == *'"summary":"'* ]] || return 1
+		return 0
+	fi
+
 	scaffold_file="$(mktemp)"
 	eaw_phase_completion_render_expected_scaffold "$card" "$card_dir" "$phase_id" "$rel_path" >"$scaffold_file"
 	if cmp -s "$file" "$scaffold_file"; then
@@ -256,6 +275,14 @@ eaw_phase_completion_artifact_has_meaningful_content() {
 		return 1
 	fi
 	rm -f "$scaffold_file" "$source_scaffold_file"
+	# Size floor: reject if below minimum regardless of scaffold identity
+	local size_check_min="${SIZE_FLOOR:-500}"
+	local file_size
+	file_size="$(wc -c < "$file" 2>/dev/null || echo 0)"
+	if [[ "$file_size" -lt "$size_check_min" ]]; then
+		rm -f "$scaffold_file"
+		return 1   # below size floor → not meaningful
+	fi
 	return 0
 }
 
@@ -314,6 +341,11 @@ eaw_phase_completion_evaluate_required_artifacts_substantive() {
 		done <<<"$metadata"
 		[[ -n "$validation_mode" ]] || validation_mode="warning"
 		failed=0
+		if [[ "$rel_path" == "investigations/20_handoff.json" || "$rel_path" == "investigations/10_phase_output.json" ]]; then
+			continue
+		fi
+		# Apply global default when min_bytes not declared per-artifact in YAML
+		min_bytes="${min_bytes:-500}"
 		if [[ -n "$min_bytes" && -e "$card_dir/$rel_path" ]]; then
 			file_size="$(wc -c <"$card_dir/$rel_path")"
 			if [[ "$file_size" -lt "$min_bytes" ]]; then

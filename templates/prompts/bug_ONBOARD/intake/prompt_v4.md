@@ -11,7 +11,7 @@ OBJECTIVE
 
 Before analyzing the evidences, you MUST read the repository onboarding located at:
 
-{{EAW_WORKDIR}}/context_sources/onboarding/<resolved_repo_key>/
+{{EAW_WORKDIR}}/context_sources/onboarding/{{RESOLVED_REPO_KEY}}/
 
 RESOLVING `resolved_repo_key` (MT01A — MANDATORY):
 Before reading onboarding, resolve `resolved_repo_key` from `00_intake.md`:

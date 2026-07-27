@@ -8,6 +8,18 @@ fail() {
 	exit 1
 }
 
+pad_markdown_artifact() {
+	local path="$1"
+	while [[ "$(wc -c <"$path")" -lt 600 ]]; do
+		cat >>"$path" <<'EOF'
+
+Fixture deterministico com conteudo substantivo para satisfazer o gate de
+artefatos preenchidos. Este teste valida compatibilidade dos wrappers e
+avanco via eaw next sem depender de placeholders pequenos.
+EOF
+	done
+}
+
 init_workdir() {
 	local workdir="$1"
 	"$REPO_ROOT/scripts/eaw" init --workdir "$workdir" --force >/dev/null
@@ -51,18 +63,25 @@ grep -Fq "current_phase: intake" "$state_file" || fail "rejected wrappers should
 grep -Fq "phase_completed: false" "$state_file" || fail "rejected wrappers should preserve phase completion state"
 grep -Fq "phase_completed_at: null" "$state_file" || fail "rejected wrappers should preserve null phase_completed_at"
 
+pad_markdown_artifact "$workdir/out/$card/investigations/00_intake.md"
 printf "# provenance ok\n" >"$workdir/out/$card/investigations/_intake_provenance.md"
+pad_markdown_artifact "$workdir/out/$card/investigations/_intake_provenance.md"
 EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" next "$card" >/dev/null
 test -f "$workdir/out/$card/prompts/intake.md" || fail "next should materialize intake prompt"
 
 printf "# findings ok\n" >"$workdir/out/$card/investigations/20_findings.md"
+pad_markdown_artifact "$workdir/out/$card/investigations/20_findings.md"
 EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" next "$card" >/dev/null
 printf "# hypotheses ok\n" >"$workdir/out/$card/investigations/30_hypotheses.md"
+pad_markdown_artifact "$workdir/out/$card/investigations/30_hypotheses.md"
 EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" next "$card" >/dev/null
 printf "# planning ok\n" >"$workdir/out/$card/investigations/40_next_steps.md"
+pad_markdown_artifact "$workdir/out/$card/investigations/40_next_steps.md"
 EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" next "$card" >/dev/null
 printf "# scope lock ok\n" >"$workdir/out/$card/implementation/00_scope.lock.md"
+pad_markdown_artifact "$workdir/out/$card/implementation/00_scope.lock.md"
 printf "# change plan ok\n" >"$workdir/out/$card/implementation/10_change_plan.md"
+pad_markdown_artifact "$workdir/out/$card/implementation/10_change_plan.md"
 EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" next "$card" >/dev/null
 
 grep -Fq "current_phase: implementation_executor" "$state_file" || fail "next should advance card to implementation_executor"

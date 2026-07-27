@@ -22,6 +22,7 @@ CONTEXT_USAGE
   - {{CARD_DIR}}/implementation/10_change_plan.md (somente quando TRIVIAL_SCOPE)
 - PRECHECK:
   - set -euo pipefail
+  - echo "$PATH" | grep -qE '^(/usr|/bin|/home)' || export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
   - cd "{{RUNTIME_ROOT}}"
   - test -f ./scripts/eaw
   - test -f "{{CONFIG_SOURCE}}"
@@ -48,7 +49,7 @@ MANDATORY CONTEXT CONSUMPTION
 
 You MUST read and use the materialized repository onboarding located at:
 
-{{EAW_WORKDIR}}/context_sources/onboarding/<resolved_repo_key>/
+{{EAW_WORKDIR}}/context_sources/onboarding/{{RESOLVED_REPO_KEY}}/
 
 Priority reading order:
 
@@ -59,7 +60,7 @@ Priority reading order:
 
 If additional onboarding files are materialized for the card, they may also be consulted when relevant.
 
-Do NOT require unpublished conventional filenames such as `INDEX.md` or `80_execution_contract.md` when they are absent from `{{EAW_WORKDIR}}/context_sources/onboarding/<resolved_repo_key>/`.
+Do NOT require unpublished conventional filenames such as `INDEX.md` or `80_execution_contract.md` when they are absent from `{{EAW_WORKDIR}}/context_sources/onboarding/{{RESOLVED_REPO_KEY}}/`.
 
 Then, depending on the task and the files actually published:
 
@@ -151,7 +152,7 @@ OUTPUT
 READ_SCOPE
 
 - Ler `{{CARD_DIR}}`
-- Ler `{{EAW_WORKDIR}}/context_sources/onboarding/<resolved_repo_key>/` para aplicar a governanca obrigatoria do template, apos resolver exatamente um `resolved_repo_key`
+- Ler `{{EAW_WORKDIR}}/context_sources/onboarding/{{RESOLVED_REPO_KEY}}/` para aplicar a governanca obrigatoria do template, apos resolver exatamente um `resolved_repo_key`
 - Ler TARGET_REPOS apenas em modo read-only quando uma checagem factual minima for indispensavel para eliminar contradicao do planejamento
 - Ler `20_handoff.json` como entrada do contrato de planejamento
 
@@ -252,6 +253,6 @@ FAIL_CONDITIONS
 - Falhar se `40_next_steps.md` nao existir ao final.
 - Falhar se nao houver secao `Hipoteses Selecionadas`.
 - Falhar se o repositorio alvo do card nao puder ser resolvido de forma unica contra `TARGET_REPOS`.
-- Falhar se houver leitura fora de `{{CARD_DIR}}`, `{{EAW_WORKDIR}}/context_sources/onboarding/<resolved_repo_key>/` e TARGET_REPOS.
+- Falhar se houver leitura fora de `{{CARD_DIR}}`, `{{EAW_WORKDIR}}/context_sources/onboarding/{{RESOLVED_REPO_KEY}}/` e TARGET_REPOS.
 - Falhar se houver escrita fora da WRITE_ALLOWLIST.
 - Falhar se o plano introduzir implementacao, arquitetura nova ou arquivos/classes nao confirmados.

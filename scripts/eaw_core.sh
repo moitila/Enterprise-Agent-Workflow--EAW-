@@ -19,14 +19,6 @@ Example:
 EOF
 }
 
-scaffold_template_names() {
-	printf '%s\n' \
-		10_baseline \
-		20_findings \
-		30_hypotheses \
-		40_next_steps
-}
-
 read_config_version() {
 	local conf="$1"
 	if [[ ! -f "$conf" ]]; then
@@ -1686,26 +1678,6 @@ EOF
 			echo "Wrote $intake_file"
 		fi
 	fi
-	# Create investigation scaffolds (non-breaking, idempotent)
-	while IFS= read -r scaffold_name; do
-		local scaffold_file="$intake_dir/${scaffold_name}.md"
-		local scaffold_tpl="$EAW_TEMPLATES_DIR/${scaffold_name}.md"
-		if [[ ! -f "$scaffold_file" ]]; then
-			if [[ -f "$scaffold_tpl" ]]; then
-				cp "$scaffold_tpl" "$scaffold_file"
-				echo "Wrote $scaffold_file"
-			else
-				echo "WARNING: missing scaffold template: $scaffold_tpl; using minimal fallback"
-				cat >"$scaffold_file" <<EOF
-# ${scaffold_name^^} — Card ${card}
-
-## Status
-
-Placeholder for ${scaffold_name} investigation phase.
-EOF
-			fi
-		fi
-	done < <(scaffold_template_names)
 	eaw_execution_log_from_journal "$outdir"
 	return 0
 }

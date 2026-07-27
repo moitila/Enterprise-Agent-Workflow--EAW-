@@ -8,6 +8,18 @@ fail() {
 	exit 1
 }
 
+pad_markdown_artifact() {
+	local path="$1"
+	while [[ "$(wc -c <"$path")" -lt 600 ]]; do
+		cat >>"$path" <<'EOF'
+
+Fixture deterministico com conteudo substantivo para satisfazer o gate de
+artefatos preenchidos. Este teste valida avancos de fase e materializacao
+de prompts sem depender de placeholders pequenos.
+EOF
+	done
+}
+
 init_workdir() {
 	local workdir="$1"
 	"$REPO_ROOT/scripts/eaw" init --workdir "$workdir" --force >/dev/null
@@ -60,10 +72,12 @@ cat >>"$workdir/out/$feature_card/investigations/00_intake.md" <<'EOF'
 Feature intake preenchido para teste.
 Referencia textual mantida: out/<CARD>/investigations/00_intake.md
 EOF
+pad_markdown_artifact "$workdir/out/$feature_card/investigations/00_intake.md"
 cat >>"$workdir/out/$feature_card/investigations/_intake_provenance.md" <<'EOF'
 
 Fonte: teste automatizado.
 EOF
+pad_markdown_artifact "$workdir/out/$feature_card/investigations/_intake_provenance.md"
 
 next_output="$(EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" next "$feature_card" 2>&1)" || fail "feature next command failed after ingest artifacts were filled"
 
@@ -99,31 +113,35 @@ cat >>"$dynamic_context_manifest" <<'EOF'
 
 Dynamic context preenchido para teste.
 EOF
+pad_markdown_artifact "$dynamic_context_manifest"
 
 next_output="$(EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" next "$feature_card" 2>&1)" || fail "feature next command failed after dynamic_context was filled"
 grep -Fq "current_phase: findings" "$state_file" || fail "feature card did not advance to findings after dynamic_context fill"
 grep -Fq "previous_phase: dynamic_context" "$state_file" || fail "feature card previous_phase not updated to dynamic_context"
 grep -Fq "    - dynamic_context" "$state_file" || fail "feature card completed_phases missing dynamic_context"
-[[ -f "$findings_file" ]] || fail "missing findings artifact after dynamic_context completion"
+test ! -f "$findings_file" || fail "findings artifact should remain absent before first write"
+[[ -f "$findings_handoff_file" ]] || fail "missing findings handoff scaffold after dynamic_context completion"
 [[ -f "$findings_prompt_phase" ]] || fail "missing phase-driven findings prompt after dynamic_context completion"
 grep -Eq '^workflow_phase_findings\|OK\|' "$execution_log" || fail "execution log missing workflow phase entry for findings"
 grep -Fq "CARD $feature_card: dynamic_context -> findings" <<<"$next_output" || fail "next output missing dynamic_context->findings transition summary"
 grep -Fq "RUNTIME: phase=findings action=phase_driven_execution" <<<"$next_output" || fail "next output missing findings phase execution summary"
+grep -Fq "RUNTIME: phase=findings deferred_artifact=investigations/20_findings.md" <<<"$next_output" || fail "next output missing deferred findings artifact trace"
 
 next_output="$(EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" next "$feature_card" 2>&1)" || fail "feature next command should keep findings current while findings is unfilled"
-grep -Fq "unfilled required artifacts: investigations/20_findings.md" <<<"$next_output" || fail "feature next output missing findings content gate"
+grep -Fq "missing required artifacts: investigations/20_findings.md" <<<"$next_output" || fail "feature next output missing findings artifact gate"
 grep -Fq "current_phase: findings" "$state_file" || fail "feature card should remain in findings while findings artifact is unfilled"
 
 if validate_output="$(EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" validate 2>&1)"; then
-	fail "validate should fail while findings is scaffold-only"
+	fail "validate should fail while findings artifact is still absent"
 fi
-grep -Fq "phase 'findings' is incomplete; unfilled required artifacts: investigations/20_findings.md" <<<"$validate_output" || fail "validate output missing strict findings gate"
+grep -Fq "phase 'findings' is incomplete; missing required artifacts: investigations/20_findings.md" <<<"$validate_output" || fail "validate output missing strict findings gate"
 
-cat >>"$findings_file" <<'EOF'
+cat >"$findings_file" <<'EOF'
 
 Findings preenchido para teste.
 Referencia textual mantida: out/<CARD>/investigations/20_findings.md
 EOF
+pad_markdown_artifact "$findings_file"
 cat >"$findings_handoff_file" <<'EOF'
 {"from_phase":"findings","status":"completed","messages":[],"codes":[]}
 EOF

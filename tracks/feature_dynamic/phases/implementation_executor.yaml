@@ -20,4 +20,6 @@ phase:
   completion:
     strategy: required_artifacts_exist
     required_artifacts:
-      - pilot_report.md
+      - path: pilot_report.md
+        min_bytes: 500
+        validation_mode: blocking

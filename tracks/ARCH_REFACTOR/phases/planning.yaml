@@ -20,4 +20,6 @@ phase:
   completion:
     strategy: required_artifacts_exist
     required_artifacts:
-      - investigations/40_next_steps.md
+      - path: investigations/40_next_steps.md
+        min_bytes: 500
+        validation_mode: blocking

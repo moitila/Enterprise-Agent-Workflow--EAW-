@@ -31,7 +31,15 @@ phase:
   completion:
     strategy: required_artifacts_exist
     required_artifacts:
-      - ingest/sources.md
-      - context/repository_identity.md
-      - investigations/00_repo_discovery.md
-      - investigations/_repo_discovery_provenance.md
+      - path: ingest/sources.md
+        min_bytes: 500
+        validation_mode: blocking
+      - path: context/repository_identity.md
+        min_bytes: 500
+        validation_mode: blocking
+      - path: investigations/00_repo_discovery.md
+        min_bytes: 500
+        validation_mode: blocking
+      - path: investigations/_repo_discovery_provenance.md
+        min_bytes: 500
+        validation_mode: blocking

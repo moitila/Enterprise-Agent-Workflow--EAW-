@@ -1,10 +1,6 @@
 out/940103/execution.log
 out/940103/execution_journal.jsonl
 out/940103/investigations/00_intake.md
-out/940103/investigations/10_baseline.md
-out/940103/investigations/20_findings.md
-out/940103/investigations/30_hypotheses.md
-out/940103/investigations/40_next_steps.md
 out/940103/investigations/_intake_provenance.md
 out/940103/prompts/intake.md
 out/940103/provenance/prompts_used.yaml

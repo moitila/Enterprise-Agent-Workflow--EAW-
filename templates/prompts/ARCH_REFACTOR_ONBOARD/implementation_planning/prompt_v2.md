@@ -21,6 +21,7 @@ CONTEXT_USAGE
   - {{CARD_DIR}}/implementation/_warnings.md
 - PRECHECK:
   - set -euo pipefail
+  - echo "$PATH" | grep -qE '^(/usr|/bin|/home)' || export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
   - cd "{{RUNTIME_ROOT}}"
   - test -f ./scripts/eaw
   - test -f "{{CONFIG_SOURCE}}"
@@ -46,7 +47,7 @@ MANDATORY CONTEXT CONSUMPTION
 
 You MUST read and use the repository onboarding located at:
 
-{{EAW_WORKDIR}}/context_sources/onboarding/<resolved_repo_key>/
+{{EAW_WORKDIR}}/context_sources/onboarding/{{RESOLVED_REPO_KEY}}/
 
 Priority reading order:
 
@@ -103,7 +104,7 @@ EXECUTION CONTRACT (MANDATORY)
 
 Follow:
 
-{{EAW_WORKDIR}}/context_sources/onboarding/<resolved_repo_key>/80_execution_contract.md
+{{EAW_WORKDIR}}/context_sources/onboarding/{{RESOLVED_REPO_KEY}}/80_execution_contract.md
 
 Including:
 
@@ -159,7 +160,7 @@ OUTPUT
 READ_SCOPE
 
 - Ler somente `{{CARD_DIR}}`, `{{CARD_DIR}}/investigations` e `{{CARD_DIR}}/context`
-- Ler `{{EAW_WORKDIR}}/context_sources/onboarding/<resolved_repo_key>/` para aplicar a governanca obrigatoria do template, apos resolver exatamente um `resolved_repo_key`
+- Ler `{{EAW_WORKDIR}}/context_sources/onboarding/{{RESOLVED_REPO_KEY}}/` para aplicar a governanca obrigatoria do template, apos resolver exatamente um `resolved_repo_key`
 - Nao alterar codigo nesta fase
 - Nao depender de leitura ampla dos TARGET_REPOS para inventar escopo
 
@@ -220,6 +221,6 @@ FAIL_CONDITIONS
 - Falhar se `00_scope.lock.md` ou `10_change_plan.md` nao existirem ao final.
 - Falhar se a allowlist contiver glob, item sem rastreabilidade ou item fora de TARGET_REPOS.
 - Falhar se o repositorio alvo do card nao puder ser resolvido de forma unica contra `TARGET_REPOS`.
-- Falhar se houver leitura fora de `{{CARD_DIR}}`, `{{CARD_DIR}}/investigations`, `{{CARD_DIR}}/context`, `TARGET_REPOS` e `{{EAW_WORKDIR}}/context_sources/onboarding/<resolved_repo_key>/`.
+- Falhar se houver leitura fora de `{{CARD_DIR}}`, `{{CARD_DIR}}/investigations`, `{{CARD_DIR}}/context`, `TARGET_REPOS` e `{{EAW_WORKDIR}}/context_sources/onboarding/{{RESOLVED_REPO_KEY}}/`.
 - Falhar se houver escrita fora da WRITE_ALLOWLIST.
 - Falhar se o implementation planning introduzir decisao de design ou expansao de escopo.

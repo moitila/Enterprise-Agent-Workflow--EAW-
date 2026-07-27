@@ -16,6 +16,18 @@ cp -R "$REPO_ROOT/config" "$RUNTIME_ROOT/"
 export EAW_WORKDIR="$WORK_ROOT/.eaw"
 "$RUNTIME_ROOT/scripts/eaw" init --workdir "$EAW_WORKDIR" >/dev/null
 
+pad_markdown_artifact() {
+	local path="$1"
+	while [[ "$(wc -c <"$path")" -lt 600 ]]; do
+		cat >>"$path" <<'EOF'
+
+Fixture deterministico com conteudo substantivo para satisfazer o gate de
+artefatos preenchidos. Este texto mantem o teste focado no ciclo de vida de
+prompts, nao no tamanho minimo de placeholders.
+EOF
+	done
+}
+
 PROMPT_DIR="$RUNTIME_ROOT/templates/prompts/lifecycle_test/intake"
 mkdir -p "$PROMPT_DIR"
 
@@ -139,16 +151,23 @@ printf "v2\n" >"$default_intake_dir/ACTIVE"
 
 "$RUNTIME_ROOT/scripts/eaw" card 500 --track standard "Prompt lifecycle integration" >/dev/null
 printf "# intake ok\n" >"$EAW_WORKDIR/out/500/investigations/00_intake.md"
+pad_markdown_artifact "$EAW_WORKDIR/out/500/investigations/00_intake.md"
 printf "# provenance ok\n" >"$EAW_WORKDIR/out/500/investigations/_intake_provenance.md"
+pad_markdown_artifact "$EAW_WORKDIR/out/500/investigations/_intake_provenance.md"
 "$RUNTIME_ROOT/scripts/eaw" next 500 >/dev/null
 printf "# findings ok\n" >"$EAW_WORKDIR/out/500/investigations/20_findings.md"
+pad_markdown_artifact "$EAW_WORKDIR/out/500/investigations/20_findings.md"
 "$RUNTIME_ROOT/scripts/eaw" next 500 >/dev/null
 printf "# hypotheses ok\n" >"$EAW_WORKDIR/out/500/investigations/30_hypotheses.md"
+pad_markdown_artifact "$EAW_WORKDIR/out/500/investigations/30_hypotheses.md"
 "$RUNTIME_ROOT/scripts/eaw" next 500 >/dev/null
 printf "# planning ok\n" >"$EAW_WORKDIR/out/500/investigations/40_next_steps.md"
+pad_markdown_artifact "$EAW_WORKDIR/out/500/investigations/40_next_steps.md"
 "$RUNTIME_ROOT/scripts/eaw" next 500 >/dev/null
 printf "# scope lock ok\n" >"$EAW_WORKDIR/out/500/implementation/00_scope.lock.md"
+pad_markdown_artifact "$EAW_WORKDIR/out/500/implementation/00_scope.lock.md"
 printf "# change plan ok\n" >"$EAW_WORKDIR/out/500/implementation/10_change_plan.md"
+pad_markdown_artifact "$EAW_WORKDIR/out/500/implementation/10_change_plan.md"
 "$RUNTIME_ROOT/scripts/eaw" next 500 >/dev/null
 
 test -f "$EAW_WORKDIR/out/500/prompts/intake.md"

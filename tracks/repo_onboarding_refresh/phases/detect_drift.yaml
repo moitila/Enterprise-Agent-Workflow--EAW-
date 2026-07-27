@@ -31,4 +31,6 @@ phase:
   completion:
     strategy: required_artifacts_exist
     required_artifacts:
-      - investigations/drift_report.md
+      - path: investigations/drift_report.md
+        min_bytes: 500
+        validation_mode: blocking

@@ -9,6 +9,18 @@ fail() {
 	exit 1
 }
 
+pad_markdown_artifact() {
+	local path="$1"
+	while [[ "$(wc -c <"$path")" -lt 600 ]]; do
+		cat >>"$path" <<'EOF'
+
+Fixture deterministico com conteudo substantivo para satisfazer o gate de
+artefatos preenchidos. Este texto existe para que o smoke valide transicoes e
+criacao diferida de prompts sem depender de placeholders pequenos.
+EOF
+	done
+}
+
 tmpdir="$(mktemp -d)"
 trap 'rm -rf "$tmpdir"' EXIT
 
@@ -23,6 +35,7 @@ card_template_missing="4013A"
 card_round_invalid="4013B"
 card_workdir_invalid="4013C"
 card_ingest_and_intake_missing="9901"
+card_findings_deferred="9902"
 
 # Scenario A: missing canonical card workflow scaffold
 isolated_root="$tmpdir/isolated_root"
@@ -82,5 +95,31 @@ set -e
 [[ $scenario_d_rc -eq 0 ]] || fail "scenario D expected zero exit code (unfilled artifacts are non-fatal)"
 grep -Fq "ingest remains current; unfilled required artifacts" <<<"$scenario_d_output" || fail "scenario D missing expected ingest artifact message"
 assert_no_repo_residue "$card_ingest_and_intake_missing"
+
+# Scenario E: findings prompt is materialized without occupying the findings artifact path.
+scenario_e_workdir="$tmpdir/scenario-e-workdir"
+./scripts/eaw init --workdir "$scenario_e_workdir" --force >/dev/null
+EAW_WORKDIR="$scenario_e_workdir" ./scripts/eaw card "$card_findings_deferred" --track bug >/dev/null 2>&1
+cat >>"$scenario_e_workdir/out/$card_findings_deferred/investigations/00_intake.md" <<'EOF'
+
+Scenario E intake preenchido para teste.
+EOF
+pad_markdown_artifact "$scenario_e_workdir/out/$card_findings_deferred/investigations/00_intake.md"
+cat >>"$scenario_e_workdir/out/$card_findings_deferred/investigations/_intake_provenance.md" <<'EOF'
+
+Scenario E provenance preenchido para teste.
+EOF
+pad_markdown_artifact "$scenario_e_workdir/out/$card_findings_deferred/investigations/_intake_provenance.md"
+
+scenario_e_output="$(EAW_WORKDIR="$scenario_e_workdir" ./scripts/eaw next "$card_findings_deferred" 2>&1)"
+grep -Fq "CARD $card_findings_deferred: intake -> findings" <<<"$scenario_e_output" || fail "scenario E missing intake->findings transition summary"
+grep -Fq "RUNTIME: phase=findings deferred_artifact=investigations/20_findings.md" <<<"$scenario_e_output" || fail "scenario E missing deferred findings artifact trace"
+test ! -f "$scenario_e_workdir/out/$card_findings_deferred/investigations/20_findings.md" || fail "scenario E findings artifact should remain absent before first write"
+test -f "$scenario_e_workdir/out/$card_findings_deferred/prompts/findings.md" || fail "scenario E missing findings prompt after transition"
+
+scenario_e_gate_output="$(EAW_WORKDIR="$scenario_e_workdir" ./scripts/eaw next "$card_findings_deferred" 2>&1)"
+grep -Fq "findings remains current; missing required artifacts" <<<"$scenario_e_gate_output" || fail "scenario E missing findings gate summary"
+grep -Fq "missing required artifacts: investigations/20_findings.md" <<<"$scenario_e_gate_output" || fail "scenario E missing strict findings artifact gate"
+assert_no_repo_residue "$card_findings_deferred"
 
 printf "OK\n"

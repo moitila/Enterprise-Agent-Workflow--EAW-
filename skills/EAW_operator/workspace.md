@@ -123,6 +123,27 @@ Antes de executar qualquer ação:
   $OUT_DIR
   $CARD_DIR
 
+## Integridade do PATH
+
+PATH corrompido é um trap documentado em execuções reais. Em subagentes EAW, o $PATH pode ser sobrescrito pelo caminho absoluto de um artefato escrito durante a fase. Comandos externos subsequentes (grep, wc, find, ls, git) falham com `command not found` ou silenciosamente, mascarando falhas de validação.
+
+### Diagnóstico
+
+```bash
+echo "$PATH"
+# PATH corrompido se não começar com /usr, /bin ou /home
+```
+
+### Restauração
+
+```bash
+echo "$PATH" | grep -qE '^(/usr|/bin|/home)' || export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+```
+
+### Aplicação
+
+Adicionar como primeira instrução do pré-check em qualquer fase que execute comandos shell externos (grep, wc, find, ls, git, bash, etc.). Inserir após `set -euo pipefail` e antes de `cd "{{RUNTIME_ROOT}}"`.
+
 ## Fail-fast
 
 Se:

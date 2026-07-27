@@ -9,6 +9,18 @@ fail() {
 	exit 1
 }
 
+pad_markdown_artifact() {
+	local path="$1"
+	while [[ "$(wc -c <"$path")" -lt 600 ]]; do
+		cat >>"$path" <<'EOF'
+
+Fixture deterministico com conteudo substantivo para satisfazer o gate de
+artefatos preenchidos. Este texto mantem o smoke focado no fluxo de implement,
+prompts e validacao, nao no tamanho minimo de placeholders.
+EOF
+	done
+}
+
 CARD="abc-501"
 tmpdir="$(mktemp -d)"
 trap 'rm -rf "$tmpdir"' EXIT
@@ -27,16 +39,23 @@ echo "SMOKE: card=$CARD"
 
 bash ./scripts/eaw init --workdir "$EAW_WORKDIR" --upgrade >/dev/null 2>&1
 bash ./scripts/eaw card "$CARD" --track standard "smoke implement" >/dev/null 2>&1
+pad_markdown_artifact "$INVESTIGATIONS_DIR/00_intake.md"
 printf "# provenance ok\n" >"$INVESTIGATIONS_DIR/_intake_provenance.md"
+pad_markdown_artifact "$INVESTIGATIONS_DIR/_intake_provenance.md"
 bash ./scripts/eaw next "$CARD" >/dev/null 2>&1
 printf "# findings ok\n" >"$INVESTIGATIONS_DIR/20_findings.md"
+pad_markdown_artifact "$INVESTIGATIONS_DIR/20_findings.md"
 bash ./scripts/eaw next "$CARD" >/dev/null 2>&1
 printf "# hypotheses ok\n" >"$INVESTIGATIONS_DIR/30_hypotheses.md"
+pad_markdown_artifact "$INVESTIGATIONS_DIR/30_hypotheses.md"
 bash ./scripts/eaw next "$CARD" >/dev/null 2>&1
 printf "# planning ok\n" >"$INVESTIGATIONS_DIR/40_next_steps.md"
+pad_markdown_artifact "$INVESTIGATIONS_DIR/40_next_steps.md"
 bash ./scripts/eaw next "$CARD" >/dev/null 2>&1
 printf "# scope lock ok\n" >"$IMPL_DIR/00_scope.lock.md"
+pad_markdown_artifact "$IMPL_DIR/00_scope.lock.md"
 printf "# change plan ok\n" >"$IMPL_DIR/10_change_plan.md"
+pad_markdown_artifact "$IMPL_DIR/10_change_plan.md"
 bash ./scripts/eaw next "$CARD" >/dev/null 2>&1
 echo "SMOKE: implement OK"
 

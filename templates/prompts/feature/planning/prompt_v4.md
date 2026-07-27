@@ -67,7 +67,7 @@ WRITE_SCOPE
 
 RULES
 - Executar pre-check em fail-fast:
-  - `set -euo pipefail`
+  - `set -eo pipefail`
   - `cd "{{RUNTIME_ROOT}}"`
   - `test -f ./scripts/eaw`
   - `test -f "{{CONFIG_SOURCE}}"`
