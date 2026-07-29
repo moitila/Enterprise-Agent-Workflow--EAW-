@@ -44,6 +44,7 @@ eaw_conf_optional_formal_contract_note() {
 default_eaw_conf_content() {
 	printf "config_version=%s\n" "$REQUIRED_CONFIG_VERSION"
 	printf "ci_feedback_enabled=false\n"
+	printf "# ci_feedback_template=\n"
 }
 
 check_config_version_validate() {

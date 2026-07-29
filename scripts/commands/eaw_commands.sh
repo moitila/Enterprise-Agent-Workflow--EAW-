@@ -2195,6 +2195,17 @@ eaw_read_ci_feedback_flag() {
 	[[ "$val" == "true" ]] && echo "true" || echo "false"
 }
 
+# Read ci_feedback_template value from EAW_CONF.
+# Returns the configured template filename, or empty string if not set.
+# Safe to call even when EAW_CONF is not set or the file does not exist.
+eaw_read_ci_feedback_template() {
+	local conf_file="${EAW_CONF:-}"
+	[[ -f "$conf_file" ]] || { echo ""; return; }
+	local val
+	val="$(grep -E '^ci_feedback_template=' "$conf_file" 2>/dev/null | tail -1 | sed 's/^ci_feedback_template=//' | tr -d '[:space:]')"
+	echo "$val"
+}
+
 # Inject phase skills content at {{SKILLS_BLOCK}} placeholder in the rendered prompt.
 # Uses temp-file + awk getline pattern to safely handle multi-line skill content.
 # No-op when placeholder is absent (opt-in per template).
@@ -2403,18 +2414,46 @@ eaw_render_phase_prompt_template() {
 	# CI Feedback reference — re-render per phase with correct step_id
 	local _ci_prompt_output
 	_ci_prompt_output="$(dirname "$output_file")/ci_feedback_prompt.md"
-	local _ci_tmpl_path="${EAW_ROOT_DIR}/templates/ci_feedback/feedback_prompt_v1.md"
+	local _ci_tmpl_name
+	_ci_tmpl_name="$(eaw_read_ci_feedback_template)"
+	local _ci_tmpl_path="${EAW_ROOT_DIR}/templates/ci_feedback/${_ci_tmpl_name:-feedback_prompt_v1.md}"
 	if [[ -f "$_ci_tmpl_path" ]] && [[ "$(eaw_read_ci_feedback_flag)" == "true" ]]; then
 		if [[ -z "${step_id:-}" ]]; then
 			echo "ERROR: step_id is empty in eaw_render_phase_prompt_template; ci_feedback_prompt generation skipped" >&2
 			return 1
 		fi
+		# Resolve new insumos — fallback: não disponível (CA-2)
+		local _ci_card_dir="${EAW_WORKDIR}/out/${card}"
+
+		local _ci_intake_path
+		_ci_intake_path="$(ls "${_ci_card_dir}/investigations/00_"*.md 2>/dev/null | head -1)"
+		_ci_intake_path="${_ci_intake_path:-não disponível}"
+
+		local _ci_prompt_path="${_ci_card_dir}/prompts/${step_id}.md"
+		[[ -f "$_ci_prompt_path" ]] || _ci_prompt_path="não disponível"
+
+		local _ci_artifact_paths="não disponível"
+		if [[ -n "${phase_file:-}" ]]; then
+			local _raw_artifacts
+			_raw_artifacts="$(eaw_phase_completion_required_artifacts "${phase_file}" 2>/dev/null)"
+			if [[ -n "$_raw_artifacts" ]]; then
+				_ci_artifact_paths="$(echo "$_raw_artifacts" | \
+					awk -v p="${_ci_card_dir}/" 'NR>1{printf ","}{printf "%s%s",p,$0}END{printf "\n"}')"
+			fi
+		fi
+
+		local _ci_success_criteria="não disponível"
+
 		mkdir -p "$(dirname "$_ci_prompt_output")"
 		sed \
 			-e "s|{{CARD}}|${card}|g" \
 			-e "s|{{TRACK}}|${track_id}|g" \
 			-e "s|{{PHASE}}|${step_id}|g" \
 			-e "s|{{EAW_WORKDIR}}|${EAW_WORKDIR}|g" \
+			-e "s|{{INTAKE_PATH}}|${_ci_intake_path}|g" \
+			-e "s|{{PROMPT_PATH}}|${_ci_prompt_path}|g" \
+			-e "s|{{ARTIFACT_PATHS}}|${_ci_artifact_paths}|g" \
+			-e "s|{{SUCCESS_CRITERIA}}|${_ci_success_criteria}|g" \
 			"$_ci_tmpl_path" > "$_ci_prompt_output"
 	fi
 	if [[ -f "$_ci_prompt_output" ]]; then
