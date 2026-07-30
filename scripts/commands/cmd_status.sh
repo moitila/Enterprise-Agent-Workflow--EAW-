@@ -20,6 +20,16 @@ eaw_status_completed_phases_emit() {
 	fi
 }
 
+eaw_status_check_skip_envelope() {
+	local card_dir="$1"
+	local phase_id="$2"
+	local po_file="${card_dir}/investigations/10_phase_output.json"
+	[[ -f "$po_file" ]] || return 1
+	grep -q '"status":"skipped"' "$po_file" 2>/dev/null || return 1
+	grep -q "\"phase_id\":\"${phase_id}\"" "$po_file" 2>/dev/null || return 1
+	return 0
+}
+
 eaw_status_pending_artifacts_emit() {
 	local card_dir="$1"
 	local phase_file="$2"
@@ -76,7 +86,13 @@ eaw_status_render_single() {
 	echo "completed_phases:"
 	eaw_status_completed_phases_emit "${EAW_CARD_WORKFLOW_COMPLETED_PHASES:-}"
 	echo "pending_required_artifacts:"
-	eaw_status_pending_artifacts_emit "$card_dir" "$EAW_CARD_WORKFLOW_CURRENT_PHASE_FILE"
+	if eaw_status_check_skip_envelope "$card_dir" "$EAW_CARD_WORKFLOW_CURRENT_PHASE"; then
+		echo "  - none"
+		echo "skipped_phase_artifacts:"
+		eaw_status_pending_artifacts_emit "$card_dir" "$EAW_CARD_WORKFLOW_CURRENT_PHASE_FILE"
+	else
+		eaw_status_pending_artifacts_emit "$card_dir" "$EAW_CARD_WORKFLOW_CURRENT_PHASE_FILE"
+	fi
 	printf "latest_journal_entry: %s\n" "$(eaw_status_latest_journal_entry "$card_dir")"
 }
 
