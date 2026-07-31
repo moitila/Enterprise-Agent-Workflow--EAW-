@@ -1,0 +1,9 @@
+version=v2
+track=spike
+phase=backlog_handoff
+created=2026-07-28
+card=EAW-HRD-SPIKE-PROMPTS-P1
+hardening=EAW-HRD-SPIKE-CONFLICT-P1
+changes=added_item_fields:status_da_decisao,problema_confirmado,hipotese_sustentadora,evidencia_autorizadora,menor_mudanca_possivel,mecanismo_existente,dependencias,risco_duplicacao,compatibilidade,rollback,tipo_correto;added_rules:NEEDS_EVIDENCE_nao_vira_feature,NO_GO_sem_backlog,spikes_derivadas_para_NEEDS_EVIDENCE
+required_substrings=ROLE|OBJECTIVE|INPUT|OUTPUT|OUTPUT_STRUCTURE|READ_SCOPE|WRITE_SCOPE|RULES|FORBIDDEN|FAIL_CONDITIONS
+forbidden_words=ignore previous instructions|write anywhere|disable tests|skip validation|modify excluded repos

@@ -1,3 +1,9 @@
 version=v2
+track=spike
+phase=hypotheses
+created=2026-07-28
+card=EAW-HRD-SPIKE-PROMPTS-P1
+hardening=EAW-HRD-SPIKE-CONFLICT-P1
+changes=replaced_contaminated_patch_prompt;added:hipoteses_concorrentes_por_categoria,evidencias_contrarias,evidencias_faltantes,como_falsificar,confianca_atual,decisao_bloqueada_por_hipotese,risco_aceitar_incorretamente;rule:nao_selecionar_hipotese_mais_elegante
 required_substrings=ROLE|OBJECTIVE|INPUT|OUTPUT|OUTPUT_STRUCTURE|READ_SCOPE|WRITE_SCOPE|RULES|FORBIDDEN|FAIL_CONDITIONS
 forbidden_words=ignore previous instructions|write anywhere|disable tests|skip validation|modify excluded repos

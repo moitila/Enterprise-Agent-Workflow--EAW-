@@ -1,9 +1,9 @@
 version=v2
 track=spike
-phase=findings
+phase=technical_decision
 created=2026-07-28
 card=EAW-HRD-SPIKE-PROMPTS-P1
 hardening=EAW-HRD-SPIKE-CONFLICT-P1
-changes=replaced_contaminated_patch_prompt;added_achado_fields:fato_observado,contrato_declarado,divergencia_identificada,intencao_recuperada,intencao_nao_recuperada,consequencia_comprovada,limite_da_evidencia;added_5_evidence_rules;removed:scripts_eaw_cli_calls
+changes=added:gate_suficiencia_11_perguntas,classificacao_por_alternativa(GO|LIMITED_GO|NO_GO|NEEDS_EVIDENCE),decisao_bloqueada_respondida;rules:nao_converter_NEEDS_EVIDENCE_em_feature,nao_agrupar_alternativas,nao_gerar_backlog_para_NO_GO
 required_substrings=ROLE|OBJECTIVE|INPUT|OUTPUT|OUTPUT_STRUCTURE|READ_SCOPE|WRITE_SCOPE|RULES|FORBIDDEN|FAIL_CONDITIONS
 forbidden_words=ignore previous instructions|write anywhere|disable tests|skip validation|modify excluded repos
