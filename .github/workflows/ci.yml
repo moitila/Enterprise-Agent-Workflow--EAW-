@@ -99,6 +99,11 @@ jobs:
           set -euo pipefail
           bash tests/smoke_audit_skip.sh
 
+      - name: Smoke - completion content test
+        run: |
+          set -euo pipefail
+          bash tests/smoke_completion_content.sh
+
       - name: Test - full suite
         run: |
           set -euo pipefail

@@ -1997,22 +1997,12 @@ eaw_scaffold_phase_artifact() {
 EOF
 		;;
 	implementation/10_change_plan.md)
-		cat >"$target_path" <<EOF
-# Change Plan - Card $card
-
-## Steps
-
-## Validation
-EOF
+		echo "RUNTIME: phase=$phase_id deferred_artifact=$rel_path"
+		return 0
 		;;
 	implementation/20_patch_notes.md)
-		cat >"$target_path" <<EOF
-# Patch Notes - Card $card
-
-## Changes
-
-## Risks
-EOF
+		echo "RUNTIME: phase=$phase_id deferred_artifact=$rel_path"
+		return 0
 		;;
 	investigations/20_handoff.json)
 		printf '{"from_phase":"%s","status":"completed","messages":[],"codes":[]}\n' \

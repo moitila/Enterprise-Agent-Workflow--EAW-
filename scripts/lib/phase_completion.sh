@@ -275,14 +275,26 @@ eaw_phase_completion_artifact_has_meaningful_content() {
 		return 1
 	fi
 	rm -f "$scaffold_file" "$source_scaffold_file"
-	# Size floor: reject if below minimum regardless of scaffold identity
-	local size_check_min="${SIZE_FLOOR:-500}"
-	local file_size
-	file_size="$(wc -c < "$file" 2>/dev/null || echo 0)"
-	if [[ "$file_size" -lt "$size_check_min" ]]; then
-		rm -f "$scaffold_file"
-		return 1   # below size floor → not meaningful
+
+	# FIX-IDENTITY: reject unrendered template variables (identity, not size). The
+	# card-token scaffold case (<CARD>) is already covered by the anti-scaffold cmp
+	# above (the template IS the scaffold); here we additionally reject files that
+	# still carry unrendered {{...}} template variables.
+	if grep -Eq '\{\{[A-Za-z0-9_]+\}\}' "$file"; then
+		return 1
 	fi
+
+	# FIX-SCOPELOCK: scope.lock has its own deterministic structural parse (no size).
+	# Runs AFTER the anti-scaffold cmp so the byte-identical minimal scaffold stays
+	# rejected, while the enriched scaffold (write_allowlist: [] / headings) is accepted.
+	if [[ "$rel_path" == "implementation/00_scope.lock.md" ]]; then
+		if grep -q 'write_allowlist:' "$file" ||
+			{ grep -q '^## In Scope' "$file" && grep -q '^## Out of Scope' "$file"; }; then
+			return 0
+		fi
+		return 1
+	fi
+
 	return 0
 }
 
@@ -320,7 +332,7 @@ eaw_phase_completion_evaluate_required_artifacts_substantive() {
 	local card_dir="$2"
 	local phase_id="$3"
 	local phase_file="$4"
-	local rel_path metadata meta_line min_bytes validation_mode headings file_size failed heading
+	local rel_path metadata meta_line validation_mode headings failed heading
 	local -a warning_artifacts=()
 	local -a blocking_artifacts=()
 	local -a heading_list
@@ -329,12 +341,10 @@ eaw_phase_completion_evaluate_required_artifacts_substantive() {
 		[[ -n "$rel_path" ]] || continue
 		metadata="$(eaw_phase_completion_artifact_object_metadata "$phase_file" "$rel_path")"
 		[[ -n "$metadata" ]] || continue
-		min_bytes=""
 		validation_mode=""
 		headings=""
 		while IFS= read -r meta_line; do
 			case "$meta_line" in
-			min_bytes=*) min_bytes="${meta_line#min_bytes=}" ;;
 			validation_mode=*) validation_mode="${meta_line#validation_mode=}" ;;
 			required_headings=*) headings="${meta_line#required_headings=}" ;;
 			esac
@@ -344,14 +354,7 @@ eaw_phase_completion_evaluate_required_artifacts_substantive() {
 		if [[ "$rel_path" == "investigations/20_handoff.json" || "$rel_path" == "investigations/10_phase_output.json" ]]; then
 			continue
 		fi
-		# Apply global default when min_bytes not declared per-artifact in YAML
-		min_bytes="${min_bytes:-500}"
-		if [[ -n "$min_bytes" && -e "$card_dir/$rel_path" ]]; then
-			file_size="$(wc -c <"$card_dir/$rel_path")"
-			if [[ "$file_size" -lt "$min_bytes" ]]; then
-				failed=1
-			fi
-		fi
+		# No size floor: substantiveness is validated by required_headings only (identity).
 		if [[ "$failed" -eq 0 && -n "$headings" && -e "$card_dir/$rel_path" ]]; then
 			IFS='|' read -ra heading_list <<<"$headings"
 			for heading in "${heading_list[@]}"; do
@@ -521,7 +524,7 @@ eaw_card_enforce_mandatory_analysis_audit() {
 				fi
 			fi
 		fi
-		if [[ "$require" -eq 1 && ! -s "$card_dir/$rel_path" ]]; then
+		if [[ "$require" -eq 1 ]] && ! eaw_phase_completion_artifact_has_meaningful_content "$card" "$card_dir" "$producer" "$rel_path"; then
 			missing_artifacts+=("$rel_path")
 		fi
 	done

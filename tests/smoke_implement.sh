@@ -52,7 +52,7 @@ bash ./scripts/eaw next "$CARD" >/dev/null 2>&1
 printf "# planning ok\n" >"$INVESTIGATIONS_DIR/40_next_steps.md"
 pad_markdown_artifact "$INVESTIGATIONS_DIR/40_next_steps.md"
 bash ./scripts/eaw next "$CARD" >/dev/null 2>&1
-printf "# scope lock ok\n" >"$IMPL_DIR/00_scope.lock.md"
+printf '# Scope Lock\n\nwrite_allowlist: []\n\n## In Scope\n\n## Out of Scope\n' >"$IMPL_DIR/00_scope.lock.md"
 pad_markdown_artifact "$IMPL_DIR/00_scope.lock.md"
 printf "# change plan ok\n" >"$IMPL_DIR/10_change_plan.md"
 pad_markdown_artifact "$IMPL_DIR/10_change_plan.md"
@@ -68,7 +68,6 @@ fi
 	for path in \
 		"$IMPL_DIR/00_scope.lock.md" \
 		"$IMPL_DIR/10_change_plan.md" \
-		"$IMPL_DIR/20_patch_notes.md" \
 		"$PROMPTS_DIR/implementation_planning.md" \
 		"$PROMPTS_DIR/implementation_executor.md"; do
 	if [[ ! -e "$path" ]]; then

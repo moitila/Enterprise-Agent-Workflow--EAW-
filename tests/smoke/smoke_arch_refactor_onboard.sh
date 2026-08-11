@@ -89,6 +89,24 @@ EOF
 	done
 }
 
+write_scope_lock_artifact() {
+	local path="$1"
+	local scenario="$2"
+	mkdir -p "$(dirname "$path")"
+	# scope.lock e validado por parse estrutural proprio (write_allowlist/headings), sem tamanho.
+	cat >"$path" <<EOF
+# Scope Lock
+
+Scenario: ${scenario}
+
+write_allowlist: []
+
+## In Scope
+
+## Out of Scope
+EOF
+}
+
 fixture_note() {
 	local note="Deterministic AR-07 smoke handoff content. This field keeps the JSON artifact above the minimum content gate while preserving messages and codes as the machine-readable transition fields."
 	while [[ "${#note}" -lt 700 ]]; do
@@ -192,7 +210,7 @@ fill_planning_artifact() {
 fill_implementation_planning_artifacts() {
 	local workdir="$1"
 	local card="$2"
-	write_markdown_artifact "$workdir/out/$card/implementation/00_scope.lock.md" "Scope Lock" "full-flow"
+	write_scope_lock_artifact "$workdir/out/$card/implementation/00_scope.lock.md" "full-flow"
 	write_markdown_artifact "$workdir/out/$card/implementation/10_change_plan.md" "Change Plan" "full-flow"
 }
 

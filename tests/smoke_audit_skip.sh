@@ -11,6 +11,10 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 EAW_TRACKS_DIR="${EAW_TRACKS_DIR:-$REPO_ROOT/tracks}"
 export EAW_TRACKS_DIR
 
+# O audit reusa has_meaningful_content -> render_expected_scaffold, que le EAW_TEMPLATES_DIR sob set -u.
+EAW_TEMPLATES_DIR="${EAW_TEMPLATES_DIR:-$REPO_ROOT/templates}"
+export EAW_TEMPLATES_DIR
+
 # shellcheck disable=SC1091
 source "$REPO_ROOT/scripts/lib.sh"
 # shellcheck disable=SC1091
@@ -54,6 +58,14 @@ seed() {
 	printf 'fixture substantive content for %s\n' "$rel" >"$card_dir/$rel"
 }
 
+# seed_scope_lock <card_dir>  — 00_scope.lock.md estrutural (validado por parse proprio, sem tamanho)
+seed_scope_lock() {
+	local card_dir="$1"
+	mkdir -p "$card_dir/implementation"
+	printf '# Scope Lock\n\nwrite_allowlist: []\n\n## In Scope\n\n## Out of Scope\n' \
+		>"$card_dir/implementation/00_scope.lock.md"
+}
+
 # run_audit <card_dir> <phase_id>  — imprime o exit code do audit
 run_audit() {
 	local card_dir="$1" phase_id="$2" rc=0
@@ -67,7 +79,7 @@ mkdir -p "$c1/investigations" "$c1/implementation"
 make_state "$c1" bug_ONBOARD intake findings planning implementation_planning
 seed "$c1" investigations/20_findings.md
 seed "$c1" investigations/40_next_steps.md
-seed "$c1" implementation/00_scope.lock.md
+seed_scope_lock "$c1"
 seed "$c1" implementation/10_change_plan.md
 # investigations/30_hypotheses.md ausente de proposito
 rc1="$(run_audit "$c1" implementation_executor)"
@@ -80,7 +92,7 @@ mkdir -p "$c2/investigations" "$c2/implementation"
 make_state "$c2" bug intake findings hypotheses planning implementation_planning
 seed "$c2" investigations/20_findings.md
 seed "$c2" investigations/40_next_steps.md
-seed "$c2" implementation/00_scope.lock.md
+seed_scope_lock "$c2"
 seed "$c2" implementation/10_change_plan.md
 # investigations/30_hypotheses.md ausente; 'hypotheses' NAO foi pulada
 rc2="$(run_audit "$c2" implementation_executor)"
@@ -101,7 +113,7 @@ pass "CA-3 multi-skip ARCH_REFACTOR_ONBOARD: 3 skips nao bloqueiam (exit 0)"
 c4="$WORK/ca4"
 mkdir -p "$c4/investigations" "$c4/implementation"
 make_state "$c4" patch ingest planning implementation_executor
-seed "$c4" implementation/00_scope.lock.md
+seed_scope_lock "$c4"
 seed "$c4" implementation/10_change_plan.md
 # ausentes: 20_findings, 30_hypotheses, 40_next_steps
 rc4="$(run_audit "$c4" implementation_executor)"

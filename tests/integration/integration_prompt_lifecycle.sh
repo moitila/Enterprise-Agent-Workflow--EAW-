@@ -164,7 +164,7 @@ pad_markdown_artifact "$EAW_WORKDIR/out/500/investigations/30_hypotheses.md"
 printf "# planning ok\n" >"$EAW_WORKDIR/out/500/investigations/40_next_steps.md"
 pad_markdown_artifact "$EAW_WORKDIR/out/500/investigations/40_next_steps.md"
 "$RUNTIME_ROOT/scripts/eaw" next 500 >/dev/null
-printf "# scope lock ok\n" >"$EAW_WORKDIR/out/500/implementation/00_scope.lock.md"
+printf '# Scope Lock\n\nwrite_allowlist: []\n\n## In Scope\n\n## Out of Scope\n' >"$EAW_WORKDIR/out/500/implementation/00_scope.lock.md"
 pad_markdown_artifact "$EAW_WORKDIR/out/500/implementation/00_scope.lock.md"
 printf "# change plan ok\n" >"$EAW_WORKDIR/out/500/implementation/10_change_plan.md"
 pad_markdown_artifact "$EAW_WORKDIR/out/500/implementation/10_change_plan.md"
