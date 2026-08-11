@@ -172,6 +172,7 @@ PY
 
 printf "[test] smoke scope\n"
 bash "$REPO_ROOT/tests/smoke/smoke_baseline.sh"
+bash "$REPO_ROOT/tests/smoke_audit_skip.sh"
 
 printf "[test] integration scope\n"
 bash "$REPO_ROOT/tests/integration/integration_suite.sh"

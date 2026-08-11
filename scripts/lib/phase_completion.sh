@@ -440,24 +440,91 @@ eaw_card_enforce_mandatory_analysis_audit() {
 		;;
 	esac
 
-	for rel_path in \
-		investigations/20_findings.md \
-		investigations/30_hypotheses.md \
-		investigations/40_next_steps.md; do
-		if [[ ! -s "$card_dir/$rel_path" ]]; then
+	# Mapa fixo artefato->fase produtora (mantem o recorte por fase: 00_scope.lock/
+	# 10_change_plan so em implementation_executor).
+	local -a rel_paths=(
+		investigations/20_findings.md
+		investigations/30_hypotheses.md
+		investigations/40_next_steps.md
+	)
+	local -a producers=(
+		findings
+		hypotheses
+		planning
+	)
+	if [[ "$phase_id" == "implementation_executor" ]]; then
+		rel_paths+=(
+			implementation/00_scope.lock.md
+			implementation/10_change_plan.md
+		)
+		producers+=(
+			implementation_planning
+			implementation_planning
+		)
+	fi
+
+	# Fonte duravel do skip (H2): completed_phases do state_card_<track>.yaml em card_dir.
+	local state_unresolved=0
+	local state_file="" track_id="" completed=""
+	local -a state_matches=()
+	local match
+	while IFS= read -r match; do
+		[[ -n "$match" ]] && state_matches+=("$match")
+	done < <(compgen -G "$card_dir/state_card_*.yaml" 2>/dev/null || true)
+	if [[ ${#state_matches[@]} -ne 1 || ! -r "${state_matches[0]:-}" ]]; then
+		state_unresolved=1
+	else
+		state_file="${state_matches[0]}"
+		track_id="$(basename "$state_file")"
+		track_id="${track_id#state_card_}"
+		track_id="${track_id%.yaml}"
+		completed="$(eaw_yaml_state_completed_phases "$state_file" 2>/dev/null || true)"
+	fi
+
+	local -A completed_set=()
+	if [[ "$state_unresolved" -eq 0 ]]; then
+		local phase_line
+		while IFS= read -r phase_line; do
+			[[ -n "$phase_line" ]] && completed_set["$phase_line"]=1
+		done <<<"$completed"
+	fi
+
+	# Clausula (2) le a track oficial da track corrente; irresolvivel -> fail-safe.
+	local track_dir="" track_dir_unresolved=0
+	if [[ "$state_unresolved" -eq 0 ]]; then
+		if ! track_dir="$(eaw_official_track_dir "$track_id" 2>/dev/null)"; then
+			track_dir_unresolved=1
+			track_dir=""
+		fi
+	fi
+
+	local i producer require phase_file artifact_re
+	for i in "${!rel_paths[@]}"; do
+		rel_path="${rel_paths[$i]}"
+		producer="${producers[$i]}"
+		if [[ "$state_unresolved" -eq 1 ]]; then
+			require=1
+		elif [[ -z "${completed_set[$producer]:-}" ]]; then
+			require=0
+		elif [[ "$track_dir_unresolved" -eq 1 ]]; then
+			require=1
+		else
+			phase_file="$track_dir/phases/${producer}.yaml"
+			if [[ ! -r "$phase_file" ]]; then
+				require=1
+			else
+				artifact_re="$(printf '%s' "$rel_path" | sed -e 's/[][\\.^$*+?(){}|]/\\&/g')"
+				if grep -Eq "^[[:space:]]*-[[:space:]]+(path:[[:space:]]+)?${artifact_re}[[:space:]]*$" "$phase_file"; then
+					require=1
+				else
+					require=0
+				fi
+			fi
+		fi
+		if [[ "$require" -eq 1 && ! -s "$card_dir/$rel_path" ]]; then
 			missing_artifacts+=("$rel_path")
 		fi
 	done
-
-	if [[ "$phase_id" == "implementation_executor" ]]; then
-		for rel_path in \
-			implementation/00_scope.lock.md \
-			implementation/10_change_plan.md; do
-			if [[ ! -s "$card_dir/$rel_path" ]]; then
-				missing_artifacts+=("$rel_path")
-			fi
-		done
-	fi
 
 	if [[ ${#missing_artifacts[@]} -gt 0 ]]; then
 		printf "ERROR: card %s phase '%s' blocked; desvio de escopo: artefatos obrigatorios ausentes ou vazios:" "$card" "$phase_id" >&2

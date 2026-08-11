@@ -94,6 +94,11 @@ jobs:
           set -euo pipefail
           bash tests/scaffold_parity_smoke.sh
 
+      - name: Smoke - audit skip/track-aware test
+        run: |
+          set -euo pipefail
+          bash tests/smoke_audit_skip.sh
+
       - name: Test - full suite
         run: |
           set -euo pipefail
