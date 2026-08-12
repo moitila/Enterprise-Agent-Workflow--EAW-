@@ -78,7 +78,7 @@ EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" next "$card" >/dev/null
 printf "# planning ok\n" >"$workdir/out/$card/investigations/40_next_steps.md"
 pad_markdown_artifact "$workdir/out/$card/investigations/40_next_steps.md"
 EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" next "$card" >/dev/null
-printf "# scope lock ok\n" >"$workdir/out/$card/implementation/00_scope.lock.md"
+printf '# Scope Lock\n\nwrite_allowlist: []\n\n## In Scope\n\n## Out of Scope\n' >"$workdir/out/$card/implementation/00_scope.lock.md"
 pad_markdown_artifact "$workdir/out/$card/implementation/00_scope.lock.md"
 printf "# change plan ok\n" >"$workdir/out/$card/implementation/10_change_plan.md"
 pad_markdown_artifact "$workdir/out/$card/implementation/10_change_plan.md"

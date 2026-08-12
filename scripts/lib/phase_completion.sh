@@ -275,14 +275,26 @@ eaw_phase_completion_artifact_has_meaningful_content() {
 		return 1
 	fi
 	rm -f "$scaffold_file" "$source_scaffold_file"
-	# Size floor: reject if below minimum regardless of scaffold identity
-	local size_check_min="${SIZE_FLOOR:-500}"
-	local file_size
-	file_size="$(wc -c < "$file" 2>/dev/null || echo 0)"
-	if [[ "$file_size" -lt "$size_check_min" ]]; then
-		rm -f "$scaffold_file"
-		return 1   # below size floor → not meaningful
+
+	# FIX-IDENTITY: reject unrendered template variables (identity, not size). The
+	# card-token scaffold case (<CARD>) is already covered by the anti-scaffold cmp
+	# above (the template IS the scaffold); here we additionally reject files that
+	# still carry unrendered {{...}} template variables.
+	if grep -Eq '\{\{[A-Za-z0-9_]+\}\}' "$file"; then
+		return 1
 	fi
+
+	# FIX-SCOPELOCK: scope.lock has its own deterministic structural parse (no size).
+	# Runs AFTER the anti-scaffold cmp so the byte-identical minimal scaffold stays
+	# rejected, while the enriched scaffold (write_allowlist: [] / headings) is accepted.
+	if [[ "$rel_path" == "implementation/00_scope.lock.md" ]]; then
+		if grep -q 'write_allowlist:' "$file" ||
+			{ grep -q '^## In Scope' "$file" && grep -q '^## Out of Scope' "$file"; }; then
+			return 0
+		fi
+		return 1
+	fi
+
 	return 0
 }
 
@@ -320,7 +332,7 @@ eaw_phase_completion_evaluate_required_artifacts_substantive() {
 	local card_dir="$2"
 	local phase_id="$3"
 	local phase_file="$4"
-	local rel_path metadata meta_line min_bytes validation_mode headings file_size failed heading
+	local rel_path metadata meta_line validation_mode headings failed heading
 	local -a warning_artifacts=()
 	local -a blocking_artifacts=()
 	local -a heading_list
@@ -329,12 +341,10 @@ eaw_phase_completion_evaluate_required_artifacts_substantive() {
 		[[ -n "$rel_path" ]] || continue
 		metadata="$(eaw_phase_completion_artifact_object_metadata "$phase_file" "$rel_path")"
 		[[ -n "$metadata" ]] || continue
-		min_bytes=""
 		validation_mode=""
 		headings=""
 		while IFS= read -r meta_line; do
 			case "$meta_line" in
-			min_bytes=*) min_bytes="${meta_line#min_bytes=}" ;;
 			validation_mode=*) validation_mode="${meta_line#validation_mode=}" ;;
 			required_headings=*) headings="${meta_line#required_headings=}" ;;
 			esac
@@ -344,14 +354,7 @@ eaw_phase_completion_evaluate_required_artifacts_substantive() {
 		if [[ "$rel_path" == "investigations/20_handoff.json" || "$rel_path" == "investigations/10_phase_output.json" ]]; then
 			continue
 		fi
-		# Apply global default when min_bytes not declared per-artifact in YAML
-		min_bytes="${min_bytes:-500}"
-		if [[ -n "$min_bytes" && -e "$card_dir/$rel_path" ]]; then
-			file_size="$(wc -c <"$card_dir/$rel_path")"
-			if [[ "$file_size" -lt "$min_bytes" ]]; then
-				failed=1
-			fi
-		fi
+		# No size floor: substantiveness is validated by required_headings only (identity).
 		if [[ "$failed" -eq 0 && -n "$headings" && -e "$card_dir/$rel_path" ]]; then
 			IFS='|' read -ra heading_list <<<"$headings"
 			for heading in "${heading_list[@]}"; do
@@ -440,24 +443,91 @@ eaw_card_enforce_mandatory_analysis_audit() {
 		;;
 	esac
 
-	for rel_path in \
-		investigations/20_findings.md \
-		investigations/30_hypotheses.md \
-		investigations/40_next_steps.md; do
-		if [[ ! -s "$card_dir/$rel_path" ]]; then
+	# Mapa fixo artefato->fase produtora (mantem o recorte por fase: 00_scope.lock/
+	# 10_change_plan so em implementation_executor).
+	local -a rel_paths=(
+		investigations/20_findings.md
+		investigations/30_hypotheses.md
+		investigations/40_next_steps.md
+	)
+	local -a producers=(
+		findings
+		hypotheses
+		planning
+	)
+	if [[ "$phase_id" == "implementation_executor" ]]; then
+		rel_paths+=(
+			implementation/00_scope.lock.md
+			implementation/10_change_plan.md
+		)
+		producers+=(
+			implementation_planning
+			implementation_planning
+		)
+	fi
+
+	# Fonte duravel do skip (H2): completed_phases do state_card_<track>.yaml em card_dir.
+	local state_unresolved=0
+	local state_file="" track_id="" completed=""
+	local -a state_matches=()
+	local match
+	while IFS= read -r match; do
+		[[ -n "$match" ]] && state_matches+=("$match")
+	done < <(compgen -G "$card_dir/state_card_*.yaml" 2>/dev/null || true)
+	if [[ ${#state_matches[@]} -ne 1 || ! -r "${state_matches[0]:-}" ]]; then
+		state_unresolved=1
+	else
+		state_file="${state_matches[0]}"
+		track_id="$(basename "$state_file")"
+		track_id="${track_id#state_card_}"
+		track_id="${track_id%.yaml}"
+		completed="$(eaw_yaml_state_completed_phases "$state_file" 2>/dev/null || true)"
+	fi
+
+	local -A completed_set=()
+	if [[ "$state_unresolved" -eq 0 ]]; then
+		local phase_line
+		while IFS= read -r phase_line; do
+			[[ -n "$phase_line" ]] && completed_set["$phase_line"]=1
+		done <<<"$completed"
+	fi
+
+	# Clausula (2) le a track oficial da track corrente; irresolvivel -> fail-safe.
+	local track_dir="" track_dir_unresolved=0
+	if [[ "$state_unresolved" -eq 0 ]]; then
+		if ! track_dir="$(eaw_official_track_dir "$track_id" 2>/dev/null)"; then
+			track_dir_unresolved=1
+			track_dir=""
+		fi
+	fi
+
+	local i producer require phase_file artifact_re
+	for i in "${!rel_paths[@]}"; do
+		rel_path="${rel_paths[$i]}"
+		producer="${producers[$i]}"
+		if [[ "$state_unresolved" -eq 1 ]]; then
+			require=1
+		elif [[ -z "${completed_set[$producer]:-}" ]]; then
+			require=0
+		elif [[ "$track_dir_unresolved" -eq 1 ]]; then
+			require=1
+		else
+			phase_file="$track_dir/phases/${producer}.yaml"
+			if [[ ! -r "$phase_file" ]]; then
+				require=1
+			else
+				artifact_re="$(printf '%s' "$rel_path" | sed -e 's/[][\\.^$*+?(){}|]/\\&/g')"
+				if grep -Eq "^[[:space:]]*-[[:space:]]+(path:[[:space:]]+)?${artifact_re}[[:space:]]*$" "$phase_file"; then
+					require=1
+				else
+					require=0
+				fi
+			fi
+		fi
+		if [[ "$require" -eq 1 ]] && ! eaw_phase_completion_artifact_has_meaningful_content "$card" "$card_dir" "$producer" "$rel_path"; then
 			missing_artifacts+=("$rel_path")
 		fi
 	done
-
-	if [[ "$phase_id" == "implementation_executor" ]]; then
-		for rel_path in \
-			implementation/00_scope.lock.md \
-			implementation/10_change_plan.md; do
-			if [[ ! -s "$card_dir/$rel_path" ]]; then
-				missing_artifacts+=("$rel_path")
-			fi
-		done
-	fi
 
 	if [[ ${#missing_artifacts[@]} -gt 0 ]]; then
 		printf "ERROR: card %s phase '%s' blocked; desvio de escopo: artefatos obrigatorios ausentes ou vazios:" "$card" "$phase_id" >&2

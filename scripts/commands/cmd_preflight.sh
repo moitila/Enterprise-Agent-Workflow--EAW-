@@ -20,7 +20,7 @@ cmd_preflight() {
                 resolved_path="$(resolve_repo_path "$path")"
                 if [[ ! -d "$resolved_path" ]]; then
                     failures+=("repos.conf:$lineno repo '$key' path não existe: $resolved_path")
-                elif [[ ! -d "$resolved_path/.git" ]]; then
+                elif ! git -C "$resolved_path" rev-parse --git-dir &>/dev/null; then
                     failures+=("repos.conf:$lineno repo '$key' não é repositório git: $resolved_path")
                 fi
             fi

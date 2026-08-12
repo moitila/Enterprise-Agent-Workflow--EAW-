@@ -67,6 +67,11 @@ Expected:
 
 `mktemp` is required because smoke tests create isolated temporary workspaces and repositories.
 
+### Invariant: smokes never write the versioned config
+
+Smoke tests must never target the versioned `config/repos.conf` as a write destination.
+They run against a temporary copy of the runtime (`cp -R scripts templates tracks config` into a `mktemp -d`, invoking `"$tmp_runtime/scripts/eaw"`) or an isolated `EAW_WORKDIR`, so config and output resolve to disposable directories and the versioned file physically never enters the run. This removes the fragile backup/restore-by-trap pattern, which left the working tree dirty during a run and could corrupt the versioned file under `kill -9`. A tripwire in `tests/test.sh` snapshots the `config/repos.conf` hash at the start of the suite and asserts it unchanged at the end, failing if any smoke mutates it.
+
 ## Stability Policy
 
 - Tests assert contract behavior, not implementation details of module layout.

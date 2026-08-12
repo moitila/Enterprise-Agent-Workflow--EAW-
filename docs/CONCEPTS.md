@@ -168,7 +168,7 @@ vs `phase.context`.
 |---|---|---|
 | **Propósito** | Verificar a prontidão de um card específico para avançar de fase | Inspecionar a saúde geral do ambiente EAW |
 | **Argumento** | Obrigatório: `<CARD>` (ex: `eaw preflight BL-03`) | Nenhum |
-| **Checks realizados** | (1) `EAW_WORKDIR` definido e é diretório válido; (2) repos.conf — cada path existe e contém `.git`; (3) runtime root acessível (`./scripts/eaw`); (4) `out/<CARD>/prompts/` existe com ≥1 arquivo | Dirs resolvidos (`RUNTIME_ROOT`, `EAW_WORKDIR`, etc.); ferramentas (`git`, `rg`, `awk`, `sed`, `bash`); arquivos de config (`repos.conf`, `search.conf`, `eaw.conf`); git hooks; `EAW_SMOKE_SH` |
+| **Checks realizados** | (1) `EAW_WORKDIR` definido e é diretório válido; (2) repos.conf — cada path existe e é repositório git detectado via `git rev-parse --git-dir` (aceita `.git` diretório, arquivo/worktree ou gitdir de submódulo); (3) runtime root acessível (`./scripts/eaw`); (4) `out/<CARD>/prompts/` existe com ≥1 arquivo | Dirs resolvidos (`RUNTIME_ROOT`, `EAW_WORKDIR`, etc.); ferramentas (`git`, `rg`, `awk`, `sed`, `bash`); arquivos de config (`repos.conf`, `search.conf`, `eaw.conf`); git hooks; `EAW_SMOKE_SH` |
 | **Output** | Binário: `PASS (4/4 checks)` ou `FAIL [n/4]` com lista de falhas | Estruturado por categoria: `OK / WARN / ERROR` por item |
 | **Escopo** | Card-específico | Ambiente global |
 | **Quando usar** | Antes de `eaw next <CARD>` — confirmar que o card está pronto para avançar | Ao configurar o ambiente, diagnosticar erros inesperados ou validar uma nova instalação |

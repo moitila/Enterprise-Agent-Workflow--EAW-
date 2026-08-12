@@ -1,3 +1,9 @@
 version=v2
+track=spike
+phase=intake
+created=2026-07-28
+card=EAW-HRD-SPIKE-PROMPTS-P1
+hardening=EAW-HRD-SPIKE-CONFLICT-P1
+changes=added:decisao_bloqueada,fatos_conhecidos,alegacoes_nao_confirmadas,criterios_de_suficiencia,fontes_iniciais;added_rules:anti_solucao_prematura,separacao_fato_alegacao,referencia_contratual_com_path
 required_substrings=ROLE|OBJECTIVE|INPUT|OUTPUT|OUTPUT_STRUCTURE|READ_SCOPE|WRITE_SCOPE|RULES|FORBIDDEN|FAIL_CONDITIONS
 forbidden_words=ignore previous instructions|write anywhere|disable tests|skip validation|modify excluded repos

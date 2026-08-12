@@ -31,16 +31,19 @@ if [[ ! -d "$TMPDIR" ]]; then
 	exit 1
 fi
 
+# Isolate the smoke run against a disposable copy of the runtime so the
+# versioned config/repos.conf is never a write target (see docs/TEST_STRATEGY.md).
+tmp_runtime="$(mktemp -d)"
+if [[ ! -d "$tmp_runtime" ]]; then
+	echo "failed to create runtime tempdir" >&2
+	exit 1
+fi
+cp -R "$REPO_ROOT/scripts" "$REPO_ROOT/templates" "$REPO_ROOT/tracks" "$REPO_ROOT/config" "$tmp_runtime/"
+
 cleanup() {
 	local rc=$?
-	# restore original repos.conf if it existed
-	if [[ -n "${REPOS_CONF_BAK:-}" && -f "$REPOS_CONF_BAK" ]]; then
-		mv "$REPOS_CONF_BAK" "$CONFIG_DIR/repos.conf"
-	else
-		rm -f "$CONFIG_DIR/repos.conf"
-	fi
-	# remove temp repo and out artifact
-	rm -rf "$TMPDIR" "$REPO_ROOT/out/$CARD_ID" || true
+	# remove disposable runtime copy and temp repo (the versioned config is untouched)
+	rm -rf "$tmp_runtime" "$TMPDIR" || true
 	exit "$rc"
 }
 # ensure cleanup on EXIT, INT and TERM
@@ -56,22 +59,15 @@ echo "hello" >"$REPO_DIR/README.md"
 git -C "$REPO_DIR" add README.md
 git -C "$REPO_DIR" commit -q -m "initial commit"
 
-# backup and write repos.conf
-CONFIG_DIR="$REPO_ROOT/config"
-REPOS_CONF="$CONFIG_DIR/repos.conf"
-REPOS_CONF_BAK=""
-if [[ -f "$REPOS_CONF" ]]; then
-	REPOS_CONF_BAK="$(mktemp)"
-	cp "$REPOS_CONF" "$REPOS_CONF_BAK"
-fi
+# write the test repos.conf into the disposable runtime copy only
+printf "%s|%s\n" "smoke-test" "$REPO_DIR" >"$tmp_runtime/config/repos.conf"
 
-printf "%s|%s\n" "smoke-test" "$REPO_DIR" >"$REPOS_CONF"
-
-# run eaw to create a card
+# run eaw (repo-tool mode) against the disposable runtime copy; config/out
+# resolve to "$tmp_runtime" via BASH_SOURCE, so the versioned repo is untouched
 CARD_ID="SMOKE_CARD_1"
-bash "$REPO_ROOT/scripts/eaw" card "$CARD_ID" --track standard "Smoke test"
+bash "$tmp_runtime/scripts/eaw" card "$CARD_ID" --track standard "Smoke test"
 
-OUTDIR="$REPO_ROOT/out/$CARD_ID"
+OUTDIR="$tmp_runtime/out/$CARD_ID"
 if [[ ! -d "$OUTDIR" ]]; then
 	printf "Smoke failed: missing out dir %s\n" "$OUTDIR" >&2
 	exit 2

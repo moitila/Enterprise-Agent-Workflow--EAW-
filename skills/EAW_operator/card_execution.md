@@ -202,7 +202,9 @@ Se houver conflito entre prompt/plano e `scope lock`/allowlist:
 - Nunca deixar o subagente escolher repo de escrita diferente do definido por `scope lock`/allowlist
 - Nunca aceitar plano ou validacao que aponte para repo diferente da allowlist sem bloquear a execucao
 - **Nunca escrever o prompt do subagente manualmente**: o prompt renderizado em `out/<CARD>/prompts/<phase>.md` é o contrato soberano da fase — deve ser passado verbatim ao subagente. Skills e contexto complementar (workspace.md, traps.md) são adicionados ao contexto, nunca substituem nem modificam o conteúdo do prompt renderizado.
-- **Fluxo de passagem do prompt**: ler `out/<CARD>/prompts/<phase>.md` de forma mecânica (sem interpretar) e passar o conteúdo bruto ao subagente. Com CI feedback ativo, o subagente valida a qualidade do prompt e reporta em `ci_feedback/` — o orquestrador não precisa pré-validar o conteúdo. **Ler para entender é o erro**: qualquer compreensão do conteúdo habilita reescrita, resumo ou seleção parcial — que são violações.
+- **Fluxo de passagem do prompt**: ler `out/<CARD>/prompts/<phase>.md` de forma mecânica e passar o conteúdo bruto ao subagente. Com CI feedback ativo, o subagente valida a qualidade do prompt e reporta em `ci_feedback/` — o orquestrador não precisa pré-validar o conteúdo.
+
+  O orquestrador não deve interpretar o prompt para executar, resumir, selecionar ou reescrever a fase. No fluxo normal, o prompt deve ser repassado mecanicamente ao agente isolado. Após um bloqueio, o orquestrador pode inspecionar somente fatos operacionais necessários para preservar e registrar a falha — paths, mensagens, metadados, artefatos citados, track, fase e skills declaradas — sem executar ou reinterpretar a tarefa substantiva da fase.
 
 ## Runtime authority
 
@@ -272,6 +274,10 @@ mencionar está incorreta.
 - Inferir skills pelo `phase_role` quando `phase.skills` está declarado
 - Mencionar skills dentro do prompt da fase (skills são contexto do agente, não conteúdo do prompt)
 - Deixar de incluir `workspace` no agente isolado
+- **Criar stubs ou artefatos artificiais para satisfazer gates de artefatos** — proibido independentemente do bloqueio
+- **Preencher artefatos com conteúdo fictício, genérico ou sem evidência real** para que o gate de `next` passe
+- **Contornar falhas de `next` alterando runtime, track, YAML, prompt ou allowlist** — a falha deve ser investigada, não contornada
+- **Escolher arbitrariamente entre fontes contraditórias** sem evidência de hierarquia declarada
 
 ### Operational Traps
 
@@ -279,13 +285,78 @@ Ver skill dedicada: `skills/EAW_operator/traps.md`
 
 ## Fail-fast
 
-Se:
-- o prompt da fase não existir após `next`
-- a execução do agente falhar
-- o executor nao conseguir criar ou usar agente isolado explicitamente
-- após a execução da fase o `next` não avançar
+Se o `next` bloquear a progressão por qualquer motivo:
 
-→ parar a execução
-→ não forçar progressão manual
-→ reportar erro ou bloqueio do runtime
-→ não substituir a falta de agente isolado por execução local da fase
+→ parar a execução  
+→ não forçar progressão manual  
+→ aplicar o protocolo abaixo antes de qualquer outra ação
+
+### Casos que não exigem protocolo de conflito
+
+- **Prompt da fase não existe após `next`**: problema técnico de ambiente — verificar instalação e runtime root.
+- **Executor não consegue criar agente isolado**: problema de plataforma — reportar ao executor.
+
+### Protocolo de falha de `next` (bloqueio de fase)
+
+Quando `eaw next` retorna falha de validação de artefatos ou de completion:
+
+**Passo 1 — Preservar**
+
+Sem alterar nada:
+- mensagem original emitida pelo `next`
+- exit code
+- estado atual do card (`state_card_*.yaml`)
+
+**Passo 2 — Coletar evidências mínimas**
+
+| Item | Fonte |
+|------|-------|
+| Comando executado | linha de terminal |
+| Exit code | saída do comando |
+| Mensagem literal do `next` | stdout/stderr |
+| Track e fase atual | `state_card_*.yaml` |
+| Artefatos exigidos pelo gate | mensagem do `next` |
+| Artefatos declarados pela track | `tracks/<track>/phases/<fase>.yaml` |
+| Prompt renderizado da fase | `out/<CARD>/prompts/<fase>.md` |
+| Skills aplicáveis | `phase.skills` + `skills/registry.yaml` |
+
+**Passo 3 — Classificar preliminarmente**
+
+| Classe | Condição |
+|--------|----------|
+| `BLOQUEIO_OPERACIONAL` | Artefato ausente declarado pela track; contrato indica inequivocamente como produzi-lo |
+| `POSSIVEL_CONFLITO_OU_CONTRADICAO` | A exigência do gate não está explicada nas fontes operacionais imediatamente disponíveis, ou duas fontes apontam para caminhos diferentes |
+| `CAUSA_INDETERMINADA` | Nenhuma das categorias acima cobre o bloqueio observado |
+
+A classificação é **preliminar**: o operador não tem autoridade para resolver definitivamente conflitos contratuais. A ausência de um artefato no YAML local não prova erro do runtime. A aplicação de um gate não prova que a track está errada. A causa definitiva pertence à investigação escalada.
+
+**Passo 4 — Ação por classe**
+
+- `BLOQUEIO_OPERACIONAL`: corrigir o artefato real conforme o contrato declarado e repetir `next`. Não criar artefato artificial.
+- `POSSIVEL_CONFLITO_OU_CONTRADICAO` ou `CAUSA_INDETERMINADA`: interromper a progressão e escalar conforme Passo 6.
+
+**Passo 5 — Registrar**
+
+Registrar somente em um mecanismo cujo contrato aceite observações de bloqueio — handoff compatível, artefato de diagnóstico previsto pela track ou outro destino explicitamente autorizado para esse tipo de conteúdo. A presença de um path na allowlist permite a escrita, mas não torna o artefato semanticamente adequado. O journal (`execution_journal.jsonl`) somente pode ser atualizado por comando ou mecanismo oficial do runtime; nunca editá-lo manualmente.
+
+Se nenhum mecanismo apropriado existir, não modificar o card. Preservar as evidências e reportar o bloqueio ao executor. O registro deve conter:
+
+```
+## Comando e resultado
+## Track e fase
+## Exigência do gate
+## Contrato ou declaração encontrada
+## Fontes divergentes
+## Ações deliberadamente não realizadas
+## Classificação preliminar
+## Evidências
+## Próxima investigação recomendada
+```
+
+**Passo 6 — Escalar**
+
+- Reportar o bloqueio ao executor com o registro do Passo 5.
+- Recomendar uma spike de investigação quando o bloqueio não puder ser resolvido pelo contrato explícito. Criar a spike somente quando houver autorização para criação de card e o operador estiver equipado com a skill apropriada de criação.
+- Não retomar a execução antes de uma decisão registrada, verificável e compatível com o estado do card.
+
+As proibições definidas em Anti-patterns continuam integralmente aplicáveis durante qualquer bloqueio. O papel do operador é `detectar → preservar → coletar → classificar preliminarmente → escalar`. Redesenhar runtime, inventar contratos, escolher arquitetura e modificar tracks estão fora desse papel.
