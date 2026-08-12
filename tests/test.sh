@@ -8,6 +8,36 @@ fail() {
 	exit 1
 }
 
+REPOS_CONF="$REPO_ROOT/config/repos.conf"
+
+repos_conf_sha() {
+	sha256sum <"$1"
+}
+
+# Tripwire: the versioned config/repos.conf must never be mutated by a smoke.
+assert_repos_conf_unchanged() {
+	local now
+	now="$(repos_conf_sha "$REPOS_CONF")"
+	if [[ "$now" != "$REPOS_CONF_SHA0" ]]; then
+		fail "config/repos.conf versionado foi modificado por um smoke (esperado $REPOS_CONF_SHA0, obtido $now)"
+	fi
+}
+
+# TDD-reverso: prove the tripwire predicate detects a mutation, operating on a
+# sandbox copy in $TMPDIR so the real versioned file is never touched.
+verify_repos_conf_guard_detects_mutation() {
+	local sandbox baseline mutated
+	sandbox="$(mktemp -d)"
+	cp "$REPOS_CONF" "$sandbox/repos.conf"
+	baseline="$(repos_conf_sha "$sandbox/repos.conf")"
+	printf 'smoke-test|/x\n' >>"$sandbox/repos.conf"
+	mutated="$(repos_conf_sha "$sandbox/repos.conf")"
+	rm -rf "$sandbox"
+	if [[ "$mutated" == "$baseline" ]]; then
+		fail "repos.conf tripwire predicate failed to detect a mutation (TDD-reverso)"
+	fi
+}
+
 prepare_feature_planning_with_onboarding() {
 	local runtime_root="$1"
 	local phase_file="$runtime_root/tracks/feature/phases/planning.yaml"
@@ -171,6 +201,8 @@ PY
 }
 
 printf "[test] smoke scope\n"
+REPOS_CONF_SHA0="$(repos_conf_sha "$REPOS_CONF")"
+verify_repos_conf_guard_detects_mutation
 bash "$REPO_ROOT/tests/smoke/smoke_baseline.sh"
 bash "$REPO_ROOT/tests/smoke_audit_skip.sh"
 bash "$REPO_ROOT/tests/smoke_completion_content.sh"
@@ -187,3 +219,6 @@ bash "$REPO_ROOT/tests/golden/golden_suite.sh"
 
 printf "[test] onboarding runtime scope\n"
 run_onboarding_runtime_suite
+
+assert_repos_conf_unchanged
+printf "[test] repos.conf tripwire OK\n"
