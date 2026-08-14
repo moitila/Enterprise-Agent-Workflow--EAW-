@@ -1880,6 +1880,15 @@ eaw_card_critical_paths_block() {
 	printf '%s\n' "${critical_paths[@]}" | awk 'NF && !seen[$0]++ { printf "- %s\n", $0 }'
 }
 
+
+# Parse top-level capabilities list from a phase YAML file.
+# Prints one capability per line, or empty when absent.
+eaw_yaml_phase_capabilities() {
+	local phase_file="${1:-}"
+	[[ -z "$phase_file" || ! -f "$phase_file" ]] && return 0
+	awk '/^capabilities:/{p=1; next} p && /^  - /{print $2} p && !/^  - /{p=0}' "$phase_file"
+}
+
 eaw_runtime_environment_block() {
 	local card="$1"
 	local card_dir="$2"
@@ -1936,6 +1945,10 @@ PHASE_SKILLS:
 ${skill_lines%$'\n'}"
 		fi
 	fi
+	local capabilities_block
+	capabilities_block="$(eaw_yaml_phase_capabilities "${phase_file:-}")"
+	local capabilities_section=""
+	[[ -n "$capabilities_block" ]] && capabilities_section=$'CAPABILITIES_DECLARED:\n'"${capabilities_block}"
 
 	cat <<EOF
 RUNTIME_ENVIRONMENT
@@ -1951,6 +1964,7 @@ OUT_DIR: $EAW_OUT_DIR
 TARGET_REPOSITORIES:
 $target_repos
 $phase_skills_block
+${capabilities_section:+${capabilities_section}$'\n'}
 WRITE_ALLOWLIST:
 $write_allowlist
 $write_allowlist_extra

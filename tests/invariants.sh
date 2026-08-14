@@ -194,4 +194,31 @@ while IFS= read -r -d '' phase_yaml; do
     ' "$phase_yaml")
 done < <(find tracks -name '*.yaml' -path '*/phases/*' -print0)
 
+# INV-10: field capabilities present in spike, absent in bug_ONBOARD and feature
+for inv_yaml in tracks/spike/track.yaml tracks/spike/phases/findings.yaml tracks/spike/phases/technical_decision.yaml; do
+    label=""
+    case "$inv_yaml" in
+        tracks/spike/track.yaml)                      label="INV-10a" ;;
+        tracks/spike/phases/findings.yaml)            label="INV-10b" ;;
+        tracks/spike/phases/technical_decision.yaml)  label="INV-10c" ;;
+    esac
+    if ! grep -q "^capabilities:" "$inv_yaml" 2>/dev/null; then
+        fail "$label" "missing 'capabilities:' in $inv_yaml"
+    else
+        printf "PASS: %s: capabilities present in %s\n" "$label" "$inv_yaml"
+    fi
+done
+for inv_yaml in tracks/bug_ONBOARD/track.yaml tracks/feature/track.yaml; do
+    label=""
+    case "$inv_yaml" in
+        tracks/bug_ONBOARD/track.yaml)  label="INV-10d" ;;
+        tracks/feature/track.yaml)      label="INV-10e" ;;
+    esac
+    if grep -q "capabilities" "$inv_yaml" 2>/dev/null; then
+        fail "$label" "unexpected 'capabilities' in $inv_yaml"
+    else
+        printf "PASS: %s: no capabilities contamination in %s\n" "$label" "$inv_yaml"
+    fi
+done
+
 summary

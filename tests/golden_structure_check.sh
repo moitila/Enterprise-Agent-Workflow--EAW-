@@ -61,6 +61,10 @@ assert_prompt_contract() {
   assert_file_contains "$file" "TARGET_REPOSITORIES:"
   assert_file_contains "$file" "WRITE_ALLOWLIST:"
   assert_file_contains "$file" "CRITICAL_PATHS:"
+  # H7: spike phases that declare capabilities must render CAPABILITIES_DECLARED in the prompt
+  if [[ "${TRACK_ID:-}" == "spike" ]] && [[ "${STEP_ID:-}" == "findings" || "${STEP_ID:-}" == "technical_decision" ]]; then
+    assert_file_contains "$file" "CAPABILITIES_DECLARED"
+  fi
 }
 
 main() {

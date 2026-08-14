@@ -1,4 +1,5 @@
 config_version: 1
+capabilities: [knowledge.read]
 
 phase:
   id: technical_decision
@@ -13,7 +14,7 @@ phase:
     - eaw_spike_operator
 
   prompt:
-    active: 1
+    active: 2
     path: templates/prompts/spike/technical_decision/prompt_v<active>.md
 
   tooling_hints:

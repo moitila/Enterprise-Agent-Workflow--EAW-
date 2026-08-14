@@ -48,3 +48,20 @@ investigations/40_backlog_or_handoff.md <- backlog e rastreamento do intake
 - NAO implementar na fase technical_decision.
 - Cada fase produz apenas seus artefatos declarados — nada alem.
 - `eaw next` e a unica autoridade para validar avanco de fase.
+
+## Campo capabilities nas fases spike
+
+As fases `findings` e `technical_decision` da track `spike` carregam o campo:
+
+```yaml
+capabilities: [knowledge.read]
+```
+
+Isso significa que essas fases **declaram explicitamente** intenção de acesso a TARGET_REPOS
+em modo leitura. Para o agente executor:
+
+- O bloco `RUNTIME_ENVIRONMENT` do prompt renderizado incluirá `CAPABILITIES_DECLARED: knowledge.read`.
+- A declaração é auditável: o runtime emite `capability_warning` no journal para fases que
+  acessam TARGET_REPOS sem declarar capabilities.
+- A declaração é opt-in: não cria obrigações adicionais além da visibilidade declarada.
+- Fases sem o campo (ex.: `intake`, `hypotheses`) mantêm comportamento atual inalterado.

@@ -22,6 +22,7 @@ INPUT
 - OUT_DIR={{OUT_DIR}}
 - CARD_DIR={{CARD_DIR}}
 - TARGET_REPOS: {{TARGET_REPOS}}
+- CAPABILITIES_DECLARED: $CAPABILITIES_DECLARED
 - REQUIRED_ARTIFACTS:
   - `{{CARD_DIR}}/investigations/00_spike_intake.md`
   - `{{CARD_DIR}}/investigations/10_hypotheses.md`
