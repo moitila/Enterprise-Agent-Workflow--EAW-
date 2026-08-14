@@ -2021,7 +2021,12 @@ eaw_scaffold_phase_artifact() {
 	local type
 
 	target_dir="$(dirname "$target_path")"
-	assert_write_scope "workflow_phase" "ensure_dir artifact_parent" "$target_dir" "$card_dir"
+	local _caps _sandbox_path=""
+	_caps="$(eaw_yaml_phase_capabilities "${EAW_CARD_WORKFLOW_CURRENT_PHASE_FILE:-}")"
+	if printf '%s\n' "$_caps" | grep -qx "execution.local_sandbox"; then
+		_sandbox_path="${TMPDIR:-/tmp}/EAW-${card}/"
+	fi
+	assert_write_scope "workflow_phase" "ensure_dir artifact_parent" "$target_dir" "$card_dir" ${_sandbox_path:+"$_sandbox_path"}
 	ensure_dir "$target_dir"
 	eaw_prune_deferred_investigation_artifact_seed "$target_path" "$rel_path" "$card" || true
 
@@ -2355,7 +2360,12 @@ eaw_render_phase_prompt_template() {
 		fi
 	fi
 
-	assert_write_scope "workflow_phase" "write phase prompt" "$output_file" "$card_dir"
+	local _caps _sandbox_path=""
+	_caps="$(eaw_yaml_phase_capabilities "${EAW_CARD_WORKFLOW_CURRENT_PHASE_FILE:-}")"
+	if printf '%s\n' "$_caps" | grep -qx "execution.local_sandbox"; then
+		_sandbox_path="${TMPDIR:-/tmp}/EAW-${card}/"
+	fi
+	assert_write_scope "workflow_phase" "write phase prompt" "$output_file" "$card_dir" ${_sandbox_path:+"$_sandbox_path"}
 	ensure_dir "$(dirname "$output_file")"
 
 	awk \
@@ -2642,9 +2652,15 @@ eaw_execute_workflow_phase() {
 		return 1
 	fi
 
+	local _caps _sandbox_path=""
+	_caps="$(eaw_yaml_phase_capabilities "${EAW_CARD_WORKFLOW_CURRENT_PHASE_FILE:-}")"
+	if printf '%s\n' "$_caps" | grep -qx "execution.local_sandbox"; then
+		_sandbox_path="${TMPDIR:-/tmp}/EAW-${card}/"
+	fi
+
 	while IFS= read -r rel_path; do
 		[[ -n "$rel_path" ]] || continue
-		assert_write_scope "workflow_phase" "ensure_dir phase_output_dir" "$card_dir/$rel_path" "$card_dir"
+		assert_write_scope "workflow_phase" "ensure_dir phase_output_dir" "$card_dir/$rel_path" "$card_dir" ${_sandbox_path:+"$_sandbox_path"}
 		ensure_dir "$card_dir/$rel_path"
 		echo "RUNTIME: phase=$phase_id created_dir=$rel_path"
 	done < <(eaw_yaml_phase_output_directories "$phase_file")

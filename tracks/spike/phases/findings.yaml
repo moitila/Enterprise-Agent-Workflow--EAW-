@@ -1,5 +1,17 @@
 config_version: 1
-capabilities: [knowledge.read]
+capabilities:
+  - knowledge.read
+  - execution.local_sandbox
+
+agent_contract:
+  sandbox_teardown: |
+    Quando esta fase declara execution.local_sandbox:
+    1. Criar sandbox em $TMPDIR/EAW-[CARD_ID]/ antes de qualquer escrita efemera.
+    2. Declarar trap 'rm -rf "$SANDBOX_PATH"' EXIT imediatamente apos criar o sandbox.
+    3. Verificar ausencia do sandbox ao final normal da fase:
+       test -d "$SANDBOX_PATH" && echo RESIDUAL_FAIL || echo TEARDOWN_OK
+    4. Risco residual: SIGKILL impede o trap; artefatos efemeros persistem ate proxima sessao
+       (impacto BAIXO - sem dado sensivel).
 
 phase:
   id: findings

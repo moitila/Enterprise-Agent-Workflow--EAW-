@@ -56,3 +56,10 @@ Traps aprendidas em execuções reais. Incluir no Mandatory Delegation Context d
   ```json
   {"from_phase":"<nome-da-fase>","status":"waiting","blocker":"<descricao-nao-vazia>","messages":[],"codes":[]}
   ```
+
+## Sandbox (execution.local_sandbox)
+
+- **TRAP: teardown de `$TMPDIR/EAW-[CARD_ID]/` é responsabilidade do agente** — sempre declarar `trap 'rm -rf "$SANDBOX_PATH"' EXIT` imediatamente após criar o sandbox; nunca assumir limpeza automática pelo runtime.
+- **Sandbox restrito ao CARD_ID corrente**: `$TMPDIR/EAW-[CARD_ID]/` é o único prefixo aceito; escrita em `$TMPDIR/EAW-outro-card/` retorna `WRITE_SCOPE_VIOLATION` (exit 97).
+- **Risco residual SIGKILL**: `SIGKILL` não executa o trap; artefatos efêmeros persistem até a próxima sessão (impacto BAIXO — sem dado sensível).
+- **Declaração obrigatória no YAML de fase**: `execution.local_sandbox` deve aparecer em `capabilities:` (formato multi-line) para que `eaw_yaml_phase_capabilities()` o detecte; formato inline `capabilities: [...]` produz string vazia.

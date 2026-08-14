@@ -54,17 +54,30 @@ investigations/40_backlog_or_handoff.md <- backlog e rastreamento do intake
 As fases `findings` e `technical_decision` da track `spike` carregam o campo:
 
 ```yaml
-capabilities: [knowledge.read]
+capabilities:
+  - knowledge.read
+  - execution.local_sandbox
 ```
 
-Isso significa que essas fases **declaram explicitamente** intenção de acesso a TARGET_REPOS
-em modo leitura. Para o agente executor:
+### knowledge.read
+
+Declara intenção de acesso a TARGET_REPOS em modo leitura. Para o agente executor:
 
 - O bloco `RUNTIME_ENVIRONMENT` do prompt renderizado incluirá `CAPABILITIES_DECLARED: knowledge.read`.
 - A declaração é auditável: o runtime emite `capability_warning` no journal para fases que
   acessam TARGET_REPOS sem declarar capabilities.
 - A declaração é opt-in: não cria obrigações adicionais além da visibilidade declarada.
 - Fases sem o campo (ex.: `intake`, `hypotheses`) mantêm comportamento atual inalterado.
+
+### execution.local_sandbox
+
+Declara que a fase pode criar e usar `$TMPDIR/EAW-[CARD_ID]/` como destino legítimo
+para artefatos efêmeros (consultas SQL, dumps temporários, arquivos de análise).
+
+- Disponível em: `findings`, `technical_decision` (track `spike`).
+- Requer teardown obrigatório via `trap 'rm -rf "$SANDBOX_PATH"' EXIT` imediatamente após criar o sandbox.
+- O isolamento é por CARD_ID: `$TMPDIR/EAW-outro-card/` é bloqueado com `WRITE_SCOPE_VIOLATION` (exit 97).
+- Risco residual: `SIGKILL` não executa o trap; artefatos efêmeros persistem até a próxima sessão (impacto BAIXO).
 
 ## Emissão de `waiting` vs `completed` nas fases `findings` e `technical_decision`
 
