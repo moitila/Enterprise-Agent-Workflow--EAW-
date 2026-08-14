@@ -455,6 +455,33 @@ eaw_eval_skip_when() {
 	return 1
 }
 
+eaw_yaml_track_waiting_when() {
+	local file="$1"
+	local phase_id="$2"
+	awk -v ph="$phase_id" '
+                /^  transitions:[[:space:]]*$/ { in_tr=1; next }
+                in_tr && /^  [^[:space:]]/ { in_tr=0 }
+                in_tr && $0 ~ ("^    " ph ":[[:space:]]*$") { in_ph=1; next }
+                in_ph && /^    [^[:space:]]/ { in_ph=0 }
+                in_ph && /^      waiting_when:[[:space:]]*$/ { in_ww=1; next }
+                in_ww && /^      [^[:space:]-]/ { exit }
+                in_ww && /^        - / {
+                        line=$0
+                        sub(/^        - /, "", line)
+                        sub(/[[:space:]]+$/, "", line)
+                        print line
+                }
+        ' "$file"
+}
+
+eaw_eval_waiting_when() {
+	local declared_codes="$1"
+	local hf_status="$2"
+	[[ -z "$declared_codes" ]] && return 1
+	[[ "$hf_status" == "waiting" ]] || return 1
+	return 0
+}
+
 eaw_emit_phase_envelope() {
 	local track_file="$1"
 	local phase_id="$2"
@@ -542,8 +569,8 @@ eaw_validate_envelope_schema() {
 			echo "  envelope: 10_phase_output.json missing or empty phase_id" >&2
 			errors=$((errors + 1))
 		fi
-		if ! echo "$normalized" | grep -qE '"status":"(completed|skipped|failed)"' 2>/dev/null; then
-			echo "  envelope: 10_phase_output.json status missing or invalid (expected completed|skipped|failed)" >&2
+		if ! echo "$normalized" | grep -qE '"status":"(completed|skipped|failed|waiting)"' 2>/dev/null; then
+			echo "  envelope: 10_phase_output.json status missing or invalid (expected completed|skipped|failed|waiting)" >&2
 			errors=$((errors + 1))
 		fi
 		if ! echo "$normalized" | grep -q '"summary":' 2>/dev/null; then
@@ -560,9 +587,20 @@ eaw_validate_envelope_schema() {
 			echo "  envelope: 20_handoff.json missing or empty from_phase" >&2
 			errors=$((errors + 1))
 		fi
-		if ! echo "$normalized" | grep -qE '"status":"(completed|skipped|failed)"' 2>/dev/null; then
-			echo "  envelope: 20_handoff.json status missing or invalid (expected completed|skipped|failed)" >&2
+		if ! echo "$normalized" | grep -qE '"status":"(completed|skipped|failed|waiting)"' 2>/dev/null; then
+			echo "  envelope: 20_handoff.json status missing or invalid (expected completed|skipped|failed|waiting)" >&2
 			errors=$((errors + 1))
+		fi
+		# H2: if status=waiting, require non-empty blocker field
+		local _hf_status_local
+		_hf_status_local="$(echo "$normalized" | grep -o '"status":"[^"]*"' 2>/dev/null | head -1 | sed 's/"status":"//;s/"//')"
+		if [[ "$_hf_status_local" == "waiting" ]]; then
+			local _blocker_val
+			_blocker_val="$(echo "$normalized" | grep -oE '"blocker":"[^"]*"' | head -1 | sed 's/"blocker":"//;s/"//')"
+			if [[ -z "$_blocker_val" ]]; then
+				echo "  envelope: 20_handoff.json status=waiting requires non-empty blocker field" >&2
+				errors=$((errors + 1))
+			fi
 		fi
 		if ! echo "$normalized" | grep -q '"messages":\[' 2>/dev/null; then
 			echo "  envelope: 20_handoff.json missing messages array" >&2
@@ -3051,6 +3089,33 @@ cmd_next() {
 	if ! eaw_validate_envelope_schema "$EAW_CARD_WORKFLOW_TRACK_FILE" "$current_phase" "$card_dir"; then
 		echo "CARD ${card}: ${current_phase} envelope schema validation failed" >&2
 		return 1
+	fi
+
+	# H3/H4/H5: detect waiting envelope and manage WAITING state
+	local _hf_next="${card_dir}/investigations/20_handoff.json"
+	local _hf_next_status=""
+	if [[ -f "$_hf_next" ]]; then
+		_hf_next_status="$(tr -d '\n' <"$_hf_next" | grep -o '"status":"[^"]*"' 2>/dev/null | head -1 | sed 's/"status":"//;s/"//')"
+	fi
+	OUTDIR="$card_dir"
+	# H5: emit waiting_resumed if phase was previously in WAITING state
+	if [[ "${EAW_CARD_WORKFLOW_PHASE_STATUS:-}" == "WAITING" ]]; then
+		eaw_journal_append "${EAW_CARD_WORKFLOW_CARD}" "${EAW_CARD_WORKFLOW_TRACK_ID}" "$current_phase" "WAITING" "0" "waiting_resumed"
+	fi
+	# H3/H4: if handoff status=waiting and waiting_when declared, enter WAITING state
+	local _waiting_codes
+	_waiting_codes="$(eaw_yaml_track_waiting_when "$EAW_CARD_WORKFLOW_TRACK_FILE" "$current_phase")"
+	if eaw_eval_waiting_when "$_waiting_codes" "$_hf_next_status"; then
+		previous_phase="$(eaw_normalize_phase_id "$(eaw_yaml_state_scalar "$EAW_CARD_WORKFLOW_STATE_FILE" "previous_phase")")"
+		completed_phases="${EAW_CARD_WORKFLOW_COMPLETED_PHASES:-}"
+		phase_started_at="$(eaw_state_scalar_or_default "$EAW_CARD_WORKFLOW_STATE_FILE" "phase_started_at" "$(utc_timestamp)")"
+		eaw_write_phase_status "$EAW_CARD_WORKFLOW_STATE_FILE" "WAITING" "$previous_phase" \
+			"$current_phase" "$completed_phases" "$phase_started_at" "false" "null"
+		eaw_journal_append "${EAW_CARD_WORKFLOW_CARD}" "${EAW_CARD_WORKFLOW_TRACK_ID}" "$current_phase" "WAITING" "0" "waiting_entered"
+		printf "Validation: passed\n\n"
+		printf "Action:\nPhase waiting — blocker present; phase will resume when blocker is cleared\n\n"
+		echo "CARD ${card}: ${current_phase} entered WAITING state"
+		return 0
 	fi
 
 	# 617: capture context summary before envelope overwrite

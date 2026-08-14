@@ -93,6 +93,27 @@ Para executar um card:
     - reportar bloqueio ao executor
     - nao forcar avanco manual
 
+### Protocolo WAITING / retomada de fase bloqueada
+
+Quando o agente de uma fase emite `status: waiting` com campo `blocker` preenchido, o `next` detecta o estado e escreve `phase_status: WAITING` no state file sem avançar a fase.
+
+**Como o orçuestrador identifica o estado:**
+- `next` imprime `CARD <id>: <fase> entered WAITING state`
+- O journal registra `event_type: waiting_entered` para rastreabilidade
+- A fase permanece como `current_phase` no state file
+
+**Como retomar após remoção do bloqueio:**
+1. O agente de fase deve reenviar um novo envelope `20_handoff.json` — com `status: completed` (bloqueio removido) ou com um novo `status: waiting` com `blocker` atualizado
+2. Rodar normalmente: `./scripts/eaw next <CARD_ID>`
+3. O `next` detecta que o estado anterior era WAITING e emite `event_type: waiting_resumed` no journal antes de processar o novo envelope
+4. Se o novo envelope for `completed`, a fase avança normalmente
+
+**Verificar histórico WAITING:**
+```bash
+grep '"event_type":"waiting_entered"\|"event_type":"waiting_resumed"' \
+  $EAW_WORKDIR/out/<CARD>/execution_journal.jsonl
+```
+
 ### CI Feedback (quando ci_feedback_enabled=true em eaw.conf)
 - O prompt renderizado já contém instrução para o agente isolado produzir
   `$EAW_WORKDIR/ci_feedback/<track>/<phase>/feedback_<CARD>.md`

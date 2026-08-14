@@ -65,3 +65,18 @@ em modo leitura. Para o agente executor:
   acessam TARGET_REPOS sem declarar capabilities.
 - A declaração é opt-in: não cria obrigações adicionais além da visibilidade declarada.
 - Fases sem o campo (ex.: `intake`, `hypotheses`) mantêm comportamento atual inalterado.
+
+## Emissão de `waiting` vs `completed` nas fases `findings` e `technical_decision`
+
+A fase deve emitir `waiting` no handoff quando a pergunta bloqueante **não pode ser respondida** com as evidências disponíveis na execução corrente:
+
+- Evidência necessária está ausente (dado, acesso, ferramenta inacessível).
+- Existe dependência externa não satisfeita (outra equipe, outro card, publicação pendente).
+- A investigação identificou ambiguidade que exige resolução antes de uma recomendação fundamentada.
+
+Quando emitir `waiting`:
+1. Preencher `blocker` com uma descrição objetiva do que está faltando — frase completa, sem abreviações.
+2. Usar o envelope canônico: `{"from_phase":"<fase>","status":"waiting","blocker":"<texto>","messages":[],"codes":[]}`.
+3. `blocker` vazio ou ausente causa rejeição pelo runtime.
+
+A fase deve emitir `completed` somente quando a pergunta bloqueante foi respondida com evidência verificada e a decisão pode ser documentada de forma fundamentada.

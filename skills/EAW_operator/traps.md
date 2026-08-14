@@ -46,3 +46,13 @@ Traps aprendidas em execuções reais. Incluir no Mandatory Delegation Context d
 ## Repos
 
 - **Role `target`/`infra` é por contexto, não global**: o mesmo repo pode ser `target` em um card (quando o card trabalha sobre ele) e `infra` em outro (quando é apenas tooling). Mudar `repos.conf` antes de criar cards que trabalham sobre o repo; restaurar após. Não há suporte a dual-role no mesmo `repos.conf`.
+
+## Estado WAITING
+
+- **Envelope `waiting` com `blocker` ausente**: o runtime rejeita com `20_handoff.json status=waiting requires non-empty blocker field`. O agente deve sempre preencher `blocker` com uma descrição objetiva do que impede a conclusão. Envelope `waiting` sem `blocker` nunca passa a validação de schema.
+- **Envelope `waiting` com `blocker` vazio (`""`)**: idêntico ao caso anterior — o runtime rejeita. Um valor não-vazio real é exigido.
+- **`messages` não-vazio bloqueia phase completion**: usar sempre `"messages": []` no handoff. O runtime rejeita se `messages` contiver entradas sem `type` e `code`. O campo `messages` é para uso interno do runtime; agentes não devem populá-lo.
+- **Envelope `waiting` correto** (canônico):
+  ```json
+  {"from_phase":"<nome-da-fase>","status":"waiting","blocker":"<descricao-nao-vazia>","messages":[],"codes":[]}
+  ```
