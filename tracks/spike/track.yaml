@@ -34,15 +34,12 @@ track:
       next: findings
       skip_when:
         - SPIKE_NO_REPO
-        - SPIKE_RESEARCH
       waiting_when:
         - WAITING
       contract:
         emit_handoff: true
     findings:
       next: technical_decision
-      skip_when:
-        - SPIKE_NO_REPO
       waiting_when:
         - WAITING
     technical_decision:

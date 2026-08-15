@@ -231,21 +231,30 @@ for inv_yaml in tracks/bug_ONBOARD/track.yaml tracks/feature/track.yaml; do
     fi
 done
 
-# INV-11: SPIKE_RESEARCH must not appear in findings skip_when in tracks/spike/track.yaml
-if awk '
-    /^    findings:/{in_findings=1; next}
-    in_findings && /^    [a-z]/{in_findings=0}
-    in_findings && /skip_when:/{in_skip=1; next}
-    in_findings && in_skip && /^[[:space:]]*-[[:space:]]*[^-]/{
-        v=$0; sub(/^[[:space:]]*-[[:space:]]*/,"",v); gsub(/[[:space:]]+$/,"",v)
-        if (v == "SPIKE_RESEARCH") { found=1; exit }
+# INV-11: hypotheses -> findings skips only SPIKE_NO_REPO; research must execute findings.
+inv11_values="$(awk '
+    /^    hypotheses:/{in_hypotheses=1; next}
+    in_hypotheses && /^    [a-z]/{in_hypotheses=0}
+    in_hypotheses && /skip_when:/{in_skip=1; next}
+    in_hypotheses && in_skip && /^[[:space:]]*-[[:space:]]*[^-]/{
+        value=$0
+        sub(/^[[:space:]]*-[[:space:]]*/, "", value)
+        gsub(/[[:space:]]+$/, "", value)
+        print value
     }
-    in_findings && in_skip && /^[[:space:]]+[a-z_]+:[[:space:]]*[^-]/{in_skip=0}
-    END{exit !found}
-' tracks/spike/track.yaml 2>/dev/null; then
-    fail "INV-11" "SPIKE_RESEARCH found in findings skip_when in tracks/spike/track.yaml"
+    in_hypotheses && in_skip && /^[[:space:]]+[a-z_]+:/{in_skip=0}
+' tracks/spike/track.yaml)"
+
+if printf '%s\n' "$inv11_values" | grep -qx 'SPIKE_RESEARCH'; then
+    fail "INV-11a" "SPIKE_RESEARCH found in hypotheses skip_when; findings would be skipped"
 else
-    printf "PASS: INV-11: SPIKE_RESEARCH absent from findings skip_when\n"
+    printf "PASS: INV-11a: SPIKE_RESEARCH executes findings\n"
+fi
+
+if printf '%s\n' "$inv11_values" | grep -qx 'SPIKE_NO_REPO'; then
+    printf "PASS: INV-11b: SPIKE_NO_REPO still skips findings\n"
+else
+    fail "INV-11b" "SPIKE_NO_REPO absent from hypotheses skip_when"
 fi
 
 summary
