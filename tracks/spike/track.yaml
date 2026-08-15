@@ -41,6 +41,8 @@ track:
         emit_handoff: true
     findings:
       next: technical_decision
+      skip_when:
+        - SPIKE_NO_REPO
       waiting_when:
         - WAITING
     technical_decision:

@@ -231,4 +231,21 @@ for inv_yaml in tracks/bug_ONBOARD/track.yaml tracks/feature/track.yaml; do
     fi
 done
 
+# INV-11: SPIKE_RESEARCH must not appear in findings skip_when in tracks/spike/track.yaml
+if awk '
+    /^    findings:/{in_findings=1; next}
+    in_findings && /^    [a-z]/{in_findings=0}
+    in_findings && /skip_when:/{in_skip=1; next}
+    in_findings && in_skip && /^[[:space:]]*-[[:space:]]*[^-]/{
+        v=$0; sub(/^[[:space:]]*-[[:space:]]*/,"",v); gsub(/[[:space:]]+$/,"",v)
+        if (v == "SPIKE_RESEARCH") { found=1; exit }
+    }
+    in_findings && in_skip && /^[[:space:]]+[a-z_]+:[[:space:]]*[^-]/{in_skip=0}
+    END{exit !found}
+' tracks/spike/track.yaml 2>/dev/null; then
+    fail "INV-11" "SPIKE_RESEARCH found in findings skip_when in tracks/spike/track.yaml"
+else
+    printf "PASS: INV-11: SPIKE_RESEARCH absent from findings skip_when\n"
+fi
+
 summary
