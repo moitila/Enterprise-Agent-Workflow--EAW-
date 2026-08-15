@@ -131,3 +131,61 @@ Quando emitir `waiting`:
 3. `blocker` vazio ou ausente causa rejeição pelo runtime.
 
 A fase deve emitir `completed` somente quando a pergunta bloqueante foi respondida com evidência verificada e a decisão pode ser documentada de forma fundamentada.
+
+## Campo `read_sources` nas fases spike
+
+### Quando declarar
+
+Declare `read_sources:` em uma fase spike quando o runtime precisar registrar explicitamente
+no prompt quais arquivos ou paths essa fase lê durante a investigação. A lista serve de contrato
+auditável entre o YAML da fase e o agente executor.
+
+### Formato
+
+`read_sources:` é campo top-level no YAML da fase, com itens de lista indentados:
+
+```yaml
+read_sources:
+  - scripts/lib.sh
+  - tracks/spike/phases/findings.yaml
+```
+
+Para fases que ainda não declaram fontes específicas, use lista vazia:
+
+```yaml
+read_sources: []
+```
+
+### Bloco no prompt renderizado
+
+Quando `read_sources:` contiver ao menos um item (lista não-vazia), o runtime injeta o bloco
+`READ_SOURCES:` no `RUNTIME_ENVIRONMENT` do prompt renderizado, imediatamente após
+`WRITE_ALLOWLIST:` e antes de `CRITICAL_PATHS:`:
+
+```
+READ_SOURCES:
+scripts/lib.sh
+tracks/spike/phases/findings.yaml
+```
+
+Quando `read_sources:` está ausente ou é lista vazia, o bloco `READ_SOURCES:` **não é emitido**
+— comportamento retroativamente compatível com fases que não usam o campo.
+
+### assert_read_scope
+
+Antes de ler qualquer arquivo listado em `read_sources`, o agente deve chamar
+`assert_read_scope <path>` para validar que o path está dentro do escopo declarado.
+Leitura sem `assert_read_scope` é permitida em modo não-enforced, mas viola o contrato.
+
+### Lifecycle para cards existentes
+
+Cards materializados antes da implementação de `read_sources` (ex.: cards em `intake/RUN`
+com `completed_phases: []`) **não requerem rematerialização**. O runtime (`cmd_next`) relê
+`track.yaml` a cada chamada de `next`. Para que o bloco `READ_SOURCES:` apareça no próximo
+prompt renderizado, basta:
+
+1. Adicionar `read_sources:` com os itens desejados ao YAML da fase correspondente.
+2. Executar `eaw next <CARD>` normalmente.
+
+Cards que não precisam de `read_sources` não são afetados — campo ausente ou lista vazia
+não altera o prompt nem bloqueia avanço de fase.

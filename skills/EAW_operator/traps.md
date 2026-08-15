@@ -32,6 +32,12 @@ Traps aprendidas em execuções reais. Incluir no Mandatory Delegation Context d
 - **dynamic_context com nomes customizados**: a fase exige nomes fixos:
   `00_scope_manifest.md`, `20_candidate_files.txt`, `30_target_snippets.md`, `40_warnings.md`.
   Não criar nomes por item de backlog — isso não satisfaz `phase.completion`.
+- **Gap: `assert_read_scope` via symlink sem `realpath`**: `canonicalize_scope_path`
+  fallback manual (`lib.sh` L95-124) nao resolve symlinks quando `realpath` esta
+  indisponivel — o resultado e o path do symlink, nao o target real. `assert_read_scope`
+  pode permitir leitura via symlink que aponta para fora do allowlist em ambientes sem
+  `realpath`. Mitigacao: verificar `command -v realpath` antes de confiar no enforcement
+  completo de `assert_read_scope` em ambientes sem `realpath`.
 
 ## CI / Runtime
 

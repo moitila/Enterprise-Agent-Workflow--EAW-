@@ -166,4 +166,26 @@ fi
 card_count="$(grep -c '"event_type":"card_completed"' "$OUTDIR_CARD/execution_journal.jsonl")"
 [ "$card_count" -eq 1 ] || fail "card_completed must appear exactly once, got $card_count"
 
+# JRN-01: 7th arg present — read_sources emitted
+tmpdir_jrn01="$(mktemp -d)"
+trap 'rm -rf "$tmpdir_jrn01"' EXIT
+OUTDIR="$tmpdir_jrn01/out"
+mkdir -p "$OUTDIR"
+EAW_CARD_WORKFLOW_CARD="TEST_CARD"
+EAW_CARD_WORKFLOW_TRACK_ID="feature"
+eaw_journal_append "TEST_CARD" "feature" "some_phase" "OK" "0" "phase_completed" '["/path/a","/path/b"]'
+grep -q '"read_sources":\["/path/a","/path/b"\]' "$OUTDIR/execution_journal.jsonl" \
+	|| fail "JRN-01 read_sources not emitted"
+
+# JRN-02: 7th arg absent — read_sources must be absent from JSONL
+tmpdir_jrn02="$(mktemp -d)"
+trap 'rm -rf "$tmpdir_jrn02"' EXIT
+OUTDIR="$tmpdir_jrn02/out"
+mkdir -p "$OUTDIR"
+EAW_CARD_WORKFLOW_CARD="TEST_CARD"
+EAW_CARD_WORKFLOW_TRACK_ID="feature"
+eaw_journal_append "TEST_CARD" "feature" "some_phase" "OK" "0" "phase_completed"
+grep -q '"read_sources"' "$OUTDIR/execution_journal.jsonl" \
+	&& fail "JRN-02 read_sources must be absent when arg omitted" || true
+
 printf "execution_journal smoke OK\n"

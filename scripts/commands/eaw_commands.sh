@@ -1927,6 +1927,12 @@ eaw_yaml_phase_capabilities() {
 	awk '/^capabilities:/{p=1; next} p && /^  - /{print $2} p && !/^  - /{p=0}' "$phase_file"
 }
 
+eaw_yaml_phase_read_sources() {
+	local phase_file="${1:-}"
+	[[ -z "$phase_file" || ! -f "$phase_file" ]] && return 0
+	awk '/^read_sources:/{p=1; next} p && /^  - /{print $2} p && !/^  - /{p=0}' "$phase_file"
+}
+
 eaw_runtime_environment_block() {
 	local card="$1"
 	local card_dir="$2"
@@ -1987,6 +1993,10 @@ ${skill_lines%$'\n'}"
 	capabilities_block="$(eaw_yaml_phase_capabilities "${phase_file:-}")"
 	local capabilities_section=""
 	[[ -n "$capabilities_block" ]] && capabilities_section=$'CAPABILITIES_DECLARED:\n'"${capabilities_block}"
+	local read_sources_block
+	read_sources_block="$(eaw_yaml_phase_read_sources "${phase_file:-}")"
+	local read_sources_section=""
+	[[ -n "$read_sources_block" ]] && read_sources_section=$'READ_SOURCES:\n'"${read_sources_block}"
 
 	cat <<EOF
 RUNTIME_ENVIRONMENT
@@ -2006,6 +2016,7 @@ ${capabilities_section:+${capabilities_section}$'\n'}
 WRITE_ALLOWLIST:
 $write_allowlist
 $write_allowlist_extra
+${read_sources_section:+${read_sources_section}$'\n'}
 CRITICAL_PATHS:
 $critical_paths
 EOF

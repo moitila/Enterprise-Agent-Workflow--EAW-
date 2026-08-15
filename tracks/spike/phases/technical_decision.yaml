@@ -4,6 +4,7 @@ capabilities:
   - execution.local_sandbox
   - execution.readonly_environment
   - execution.escalated
+read_sources: []
 
 agent_contract:
   sandbox_teardown: |
