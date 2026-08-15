@@ -114,6 +114,38 @@ grep '"event_type":"waiting_entered"\|"event_type":"waiting_resumed"' \
   $EAW_WORKDIR/out/<CARD>/execution_journal.jsonl
 ```
 
+### Protocolo execution.escalated
+
+Quando uma fase declara `execution.escalated`, o agente pode solicitar ao orquestrador
+a execução de uma operação que excede seu escopo de autonomia.
+
+**Fluxo completo:**
+
+1. Agente de fase produz `XX_escalation_request.md` (onde `XX` é o prefixo numérico da fase)
+   com os campos obrigatórios: `operation`, `preconditions`, `risks`, `expected_result`,
+   `requested_by`, `result_injection_path`.
+2. Agente emite `20_handoff.json` com:
+   `{"from_phase":"<fase>","status":"waiting","blocker":"escalation_pending: <operacao>","messages":[],"codes":[]}`.
+   O prefixo `escalation_pending:` no campo `blocker` identifica o tipo de WAITING.
+3. Runtime detecta `waiting_when: [WAITING]` e grava `phase_status: WAITING` no state file.
+4. Orquestrador lê `XX_escalation_request.md`, executa a operação declarada em `operation`,
+   e grava o resultado no path indicado em `result_injection_path`.
+5. Orquestrador produz novo envelope de retomada com `status: completed` e roda
+   `./scripts/eaw next <CARD_ID>`.
+6. A fase retoma com o resultado já disponível como artefato de entrada.
+
+**Campos obrigatórios de XX_escalation_request.md:**
+- `## operation` — descrição objetiva do que o orquestrador deve executar
+- `## preconditions` — condições verificáveis antes da execução (lista)
+- `## risks` — riscos com severidade estimada (lista)
+- `## expected_result` — o que o agente espera receber de volta
+- `## requested_by` — fase que solicitou (ex.: `findings`)
+- `## result_injection_path` — path onde o orquestrador grava o resultado
+
+**Identificação do tipo de WAITING:**
+O orquestrador identifica WAITING de escalonamento pelo prefixo `escalation_pending:` no campo `blocker`.
+WAITING sem esse prefixo é WAITING genérico (bloqueio de dependência).
+
 ### CI Feedback (quando ci_feedback_enabled=true em eaw.conf)
 - O prompt renderizado já contém instrução para o agente isolado produzir
   `$EAW_WORKDIR/ci_feedback/<track>/<phase>/feedback_<CARD>.md`

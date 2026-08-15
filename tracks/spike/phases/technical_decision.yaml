@@ -2,6 +2,8 @@ config_version: 1
 capabilities:
   - knowledge.read
   - execution.local_sandbox
+  - execution.readonly_environment
+  - execution.escalated
 
 agent_contract:
   sandbox_teardown: |
@@ -35,6 +37,8 @@ phase:
     - Nao sugerir implementacao sem embasar em evidencia real.
     - Alternativas descartadas devem ser documentadas com justificativa explicita.
     - Se os achados forem insuficientes para decidir, declarar `DECISION_DEFERRED` e listar lacunas.
+    - "execution.readonly_environment: acesso investigativo ao banco Oracle apenas para leitura (EXPLAIN PLAN, dicionário). A credencial é read-only por configuração de ambiente; INSERT/UPDATE falha com erro de privilégio Oracle, não erro de EAW."
+    - "execution.escalated: quando a fase não pode executar uma operação de forma autônoma, produzir investigations/XX_escalation_request.md com campos obrigatórios: operation, preconditions, risks, expected_result, requested_by, result_injection_path. Emitir handoff waiting com blocker: escalation_pending: <operacao>. O orquestrador executa e injeta o resultado antes da retomada."
 
   outputs:
     create_directories:

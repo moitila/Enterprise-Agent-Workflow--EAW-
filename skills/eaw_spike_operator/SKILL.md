@@ -79,6 +79,44 @@ para artefatos efêmeros (consultas SQL, dumps temporários, arquivos de anális
 - O isolamento é por CARD_ID: `$TMPDIR/EAW-outro-card/` é bloqueado com `WRITE_SCOPE_VIOLATION` (exit 97).
 - Risco residual: `SIGKILL` não executa o trap; artefatos efêmeros persistem até a próxima sessão (impacto BAIXO).
 
+### execution.readonly_environment
+
+Declara que a fase acessa banco de dados Oracle somente para leitura (consultas investigativas:
+`EXPLAIN PLAN`, leitura de dicionário, análise de planos de execução).
+
+- Disponível em: `findings`, `technical_decision` (track `spike`).
+- A restrição é imposta pela credencial de banco configurada no workspace (variável de ambiente
+  ou arquivo de configuração). O runtime não valida a restrição — é uma declaração contratual.
+- Tentativas de INSERT/UPDATE/DELETE falham com erro de privilégio Oracle, não erro de EAW.
+- CA-2 de BL-04: verificável por tentativa de INSERT que deve falhar com `ORA-01031: insufficient privileges`.
+- Não confundir com `execution.local_sandbox` (filesystem efêmero): são orthogonais.
+
+### execution.escalated
+
+Declara que a fase pode solicitar ao orquestrador a execução de uma operação que excede
+o escopo de autonomia do agente (ex.: DDL, operação com credencial privilegiada, aprovação humana).
+
+- Disponível em: `findings`, `technical_decision` (track `spike`).
+- Requer `waiting_when: [WAITING]` na transição da fase em `track.yaml`; sem isso, a capability
+  é declarada mas inoperante.
+- **Quando usar**: operação necessária para concluir a investigação que o agente não pode executar
+  de forma autônoma — acesso privilegiado, operação destrutiva, aprovação humana.
+- **Quando NÃO usar**: para qualquer operação dentro do escopo de `execution.local_sandbox`
+  (filesystem efêmero) ou `knowledge.read` (leitura de repos). Usar a capability mínima necessária.
+
+**Fluxo do agente:**
+1. Identificar que a operação excede o escopo.
+2. Produzir `investigations/XX_escalation_request.md` com campos obrigatórios:
+   - `## operation` — descrição objetiva
+   - `## preconditions` — lista verificável
+   - `## risks` — lista com severidade
+   - `## expected_result` — o que o agente espera receber
+   - `## requested_by` — fase solicitante
+   - `## result_injection_path` — path para o orquestrador gravar o resultado
+3. Emitir handoff: `{"from_phase":"<fase>","status":"waiting","blocker":"escalation_pending: <operacao>","messages":[],"codes":[]}`.
+4. O orquestrador executa, grava em `result_injection_path` e retoma com `completed`.
+
+
 ## Emissão de `waiting` vs `completed` nas fases `findings` e `technical_decision`
 
 A fase deve emitir `waiting` no handoff quando a pergunta bloqueante **não pode ser respondida** com as evidências disponíveis na execução corrente:

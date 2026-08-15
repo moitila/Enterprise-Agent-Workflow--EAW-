@@ -207,6 +207,16 @@ for inv_yaml in tracks/spike/track.yaml tracks/spike/phases/findings.yaml tracks
     else
         printf "PASS: %s: capabilities present in %s\n" "$label" "$inv_yaml"
     fi
+    # INV-10b/c: verify each required capability individually (not applicable to INV-10a)
+    if [ "$label" = "INV-10b" ] || [ "$label" = "INV-10c" ]; then
+        for cap in "knowledge.read" "execution.local_sandbox" "execution.readonly_environment" "execution.escalated"; do
+            if ! grep -qE "^[[:space:]]*-[[:space:]]*${cap}$" "$inv_yaml" 2>/dev/null; then
+                fail "${label}v" "missing capability '$cap' in $inv_yaml"
+            else
+                printf "PASS: %sv: capability '%s' verified in %s\n" "$label" "$cap" "$inv_yaml"
+            fi
+        done
+    fi
 done
 for inv_yaml in tracks/bug_ONBOARD/track.yaml tracks/feature/track.yaml; do
     label=""
