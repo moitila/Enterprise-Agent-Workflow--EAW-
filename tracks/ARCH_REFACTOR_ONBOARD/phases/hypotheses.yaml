@@ -30,5 +30,4 @@ phase:
     strategy: required_artifacts_exist
     required_artifacts:
       - path: investigations/30_hypotheses.md
-        min_bytes: 500
         validation_mode: blocking

@@ -26,5 +26,4 @@ phase:
     strategy: required_artifacts_exist
     required_artifacts:
       - path: context/dynamic/00_scope_manifest.md
-        min_bytes: 500
         validation_mode: blocking

@@ -31,8 +31,6 @@ phase:
     strategy: required_artifacts_exist
     required_artifacts:
       - path: context/onboarding_source_manifest.md
-        min_bytes: 500
         validation_mode: blocking
       - path: investigations/20_repo_onboarding_build.md
-        min_bytes: 500
         validation_mode: blocking

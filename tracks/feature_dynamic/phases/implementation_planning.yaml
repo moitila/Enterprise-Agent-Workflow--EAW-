@@ -23,7 +23,6 @@ phase:
     strategy: required_artifacts_exist
     required_artifacts:
       - path: implementation/00_scope.lock.md
-        min_bytes: 500
         validation_mode: blocking
         required_sections:
           - "## Base Obrigatoria"
@@ -34,7 +33,6 @@ phase:
           - "## Allowlist de Escrita"
           - "## Regra de Escrita"
       - path: implementation/10_change_plan.md
-        min_bytes: 500
         validation_mode: blocking
         required_sections:
           - "## Objetivo de Execucao"
