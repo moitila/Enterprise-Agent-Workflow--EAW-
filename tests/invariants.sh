@@ -257,4 +257,19 @@ else
     fail "INV-11b" "SPIKE_NO_REPO absent from hypotheses skip_when"
 fi
 
+# validate_envelope harness (INV-A TC-1 a TC-7, INV-B TC-8 e TC-9)
+if ! bash "${REPO_ROOT}/tests/validate_envelope.sh"; then
+    fail "validate_envelope" "validate_envelope.sh failed"
+fi
+
+# smoke_status_skip harness (INV-C-STATUS C1-C6) — subshell to isolate local vars
+if ! (bash "${REPO_ROOT}/tests/smoke_status_skip.sh"); then
+    fail "smoke_status_skip" "smoke_status_skip.sh failed"
+fi
+
+# smoke_audit_skip harness (INV-C-AUDIT AUDIT-1 to AUDIT-6)
+if ! bash "${REPO_ROOT}/tests/smoke_audit_skip.sh"; then
+    fail "smoke_audit_skip" "smoke_audit_skip.sh failed"
+fi
+
 summary

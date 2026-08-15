@@ -120,7 +120,23 @@ rc4="$(run_audit "$c4" implementation_executor)"
 [[ "$rc4" -eq 0 ]] || fail "CA-4 (patch sem seeds): esperado exit 0, obtido $rc4"
 pass "CA-4 patch sem seeds: planning nao declara 40_next_steps (exit 0)"
 
-if [[ "$PASS_COUNT" -ne 4 ]]; then
-	fail "esperados 4 casos aprovados, obtidos $PASS_COUNT"
+# ── CA-5 — feature track: completed_phases:[] -> audit nao exige nenhum artefato ──
+c5="$WORK/ca5"
+mkdir -p "$c5"
+printf 'card_state:\n  completed_phases: []\n' > "$c5/state_card_feature.yaml"
+rc5="$(run_audit "$c5" "implementation_executor")"
+[[ "$rc5" -eq 0 ]] || fail "CA-5 (feature completed_phases:[]): esperado exit 0, obtido $rc5"
+pass "CA-5 feature: completed_phases:[] nao bloqueia audit (exit 0)"
+
+# ── CA-6 — spike track: completed_phases:[] -> audit nao exige nenhum artefato ──
+c6="$WORK/ca6"
+mkdir -p "$c6"
+printf 'card_state:\n  completed_phases: []\n' > "$c6/state_card_spike.yaml"
+rc6="$(run_audit "$c6" "implementation_executor")"
+[[ "$rc6" -eq 0 ]] || fail "CA-6 (spike completed_phases:[]): esperado exit 0, obtido $rc6"
+pass "CA-6 spike: completed_phases:[] nao bloqueia audit (exit 0)"
+
+if [[ "$PASS_COUNT" -ne 6 ]]; then
+	fail "esperados 6 casos aprovados, obtidos $PASS_COUNT"
 fi
-printf "ALL PASSED (%d/4)\n" "$PASS_COUNT"
+printf "ALL PASSED (%d/6)\n" "$PASS_COUNT"

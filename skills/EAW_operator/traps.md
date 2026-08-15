@@ -57,7 +57,7 @@ Traps aprendidas em execuções reais. Incluir no Mandatory Delegation Context d
 
 - **Envelope `waiting` com `blocker` ausente**: o runtime rejeita com `20_handoff.json status=waiting requires non-empty blocker field`. O agente deve sempre preencher `blocker` com uma descrição objetiva do que impede a conclusão. Envelope `waiting` sem `blocker` nunca passa a validação de schema.
 - **Envelope `waiting` com `blocker` vazio (`""`)**: idêntico ao caso anterior — o runtime rejeita. Um valor não-vazio real é exigido.
-- **`messages` não-vazio bloqueia phase completion**: usar sempre `"messages": []` no handoff. O runtime rejeita se `messages` contiver entradas sem `type` e `code`. O campo `messages` é para uso interno do runtime; agentes não devem populá-lo.
+- **`messages[]` sem `type`/`code` bloqueia phase completion (entries com `type`+`code` são aceitas)**: usar `"messages": []` em handoffs de agente — campo reservado para uso interno do runtime. O runtime rejeita entradas em `messages` que não possuam `type` e `code`; entradas estruturadas `{"type":"...","code":"..."}` são aceitas. Autoridade: `scripts/commands/eaw_commands.sh` L604-625.
 - **Envelope `waiting` correto** (canônico):
   ```json
   {"from_phase":"<nome-da-fase>","status":"waiting","blocker":"<descricao-nao-vazia>","messages":[],"codes":[]}

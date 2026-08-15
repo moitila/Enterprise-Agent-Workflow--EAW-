@@ -73,5 +73,14 @@ run_tc "TC-6" "status=waiting no blocker field rejected" "fail" "blocker" \
 run_tc "TC-7" "status=unknown rejected" "fail" "status missing or invalid" \
 	'{"from_phase":"test_phase","status":"unknown","messages":[],"codes":[]}'
 
+# TC-8: messages with plain string (no type/code) — rejected (INV-B/CA-1)
+run_tc "TC-8" "messages plain string rejected (no type/code)" "fail" "type in entries" \
+	'{"from_phase":"test_phase","status":"completed","messages":["plain_string"],"codes":[]}'
+
+# TC-9: messages with structured entry (type+code) — accepted (INV-B/CA-2)
+# Authority: eaw_commands.sh L604-625 (runtime accepts messages with type+code)
+run_tc "TC-9" "messages structured entry accepted (type+code present)" "pass" "" \
+	'{"from_phase":"test_phase","status":"completed","messages":[{"type":"info","code":"PHASE_SKIPPED_BY_RULE","text":"skipped"}],"codes":[]}'
+
 printf "\nResults: %d passed, %d failed\n" "$pass" "$fail"
 exit "$(( fail > 0 ? 1 : 0 ))"
