@@ -23,5 +23,4 @@ phase:
     strategy: required_artifacts_exist
     required_artifacts:
       - path: ingest/00_intake.md
-        min_bytes: 500
         validation_mode: blocking

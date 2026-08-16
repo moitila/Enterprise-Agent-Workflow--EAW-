@@ -32,6 +32,12 @@ Traps aprendidas em execuções reais. Incluir no Mandatory Delegation Context d
 - **dynamic_context com nomes customizados**: a fase exige nomes fixos:
   `00_scope_manifest.md`, `20_candidate_files.txt`, `30_target_snippets.md`, `40_warnings.md`.
   Não criar nomes por item de backlog — isso não satisfaz `phase.completion`.
+- **Gap: `assert_read_scope` via symlink sem `realpath`**: `canonicalize_scope_path`
+  fallback manual (`lib.sh` L95-124) nao resolve symlinks quando `realpath` esta
+  indisponivel — o resultado e o path do symlink, nao o target real. `assert_read_scope`
+  pode permitir leitura via symlink que aponta para fora do allowlist em ambientes sem
+  `realpath`. Mitigacao: verificar `command -v realpath` antes de confiar no enforcement
+  completo de `assert_read_scope` em ambientes sem `realpath`.
 
 ## CI / Runtime
 
@@ -46,3 +52,33 @@ Traps aprendidas em execuções reais. Incluir no Mandatory Delegation Context d
 ## Repos
 
 - **Role `target`/`infra` é por contexto, não global**: o mesmo repo pode ser `target` em um card (quando o card trabalha sobre ele) e `infra` em outro (quando é apenas tooling). Mudar `repos.conf` antes de criar cards que trabalham sobre o repo; restaurar após. Não há suporte a dual-role no mesmo `repos.conf`.
+
+## Estado WAITING
+
+- **Envelope `waiting` com `blocker` ausente**: o runtime rejeita com `20_handoff.json status=waiting requires non-empty blocker field`. O agente deve sempre preencher `blocker` com uma descrição objetiva do que impede a conclusão. Envelope `waiting` sem `blocker` nunca passa a validação de schema.
+- **Envelope `waiting` com `blocker` vazio (`""`)**: idêntico ao caso anterior — o runtime rejeita. Um valor não-vazio real é exigido.
+- **`messages[]` sem `type`/`code` bloqueia phase completion (entries com `type`+`code` são aceitas)**: usar `"messages": []` em handoffs de agente — campo reservado para uso interno do runtime. O runtime rejeita entradas em `messages` que não possuam `type` e `code`; entradas estruturadas `{"type":"...","code":"..."}` são aceitas. Autoridade: `scripts/commands/eaw_commands.sh` L604-625.
+- **Envelope `waiting` correto** (canônico):
+  ```json
+  {"from_phase":"<nome-da-fase>","status":"waiting","blocker":"<descricao-nao-vazia>","messages":[],"codes":[]}
+  ```
+
+## Sandbox (execution.local_sandbox)
+
+- **TRAP: teardown de `$TMPDIR/EAW-[CARD_ID]/` é responsabilidade do agente** — sempre declarar `trap 'rm -rf "$SANDBOX_PATH"' EXIT` imediatamente após criar o sandbox; nunca assumir limpeza automática pelo runtime.
+- **Sandbox restrito ao CARD_ID corrente**: `$TMPDIR/EAW-[CARD_ID]/` é o único prefixo aceito; escrita em `$TMPDIR/EAW-outro-card/` retorna `WRITE_SCOPE_VIOLATION` (exit 97).
+- **Risco residual SIGKILL**: `SIGKILL` não executa o trap; artefatos efêmeros persistem até a próxima sessão (impacto BAIXO — sem dado sensível).
+- **TRAP: Declaração obrigatória no YAML de fase**: `execution.local_sandbox` deve aparecer em `capabilities:` (formato multi-line) para que `eaw_yaml_phase_capabilities()` o detecte; formato inline `capabilities: [...]` produz string vazia.
+
+## Readonly Environment (execution.readonly_environment)
+
+- **TRAP: declarar capability sem credencial read-only configurada**: `execution.readonly_environment` é declaração contratual de intenção; a restrição real é imposta pela credencial de banco no workspace. Declarar sem configurar a credencial não gera erro de EAW — o banco simplesmente aceitará escrita. Verificar variável de ambiente ou arquivo de configuração do workspace antes de confiar na restrição.
+- **TRAP: confundir readonly_environment com local_sandbox**: `execution.readonly_environment` restringe acesso ao banco Oracle (credencial read-only); `execution.local_sandbox` restringe escrita efêmera ao filesystem (`$TMPDIR/EAW-[CARD_ID]/`). São orthogonais — uma fase pode ter ambas.
+
+## Escalated (execution.escalated)
+
+- **TRAP: emitir waiting sem XX_escalation_request.md**: o runtime aceita o envelope waiting (BL-02), mas o orquestrador não saberá o que executar. Sempre produzir `investigations/XX_escalation_request.md` com todos os campos obrigatórios ANTES de emitir o handoff waiting.
+- **TRAP: blocker sem prefixo `escalation_pending:`**: o orquestrador identifica WAITING de escalonamento pelo prefixo `escalation_pending:` no campo blocker. Sem o prefixo, o WAITING é tratado como bloqueio genérico e o orquestrador não procurará o artefato de escalonamento.
+- **TRAP: resultado injetado em path diferente de result_injection_path**: o agente de retomada usa `result_injection_path` para localizar o resultado. Se o orquestrador gravar em path diferente, a retomada não encontra o artefato e falha.
+- **TRAP: usar execution.escalated em fase sem waiting_when no track.yaml**: a capability é inoperante se a transição da fase em track.yaml não tiver `waiting_when: [WAITING]`. O agente emite waiting, mas o runtime não grava WAITING no state file. Verificar track.yaml antes de declarar execution.escalated em um phase YAML.
+

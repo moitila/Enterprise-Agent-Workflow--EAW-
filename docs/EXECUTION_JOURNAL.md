@@ -30,6 +30,7 @@ Example events (schema v2):
 | `status`       | string | yes      | `"OK"` or `"FAIL"` for `phase_completed`; `"STARTED"` for `phase_started`. |
 | `duration_ms`  | number | yes      | Phase duration in milliseconds. `0` for `phase_started` events (duration not yet known). |
 | `event_type`   | string | yes (v2) | `"phase_started"` or `"phase_completed"`. See Event Types below. |
+| `read_sources` | array\<string\> | no       | List of absolute paths authorized for reading in this phase execution. Absent field is equivalent to `[]` (zero declared sources). Retroactively compatible: existing readers must treat field absence as empty list. |
 
 ## Event Types
 

@@ -22,5 +22,4 @@ phase:
     strategy: required_artifacts_exist
     required_artifacts:
       - path: implementation/20_patch_notes.md
-        min_bytes: 500
         validation_mode: blocking

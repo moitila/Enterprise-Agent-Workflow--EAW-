@@ -154,6 +154,7 @@ Optional fields:
 - `phase.skills`
 - `phase.outputs`
 - `phase.completion`
+- `phase.read_sources`
 
 Rules:
 - Each phase file must expose one `phase.id`.
@@ -307,6 +308,53 @@ phase:
   skills:
     - workspace
     extra_key: value
+```
+
+Phase Read Sources Block
+------------------------
+The optional `phase.read_sources` field declares the list of absolute paths that the executor is authorized to read during this phase execution. It corresponds to `RL` in the formal model defined in `docs/PHASE_CONTRACT_ENGINEERING.md` (Section 7, S3. Read Confinement).
+
+Permitted value:
+- A YAML list of absolute path strings. An empty list (`[]`) is treated as absent.
+
+Semantics: each entry is an absolute path that the isolated agent may access as a declared read source. The executor enforces `reads(exec) ⊆ RL(C, p, T)`. Absent field or empty list implies no declared read sources and no `READ_SOURCES` section injected in the prompt.
+
+Fallback: when `phase.read_sources` is absent or the list is empty, read access falls back to default runtime behavior (no `READ_SOURCES` section injected in prompt).
+
+Valid examples:
+
+```yaml
+# Phase without read_sources — default fallback active
+phase:
+  id: findings
+  prompt:
+    path: templates/prompts/feature/findings/prompt_v1.md
+
+# Phase with explicit read_sources
+phase:
+  id: implementation_executor
+  prompt:
+    path: templates/prompts/feature/implementation_executor/prompt_v1.md
+  read_sources:
+    - /home/user/dev/.eaw/out/SOME-CARD/ingest/00_intake.md
+```
+
+Invalid examples:
+
+```yaml
+# Invalid: string instead of list
+phase:
+  read_sources: /some/path
+
+# Invalid: relative path (must be absolute)
+phase:
+  read_sources:
+    - ingest/00_intake.md
+
+# Invalid: path with traversal
+phase:
+  read_sources:
+    - /home/user/dev/.eaw/out/SOME-CARD/../OTHER-CARD/file.md
 ```
 
 Card State Contract

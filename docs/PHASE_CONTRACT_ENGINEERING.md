@@ -229,6 +229,58 @@ Sem aprovacao explicita, alteracoes em areas core sao proibidas.
 
 Isso torna a execucao confinada e auditavel, o que e essencial para produto.
 
+### S3. Read Confinement
+
+Regra formal:
+
+```text
+reads(exec) ⊆ RL(C, p, T)
+```
+
+**Schema de `RL` / `read_sources`:**
+
+- Tipo: lista de paths absolutos (`array<string>`)
+- Cardinalidade: 0..N (campo opcional; ausência equivale a `[]`)
+- Default: `[]` (zero fontes declaradas; compatibilidade retroativa preservada)
+
+**Validações obrigatórias (por path declarado em `read_sources`):**
+
+1. **Tipo/cardinalidade**: campo é lista de strings; ausência tratada como `[]`.
+2. **Pertencimento a `$OUT_DIR`**: cada path deve satisfazer `[[ "$p" == "$OUT_DIR"/* ]]`; path fora de `OUT_DIR` é rejeitado.
+3. **Existência**: `test -f "$p"` deve retornar exit 0; path inexistente é rejeitado.
+4. **Canonicalização**: `canonicalize_scope_path "$p"` deve ser chamado antes de qualquer uso; path não canonicalizável é rejeitado com erro determinístico.
+5. **Rejeição de traversal**: qualquer path contendo `../` (pré ou pós-canonicalização) é rejeitado — maior gap operacional identificado em F-04.
+6. **Rejeição de fonte não declarada**: o executor não pode ler um path que não esteja em `RL(C, p, T)` sem violar este invariante.
+
+**Política de symlink:**
+
+`canonicalize_scope_path` depende de `realpath -m` para resolver symlinks. O fallback de resolução de path em `lib.sh:95–124` não resolve symlinks — esta é uma limitação documentada: `realpath` é um requisito de ambiente para enforcement completo do invariante. Em ambientes sem `realpath` nativo (ex.: macOS com PATH mínimo), o fallback é `readlink -f`; se nenhum mecanismo estiver disponível, a resolução é omitida e a lacuna deve ser tratada como risco operacional, não como falha silenciosa.
+
+#### Enforcement runtime
+
+A funcao `assert_read_scope` em `scripts/lib.sh` implementa o invariante formal
+`reads(exec) ⊆ RL(C, p, T)` declarado nesta secao.
+
+Assinatura: `assert_read_scope phase command_name source_path [allowed_path...]`
+
+- Exit code 97 com mensagem `READ_SCOPE_VIOLATION: phase=<p> command=<c> blocked_path=<path>`
+  quando `source_path` esta fora do allowlist.
+- Exit code 0 quando `source_path` pertence a `OUT_DIR` ou a um dos `allowed_path` declarados.
+- Campo `read_sources` no JSONL do journal e emitido condicionalmente (omitido quando
+  ausente — nao `null`).
+
+**Representação no prompt:**
+
+Quando `read_sources` for não-vazio, o runtime injeta a seção `READ_SOURCES` no bloco `RUNTIME_ENVIRONMENT` do prompt da fase:
+
+```
+READ_SOURCES:
+- /path/to/authorized/source1
+- /path/to/authorized/source2
+```
+
+Ausência de `read_sources` (ou lista vazia) implica ausência da seção `READ_SOURCES` no bloco — comportamento análogo ao campo `WRITE_ALLOWLIST`.
+
 ## 8. Tracks Configuraveis sem Perder Formalismo
 
 Uma track configuravel nao e livre; e um programa validado.

@@ -97,6 +97,10 @@ Regras da descoberta:
 - Nunca escrever fora de:
   $OUT_DIR/<CARD>
 
+  Excecao sandbox: quando a fase corrente declara `execution.local_sandbox`,
+  o agente pode escrever em `$TMPDIR/EAW-[CARD_ID]/`. Teardown obrigatorio
+  via `trap EXIT`. Referencia cruzada CA-4: EAW-SPIKE-INVESTIGATIVE-CAPABILITY/30_technical_decision.md.
+
 - Nunca escrever diretamente em TargetRepo fora do fluxo de implementação
 
 - Nunca modificar o runtime root

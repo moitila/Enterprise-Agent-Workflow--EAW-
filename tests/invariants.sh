@@ -89,13 +89,11 @@ while IFS= read -r -d '' phase_yaml; do
     fi
 done < <(find tracks -name '*.yaml' -path '*/phases/*' -print0)
 
-# INV-03: Tracks WITHOUT dynamic_context must NOT have {{CONTEXT_BLOCK}} in active prompts
+# INV-03: Active prompts with {{CONTEXT_BLOCK}} must declare a resolution mechanism
 for track_dir in tracks/*/; do
     [[ -d "$track_dir" ]] || continue
     track_name="${track_dir%/}"
     track_name="${track_name##*/}"
-    # Skip tracks that have dynamic_context phase
-    [[ -f "${track_dir}phases/dynamic_context.yaml" ]] && continue
     # Check each phase
     for phase_yaml in "${track_dir}phases/"*.yaml; do
         [[ -f "$phase_yaml" ]] || continue
@@ -113,7 +111,11 @@ for track_dir in tracks/*/; do
         prompt_file="templates/prompts/${track_name}/${phase_name}/prompt_${version}.md"
         [[ -f "$prompt_file" ]] || continue
         if grep -qF '{{CONTEXT_BLOCK}}' "$prompt_file"; then
-            fail "INV-03" "track '${track_name}': '${prompt_file}' contains {{CONTEXT_BLOCK}} but track has no dynamic_context phase"
+            # skip if mechanism declared at phase level (onboarding_template or dynamic_context_template)
+            grep -qE 'onboarding_template:|dynamic_context_template:' "$phase_yaml" && continue
+            # legacy skip: track declares dynamic_context phase (kept for compatibility)
+            [[ -f "${track_dir}phases/dynamic_context.yaml" ]] && continue
+            fail "INV-03" "track '${track_name}': '${prompt_file}' contains {{CONTEXT_BLOCK}} but phase '${phase_name}' declares no resolution mechanism"
         fi
     done
 done
@@ -193,5 +195,83 @@ while IFS= read -r -d '' phase_yaml; do
         in_p && in_sk && /^[[:space:]]+[a-z_]+:[[:space:]]*[^-]/{in_sk=0}
     ' "$phase_yaml")
 done < <(find tracks -name '*.yaml' -path '*/phases/*' -print0)
+
+# INV-10: field capabilities present in spike, absent in bug_ONBOARD and feature
+for inv_yaml in tracks/spike/track.yaml tracks/spike/phases/findings.yaml tracks/spike/phases/technical_decision.yaml; do
+    label=""
+    case "$inv_yaml" in
+        tracks/spike/track.yaml)                      label="INV-10a" ;;
+        tracks/spike/phases/findings.yaml)            label="INV-10b" ;;
+        tracks/spike/phases/technical_decision.yaml)  label="INV-10c" ;;
+    esac
+    if ! grep -q "^capabilities:" "$inv_yaml" 2>/dev/null; then
+        fail "$label" "missing 'capabilities:' in $inv_yaml"
+    else
+        printf "PASS: %s: capabilities present in %s\n" "$label" "$inv_yaml"
+    fi
+    # INV-10b/c: verify each required capability individually (not applicable to INV-10a)
+    if [ "$label" = "INV-10b" ] || [ "$label" = "INV-10c" ]; then
+        for cap in "knowledge.read" "execution.local_sandbox" "execution.readonly_environment" "execution.escalated"; do
+            if ! grep -qE "^[[:space:]]*-[[:space:]]*${cap}$" "$inv_yaml" 2>/dev/null; then
+                fail "${label}v" "missing capability '$cap' in $inv_yaml"
+            else
+                printf "PASS: %sv: capability '%s' verified in %s\n" "$label" "$cap" "$inv_yaml"
+            fi
+        done
+    fi
+done
+for inv_yaml in tracks/bug_ONBOARD/track.yaml tracks/feature/track.yaml; do
+    label=""
+    case "$inv_yaml" in
+        tracks/bug_ONBOARD/track.yaml)  label="INV-10d" ;;
+        tracks/feature/track.yaml)      label="INV-10e" ;;
+    esac
+    if grep -q "capabilities" "$inv_yaml" 2>/dev/null; then
+        fail "$label" "unexpected 'capabilities' in $inv_yaml"
+    else
+        printf "PASS: %s: no capabilities contamination in %s\n" "$label" "$inv_yaml"
+    fi
+done
+
+# INV-11: hypotheses -> findings skips only SPIKE_NO_REPO; research must execute findings.
+inv11_values="$(awk '
+    /^    hypotheses:/{in_hypotheses=1; next}
+    in_hypotheses && /^    [a-z]/{in_hypotheses=0}
+    in_hypotheses && /skip_when:/{in_skip=1; next}
+    in_hypotheses && in_skip && /^[[:space:]]*-[[:space:]]*[^-]/{
+        value=$0
+        sub(/^[[:space:]]*-[[:space:]]*/, "", value)
+        gsub(/[[:space:]]+$/, "", value)
+        print value
+    }
+    in_hypotheses && in_skip && /^[[:space:]]+[a-z_]+:/{in_skip=0}
+' tracks/spike/track.yaml)"
+
+if printf '%s\n' "$inv11_values" | grep -qx 'SPIKE_RESEARCH'; then
+    fail "INV-11a" "SPIKE_RESEARCH found in hypotheses skip_when; findings would be skipped"
+else
+    printf "PASS: INV-11a: SPIKE_RESEARCH executes findings\n"
+fi
+
+if printf '%s\n' "$inv11_values" | grep -qx 'SPIKE_NO_REPO'; then
+    printf "PASS: INV-11b: SPIKE_NO_REPO still skips findings\n"
+else
+    fail "INV-11b" "SPIKE_NO_REPO absent from hypotheses skip_when"
+fi
+
+# validate_envelope harness (INV-A TC-1 a TC-7, INV-B TC-8 e TC-9)
+if ! bash "${REPO_ROOT}/tests/validate_envelope.sh"; then
+    fail "validate_envelope" "validate_envelope.sh failed"
+fi
+
+# smoke_status_skip harness (INV-C-STATUS C1-C6) — subshell to isolate local vars
+if ! (bash "${REPO_ROOT}/tests/smoke_status_skip.sh"); then
+    fail "smoke_status_skip" "smoke_status_skip.sh failed"
+fi
+
+# smoke_audit_skip harness (INV-C-AUDIT AUDIT-1 to AUDIT-6)
+if ! bash "${REPO_ROOT}/tests/smoke_audit_skip.sh"; then
+    fail "smoke_audit_skip" "smoke_audit_skip.sh failed"
+fi
 
 summary

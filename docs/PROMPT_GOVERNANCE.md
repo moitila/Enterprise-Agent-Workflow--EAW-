@@ -107,3 +107,79 @@ O executor do EAW opera com três superfícies ortogonais e independentes ao exe
 **Invariante de governança:** o executor não altera o conteúdo do prompt para incluir ou mencionar nomes de skills. `phase.skills` é ortogonal a `phase.prompt.path` e ao registro `ACTIVE`. A separação entre as três superfícies é absoluta e deve ser preservada em qualquer extensão futura do runtime.
 
 Esta regra é de governança de prompts: skills equipam o agente operacionalmente, mas nunca como texto no prompt. A mecânica completa do ciclo de execução (Modo D) é definida em `docs/ARCHITECTURE.md` (Deterministic Agent Mode).
+
+## RUNTIME_ENVIRONMENT Blocks
+
+O bloco `RUNTIME_ENVIRONMENT` injetado no prompt renderizado contém seções condicionais
+determinadas pelo YAML da fase. A ordem canônica das seções é:
+
+```
+RUNTIME_ENVIRONMENT
+
+CARD_ID:
+TRACK_ID:
+STEP_ID:
+...
+TARGET_REPOSITORIES:
+[PHASE_SKILLS: — quando declarado]
+[CAPABILITIES_DECLARED: — quando capabilities: não-vazia]
+WRITE_ALLOWLIST:
+[READ_SOURCES: — quando read_sources: não-vazia]
+CRITICAL_PATHS:
+```
+
+### WRITE_ALLOWLIST
+
+Sempre presente. Lista os paths absolutos nos quais o agente tem permissão de escrita.
+Derivado do `00_scope.lock.md` do card quando disponível, com fallback para a allowlist
+calculada pelo runtime. `assert_write_scope` valida cada escrita contra esta lista.
+
+### READ_SOURCES
+
+Presente **somente quando** o campo `read_sources:` no YAML da fase contiver ao menos
+um item (lista não-vazia). Omitido quando o campo está ausente ou é `read_sources: []`.
+
+- **Posição**: após o bloco `WRITE_ALLOWLIST:` (incluindo `WRITE_ALLOWLIST_SOURCE` e
+  `WRITE_ALLOWLIST_RESOLVED_FROM_SCOPE_LOCK`), imediatamente antes de `CRITICAL_PATHS:`.
+- **Formato do bloco**:
+  ```
+  READ_SOURCES:
+  <item1>
+  <item2>
+  ```
+- **Campo YAML de fase correspondente**: `read_sources:` top-level no YAML da fase.
+- **Compatibilidade retroativa**: fases sem o campo ou com `read_sources: []` mantêm
+  comportamento inalterado — o bloco simplesmente não aparece no prompt.
+- **Função extratora**: `eaw_yaml_phase_read_sources` em `scripts/commands/eaw_commands.sh`.
+- **Enforcement**: `assert_read_scope <path>` deve ser chamado antes de ler qualquer
+  item declarado em `read_sources`.
+
+## CONTEXT_BLOCK
+
+O placeholder CONTEXT_BLOCK em templates de prompt é resolvido pelo runtime em
+`eaw_build_phase_context_block` (`scripts/commands/eaw_commands.sh`) antes da
+entrega do prompt ao agente. Dois mecanismos de resolução são suportados:
+
+### Mecanismo 1: dynamic_context_template
+Declarado em `context.dynamic_context_template` no YAML da fase.
+Requer que o track declare a fase `dynamic_context` (que materializa
+`context/dynamic/` antes desta fase ser executada).
+
+### Mecanismo 2: onboarding_template
+Declarado em `context.onboarding_template` no YAML da fase.
+Usado em tracks de onboarding (ex.: ARCH_REFACTOR_ONBOARD, bug_ONBOARD)
+que entregam contexto via template de onboarding em vez de fase dedicada.
+Não requer fase `dynamic_context` no track.
+
+### Comportamento sem mecanismo declarado
+Se a fase não declarar nenhum dos dois mecanismos,
+`eaw_apply_context_block_to_prompt` remove o placeholder CONTEXT_BLOCK
+(substituído por string vazia). O prompt é entregue sem bloco de contexto.
+Incluir CONTEXT_BLOCK em um prompt de fase sem mecanismo declarado resulta
+em prompt entregue sem contexto — não em erro de runtime.
+
+### Invariante de CI (INV-03)
+INV-03 em `tests/invariants.sh` valida que prompts ativos com CONTEXT_BLOCK
+têm ao menos um mecanismo de resolução declarado no YAML da fase correspondente
+(`onboarding_template:` ou `dynamic_context_template:`). Um prompt com
+CONTEXT_BLOCK e sem mecanismo declarado é considerado configuração inválida.

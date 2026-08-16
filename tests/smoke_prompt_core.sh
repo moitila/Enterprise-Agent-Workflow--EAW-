@@ -90,4 +90,34 @@ mv "$meta_backup" "$meta_file"
 "$REPO_ROOT/scripts/eaw" validate >/dev/null
 "$REPO_ROOT/scripts/eaw" prompt validate >/dev/null
 
+# T-RND-01: phase YAML with non-empty read_sources → READ_SOURCES block present in rendered prompt
+rnd01_yaml="$WORK_ROOT/rnd01_phase.yaml"
+cat <<'YAML' >"$rnd01_yaml"
+config_version: 1
+capabilities:
+  - knowledge.read
+read_sources:
+  - scripts/lib.sh
+YAML
+(
+	source "$REPO_ROOT/scripts/commands/eaw_commands.sh"
+	out="$(eaw_yaml_phase_read_sources "$rnd01_yaml")"
+	[[ -n "$out" ]] || {
+		echo "T-RND-01 FAIL: read_sources output empty" >&2
+		exit 1
+	}
+	echo "T-RND-01 PASS"
+)
+
+# T-RND-02: phase YAML with read_sources: [] → READ_SOURCES block absent in rendered prompt
+(
+	source "$REPO_ROOT/scripts/commands/eaw_commands.sh"
+	out="$(eaw_yaml_phase_read_sources "$REPO_ROOT/tracks/spike/phases/findings.yaml")"
+	[[ -z "$out" ]] || {
+		echo "T-RND-02 FAIL: read_sources output non-empty for empty list" >&2
+		exit 1
+	}
+	echo "T-RND-02 PASS"
+)
+
 printf "smoke prompt core OK\n"

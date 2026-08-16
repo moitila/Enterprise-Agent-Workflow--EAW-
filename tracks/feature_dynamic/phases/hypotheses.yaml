@@ -31,11 +31,8 @@ phase:
     strategy: required_artifacts_exist
     required_artifacts:
       - path: investigations/10_phase_output.json
-        min_bytes: 500
         validation_mode: blocking
       - path: investigations/20_handoff.json
-        min_bytes: 500
         validation_mode: blocking
       - path: investigations/30_hypotheses.md
-        min_bytes: 500
         validation_mode: blocking

@@ -23,6 +23,12 @@ Primary workflow classification remains the selected `track`, persisted as `card
 In the current runtime model, `eaw next <CARD>` is the phase-driven entrypoint. `eaw intake <CARD>`, `eaw analyze <CARD>`, and `eaw implement <CARD>` are no longer exposed by `scripts/eaw` as public commands.
 The current contract documents phase completion through `phase.completion` and the `eaw next <CARD>` transition gate. `eaw complete <CARD>` is reserved as an escape/standalone closure command; callers should treat `eaw next` as the normal lifecycle path.
 
+### Lifecycle for existing materialized cards and `read_sources`
+
+`cmd_next` re-reads `track.yaml` on each invocation; the rendered prompt always reflects the current YAML state of the phase at the moment `eaw next <CARD>` is called. Cards already materialized in `intake/RUN` with `completed_phases: []` can advance via `eaw next` after a track contract extension without rematerialization.
+
+For `read_sources` specifically: cards materialized before this field was introduced do not require rematerialization. To enable the `READ_SOURCES:` block in a future prompt for an existing card, add the `read_sources:` field with the desired items to the relevant phase YAML and call `eaw next <CARD>` normally. The rendered prompt will include `READ_SOURCES:` on the next invocation when the list is non-empty. Cards whose phases do not declare `read_sources` (or declare `read_sources: []`) are unaffected — field absent or empty list does not alter the prompt or block phase advancement.
+
 ### `eaw run`
 
 Syntax:

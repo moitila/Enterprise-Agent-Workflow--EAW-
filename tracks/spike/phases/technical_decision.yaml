@@ -1,4 +1,20 @@
 config_version: 1
+capabilities:
+  - knowledge.read
+  - execution.local_sandbox
+  - execution.readonly_environment
+  - execution.escalated
+read_sources: []
+
+agent_contract:
+  sandbox_teardown: |
+    Quando esta fase declara execution.local_sandbox:
+    1. Criar sandbox em $TMPDIR/EAW-[CARD_ID]/ antes de qualquer escrita efemera.
+    2. Declarar trap 'rm -rf "$SANDBOX_PATH"' EXIT imediatamente apos criar o sandbox.
+    3. Verificar ausencia do sandbox ao final normal da fase:
+       test -d "$SANDBOX_PATH" && echo RESIDUAL_FAIL || echo TEARDOWN_OK
+    4. Risco residual: SIGKILL impede o trap; artefatos efemeros persistem ate proxima sessao
+       (impacto BAIXO - sem dado sensivel).
 
 phase:
   id: technical_decision
@@ -13,7 +29,7 @@ phase:
     - eaw_spike_operator
 
   prompt:
-    active: 1
+    active: 2
     path: templates/prompts/spike/technical_decision/prompt_v<active>.md
 
   tooling_hints:
@@ -22,6 +38,8 @@ phase:
     - Nao sugerir implementacao sem embasar em evidencia real.
     - Alternativas descartadas devem ser documentadas com justificativa explicita.
     - Se os achados forem insuficientes para decidir, declarar `DECISION_DEFERRED` e listar lacunas.
+    - "execution.readonly_environment: acesso investigativo ao banco Oracle apenas para leitura (EXPLAIN PLAN, dicionário). A credencial é read-only por configuração de ambiente; INSERT/UPDATE falha com erro de privilégio Oracle, não erro de EAW."
+    - "execution.escalated: quando a fase não pode executar uma operação de forma autônoma, produzir investigations/XX_escalation_request.md com campos obrigatórios: operation, preconditions, risks, expected_result, requested_by, result_injection_path. Emitir handoff waiting com blocker: escalation_pending: <operacao>. O orquestrador executa e injeta o resultado antes da retomada."
 
   outputs:
     create_directories:
@@ -35,5 +53,4 @@ phase:
     strategy: required_artifacts_exist
     required_artifacts:
       - path: investigations/30_technical_decision.md
-        min_bytes: 500
         validation_mode: blocking
