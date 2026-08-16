@@ -158,8 +158,8 @@ assert_read_scope() {
 	# verify membership in OUT_DIR fallback
 	local outdir_abs
 	outdir_abs="$(canonicalize_scope_path "${OUT_DIR:-}")"
-	if [[ -n "$outdir_abs" ]] && \
-	   { [[ "$source_abs" == "$outdir_abs" ]] || [[ "$source_abs" == "$outdir_abs/"* ]]; }; then
+	if [[ -n "$outdir_abs" ]] &&
+		{ [[ "$source_abs" == "$outdir_abs" ]] || [[ "$source_abs" == "$outdir_abs/"* ]]; }; then
 		return 0
 	fi
 	# verify membership in explicit allowed_path list
