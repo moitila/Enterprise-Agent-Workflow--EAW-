@@ -1,0 +1,27 @@
+config_version: 1
+
+phase:
+  id: track_design
+  name: Track Design
+  description: Design the track structure, phases, transitions, and handoff contracts.
+
+  skills:
+    - eaw_track_creator
+
+  prompt:
+    active: 1
+    path: templates/prompts/track_creator/track_design/prompt_v<active>.md
+
+  outputs:
+    create_directories:
+      - investigations
+    create_artifacts:
+      - investigations/10_track_design.md
+    prompts:
+      - track_design
+
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - path: investigations/10_track_design.md
+        validation_mode: blocking

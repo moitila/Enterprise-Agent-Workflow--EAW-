@@ -1,0 +1,28 @@
+config_version: 1
+
+phase:
+  id: intake
+  name: Intake
+  description: Collect the track goal, phases, phase.skills decisions, and constraints.
+
+  skills:
+    - eaw_track_creator
+
+  prompt:
+    active: 1
+    path: templates/prompts/track_creator/intake/prompt_v<active>.md
+
+  outputs:
+    create_directories:
+      - ingest
+      - investigations
+    create_artifacts:
+      - investigations/00_intake.md
+    prompts:
+      - intake
+
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - path: investigations/00_intake.md
+        validation_mode: blocking

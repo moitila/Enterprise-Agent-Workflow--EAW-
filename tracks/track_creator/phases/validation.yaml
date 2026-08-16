@@ -1,0 +1,27 @@
+config_version: 1
+
+phase:
+  id: validation
+  name: Validation
+  description: Validate all track artifacts, phase.skills matrix, and track registration.
+
+  skills:
+    - eaw_track_creator
+    - eaw_prompt_creator
+
+  prompt:
+    active: 1
+    path: templates/prompts/track_creator/validation/prompt_v<active>.md
+
+  outputs:
+    create_directories: []
+    create_artifacts:
+      - investigations/90_validation_report.md
+    prompts:
+      - validation
+
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - path: investigations/90_validation_report.md
+        validation_mode: blocking

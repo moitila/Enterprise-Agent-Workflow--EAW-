@@ -1,0 +1,27 @@
+config_version: 1
+
+phase:
+  id: implementation_executor
+  name: Implementation Executor
+  description: Create all track artifacts per the change_plan and register the track.
+
+  skills:
+    - eaw_track_creator
+    - eaw_prompt_creator
+
+  prompt:
+    active: 1
+    path: templates/prompts/track_creator/implementation_executor/prompt_v<active>.md
+
+  outputs:
+    create_directories: []
+    create_artifacts:
+      - implementation/20_patch_notes.md
+    prompts:
+      - implementation_executor
+
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - path: implementation/20_patch_notes.md
+        validation_mode: blocking

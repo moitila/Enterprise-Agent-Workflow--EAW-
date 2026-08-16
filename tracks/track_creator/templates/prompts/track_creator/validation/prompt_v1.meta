@@ -1,0 +1,3 @@
+version=v1
+required_substrings=ROLE|OBJECTIVE|INPUT|OUTPUT
+forbidden_words=
