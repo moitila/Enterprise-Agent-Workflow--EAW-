@@ -89,13 +89,11 @@ while IFS= read -r -d '' phase_yaml; do
     fi
 done < <(find tracks -name '*.yaml' -path '*/phases/*' -print0)
 
-# INV-03: Tracks WITHOUT dynamic_context must NOT have {{CONTEXT_BLOCK}} in active prompts
+# INV-03: Active prompts with {{CONTEXT_BLOCK}} must declare a resolution mechanism
 for track_dir in tracks/*/; do
     [[ -d "$track_dir" ]] || continue
     track_name="${track_dir%/}"
     track_name="${track_name##*/}"
-    # Skip tracks that have dynamic_context phase
-    [[ -f "${track_dir}phases/dynamic_context.yaml" ]] && continue
     # Check each phase
     for phase_yaml in "${track_dir}phases/"*.yaml; do
         [[ -f "$phase_yaml" ]] || continue
@@ -113,7 +111,11 @@ for track_dir in tracks/*/; do
         prompt_file="templates/prompts/${track_name}/${phase_name}/prompt_${version}.md"
         [[ -f "$prompt_file" ]] || continue
         if grep -qF '{{CONTEXT_BLOCK}}' "$prompt_file"; then
-            fail "INV-03" "track '${track_name}': '${prompt_file}' contains {{CONTEXT_BLOCK}} but track has no dynamic_context phase"
+            # skip if mechanism declared at phase level (onboarding_template or dynamic_context_template)
+            grep -qE 'onboarding_template:|dynamic_context_template:' "$phase_yaml" && continue
+            # legacy skip: track declares dynamic_context phase (kept for compatibility)
+            [[ -f "${track_dir}phases/dynamic_context.yaml" ]] && continue
+            fail "INV-03" "track '${track_name}': '${prompt_file}' contains {{CONTEXT_BLOCK}} but phase '${phase_name}' declares no resolution mechanism"
         fi
     done
 done

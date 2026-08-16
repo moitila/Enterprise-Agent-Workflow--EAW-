@@ -249,6 +249,7 @@ eaw_phase_completion_artifact_has_meaningful_content() {
 		[[ "$normalized" == *'"status":"completed"'* || "$normalized" == *'"status":"skipped"'* || "$normalized" == *'"status":"failed"'* ]] || return 1
 		[[ "$normalized" == *'"messages":['* ]] || return 1
 		[[ "$normalized" == *'"codes":['* ]] || return 1
+		[[ "$normalized" != *'"scaffold":true'* ]] || return 1
 		return 0
 	fi
 

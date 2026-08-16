@@ -153,3 +153,33 @@ um item (lista não-vazia). Omitido quando o campo está ausente ou é `read_sou
 - **Função extratora**: `eaw_yaml_phase_read_sources` em `scripts/commands/eaw_commands.sh`.
 - **Enforcement**: `assert_read_scope <path>` deve ser chamado antes de ler qualquer
   item declarado em `read_sources`.
+
+## CONTEXT_BLOCK
+
+O placeholder CONTEXT_BLOCK em templates de prompt é resolvido pelo runtime em
+`eaw_build_phase_context_block` (`scripts/commands/eaw_commands.sh`) antes da
+entrega do prompt ao agente. Dois mecanismos de resolução são suportados:
+
+### Mecanismo 1: dynamic_context_template
+Declarado em `context.dynamic_context_template` no YAML da fase.
+Requer que o track declare a fase `dynamic_context` (que materializa
+`context/dynamic/` antes desta fase ser executada).
+
+### Mecanismo 2: onboarding_template
+Declarado em `context.onboarding_template` no YAML da fase.
+Usado em tracks de onboarding (ex.: ARCH_REFACTOR_ONBOARD, bug_ONBOARD)
+que entregam contexto via template de onboarding em vez de fase dedicada.
+Não requer fase `dynamic_context` no track.
+
+### Comportamento sem mecanismo declarado
+Se a fase não declarar nenhum dos dois mecanismos,
+`eaw_apply_context_block_to_prompt` remove o placeholder CONTEXT_BLOCK
+(substituído por string vazia). O prompt é entregue sem bloco de contexto.
+Incluir CONTEXT_BLOCK em um prompt de fase sem mecanismo declarado resulta
+em prompt entregue sem contexto — não em erro de runtime.
+
+### Invariante de CI (INV-03)
+INV-03 em `tests/invariants.sh` valida que prompts ativos com CONTEXT_BLOCK
+têm ao menos um mecanismo de resolução declarado no YAML da fase correspondente
+(`onboarding_template:` ou `dynamic_context_template:`). Um prompt com
+CONTEXT_BLOCK e sem mecanismo declarado é considerado configuração inválida.

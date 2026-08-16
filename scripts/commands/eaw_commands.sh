@@ -2073,7 +2073,7 @@ EOF
 		return 0
 		;;
 	investigations/20_handoff.json)
-		printf '{"from_phase":"%s","status":"completed","messages":[],"codes":[]}\n' \
+		printf '{"from_phase":"%s","status":"completed","messages":[],"codes":[],"scaffold":true}\n' \
 			"$phase_id" >"$target_path"
 		;;
 	*.json)
