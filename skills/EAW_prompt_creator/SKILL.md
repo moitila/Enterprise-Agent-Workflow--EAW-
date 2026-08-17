@@ -307,6 +307,22 @@ When reviewing, produce:
 - Never hardcode workspace-specific paths, repository aliases, or runtime variable values.
 - Always resolve track, templates, docs, and repos from the active runtime and current workspace.
 - Todo prompt deve começar com `{{RUNTIME_ENVIRONMENT}}` como primeira linha.
+
+## Invariante de Placeholder Canonico
+
+Todo prompt EAW e todo arquivo de template de track devem usar o formato canonico
+(dupla-chave) para referencias a variaveis operacionais (CARD, CARD_DIR, EAW_WORKDIR,
+RUNTIME_ROOT, CONFIG_SOURCE, OUT_DIR, etc.).
+
+O formato shell-style (chave-simples, ex: ${CARD_DIR}) NAO e expandido pelo motor de
+renderizacao EAW e e considerado DEFEITO em secoes operacionais (INPUT, READ_SCOPE,
+WRITE_SCOPE, OUTPUT, RULES, FAIL_CONDITIONS).
+
+Excecoes legitimas do shell-style:
+- Comandos shell literais em RULES que serao executados pelo agente no terminal
+  (ex: `printf '...' | cat > arquivo` ou `grep -n '\${[A-Z_]+' <arquivo>`)
+- Exemplos ilustrativos do formato INCORRETO, precedidos de `ex:` ou `errado:`
+
 - `eaw_workspace` é sempre incluída implicitamente pelo runtime no agent_bundle — nunca declarar em `phase.skills`.
 - Skills em `phase.skills` devem refletir o papel real do agente da fase: `eaw_card_execution` só para fases orquestradoras.
 - When reviewing a phase that depends on context, require explicit alignment with the runtime context contract:
@@ -331,3 +347,10 @@ Before finalizing any prompt or phase, confirm:
 - se a fase emite codes para `skip_when`: `20_handoff.json` está em OUTPUT, WRITE_SCOPE e FAIL_CONDITIONS
 - `eaw_workspace` não está declarada em `phase.skills` (implícita)
 - `ACTIVE` e `.meta` criados junto com o prompt
+- FAIL_CONDITIONS usa criterio preciso: proibe shell-style (chave-simples) em secoes
+  operacionais, nao proibe o formato canonico (dupla-chave) que e intencional
+- gate WRITE_SCOPE-handoff verificado: cada artefato exigido em FAIL_CONDITIONS esta
+  em WRITE_SCOPE ou RULES de escrita do mesmo prompt
+- gate sintaxe handoff verificado: todo `printf` com redirect esta em linha unica
+- gate OBJECTIVE-OUTPUT_STRUCTURE verificado: nenhum campo de OUTPUT_STRUCTURE exige
+  resultado proibido por OBJECTIVE ou FORBIDDEN

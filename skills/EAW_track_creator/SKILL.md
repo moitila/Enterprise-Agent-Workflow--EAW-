@@ -56,6 +56,19 @@ Do not teach an imaginary track format.
 Use the format the current runtime actually consumes.
 Derive every runtime path from the active environment instead of hardcoding workspace-specific locations.
 
+## Invariante de Placeholder Canonico
+
+Os arquivos de template de track (prompt_vN.md) devem usar o formato canonico
+(dupla-chave) para todas as referencias a variaveis operacionais em secoes
+INPUT, READ_SCOPE, WRITE_SCOPE, OUTPUT, RULES e FAIL_CONDITIONS.
+
+O formato shell-style (chave-simples, ex: ${CARD_DIR}) em secoes operacionais
+e DEFEITO. O motor de renderizacao EAW expande apenas o formato dupla-chave.
+
+FAIL_CONDITIONS que proibem "placeholders de template nao resolvidos" devem
+ser escritas com precisao: proibir shell-style em secoes operacionais,
+nao proibir o formato canonico que e intencional.
+
 ## Minimal Track Contract You Must Follow
 
 Track files must use:
