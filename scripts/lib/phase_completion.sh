@@ -130,7 +130,41 @@ eaw_phase_completion_evaluate_required_artifacts_exist() {
 eaw_phase_completion_detect_card_template_type() {
 	local card="$1"
 	local card_dir="$2"
+	local track_id
+	local -a state_candidates=()
 
+	shopt -s nullglob
+	state_candidates=("$card_dir"/state_card_*.yaml)
+	shopt -u nullglob
+
+	if [[ ${#state_candidates[@]} -eq 0 ]]; then
+		echo "eaw_phase_completion_detect_card_template_type: no state_card_*.yaml found in $card_dir" >&2
+		return 1
+	elif [[ ${#state_candidates[@]} -gt 1 ]]; then
+		echo "eaw_phase_completion_detect_card_template_type: multiple state_card_*.yaml found in $card_dir" >&2
+		return 1
+	fi
+
+	track_id="$(eaw_yaml_state_scalar "${state_candidates[0]}" "track_id")"
+
+	if [[ -z "$track_id" ]]; then
+		echo "eaw_phase_completion_detect_card_template_type: track_id missing in ${state_candidates[0]}" >&2
+		return 1
+	fi
+
+	if [[ ! "$track_id" =~ ^[a-zA-Z0-9_-]+$ ]]; then
+		echo "eaw_phase_completion_detect_card_template_type: track_id contains invalid characters: $track_id" >&2
+		return 1
+	fi
+
+	track_id="${track_id,,}"
+
+	if [[ -f "${EAW_TEMPLATES_DIR}/intake_${track_id}.md" ]]; then
+		printf "%s\n" "$track_id"
+		return 0
+	fi
+
+	# Legacy fallback when no dedicated template exists
 	if [[ -f "$card_dir/bug_${card}.md" ]]; then
 		printf "bug\n"
 	elif [[ -f "$card_dir/spike_${card}.md" ]]; then
@@ -294,6 +328,17 @@ eaw_phase_completion_artifact_has_meaningful_content() {
 			return 0
 		fi
 		return 1
+	fi
+
+	# FIX-EMPTY-HEADINGS: for markdown artifacts, reject files that consist only of
+	# heading lines (# / ##) and blank lines — this is an unfilled scaffold regardless
+	# of which template it came from (e.g. 5-heading intake with all sections empty).
+	if [[ "$rel_path" == *.md ]]; then
+		local non_heading_lines
+		non_heading_lines="$(grep -cvE '^[[:space:]]*$|^#' "$file" 2>/dev/null)" || non_heading_lines=0
+		if [[ "$non_heading_lines" -eq 0 ]]; then
+			return 1
+		fi
 	fi
 
 	return 0

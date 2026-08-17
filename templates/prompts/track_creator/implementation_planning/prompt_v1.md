@@ -38,7 +38,12 @@ OUTPUT_STRUCTURE
 - Cada path da allowlist deve aparecer em arquivos envolvidos de algum Step.
 
 READ_SCOPE
-- Somente {{CARD_DIR}}/investigations/ e {{CARD_DIR}}/implementation/
+- {{CARD_DIR}}/investigations/
+- {{CARD_DIR}}/implementation/
+- {{RUNTIME_ROOT}}/docs/WORKFLOW_YAML_CONTRACT.md
+- {{RUNTIME_ROOT}}/tracks/track_creator
+- {{RUNTIME_ROOT}}/templates/prompts/track_creator
+- {{RUNTIME_ROOT}}/skills/registry.yaml
 
 WRITE_SCOPE
 - Somente:

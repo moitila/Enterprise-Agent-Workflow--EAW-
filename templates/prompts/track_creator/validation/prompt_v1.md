@@ -36,7 +36,14 @@ OUTPUT_STRUCTURE
   ou hash de existencia).
 
 READ_SCOPE
-- Somente {{CARD_DIR}}/implementation/, TARGET_REPOS em modo leitura.
+- {{CARD_DIR}}/investigations/
+- {{CARD_DIR}}/implementation/
+- {{CARD_DIR}}/runtime/
+- {{RUNTIME_ROOT}}/docs/WORKFLOW_YAML_CONTRACT.md
+- {{RUNTIME_ROOT}}/docs/PROMPT_GOVERNANCE.md
+- {{RUNTIME_ROOT}}/tracks/track_creator/track.yaml
+- {{RUNTIME_ROOT}}/tracks/track_creator/phases
+- {{RUNTIME_ROOT}}/templates/prompts/track_creator
 
 WRITE_SCOPE
 - Somente {{CARD_DIR}}/investigations/90_validation_report.md

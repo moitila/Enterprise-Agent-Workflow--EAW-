@@ -1639,11 +1639,43 @@ eaw_detect_card_template_type() {
 	state_candidates=("$card_dir"/state_card_*.yaml)
 	shopt -u nullglob
 
-	if [[ ${#state_candidates[@]} -eq 1 ]]; then
-		track_id="$(eaw_yaml_state_scalar "${state_candidates[0]}" "track_id")"
+	if [[ ${#state_candidates[@]} -eq 0 ]]; then
+		echo "eaw_detect_card_template_type: no state_card_*.yaml found in $card_dir" >&2
+		return 1
+	elif [[ ${#state_candidates[@]} -gt 1 ]]; then
+		echo "eaw_detect_card_template_type: multiple state_card_*.yaml found in $card_dir" >&2
+		return 1
 	fi
 
-	printf "%s\n" "${track_id:-feature}"
+	track_id="$(eaw_yaml_state_scalar "${state_candidates[0]}" "track_id")"
+
+	if [[ -z "$track_id" ]]; then
+		echo "eaw_detect_card_template_type: track_id missing in ${state_candidates[0]}" >&2
+		return 1
+	fi
+
+	if [[ ! "$track_id" =~ ^[a-zA-Z0-9_-]+$ ]]; then
+		echo "eaw_detect_card_template_type: track_id contains invalid characters: $track_id" >&2
+		return 1
+	fi
+
+	track_id="${track_id,,}"
+
+	if [[ -f "${EAW_TEMPLATES_DIR}/intake_${track_id}.md" ]]; then
+		printf "%s\n" "$track_id"
+		return 0
+	fi
+
+	# Legacy fallback when no dedicated template exists
+	if [[ -f "$card_dir/bug_${card}.md" ]]; then
+		printf "bug\n"
+	elif [[ -f "$card_dir/spike_${card}.md" ]]; then
+		printf "spike\n"
+	elif compgen -G "$card_dir/state_card_repo_onboarding.yaml" >/dev/null 2>&1; then
+		printf "repo_onboarding\n"
+	else
+		printf "feature\n"
+	fi
 }
 
 eaw_card_markdown_list_after_label() {
@@ -1930,7 +1962,76 @@ eaw_yaml_phase_capabilities() {
 eaw_yaml_phase_read_sources() {
 	local phase_file="${1:-}"
 	[[ -z "$phase_file" || ! -f "$phase_file" ]] && return 0
-	awk '/^read_sources:/{p=1; next} p && /^  - /{print $2} p && !/^  - /{p=0}' "$phase_file"
+	awk '
+		BEGIN { in_phase=0; in_rs=0 }
+		/^phase:[[:space:]]*$/ { in_phase=1; in_rs=0; next }
+		in_phase && /^  read_sources:[[:space:]]*$/ { in_rs=1; next }
+		in_phase && in_rs && /^    - / {
+			val=$0; sub(/^    - /, "", val)
+			if (val ~ /^".*"$/) { sub(/^"/, "", val); sub(/"$/, "", val) }
+			else if (val ~ /^'"'"'.*'"'"'$/) { sub(/^'"'"'/, "", val); sub(/'"'"'$/, "", val) }
+			print val
+			next
+		}
+		in_phase && in_rs && /^  [^[:space:]]/ { in_rs=0 }
+		in_phase && in_rs && /^[^[:space:]]/ { in_rs=0; in_phase=0 }
+		in_phase && !in_rs && /^[^[:space:]]/ && !/^phase:[[:space:]]*$/ { in_phase=0 }
+	' "$phase_file"
+}
+
+eaw_resolve_read_source_item() {
+	local raw_path="${1:-}"
+	local resolved="$raw_path"
+
+	# Resolve known placeholders
+	if [[ "$resolved" == *"{{RUNTIME_ROOT}}"* ]]; then
+		[[ -z "${RUNTIME_ROOT:-}" ]] && { echo "eaw_resolve_read_source_item: RUNTIME_ROOT is empty" >&2; return 1; }
+		resolved="${resolved//\{\{RUNTIME_ROOT\}\}/${RUNTIME_ROOT}}"
+	fi
+	if [[ "$resolved" == *"{{CARD_DIR}}"* ]]; then
+		[[ -z "${CARD_DIR:-}" ]] && { echo "eaw_resolve_read_source_item: CARD_DIR is empty" >&2; return 1; }
+		resolved="${resolved//\{\{CARD_DIR\}\}/${CARD_DIR}}"
+	fi
+	if [[ "$resolved" == *"{{OUT_DIR}}"* ]]; then
+		[[ -z "${OUT_DIR:-}" ]] && { echo "eaw_resolve_read_source_item: OUT_DIR is empty" >&2; return 1; }
+		resolved="${resolved//\{\{OUT_DIR\}\}/${OUT_DIR}}"
+	fi
+	if [[ "$resolved" == *"{{EAW_WORKDIR}}"* ]]; then
+		[[ -z "${EAW_WORKDIR:-}" ]] && { echo "eaw_resolve_read_source_item: EAW_WORKDIR is empty" >&2; return 1; }
+		resolved="${resolved//\{\{EAW_WORKDIR\}\}/${EAW_WORKDIR}}"
+	fi
+
+	# Reject any remaining unknown placeholders
+	if [[ "$resolved" =~ \{\{[a-zA-Z_][a-zA-Z0-9_]*\}\} ]]; then
+		echo "eaw_resolve_read_source_item: unknown placeholder in: $resolved" >&2
+		return 1
+	fi
+
+	# Must be absolute
+	if [[ "$resolved" != /* ]]; then
+		echo "eaw_resolve_read_source_item: path is not absolute after resolution: $resolved" >&2
+		return 1
+	fi
+
+	# Reject traversal
+	if [[ "$resolved" == *"/../"* || "$resolved" == *"/.." ]]; then
+		echo "eaw_resolve_read_source_item: path contains traversal: $resolved" >&2
+		return 1
+	fi
+
+	# Remove duplicate slashes
+	while [[ "$resolved" == *//* ]]; do
+		resolved="${resolved//\/\///}"
+	done
+
+	# Path must exist
+	if [[ ! -e "$resolved" ]]; then
+		echo "eaw_resolve_read_source_item: path does not exist: $resolved" >&2
+		return 1
+	fi
+
+	echo "$resolved"
+	return 0
 }
 
 eaw_runtime_environment_block() {
@@ -1993,8 +2094,21 @@ ${skill_lines%$'\n'}"
 	capabilities_block="$(eaw_yaml_phase_capabilities "${phase_file:-}")"
 	local capabilities_section=""
 	[[ -n "$capabilities_block" ]] && capabilities_section=$'CAPABILITIES_DECLARED:\n'"${capabilities_block}"
-	local read_sources_block
-	read_sources_block="$(eaw_yaml_phase_read_sources "${phase_file:-}")"
+	local read_sources_block=""
+	local rs_raw
+	rs_raw="$(eaw_yaml_phase_read_sources "${phase_file:-}")"
+	if [[ -n "$rs_raw" ]]; then
+		local rs_line rs_resolved rs_resolved_list=""
+		while IFS= read -r rs_line; do
+			[[ -n "$rs_line" ]] || continue
+			rs_resolved="$(CARD_DIR="$card_dir" eaw_resolve_read_source_item "$rs_line" 2>/dev/null)" || {
+				echo "RUNTIME: read_sources item skipped (resolution failed): $rs_line" >&2
+				continue
+			}
+			rs_resolved_list+="${rs_resolved}"$'\n'
+		done <<< "$rs_raw"
+		read_sources_block="${rs_resolved_list%$'\n'}"
+	fi
 	local read_sources_section=""
 	[[ -n "$read_sources_block" ]] && read_sources_section=$'READ_SOURCES:\n'"${read_sources_block}"
 

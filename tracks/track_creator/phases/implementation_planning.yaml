@@ -23,6 +23,14 @@ phase:
     prompts:
       - implementation_planning
 
+  read_sources:
+    - "{{RUNTIME_ROOT}}/docs/WORKFLOW_YAML_CONTRACT.md"
+    - "{{RUNTIME_ROOT}}/tracks/track_creator"
+    - "{{RUNTIME_ROOT}}/templates/prompts/track_creator"
+    - "{{RUNTIME_ROOT}}/skills/registry.yaml"
+    - "{{CARD_DIR}}/investigations"
+    - "{{CARD_DIR}}/implementation"
+
   completion:
     strategy: required_artifacts_exist
     required_artifacts:

@@ -22,14 +22,22 @@ OUTPUT
 - Escrever somente: {{CARD_DIR}}/investigations/10_track_design.md
 
 OUTPUT_STRUCTURE
-- Secoes obrigatorias: Objetivo da Track, Fases (id, nome, responsabilidade unica),
-  Transicoes, phase.skills por fase, Artefatos de saida por fase, Decisoes de
-  skip_when (com justificativa quando presente), Handoff contracts.
+- Secoes obrigatorias: Objetivo da Track, Magnitude (magnitude pequena/media/grande,
+  responsabilidades identificadas, dependencias, complexidade de fontes, necessidade
+  de skills, justificativa da quantidade de fases, proporcionalidade), Fases (id,
+  nome, responsabilidade unica), Transicoes, phase.skills por fase, Artefatos de
+  saida por fase, Decisoes de skip_when (com justificativa quando presente),
+  Handoff contracts.
 - Declarar phase.skills explicitamente para cada fase.
 - Garantir que cada fase nao-final tenha transicao declarada.
 
 READ_SCOPE
-- Somente {{CARD_DIR}}/investigations/
+- {{CARD_DIR}}/investigations/
+- {{RUNTIME_ROOT}}/docs/WORKFLOW_YAML_CONTRACT.md
+- {{RUNTIME_ROOT}}/docs/PROMPT_GOVERNANCE.md
+- {{RUNTIME_ROOT}}/skills/registry.yaml
+- {{RUNTIME_ROOT}}/tracks
+- {{RUNTIME_ROOT}}/templates/prompts
 
 WRITE_SCOPE
 - Somente {{CARD_DIR}}/investigations/10_track_design.md

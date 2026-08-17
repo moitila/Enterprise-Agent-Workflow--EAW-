@@ -32,7 +32,8 @@ OUTPUT_STRUCTURE
 - Resultado de cada validacao deve ser PASS ou FAIL com evidencia literal.
 
 READ_SCOPE
-- Somente {{CARD_DIR}}/implementation/
+- {{CARD_DIR}}/implementation/
+- {{RUNTIME_ROOT}}/tracks/track_creator
 
 WRITE_SCOPE
 - Paths da allowlist de {{CARD_DIR}}/implementation/00_scope.lock.md.
@@ -66,3 +67,11 @@ FAIL_CONDITIONS
 - Falhar se 20_patch_notes.md estiver ausente ou vazio.
 - Falhar se qualquer arquivo criado contiver placeholders de template nao resolvidos.
 - Falhar se qualquer escrita ocorrer fora da allowlist em TARGET_REPOS.
+
+FAIL-CLOSED
+- Ao descobrir qualquer path necessario fora da allowlist de
+  {{CARD_DIR}}/implementation/00_scope.lock.md:
+  (a) parar imediatamente;
+  (b) nao criar o arquivo;
+  (c) registrar o bloqueio em {{CARD_DIR}}/implementation/20_patch_notes.md;
+  (d) marcar status como BLOCKED e nao declarar sucesso.

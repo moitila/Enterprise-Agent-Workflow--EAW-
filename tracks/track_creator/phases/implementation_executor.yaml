@@ -20,6 +20,10 @@ phase:
     prompts:
       - implementation_executor
 
+  read_sources:
+    - "{{RUNTIME_ROOT}}/tracks/track_creator"
+    - "{{CARD_DIR}}/implementation"
+
   completion:
     strategy: required_artifacts_exist
     required_artifacts:

@@ -147,7 +147,7 @@ um item (lista não-vazia). Omitido quando o campo está ausente ou é `read_sou
   <item1>
   <item2>
   ```
-- **Campo YAML de fase correspondente**: `read_sources:` top-level no YAML da fase.
+- **Campo YAML de fase correspondente**: `phase.read_sources` (aninhado sob `phase:`, indentação de 2 espaços). Placeholders portáveis com delimitadores duplos são suportados: `{{RUNTIME_ROOT}}`, `{{CARD_DIR}}`, `{{OUT_DIR}}`, `{{EAW_WORKDIR}}`. O runtime resolve cada placeholder para o path absoluto correspondente antes de injetar o bloco READ_SOURCES no prompt. Paths relativos ou placeholders desconhecidos bloqueiam a materialização.
 - **Compatibilidade retroativa**: fases sem o campo ou com `read_sources: []` mantêm
   comportamento inalterado — o bloco simplesmente não aparece no prompt.
 - **Função extratora**: `eaw_yaml_phase_read_sources` em `scripts/commands/eaw_commands.sh`.

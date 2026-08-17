@@ -20,6 +20,16 @@ phase:
     prompts:
       - validation
 
+  read_sources:
+    - "{{RUNTIME_ROOT}}/docs/WORKFLOW_YAML_CONTRACT.md"
+    - "{{RUNTIME_ROOT}}/docs/PROMPT_GOVERNANCE.md"
+    - "{{RUNTIME_ROOT}}/tracks/track_creator/track.yaml"
+    - "{{RUNTIME_ROOT}}/tracks/track_creator/phases"
+    - "{{RUNTIME_ROOT}}/templates/prompts/track_creator"
+    - "{{CARD_DIR}}/investigations"
+    - "{{CARD_DIR}}/implementation"
+    - "{{CARD_DIR}}/runtime"
+
   completion:
     strategy: required_artifacts_exist
     required_artifacts:

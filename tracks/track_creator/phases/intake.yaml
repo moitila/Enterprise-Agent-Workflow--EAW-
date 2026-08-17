@@ -3,10 +3,9 @@ config_version: 1
 phase:
   id: intake
   name: Intake
-  description: Collect the track goal, phases, phase.skills decisions, and constraints.
+  description: Collect the track goal, problem, expected result, and constraints from the user.
 
-  skills:
-    - eaw_track_creator
+  skills: []
 
   prompt:
     active: 1
@@ -26,3 +25,9 @@ phase:
     required_artifacts:
       - path: investigations/00_intake.md
         validation_mode: blocking
+        required_headings:
+          - "## Objetivo da Track"
+          - "## Problema"
+          - "## Resultado Esperado"
+          - "## Restricoes Operacionais"
+          - "## Questoes em Aberto"

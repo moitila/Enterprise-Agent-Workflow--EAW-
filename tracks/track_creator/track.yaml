@@ -19,6 +19,7 @@ track:
   phases:
     - intake
     - track_design
+    - prompt_design
     - implementation_planning
     - implementation_executor
     - validation
@@ -27,6 +28,8 @@ track:
     intake:
       next: track_design
     track_design:
+      next: prompt_design
+    prompt_design:
       next: implementation_planning
     implementation_planning:
       next: implementation_executor
