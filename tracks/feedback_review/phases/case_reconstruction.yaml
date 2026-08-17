@@ -1,0 +1,30 @@
+config_version: 1
+
+phase:
+  id: case_reconstruction
+  name: Case Reconstruction
+  description: >
+    Reconstruct the minimum unit of analysis for each execution in the corpus.
+    Uses materialized prompts (not current templates) as the historical source of truth.
+
+  prompt:
+    active: 1
+    path: templates/prompts/feedback_review/case_reconstruction/prompt_v<active>.md
+
+  outputs:
+    create_directories:
+      - analysis
+    create_artifacts:
+      - analysis/20_cases.md
+    prompts:
+      - case_reconstruction
+
+  read_sources:
+    - "{{CARD_DIR}}/corpus/00_manifest.md"
+    - "{{CARD_DIR}}/corpus/10_inventory.md"
+
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - path: analysis/20_cases.md
+        validation_mode: blocking

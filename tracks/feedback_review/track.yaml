@@ -1,0 +1,43 @@
+config_version: 1
+
+track:
+  id: feedback_review
+  name: Feedback Review
+  description: >
+    Analyzes a single origin track per execution, systematically crossing
+    spontaneous agent feedback against operational prompts, produced artifacts,
+    phase handoffs, runtime journal, and observed outcomes. Transforms feedback
+    into a prioritized backlog with evidence-based findings classified by cause.
+  initial_phase: corpus_freeze
+  final_phase: backlog_finalization
+
+  initial_outputs:
+    create_directories:
+      - ingest
+      - corpus
+      - analysis
+
+  phases:
+    - corpus_freeze
+    - case_reconstruction
+    - findings
+    - phase_alignment
+    - diagnosis
+    - backlog_finalization
+
+  transitions:
+    corpus_freeze:
+      next: case_reconstruction
+    case_reconstruction:
+      next: findings
+    findings:
+      next: phase_alignment
+    phase_alignment:
+      next: diagnosis
+    diagnosis:
+      next: backlog_finalization
+
+  rules:
+    one_prompt_per_phase: true
+    generated_artifacts_of_each_phase_must_be_non_empty: true
+    allow_manual_phase_skip: false

@@ -23,3 +23,5 @@ tracks:
     status: installed
   - track_id: track_creator
     status: installed
+  - track_id: feedback_review
+    status: installed
