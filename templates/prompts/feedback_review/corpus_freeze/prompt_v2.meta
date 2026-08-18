@@ -1,0 +1,6 @@
+version: 2
+phase: corpus_freeze
+track: feedback_review
+status: active
+created: 2026-08-17
+notes: "Corrige D1-D6: placeholders canonicos, WRITE_SCOPE+handoff, OUTPUT_STRUCTURE"
