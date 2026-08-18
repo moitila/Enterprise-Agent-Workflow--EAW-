@@ -274,4 +274,42 @@ if ! bash "${REPO_ROOT}/tests/smoke_audit_skip.sh"; then
     fail "smoke_audit_skip" "smoke_audit_skip.sh failed"
 fi
 
+# INV-10-ACTIVE: active: em cada phase YAML deve coincidir com sufixo numérico do ACTIVE file
+# Escopo: bug_ONBOARD. Outras tracks terão invariante própria quando forem corrigidas.
+for yaml_file in tracks/bug_ONBOARD/phases/*.yaml; do
+    [[ -f "$yaml_file" ]] || continue
+    track_id="bug_ONBOARD"
+    phase_id="$(basename "$yaml_file" .yaml)"
+    yaml_active="$(awk '/^[[:space:]]+active:/{print $2; exit}' "$yaml_file")"
+    [[ -n "$yaml_active" ]] || continue
+    active_file="templates/prompts/${track_id}/${phase_id}/ACTIVE"
+    [[ -f "$active_file" ]] || continue
+    active_val="$(tr -d '[:space:]' <"$active_file" | sed 's/^v//')"
+    if [[ "$yaml_active" != "$active_val" ]]; then
+        fail "INV-10-ACTIVE" "track=${track_id} phase=${phase_id} yaml_active=${yaml_active} active_file=${active_val}"
+    else
+        printf "PASS: INV-10-ACTIVE: track=%s phase=%s active=%s\n" "$track_id" "$phase_id" "$yaml_active"
+    fi
+done
+
+# INV-11-SECTIONS: cada heading de required_sections do change_plan deve existir no template
+# Escopo: bug_ONBOARD/implementation_planning vs implementation_10_change_plan.md
+for yaml_file in tracks/bug_ONBOARD/phases/implementation_planning.yaml; do
+    [[ -f "$yaml_file" ]] || continue
+    while IFS= read -r section; do
+        [[ -n "$section" ]] || continue
+        heading="$(echo "$section" | tr -d '"')"
+        # Somente headings do 10_change_plan.md (excluir headings de 00_scope.lock.md)
+        template_file=""
+        if echo "$heading" | grep -qE 'Validacao|Rollback|Objetivo|Hipotese.s..Selecionada|Assuncoes|^## Steps'; then
+            template_file="templates/implementation_10_change_plan.md"
+        fi
+        if [[ -n "$template_file" && -f "$template_file" ]]; then
+            if ! grep -qF "$heading" "$template_file"; then
+                fail "INV-11-SECTIONS" "phase=implementation_planning section='${heading}' not found in ${template_file}"
+            fi
+        fi
+    done < <(grep -A100 'required_sections:' "$yaml_file" | grep '^\s*-' | sed 's/.*- //')
+done
+
 summary

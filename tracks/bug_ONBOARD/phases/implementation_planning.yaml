@@ -6,7 +6,7 @@ phase:
   description: Plan the implementation tasks.
 
   prompt:
-    active: 5
+    active: 6
     path: templates/prompts/bug_ONBOARD/implementation_planning/prompt_v<active>.md
 
   outputs:
@@ -36,5 +36,6 @@ phase:
           - "## Hipotese(s) Selecionada(s)"
           - "## Assuncoes Explicitas"
           - "## Steps"
-          - "## Validacao Tecnica Obrigatoria"
+          - "## Validacao Read-only"
+          - "## Validacao Pos-PR"
           - "## Rollback"

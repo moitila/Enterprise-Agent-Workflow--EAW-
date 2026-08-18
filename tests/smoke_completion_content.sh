@@ -170,3 +170,28 @@ if [[ "$PASS_COUNT" -ne 8 ]]; then
 	fail "esperados 8 casos aprovados, obtidos $PASS_COUNT"
 fi
 printf "smoke_completion_content OK (%d/8)\n" "$PASS_COUNT"
+
+# --- Allowlist gate tests (BL-03) ---
+# g: scope.lock com In Scope + Out of Scope mas SEM Allowlist de Escrita -> deve FALHAR
+cG="$WORK/g"
+seed_file "$cG" implementation/00_scope.lock.md \
+	$'# Scope Lock\n\n## In Scope\n\nalgum conteudo\n\n## Out of Scope\n\nalgum conteudo\n'
+if eaw_phase_completion_artifact_has_meaningful_content "SMOKE" "$cG" "implementation_planning" \
+		"implementation/00_scope.lock.md" 2>/dev/null; then
+	fail "(g) gate deveria rejeitar scope.lock sem ## Allowlist de Escrita"
+fi
+pass "(g) gate rejeitou scope.lock sem Allowlist de Escrita"
+PASS_COUNT=$((PASS_COUNT + 1))
+
+# h: scope.lock com Allowlist de Escrita preenchida com path real -> deve PASSAR
+cH="$WORK/h"
+seed_file "$cH" implementation/00_scope.lock.md \
+	$'# Scope Lock\n\n## Base Obrigatoria\n\nalgum conteudo\n\n## In Scope\n\nalgum conteudo\n\n## Out of Scope\n\nalgum conteudo\n\n## Allowlist de Escrita\n- /home/user/dev/eaw/tracks/bug_ONBOARD/phases/intake.yaml\n\n## Regra de Escrita\n\nalguma regra\n'
+if ! eaw_phase_completion_artifact_has_meaningful_content "SMOKE" "$cH" "implementation_planning" \
+		"implementation/00_scope.lock.md" 2>/dev/null; then
+	fail "(h) gate deveria aceitar scope.lock com Allowlist preenchida com path real"
+fi
+pass "(h) gate aceitou scope.lock com Allowlist de Escrita preenchida"
+PASS_COUNT=$((PASS_COUNT + 1))
+
+printf "smoke_completion_content Allowlist gate OK (%d total)\n" "$PASS_COUNT"

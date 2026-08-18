@@ -2173,9 +2173,20 @@ eaw_scaffold_phase_artifact() {
 		cat >"$target_path" <<EOF
 # Scope Lock - Card $card
 
+## Base Obrigatoria
+
+## Hipotese(s) Base
+
+## Contexto
+
 ## In Scope
 
 ## Out of Scope
+
+## Allowlist de Escrita
+Substitua este bloco por paths absolutos reais — um por linha, sem exemplos fictícios.
+
+## Regra de Escrita
 EOF
 		;;
 	implementation/10_change_plan.md)

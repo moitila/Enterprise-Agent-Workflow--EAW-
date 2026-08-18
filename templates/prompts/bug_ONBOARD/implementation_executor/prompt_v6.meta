@@ -1,0 +1,6 @@
+version: v6
+based_on: v5
+change: BL-07 — separacao Validacao Read-only vs Validacao Pos-PR
+card: EAW-BUG-ONBOARD-SCAFFOLDS-GATES
+date: 2026-08-18
+fixes: BL-07

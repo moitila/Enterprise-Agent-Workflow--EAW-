@@ -79,8 +79,10 @@ OUTPUT_STRUCTURE
   - `## Hipotese(s) Selecionada(s)`
   - `## Assuncoes Explicitas`
   - `## Steps`
-  - `## Validacao Tecnica Obrigatoria`
-  - `## Rollback`
+  - `## Validacao Read-only`
+  - `## Validacao Pos-PR`
+- `## Validacao Read-only` aceita somente operações de leitura/verificação (bash -n, grep, diff, cat, wc); não inclui DDL nem compilação.
+- `## Validacao Pos-PR` é informativa; não deve incluir mandatos de execução bloqueante.
 - A allowlist de escrita deve ser fechada: paths absolutos, sem glob, sem alias.
 
 READ_SCOPE
@@ -144,7 +146,8 @@ RULES
     - `## Hipotese(s) Selecionada(s)`
     - `## Assuncoes Explicitas`
     - `## Steps`
-    - `## Validacao Tecnica Obrigatoria`
+    - `## Validacao Read-only`
+    - `## Validacao Pos-PR`
     - `## Rollback`
   - Em cada Step numerado, incluir obrigatoriamente:
     - objetivo

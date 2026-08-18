@@ -6,7 +6,7 @@ phase:
   description: Analyze the intake information and record substantive findings in investigations/20_findings.md; scaffold-only content does not satisfy the phase contract.
 
   prompt:
-    active: 3
+    active: 4
     path: templates/prompts/bug_ONBOARD/findings/prompt_v<active>.md
 
   context:

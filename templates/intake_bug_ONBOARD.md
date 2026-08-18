@@ -1,4 +1,4 @@
-# Intake Bug ONBOARD - {{CARD}}
+# Intake Bug ONBOARD - <CARD>
 
 ## Resumo
 

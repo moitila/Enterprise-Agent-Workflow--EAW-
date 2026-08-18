@@ -202,9 +202,20 @@ eaw_phase_completion_render_expected_scaffold() {
 		cat <<EOF
 # Scope Lock - Card $card
 
+## Base Obrigatoria
+
+## Hipotese(s) Base
+
+## Contexto
+
 ## In Scope
 
 ## Out of Scope
+
+## Allowlist de Escrita
+Substitua este bloco por paths absolutos reais — um por linha, sem exemplos fictícios.
+
+## Regra de Escrita
 EOF
 		;;
 	implementation/10_change_plan.md)
@@ -213,7 +224,11 @@ EOF
 
 ## Steps
 
-## Validation
+## Validacao Read-only
+
+## Validacao Pos-PR
+
+## Rollback
 EOF
 		;;
 	implementation/20_patch_notes.md)
@@ -323,9 +338,15 @@ eaw_phase_completion_artifact_has_meaningful_content() {
 	# Runs AFTER the anti-scaffold cmp so the byte-identical minimal scaffold stays
 	# rejected, while the enriched scaffold (write_allowlist: [] / headings) is accepted.
 	if [[ "$rel_path" == "implementation/00_scope.lock.md" ]]; then
-		if grep -q 'write_allowlist:' "$file" ||
-			{ grep -q '^## In Scope' "$file" && grep -q '^## Out of Scope' "$file"; }; then
+		if grep -q 'write_allowlist:' "$file"; then
 			return 0
+		fi
+		if grep -q '^## In Scope' "$file" && grep -q '^## Out of Scope' "$file"; then
+			if grep -q '^## Allowlist de Escrita' "$file"; then
+				if awk '/^## Allowlist de Escrita/{f=1;next} f && /^## /{exit} f && /\//{print;exit}' "$file" | grep -q '/'; then
+					return 0
+				fi
+			fi
 		fi
 		return 1
 	fi
