@@ -2130,7 +2130,7 @@ ${capabilities_section:+${capabilities_section}$'\n'}
 WRITE_ALLOWLIST:
 $write_allowlist
 $write_allowlist_extra
-${read_sources_section:+${read_sources_section}$'\n'}
+${read_sources_section}
 CRITICAL_PATHS:
 $critical_paths
 EOF
