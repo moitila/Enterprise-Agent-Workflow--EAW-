@@ -135,6 +135,21 @@ section_count="$(awk '
     && pass "intake_scaffold_sections>=${section_count}" \
     || fail "intake_scaffold_sections expected>=5 got=${section_count}"
 
+# BL-CI-16-EXT: bloco BL-CI-16 bug_ONBOARD-especifico deve estar ausente apos extensao generica
+grep -q 'BL-CI-16: for bug_ONBOARD track' scripts/commands/eaw_commands.sh \
+    && fail "BL-CI-16-EXT: comentario BL-CI-16 bug_ONBOARD-especifico ainda presente" \
+    || pass "BL-CI-16-EXT_guard_removed"
+
+# BL-CI-16-EXT: fallback para raw_card_explication.md deve estar presente
+grep -q 'raw_card_explication' scripts/commands/eaw_commands.sh \
+    && pass "BL-CI-16-EXT_fallback_raw_card_explication_present" \
+    || fail "BL-CI-16-EXT: fallback raw_card_explication ausente em eaw_commands.sh"
+
+# D3: verificacao de existencia do diretorio de onboarding deve estar presente
+grep -qE 'context_sources/onboarding.*resolved_repo_key|resolved_repo_key.*context_sources/onboarding' scripts/commands/eaw_commands.sh \
+    && pass "D3_onboarding_dir_check_present" \
+    || fail "D3: verificacao de existencia do diretorio de onboarding ausente"
+
 # syntax check for all modified shell files
 bash -n scripts/commands/eaw_commands.sh && pass "eaw_commands_syntax_ok" || fail "eaw_commands.sh syntax error"
 bash -n scripts/lib/phase_completion.sh  && pass "phase_completion_syntax_ok" || fail "phase_completion.sh syntax error"

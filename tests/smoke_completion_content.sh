@@ -73,6 +73,14 @@ seed_file "$cAT" investigations/30_hypotheses.md $'# H1\n\nvalor {{WRITE_ALLOWLI
 	fail "(a'') token {{...}} deveria dar exit 1"
 pass "(a'') variavel de template {{...}} nao renderizada rejeitada (exit 1)"
 
+# ── (a''') blueprint de prompt_design com token canonico literal -> exit 0 ──
+cAPD="$WORK/apd"
+seed_file "$cAPD" investigations/20_prompt_design.md \
+	$'# Blueprint de Prompts\n\n## Contrato\n\nTodo prompt inicia com {{RUNTIME_ENVIRONMENT}} como dado canonico.\n'
+[[ "$(has_content "$cAPD" prompt_design investigations/20_prompt_design.md)" -eq 0 ]] ||
+	fail "(a''') blueprint de prompt_design com token canonico literal deveria PASSAR (exit 0)"
+pass "(a''') blueprint de prompt_design com token canonico literal aprovado (exit 0)"
+
 # ── (b) .md CURTO nao-scaffold sem placeholder (~40 bytes) -> exit 0 (SEM piso) ──
 cB="$WORK/b"
 seed_file "$cB" investigations/40_next_steps.md $'# Passo 1\nfoo bar baz.\n'
@@ -166,10 +174,10 @@ seed_file "$cF" implementation/00_scope.lock.md $'# scope lock\n\nconteudo gener
 	fail "(f) scope.lock generico sem estrutura deveria FALHAR (exit 1)"
 pass "(f) scope.lock por estrutura: write_allowlist/headings passa; generico falha"
 
-if [[ "$PASS_COUNT" -ne 8 ]]; then
-	fail "esperados 8 casos aprovados, obtidos $PASS_COUNT"
+if [[ "$PASS_COUNT" -ne 9 ]]; then
+	fail "esperados 9 casos aprovados, obtidos $PASS_COUNT"
 fi
-printf "smoke_completion_content OK (%d/8)\n" "$PASS_COUNT"
+printf "smoke_completion_content OK (%d/9)\n" "$PASS_COUNT"
 
 # --- Allowlist gate tests (BL-03) ---
 # g: scope.lock com In Scope + Out of Scope mas SEM Allowlist de Escrita -> deve FALHAR

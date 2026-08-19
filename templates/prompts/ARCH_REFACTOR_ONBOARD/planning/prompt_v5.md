@@ -53,9 +53,6 @@ You MUST read and use the materialized repository onboarding located at:
 
 Priority reading order:
 
-1. README.md
-2. boundaries.md
-3. commands.md
 4. provenance.md
 
 If additional onboarding files are materialized for the card, they may also be consulted when relevant.

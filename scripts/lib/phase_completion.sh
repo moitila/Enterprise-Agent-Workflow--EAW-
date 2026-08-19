@@ -329,8 +329,10 @@ eaw_phase_completion_artifact_has_meaningful_content() {
 	# FIX-IDENTITY: reject unrendered template variables (identity, not size). The
 	# card-token scaffold case (<CARD>) is already covered by the anti-scaffold cmp
 	# above (the template IS the scaffold); here we additionally reject files that
-	# still carry unrendered {{...}} template variables.
-	if grep -Eq '\{\{[A-Za-z0-9_]+\}\}' "$file"; then
+	# still carry unrendered {{...}} template variables outside the canonical
+	# prompt-design blueprint, where those tokens are intentional design data.
+	if grep -Eq '\{\{[A-Za-z0-9_]+\}\}' "$file" &&
+		[[ "$phase_id" != "prompt_design" || "$rel_path" != "investigations/20_prompt_design.md" ]]; then
 		return 1
 	fi
 

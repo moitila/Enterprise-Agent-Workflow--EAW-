@@ -12,7 +12,6 @@ OBJECTIVE
 Before analyzing the evidences, you MUST read the repository onboarding located at:
 
 {{EAW_WORKDIR}}/context_sources/onboarding/<resolved_repo_key>/
-(Note: `<resolved_repo_key>` is a runtime value determined by the agent during MT01A — it is NOT an EAW template variable.)
 
 RESOLVING `resolved_repo_key` (MT01A — MANDATORY):
 Before reading onboarding, resolve `resolved_repo_key` from `00_intake.md`:
@@ -30,7 +29,6 @@ Priority order:
 1. INDEX.md
 2. 00_overview.md
 3. 70_debug_playbook.md (if bug-related)
-4. 75_rich_editor_and_ckeditor.md (if applicable)
 
 Usage rules:
 

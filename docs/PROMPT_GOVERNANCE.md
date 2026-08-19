@@ -211,3 +211,41 @@ INV-03 em `tests/invariants.sh` valida que prompts ativos com CONTEXT_BLOCK
 têm ao menos um mecanismo de resolução declarado no YAML da fase correspondente
 (`onboarding_template:` ou `dynamic_context_template:`). Um prompt com
 CONTEXT_BLOCK e sem mecanismo declarado é considerado configuração inválida.
+
+## Resolução de resolved_repo_key (BL-CI-16-EXT)
+
+O mecanismo ONBOARDING CONTEXT injeta o path `context_sources/onboarding/<resolved_repo_key>/`
+nos prompts renderizados via substituição dos tokens `<resolved_repo_key>` e `{{RESOLVED_REPO_KEY}}`.
+A partir do commit BL-CI-16-EXT (card EAW-BUG-ONBOARD-CONTEXT-FIX, 2026-08-19), a resolução
+é universal para todas as tracks via fallback hierárquico de 3 níveis:
+
+| Nível | Fonte | Condição |
+|-------|-------|----------|
+| 1 | `investigations/00_intake.md` — seção `## Repositorio principal de onboarding` | arquivo existe |
+| 2 | `ingest/raw_card_explication.md` — mesma seção | `00_intake.md` ausente |
+| 3 | Primeiro entry de `TARGET_REPOS` (fallback) | com WARNING em stderr |
+
+**Preservação de contrato:** quando `00_intake.md` existe mas a seção está vazia, o runtime
+emite `ERROR:` e aborta a renderização (contrato de bug_ONBOARD pós-intake mantido).
+
+**WARNING de diretório ausente:** se `context_sources/onboarding/<resolved_repo_key>/` não existir,
+o runtime emite WARNING em stderr antes de injetar o path. A renderização prossegue.
+
+### Filenames de onboarding garantidos em todos os repositórios onboardados
+
+Os seguintes filenames são confirmados presentes nos 9 repositórios de onboarding e devem
+ser usados nas priority orders dos prompts:
+
+- `INDEX.md`
+- `65_implementation_patterns.md`
+- `66_canonical_examples.md`
+- `67_reuse_rules.md`
+- `provenance.md` (garantido nos repos ARCH_REFACTOR_ONBOARD)
+
+Os seguintes filenames foram removidos das priority orders por estarem ausentes em todos os repositórios:
+
+- `75_rich_editor_and_ckeditor.md` — removido de bug_ONBOARD×5 + feature_dynamic×1
+- `README.md`, `boundaries.md`, `commands.md` — removidos de ARCH_REFACTOR_ONBOARD×5
+
+Novos filenames só devem ser adicionados a priority orders após confirmação de existência
+nos repositórios de onboarding relevantes.

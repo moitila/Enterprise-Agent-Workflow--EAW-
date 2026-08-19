@@ -2479,20 +2479,53 @@ eaw_render_phase_prompt_template() {
 	local resolved_repo_key
 	resolved_repo_key="$(printf "%s\n" "$target_repos" | awk 'NF { sub(/^[[:space:]]*-[[:space:]]/, ""); print $1; exit }')"
 
-	# BL-CI-16: for bug_ONBOARD track, override resolved_repo_key from investigations/00_intake.md.
-	# The correct onboarding repo is stored in '## Repositorio principal de onboarding' by the intake agent.
-	# Falls back silently to target_repos resolution when 00_intake.md does not yet exist (intake phase).
-	if [[ "$track_id" == "bug_ONBOARD" ]]; then
-		local _intake_md_bl16="$card_dir/investigations/00_intake.md"
-		if [[ -f "$_intake_md_bl16" ]]; then
-			local _onboarding_repo_bl16
-			_onboarding_repo_bl16="$(awk '/^## Repositorio principal de onboarding/{found=1; next} /^## Reposit.*rio principal de onboarding/{found=1; next} found && /^[[:space:]]*$/{next} found && /^#/{exit} found {gsub(/^[[:space:]]+|[[:space:]]+$/, ""); if ($0 != "") {print; exit}}' "$_intake_md_bl16")"
-			if [[ -n "$_onboarding_repo_bl16" ]]; then
-				resolved_repo_key="$_onboarding_repo_bl16"
-			else
-				echo "ERROR: bug_ONBOARD: campo '## Repositorio principal de onboarding' vazio em $_intake_md_bl16; abortando renderizacao." >&2
-				return 1
+	# BL-CI-16-EXT: resolve resolved_repo_key hierarquicamente para todas as tracks.
+	# Nivel 1: investigations/00_intake.md (section ## Repositorio principal de onboarding)
+	local _awk_bl16='
+		/^## Repositorio principal de onboarding/{found=1; repo_section=0; next}
+		/^## Reposit.*rio principal de onboarding/{found=1; repo_section=0; next}
+		/^## Repo \/ componente afetado/{found=1; repo_section=1; next}
+		found && /^[[:space:]]*$/{next}
+		found && /^#/{exit}
+		found {
+			gsub(/^[[:space:]]+|[[:space:]]+$/, "")
+			if ($0 != "") {
+				if (repo_section) { sub(/[[:space:]].*$/, "") }
+				print; exit
+			}
+		}
+	'
+	local _intake_md_bl16="$card_dir/investigations/00_intake.md"
+	if [[ -f "$_intake_md_bl16" ]]; then
+		local _onboarding_repo_bl16
+		_onboarding_repo_bl16="$(awk "$_awk_bl16" "$_intake_md_bl16")"
+		if [[ -n "$_onboarding_repo_bl16" ]]; then
+			resolved_repo_key="$_onboarding_repo_bl16"
+		else
+			echo "ERROR: BL-CI-16: campo '## Repositorio principal de onboarding' vazio em $_intake_md_bl16; abortando renderizacao." >&2
+			return 1
+		fi
+	else
+		# Nivel 2: ingest/raw_card_explication.md
+		local _raw_md_bl16="$card_dir/ingest/raw_card_explication.md"
+		if [[ -f "$_raw_md_bl16" ]]; then
+			local _onboarding_repo_raw
+			_onboarding_repo_raw="$(awk "$_awk_bl16" "$_raw_md_bl16")"
+			if [[ -n "$_onboarding_repo_raw" ]]; then
+				resolved_repo_key="$_onboarding_repo_raw"
 			fi
+			# campo vazio ou ausente -> Nivel 3 (fallback com WARNING)
+		fi
+		# Nivel 3: fallback ja inicializado como 1o entry de target_repos
+		if [[ "$resolved_repo_key" == "$(printf "%s\n" "$target_repos" | awk 'NF { sub(/^[[:space:]]*-[[:space:]]/, ""); print $1; exit }')" ]]; then
+			echo "WARNING: BL-CI-16: resolved_repo_key fallback to first TARGET_REPO='$resolved_repo_key'; define '## Repositorio principal de onboarding' in investigations/00_intake.md or ingest/raw_card_explication.md" >&2
+		fi
+	fi
+	# BL-CI-16-EXT D3: warn when resolved onboarding directory is absent
+	if [[ -n "${EAW_WORKDIR:-}" ]]; then
+		local _onboarding_dir_check="${EAW_WORKDIR}/context_sources/onboarding/${resolved_repo_key}"
+		if [[ ! -d "$_onboarding_dir_check" ]]; then
+			echo "WARNING: BL-CI-16: onboarding directory absent for repo=${resolved_repo_key} path=${_onboarding_dir_check}; agent will receive invalid path" >&2
 		fi
 	fi
 

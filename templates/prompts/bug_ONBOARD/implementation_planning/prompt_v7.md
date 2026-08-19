@@ -20,7 +20,6 @@ Priority order:
 3. 65_implementation_patterns.md
 4. 66_canonical_examples.md
 5. 70_debug_playbook.md
-6. 75_rich_editor_and_ckeditor.md (if applicable)
 
 Usage rules:
 
