@@ -2662,12 +2662,23 @@ EAW_CI_FEEDBACK_REF
 eaw_lint_rendered_prompt() {
 	local output_file="$1"
 	local residual
-	residual="$(grep -Eon '\{\{[A-Z_]+\}\}|<[a-z][a-z_]*>' "$output_file" 2>/dev/null || true)"
+	local lint_failed=0
+	residual="$(grep -Eon '\{\{[A-Z_]+\}\}|<[a-z][a-z_]*>|<!--' "$output_file" 2>/dev/null || true)"
 	if [[ -n "$residual" ]]; then
-		echo "WARNING: unresolved template variables in ${output_file}:"
+		echo "ERROR: unresolved template variables in ${output_file}:"
 		printf "%s\n" "$residual"
+		lint_failed=1
 	fi
-	return 0
+	local operational_residual
+	operational_residual="$(grep -Eon \
+		'\$\{(CONTEXT_BLOCK|SKILLS_BLOCK|WARNINGS_BLOCK|TOOLING_HINTS)\}' \
+		"$output_file" 2>/dev/null || true)"
+	if [[ -n "$operational_residual" ]]; then
+		echo "ERROR: unresolved EAW operational tokens in ${output_file}:"
+		printf "%s\n" "$operational_residual"
+		lint_failed=1
+	fi
+	return "$lint_failed"
 }
 
 eaw_primary_target_repo() {
@@ -3075,7 +3086,14 @@ cmd_card() {
 		ensure_dir "$outdir/ingest"
 		local _intake_signal="$outdir/ingest/intake_bug.md"
 		if [[ ! -f "$_intake_signal" ]]; then
-			printf '# Intake Bug — %s\n' "$card" >"$_intake_signal"
+			{
+				printf '# Intake Bug — %s\n\n' "$card"
+				printf '## Sintoma observado\n\n'
+				printf '## Evidencia / reproducao minima\n\n'
+				printf '## Comportamento esperado\n\n'
+				printf '## Repo / componente afetado\n\n'
+				printf '## Referencias (ADO, PR, log)\n'
+			} >"$_intake_signal"
 			echo "Wrote ingest/intake_bug.md (bug_ONBOARD type signal)"
 		fi
 	fi

@@ -78,9 +78,37 @@ Render + Write to prompts/{alias}.md
 Provenance Log
 ```
 
-## Architectural Decisions
+## Tokens Operacionais e Lint
 
-- `phase.prompt.path` é a fonte de verdade para qual track e template são usados na renderização.
+### Tokens Operacionais EAW Canonicos
+
+Lista positiva fechada de tokens que DEVEM ser resolvidos antes de entregar o prompt ao agente.
+Se qualquer token desta lista aparecer no prompt renderizado em dollar-brace, o lint retorna 1 (ERROR).
+
+| Token (double-brace no template) | Funcao de resolucao | Exit se residual |
+|---|---|---|
+| CONTEXT_BLOCK | `eaw_apply_context_block_to_prompt` (linha ~2333) | ERROR, exit 1 |
+| SKILLS_BLOCK | `eaw_apply_skills_block_to_prompt` (linha ~2402) | ERROR, exit 1 |
+| WARNINGS_BLOCK | awk inline (linha ~2541) | ERROR, exit 1 |
+| TOOLING_HINTS | awk inline (linha ~2545) | ERROR, exit 1 |
+
+**Nota de digitacao**: usar SEMPRE double-brace no template (ex: o formato de token com dupla-chave e maiusculas).
+Usar dollar-brace no template e erro de digitacao: o awk nao o substitui e o token passa literal ao agente.
+
+### Comportamento de eaw_lint_rendered_prompt
+
+A funcao `eaw_lint_rendered_prompt` (eaw_commands.sh) retorna:
+- **0**: arquivo renderizado sem residuos detectados.
+- **1 (ERROR)**: ao menos um dos seguintes residuos foi encontrado:
+  - Token de template double-brace nao resolvido (padrao maiusculo).
+  - Tag angular residual minuscula.
+  - Abertura de HTML comment (`<!--`).
+  - Token operacional EAW em dollar-brace (lista canonica acima).
+
+A chamada esta em `eaw_render_phase_prompt` (linha ~2576); o exit code e propagado para o pipeline.
+Tokens de shell legitimos como PATH, HOME, USER nao estao na lista canonica e nao produzem falso-positivo.
+
+## Architectural Decisions para qual track e template são usados na renderização.
 - O nome/path do artefato gerado (`prompts/<alias>.md`) é determinado pelo alias da fase, não pelo path declarado.
 - O track nunca é inferido por alias fixo quando `phase.prompt.path` está declarado.
 - O fallback para track `default` ocorre apenas quando `phase.prompt.path` está ausente ou indecifrável; nunca silenciosamente.

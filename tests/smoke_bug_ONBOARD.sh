@@ -82,6 +82,59 @@ grep -q 'Validacao Tecnica Obrigatoria' "templates/prompts/bug_ONBOARD/implement
     && fail "prompt_v6.md still has Validacao Tecnica Obrigatoria" \
     || pass "prompt_v6_no_tecnica_obrigatoria"
 
+# BL-15: lint deve rejeitar HTML comment com exit 1
+# shellcheck source=/dev/null
+source scripts/commands/eaw_commands.sh
+_f="$(mktemp)"; echo '<!-- residual comment -->' >"$_f"
+eaw_lint_rendered_prompt "$_f" >/dev/null 2>&1 \
+    && fail "lint_should_fail_on_html_comment" \
+    || pass "lint_fails_on_html_comment"
+rm -f "$_f"
+
+# BL-16: lint deve rejeitar CONTEXT_BLOCK em dollar-brace com exit 1
+_f2="$(mktemp)"; printf '${CONTEXT_BLOCK}\n' >"$_f2"
+eaw_lint_rendered_prompt "$_f2" >/dev/null 2>&1 \
+    && fail "lint_should_fail_on_dollar_CONTEXT_BLOCK" \
+    || pass "lint_fails_on_dollar_CONTEXT_BLOCK"
+rm -f "$_f2"
+
+# BL-16: lint NAO deve rejeitar ${PATH} (nao e token operacional EAW canonico)
+_f3="$(mktemp)"; printf '${PATH}\n' >"$_f3"
+eaw_lint_rendered_prompt "$_f3" >/dev/null 2>&1 \
+    && pass "lint_no_false_positive_PATH" \
+    || fail "lint_false_positive_on_PATH"
+rm -f "$_f3"
+
+# BL-18: prompt_v7.md deve existir
+[[ -f "templates/prompts/bug_ONBOARD/implementation_planning/prompt_v7.md" ]] \
+    && pass "impl_planning_v7_exists" \
+    || fail "impl_planning_prompt_v7_not_found"
+# BL-18: ACTIVE deve apontar para v7
+active_ip="$(cat "templates/prompts/bug_ONBOARD/implementation_planning/ACTIVE")"
+[[ "$active_ip" == "v7" ]] \
+    && pass "impl_planning_ACTIVE=v7" \
+    || fail "impl_planning_ACTIVE expected=v7 got=${active_ip}"
+# BL-18: prompt_v7.md nao deve ter instrucao autorreferente na secao VALIDACOES FINAIS
+grep -qE 'contenham placeholders literais.*\{\{CARD\}\}' \
+    "templates/prompts/bug_ONBOARD/implementation_planning/prompt_v7.md" \
+    && fail "prompt_v7_still_has_autorreferential_tokens" \
+    || pass "prompt_v7_no_autorreferential_tokens"
+
+# BL-INTAKE: scaffold deve ter secao Sintoma observado
+grep -q '## Sintoma observado' scripts/commands/eaw_commands.sh \
+    && pass "intake_scaffold_has_sintoma_observado" \
+    || fail "intake_scaffold_missing_sintoma_observado"
+# BL-INTAKE: scaffold deve ter pelo menos 5 secoes estruturadas
+section_count="$(awk '
+    /BL-CI-11/{in_block=1; next}
+    in_block && /fi/{exit}
+    in_block && /^[[:space:]]*printf.*## /{count++}
+    END{print count+0}
+' scripts/commands/eaw_commands.sh)"
+[[ "$section_count" -ge 5 ]] \
+    && pass "intake_scaffold_sections>=${section_count}" \
+    || fail "intake_scaffold_sections expected>=5 got=${section_count}"
+
 # syntax check for all modified shell files
 bash -n scripts/commands/eaw_commands.sh && pass "eaw_commands_syntax_ok" || fail "eaw_commands.sh syntax error"
 bash -n scripts/lib/phase_completion.sh  && pass "phase_completion_syntax_ok" || fail "phase_completion.sh syntax error"
