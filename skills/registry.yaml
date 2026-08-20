@@ -48,3 +48,7 @@ skills:
   bootstrap_operator:
     file: skills/bootstrap_operator/SKILL.md
     description: Bootstrap operator skill — workspace init, env config, repos registration, git validation and environment health check (skill-only, no track required).
+
+  eaw_implementation_quality:
+    file: skills/eaw_implementation_quality/SKILL.md
+    description: Auto-validates quality gates (CodeScene thresholds, @SuppressWarnings) during implementation_executor phases, with repo-specific overrides via 62_*.md onboarding files.

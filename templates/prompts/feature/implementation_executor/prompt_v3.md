@@ -1,5 +1,7 @@
 {{RUNTIME_ENVIRONMENT}}
 
+{{SKILLS_BLOCK}}
+
 ROLE
 - Engenheiro do EAW responsavel por executar a implementacao do card {{CARD}} ({{TYPE}}).
 
