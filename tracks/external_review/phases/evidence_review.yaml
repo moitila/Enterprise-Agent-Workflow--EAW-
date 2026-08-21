@@ -1,0 +1,36 @@
+config_version: 1
+
+phase:
+  id: evidence_review
+  name: Evidence Review
+  description: Assess test, CI, documentation, and functional evidence against mapped requirements and risks.
+  skills:
+    - eaw_reviewer
+  prompt:
+    active: 1
+    path: templates/prompts/external_review/evidence_review/prompt_v<active>.md
+  tooling_hints: []
+  outputs:
+    create_artifacts:
+      - review/50_evidence_matrix.md
+      - review/51_validation_gaps.md
+      - investigations/20_handoff.json
+    prompts:
+      - evidence_review
+  read_sources:
+    - "{{CARD_DIR}}/review/00_source_manifest.md"
+    - "{{CARD_DIR}}/review/20_requirements_matrix.md"
+    - "{{CARD_DIR}}/review/21_context_limits.md"
+    - "{{CARD_DIR}}/review/30_change_map.md"
+    - "{{CARD_DIR}}/review/31_impact_matrix.md"
+    - "{{CARD_DIR}}/review/40_technical_analysis.md"
+    - "{{CARD_DIR}}/ingest"
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - path: review/50_evidence_matrix.md
+        validation_mode: blocking
+      - path: review/51_validation_gaps.md
+        validation_mode: blocking
+      - path: investigations/20_handoff.json
+        validation_mode: blocking

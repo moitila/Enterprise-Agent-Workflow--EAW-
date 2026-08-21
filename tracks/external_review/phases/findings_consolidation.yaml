@@ -1,0 +1,39 @@
+config_version: 1
+
+phase:
+  id: findings_consolidation
+  name: Findings Consolidation
+  description: Deduplicate and classify findings, questions, recommendations, and positive aspects with traceability.
+  skills:
+    - eaw_reviewer
+  prompt:
+    active: 1
+    path: templates/prompts/external_review/findings_consolidation/prompt_v<active>.md
+  tooling_hints: []
+  outputs:
+    create_artifacts:
+      - review/60_findings.md
+      - review/61_traceability_matrix.md
+      - review/62_positive_aspects.md
+      - investigations/20_handoff.json
+    prompts:
+      - findings_consolidation
+  read_sources:
+    - "{{CARD_DIR}}/review/20_requirements_matrix.md"
+    - "{{CARD_DIR}}/review/30_change_map.md"
+    - "{{CARD_DIR}}/review/31_impact_matrix.md"
+    - "{{CARD_DIR}}/review/40_technical_analysis.md"
+    - "{{CARD_DIR}}/review/41_review_candidates.md"
+    - "{{CARD_DIR}}/review/50_evidence_matrix.md"
+    - "{{CARD_DIR}}/review/51_validation_gaps.md"
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - path: review/60_findings.md
+        validation_mode: blocking
+      - path: review/61_traceability_matrix.md
+        validation_mode: blocking
+      - path: review/62_positive_aspects.md
+        validation_mode: blocking
+      - path: investigations/20_handoff.json
+        validation_mode: blocking

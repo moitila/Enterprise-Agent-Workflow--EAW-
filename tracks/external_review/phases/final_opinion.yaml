@@ -1,0 +1,44 @@
+config_version: 1
+
+phase:
+  id: final_opinion
+  name: Final Opinion
+  description: Issue one auditable final outcome with limitations, traceability, and manual comment proposals.
+  skills:
+    - eaw_reviewer
+  prompt:
+    active: 1
+    path: templates/prompts/external_review/final_opinion/prompt_v<active>.md
+  tooling_hints: []
+  outputs:
+    create_artifacts:
+      - review/70_final_review.md
+      - review/71_proposed_comments.md
+      - review/72_validation_report.md
+    prompts:
+      - final_opinion
+  read_sources:
+    - "{{CARD_DIR}}/review/00_source_manifest.md"
+    - "{{CARD_DIR}}/review/01_source_gaps.md"
+    - "{{CARD_DIR}}/review/10_baseline.md"
+    - "{{CARD_DIR}}/review/11_diff_identity.md"
+    - "{{CARD_DIR}}/review/20_requirements_matrix.md"
+    - "{{CARD_DIR}}/review/21_context_limits.md"
+    - "{{CARD_DIR}}/review/30_change_map.md"
+    - "{{CARD_DIR}}/review/31_impact_matrix.md"
+    - "{{CARD_DIR}}/review/40_technical_analysis.md"
+    - "{{CARD_DIR}}/review/41_review_candidates.md"
+    - "{{CARD_DIR}}/review/50_evidence_matrix.md"
+    - "{{CARD_DIR}}/review/51_validation_gaps.md"
+    - "{{CARD_DIR}}/review/60_findings.md"
+    - "{{CARD_DIR}}/review/61_traceability_matrix.md"
+    - "{{CARD_DIR}}/review/62_positive_aspects.md"
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - path: review/70_final_review.md
+        validation_mode: blocking
+      - path: review/71_proposed_comments.md
+        validation_mode: blocking
+      - path: review/72_validation_report.md
+        validation_mode: blocking

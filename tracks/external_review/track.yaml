@@ -1,0 +1,67 @@
+config_version: 1
+
+track:
+  id: external_review
+  name: External Review
+  description: >
+    Reviews externally produced changes through an auditable, fail-closed,
+    read-only workflow from source inventory to final opinion.
+  initial_phase: source_inventory
+  final_phase: final_opinion
+
+  initial_outputs:
+    create_directories:
+      - ingest
+      - investigations
+      - review
+
+  phases:
+    - source_inventory
+    - baseline_validation
+    - functional_context
+    - change_mapping
+    - technical_review
+    - evidence_review
+    - findings_consolidation
+    - final_opinion
+
+  transitions:
+    source_inventory:
+      next: baseline_validation
+      contract:
+        emit_handoff: true
+        consume_previous: true
+    baseline_validation:
+      next: functional_context
+      contract:
+        emit_handoff: true
+        consume_previous: true
+    functional_context:
+      next: change_mapping
+      contract:
+        emit_handoff: true
+        consume_previous: true
+    change_mapping:
+      next: technical_review
+      contract:
+        emit_handoff: true
+        consume_previous: true
+    technical_review:
+      next: evidence_review
+      contract:
+        emit_handoff: true
+        consume_previous: true
+    evidence_review:
+      next: findings_consolidation
+      contract:
+        emit_handoff: true
+        consume_previous: true
+    findings_consolidation:
+      next: final_opinion
+      contract:
+        emit_handoff: true
+        consume_previous: true
+
+  rules:
+    generated_artifacts_of_each_phase_must_be_non_empty: true
+    allow_manual_phase_skip: false

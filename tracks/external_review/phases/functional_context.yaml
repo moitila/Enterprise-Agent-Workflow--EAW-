@@ -1,0 +1,31 @@
+config_version: 1
+
+phase:
+  id: functional_context
+  name: Functional Context
+  description: Reconstruct requirements and contracts from proven sources while preserving explicit context gaps.
+  skills: []
+  prompt:
+    active: 1
+    path: templates/prompts/external_review/functional_context/prompt_v<active>.md
+  tooling_hints: []
+  outputs:
+    create_artifacts:
+      - review/20_requirements_matrix.md
+      - review/21_context_limits.md
+      - investigations/20_handoff.json
+    prompts:
+      - functional_context
+  read_sources:
+    - "{{CARD_DIR}}/review/00_source_manifest.md"
+    - "{{CARD_DIR}}/review/01_source_gaps.md"
+    - "{{CARD_DIR}}/ingest"
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - path: review/20_requirements_matrix.md
+        validation_mode: blocking
+      - path: review/21_context_limits.md
+        validation_mode: blocking
+      - path: investigations/20_handoff.json
+        validation_mode: blocking

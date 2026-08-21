@@ -25,3 +25,5 @@ tracks:
     status: installed
   - track_id: feedback_review
     status: installed
+  - track_id: external_review
+    status: installed

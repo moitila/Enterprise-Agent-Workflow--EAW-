@@ -1,0 +1,35 @@
+config_version: 1
+
+phase:
+  id: technical_review
+  name: Technical Review
+  description: Review attributable changes against requirements, contracts, and mapped risks.
+  skills:
+    - eaw_reviewer
+  prompt:
+    active: 1
+    path: templates/prompts/external_review/technical_review/prompt_v<active>.md
+  tooling_hints: []
+  outputs:
+    create_artifacts:
+      - review/40_technical_analysis.md
+      - review/41_review_candidates.md
+      - investigations/20_handoff.json
+    prompts:
+      - technical_review
+  read_sources:
+    - "{{CARD_DIR}}/review/10_baseline.md"
+    - "{{CARD_DIR}}/review/11_diff_identity.md"
+    - "{{CARD_DIR}}/review/20_requirements_matrix.md"
+    - "{{CARD_DIR}}/review/21_context_limits.md"
+    - "{{CARD_DIR}}/review/30_change_map.md"
+    - "{{CARD_DIR}}/review/31_impact_matrix.md"
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - path: review/40_technical_analysis.md
+        validation_mode: blocking
+      - path: review/41_review_candidates.md
+        validation_mode: blocking
+      - path: investigations/20_handoff.json
+        validation_mode: blocking

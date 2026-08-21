@@ -1,0 +1,32 @@
+config_version: 1
+
+phase:
+  id: source_inventory
+  name: Source Inventory
+  description: Freeze source identities, provenance, availability, and gaps without reviewing code merit.
+  skills: []
+  prompt:
+    active: 1
+    path: templates/prompts/external_review/source_inventory/prompt_v<active>.md
+  tooling_hints: []
+  outputs:
+    create_directories:
+      - ingest
+    create_artifacts:
+      - review/00_source_manifest.md
+      - review/01_source_gaps.md
+      - investigations/20_handoff.json
+    prompts:
+      - source_inventory
+  read_sources:
+    - "{{CARD_DIR}}/ingest"
+    - "{{EAW_WORKDIR}}/config/repos.conf"
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - path: review/00_source_manifest.md
+        validation_mode: blocking
+      - path: review/01_source_gaps.md
+        validation_mode: blocking
+      - path: investigations/20_handoff.json
+        validation_mode: blocking
