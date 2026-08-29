@@ -1,0 +1,37 @@
+config_version: 1
+
+phase:
+  id: validation
+  name: Validation
+  description: Validate all track artifacts, phase.skills matrix, and track registration.
+
+  skills:
+    - eaw_track_creator
+    - eaw_prompt_creator
+
+  prompt:
+    active: 1
+    path: templates/prompts/track_creator/validation/prompt_v<active>.md
+
+  outputs:
+    create_directories: []
+    create_artifacts:
+      - investigations/90_validation_report.md
+    prompts:
+      - validation
+
+  read_sources:
+    - "{{RUNTIME_ROOT}}/docs/WORKFLOW_YAML_CONTRACT.md"
+    - "{{RUNTIME_ROOT}}/docs/PROMPT_GOVERNANCE.md"
+    - "{{RUNTIME_ROOT}}/tracks/track_creator/track.yaml"
+    - "{{RUNTIME_ROOT}}/tracks/track_creator/phases"
+    - "{{RUNTIME_ROOT}}/templates/prompts/track_creator"
+    - "{{CARD_DIR}}/investigations"
+    - "{{CARD_DIR}}/implementation"
+    - "{{CARD_DIR}}/runtime"
+
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - path: investigations/90_validation_report.md
+        validation_mode: blocking

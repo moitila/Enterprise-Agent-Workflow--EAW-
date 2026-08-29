@@ -130,7 +130,41 @@ eaw_phase_completion_evaluate_required_artifacts_exist() {
 eaw_phase_completion_detect_card_template_type() {
 	local card="$1"
 	local card_dir="$2"
+	local track_id
+	local -a state_candidates=()
 
+	shopt -s nullglob
+	state_candidates=("$card_dir"/state_card_*.yaml)
+	shopt -u nullglob
+
+	if [[ ${#state_candidates[@]} -eq 0 ]]; then
+		echo "eaw_phase_completion_detect_card_template_type: no state_card_*.yaml found in $card_dir" >&2
+		return 1
+	elif [[ ${#state_candidates[@]} -gt 1 ]]; then
+		echo "eaw_phase_completion_detect_card_template_type: multiple state_card_*.yaml found in $card_dir" >&2
+		return 1
+	fi
+
+	track_id="$(eaw_yaml_state_scalar "${state_candidates[0]}" "track_id")"
+
+	if [[ -z "$track_id" ]]; then
+		echo "eaw_phase_completion_detect_card_template_type: track_id missing in ${state_candidates[0]}" >&2
+		return 1
+	fi
+
+	if [[ ! "$track_id" =~ ^[a-zA-Z0-9_-]+$ ]]; then
+		echo "eaw_phase_completion_detect_card_template_type: track_id contains invalid characters: $track_id" >&2
+		return 1
+	fi
+
+	track_id="${track_id,,}"
+
+	if [[ -f "${EAW_TEMPLATES_DIR}/intake_${track_id}.md" ]]; then
+		printf "%s\n" "$track_id"
+		return 0
+	fi
+
+	# Legacy fallback when no dedicated template exists
 	if [[ -f "$card_dir/bug_${card}.md" ]]; then
 		printf "bug\n"
 	elif [[ -f "$card_dir/spike_${card}.md" ]]; then
@@ -168,9 +202,20 @@ eaw_phase_completion_render_expected_scaffold() {
 		cat <<EOF
 # Scope Lock - Card $card
 
+## Base Obrigatoria
+
+## Hipotese(s) Base
+
+## Contexto
+
 ## In Scope
 
 ## Out of Scope
+
+## Allowlist de Escrita
+Substitua este bloco por paths absolutos reais — um por linha, sem exemplos fictícios.
+
+## Regra de Escrita
 EOF
 		;;
 	implementation/10_change_plan.md)
@@ -179,7 +224,11 @@ EOF
 
 ## Steps
 
-## Validation
+## Validacao Read-only
+
+## Validacao Pos-PR
+
+## Rollback
 EOF
 		;;
 	implementation/20_patch_notes.md)
@@ -280,8 +329,10 @@ eaw_phase_completion_artifact_has_meaningful_content() {
 	# FIX-IDENTITY: reject unrendered template variables (identity, not size). The
 	# card-token scaffold case (<CARD>) is already covered by the anti-scaffold cmp
 	# above (the template IS the scaffold); here we additionally reject files that
-	# still carry unrendered {{...}} template variables.
-	if grep -Eq '\{\{[A-Za-z0-9_]+\}\}' "$file"; then
+	# still carry unrendered {{...}} template variables outside the canonical
+	# prompt-design blueprint, where those tokens are intentional design data.
+	if grep -Eq '\{\{[A-Za-z0-9_]+\}\}' "$file" &&
+		[[ "$phase_id" != "prompt_design" || "$rel_path" != "investigations/20_prompt_design.md" ]]; then
 		return 1
 	fi
 
@@ -289,11 +340,28 @@ eaw_phase_completion_artifact_has_meaningful_content() {
 	# Runs AFTER the anti-scaffold cmp so the byte-identical minimal scaffold stays
 	# rejected, while the enriched scaffold (write_allowlist: [] / headings) is accepted.
 	if [[ "$rel_path" == "implementation/00_scope.lock.md" ]]; then
-		if grep -q 'write_allowlist:' "$file" ||
-			{ grep -q '^## In Scope' "$file" && grep -q '^## Out of Scope' "$file"; }; then
+		if grep -q 'write_allowlist:' "$file"; then
 			return 0
 		fi
+		if grep -q '^## In Scope' "$file" && grep -q '^## Out of Scope' "$file"; then
+			if grep -q '^## Allowlist de Escrita' "$file"; then
+				if awk '/^## Allowlist de Escrita/{f=1;next} f && /^## /{exit} f && /\//{print;exit}' "$file" | grep -q '/'; then
+					return 0
+				fi
+			fi
+		fi
 		return 1
+	fi
+
+	# FIX-EMPTY-HEADINGS: for markdown artifacts, reject files that consist only of
+	# heading lines (# / ##) and blank lines — this is an unfilled scaffold regardless
+	# of which template it came from (e.g. 5-heading intake with all sections empty).
+	if [[ "$rel_path" == *.md ]]; then
+		local non_heading_lines
+		non_heading_lines="$(grep -cvE '^[[:space:]]*$|^#' "$file" 2>/dev/null)" || non_heading_lines=0
+		if [[ "$non_heading_lines" -eq 0 ]]; then
+			return 1
+		fi
 	fi
 
 	return 0

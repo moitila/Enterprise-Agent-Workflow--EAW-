@@ -1,0 +1,42 @@
+config_version: 1
+
+track:
+  id: track_creator
+  name: Track Creator
+  description: >
+    Generic EAW track for creating or revising other EAW tracks.
+    Guides the operator through intake, design, planning, implementation,
+    and validation of a new or revised track structure.
+  initial_phase: intake
+  final_phase: validation
+
+  initial_outputs:
+    create_directories:
+      - ingest
+      - investigations
+      - context
+
+  phases:
+    - intake
+    - track_design
+    - prompt_design
+    - implementation_planning
+    - implementation_executor
+    - validation
+
+  transitions:
+    intake:
+      next: track_design
+    track_design:
+      next: prompt_design
+    prompt_design:
+      next: implementation_planning
+    implementation_planning:
+      next: implementation_executor
+    implementation_executor:
+      next: validation
+
+  rules:
+    one_prompt_per_phase: true
+    generated_artifacts_of_each_phase_must_be_non_empty: true
+    allow_manual_phase_skip: false

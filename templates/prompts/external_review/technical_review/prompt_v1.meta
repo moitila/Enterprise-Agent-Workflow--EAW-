@@ -1,0 +1,3 @@
+version=v1
+required_substrings=ROLE|OBJECTIVE|INPUT|OUTPUT|OUTPUT_STRUCTURE|READ_SCOPE|WRITE_SCOPE|RULES|FORBIDDEN|FAIL_CONDITIONS|NAO_EXECUTADA_POR_BASELINE|PROBLEMA|DUVIDA|RECOMENDACAO|from_phase":"technical_review|messages":[]|codes":[]
+forbidden_words=${CARD_DIR}|${EAW_WORKDIR}|${RUNTIME_ROOT}|checkout|fetch|pull|push|commit

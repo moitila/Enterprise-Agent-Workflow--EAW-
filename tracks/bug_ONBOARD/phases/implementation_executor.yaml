@@ -2,11 +2,13 @@ config_version: 1
 
 phase:
   id: implementation_executor
+  skills:
+    - eaw_implementation_quality
   name: Implementation Executor
   description: Execute the planned implementation tasks.
 
   prompt:
-    active: 5
+    active: 6
     path: templates/prompts/bug_ONBOARD/implementation_executor/prompt_v<active>.md
 
   outputs:

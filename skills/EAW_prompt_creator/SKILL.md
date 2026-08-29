@@ -48,6 +48,70 @@ Identifique o papel semântico antes de escrever qualquer prompt:
 - `validation` — valida artefatos produzidos sem escrever código novo
 - `reporting` / `refine` — consolida e publica artefatos operacionais
 
+## Pre-Writing Investigation
+
+Before writing any prompt, investigate these dimensions. Depth is proportional to phase
+complexity — a simple intake phase needs a brief pass; a multi-input analysis phase with
+corpus requires the full treatment.
+
+### 1. Semantic role
+Identify the real semantic role from `phase_role`, required artifacts, and the track
+contract — not from the phase name alone. Resolve this before writing any instruction.
+
+### 2. Concrete objective
+Derive the objective from the required output artifacts and what the next phase consumes.
+Do not restate the phase name as the objective. Find what Done looks like from the
+consumer's perspective.
+
+### 3. Inputs and available sources
+Identify what is already materialized on disk (scope.lock, change plan, context files,
+prior phase artifacts) versus what the agent must discover at execution time. Reference
+only materialized paths; never assume ambient availability.
+
+### 4. Output-to-consumer mapping
+Map each output artifact to its downstream consumer and the structural minimum that
+consumer requires. The prompt should produce exactly that — no more, no less.
+
+### 5. Observed, inferred, and unverified
+Before instructing an assertion (e.g., "file X exists", "repo Y is target"), classify it:
+- **Observed**: confirmed from the card's artifacts or repos.conf in this execution
+- **Inferred**: derived from context but not directly confirmed
+- **Unverified**: assumed without evidence in this card
+
+Instruct only observed facts without qualification. Inferred facts need a validation step
+in the prompt. Unverified facts must not be stated as given.
+
+### 6. Proportionality
+Match prompt depth to phase complexity.
+
+**Simple phase**: single clear role, inputs already structured, one output artifact, no
+ambiguity, no corpus. → Short prompt. Skip corpus sections. Skip distinction matrices.
+State role, inputs, output, fail condition. Done.
+
+**Complex phase**: multiple input sources, corpus to analyze, non-trivial validation,
+external contracts or validators, risk of scope creep. → Full treatment: conditional
+corpus reading, explicit distinction between observed and inferred, explicit completion
+criteria.
+
+Do not add depth for its own sake. Over-specifying a simple phase creates noise.
+
+### 7. Corpus treatment
+Only instruct corpus reading when a corpus is actually present in this card or workspace.
+Use a conditional form: "if `<path>` exists and is non-empty, read it before proceeding".
+Never mandate corpus reading when no corpus has been declared in the card's context.
+
+### 8. Objective completion criteria
+Define Done in verifiable terms: artifact exists, is non-empty, not identical to the
+scaffold, passes the gate predicate. Avoid subjective criteria. Prefer: file exists +
+not identical to scaffold + specific structural check (grep, schema, lint).
+
+### 9. Coherence with contract, scaffold, and validator
+Before finalizing the prompt, verify:
+- Every required output artifact appears in `OUTPUT` and `WRITE_SCOPE`
+- `FAIL_CONDITIONS` will reject a scaffold-only output
+- The prompt executes deterministically from its declared inputs alone
+- The validator (if any) can operate from the prompt's outputs without implicit knowledge
+
 ## Standard Prompt Structure
 
 Todo prompt EAW começa com `{{RUNTIME_ENVIRONMENT}}` como primeira linha. Este placeholder é substituido pelo runtime com o bloco completo de contexto de execução (CARD_ID, TRACK_ID, STEP_ID, WRITE_ALLOWLIST, TARGET_REPOSITORIES, etc.).
@@ -169,7 +233,9 @@ Após EAW-ARCH-CONTEXT-PATH-REF: em tracks com `dynamic_context_template`, refer
    - `validation`
    - `reporting` / `refine`
 
-3. Resolve context from the active environment before drafting:
+3. Investigate before drafting — apply the Pre-Writing Investigation above to determine
+   depth, classify inputs as observed/inferred/unverified, and define what the next phase
+   needs to receive. Then resolve context from the active environment:
    - treat `WORKDIR`, `EAW_WORKDIR`, runtime root, and related values as execution-time values provided or resolved by the active runtime
    - derive the runtime root from the current execution environment, not from a hardcoded path
    - treat `repos.conf` from the active workspace/runtime as the source of truth
@@ -241,6 +307,22 @@ When reviewing, produce:
 - Never hardcode workspace-specific paths, repository aliases, or runtime variable values.
 - Always resolve track, templates, docs, and repos from the active runtime and current workspace.
 - Todo prompt deve começar com `{{RUNTIME_ENVIRONMENT}}` como primeira linha.
+
+## Invariante de Placeholder Canonico
+
+Todo prompt EAW e todo arquivo de template de track devem usar o formato canonico
+(dupla-chave) para referencias a variaveis operacionais (CARD, CARD_DIR, EAW_WORKDIR,
+RUNTIME_ROOT, CONFIG_SOURCE, OUT_DIR, etc.).
+
+O formato shell-style (chave-simples, ex: ${CARD_DIR}) NAO e expandido pelo motor de
+renderizacao EAW e e considerado DEFEITO em secoes operacionais (INPUT, READ_SCOPE,
+WRITE_SCOPE, OUTPUT, RULES, FAIL_CONDITIONS).
+
+Excecoes legitimas do shell-style:
+- Comandos shell literais em RULES que serao executados pelo agente no terminal
+  (ex: `printf '...' | cat > arquivo` ou `grep -n '\${[A-Z_]+' <arquivo>`)
+- Exemplos ilustrativos do formato INCORRETO, precedidos de `ex:` ou `errado:`
+
 - `eaw_workspace` é sempre incluída implicitamente pelo runtime no agent_bundle — nunca declarar em `phase.skills`.
 - Skills em `phase.skills` devem refletir o papel real do agente da fase: `eaw_card_execution` só para fases orquestradoras.
 - When reviewing a phase that depends on context, require explicit alignment with the runtime context contract:
@@ -265,3 +347,10 @@ Before finalizing any prompt or phase, confirm:
 - se a fase emite codes para `skip_when`: `20_handoff.json` está em OUTPUT, WRITE_SCOPE e FAIL_CONDITIONS
 - `eaw_workspace` não está declarada em `phase.skills` (implícita)
 - `ACTIVE` e `.meta` criados junto com o prompt
+- FAIL_CONDITIONS usa criterio preciso: proibe shell-style (chave-simples) em secoes
+  operacionais, nao proibe o formato canonico (dupla-chave) que e intencional
+- gate WRITE_SCOPE-handoff verificado: cada artefato exigido em FAIL_CONDITIONS esta
+  em WRITE_SCOPE ou RULES de escrita do mesmo prompt
+- gate sintaxe handoff verificado: todo `printf` com redirect esta em linha unica
+- gate OBJECTIVE-OUTPUT_STRUCTURE verificado: nenhum campo de OUTPUT_STRUCTURE exige
+  resultado proibido por OBJECTIVE ou FORBIDDEN

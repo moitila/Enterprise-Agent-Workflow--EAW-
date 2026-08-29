@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### Fixed (EAW-BUG-ONBOARD-CONTEXT-FIX — BL-CI-16-EXT)
+
+- `eaw_commands.sh`: BL-CI-16 `resolved_repo_key` override universalizado para todas as tracks via fallback hierárquico de 3 níveis — (1) `investigations/00_intake.md`, (2) `ingest/raw_card_explication.md`, (3) 1º TARGET_REPO com WARNING (D1/H1).
+- `eaw_commands.sh`: WARNING emitido para stderr quando diretório `context_sources/onboarding/<resolved_repo_key>/` estiver ausente (D3/H3).
+- 11 prompts ativos: filenames órfãos removidos das priority orders — `75_rich_editor_and_ckeditor.md` (6 prompts: bug_ONBOARD×5 + feature_dynamic×1), `README.md`/`boundaries.md`/`commands.md` (5 prompts ARCH_REFACTOR_ONBOARD) (D2/H2).
+- `bug_ONBOARD/intake/prompt_v5.md`: comentário stale sobre `<resolved_repo_key>` removido (D4/H4).
+- `bug_ONBOARD/findings/prompt_v4.md`: notação `{{RESOLVED_REPO_KEY}}` uniformizada para `<resolved_repo_key>` (D4/H4).
+
+Arquivos modificados: `scripts/commands/eaw_commands.sh`, `templates/prompts/bug_ONBOARD/intake/prompt_v5.md`, `templates/prompts/bug_ONBOARD/findings/prompt_v4.md`, `templates/prompts/bug_ONBOARD/hypotheses/prompt_v3.md`, `templates/prompts/bug_ONBOARD/implementation_planning/prompt_v7.md`, `templates/prompts/bug_ONBOARD/implementation_executor/prompt_v6.md`, `templates/prompts/feature_dynamic/hypotheses/prompt_v5.md`, `templates/prompts/ARCH_REFACTOR_ONBOARD/intake/prompt_v4.md`, `templates/prompts/ARCH_REFACTOR_ONBOARD/ingest/prompt_v3.md`, `templates/prompts/ARCH_REFACTOR_ONBOARD/findings/prompt_v3.md`, `templates/prompts/ARCH_REFACTOR_ONBOARD/hypotheses/prompt_v4.md`, `templates/prompts/ARCH_REFACTOR_ONBOARD/planning/prompt_v5.md`, `tests/smoke_bug_ONBOARD.sh`, `docs/PROMPT_GOVERNANCE.md`.
+
 ### Fixed (CARD 574A — CompleteYAML)
 
 - `eaw_official_track_dir`: substituiu `grep -qF` por awk via `eaw_yaml_track_scalar` para leitura consistente do registry (DV-DA1).

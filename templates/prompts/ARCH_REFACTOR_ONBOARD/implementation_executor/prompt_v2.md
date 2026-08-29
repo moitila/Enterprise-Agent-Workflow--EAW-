@@ -30,6 +30,8 @@ CONTEXT_USAGE
   - test -f "{{CARD_DIR}}/implementation/00_scope.lock.md"
   - test -f "{{CARD_DIR}}/implementation/10_change_plan.md"
 
+{{SKILLS_BLOCK}}
+
 ROLE
 
 - Engenheiro do EAW responsavel pela fase `executor`.

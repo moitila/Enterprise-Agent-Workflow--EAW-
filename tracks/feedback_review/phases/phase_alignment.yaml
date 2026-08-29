@@ -1,0 +1,30 @@
+config_version: 1
+
+phase:
+  id: phase_alignment
+  name: Phase Alignment
+  description: >
+    Analyze the harmony between consecutive phases of the reviewed track.
+    Distinguish local card failures from structural recurring patterns.
+
+  prompt:
+    active: 1
+    path: templates/prompts/feedback_review/phase_alignment/prompt_v<active>.md
+
+  outputs:
+    create_artifacts:
+      - analysis/40_alignment_matrix.md
+    prompts:
+      - phase_alignment
+
+  read_sources:
+    - "{{CARD_DIR}}/analysis/20_cases.md"
+    - "{{CARD_DIR}}/analysis/30_findings.md"
+    - "{{CARD_DIR}}/analysis/35_feedback_matrix.md"
+    - "{{CARD_DIR}}/corpus/00_manifest.md"
+
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - path: analysis/40_alignment_matrix.md
+        validation_mode: blocking

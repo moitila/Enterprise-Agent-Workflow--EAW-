@@ -1,17 +1,13 @@
-# Findings — Card <CARD>
+# 20_findings - Card <CARD>
 
-## Comandos Executados
+## 1. Contexto Confirmado
 
-Registre todos os comandos executados durante investigação.
+## 2. Evidencias Coletadas
 
-## Artefatos Coletados
+## 3. Criterios de Aceite Identificados
 
-Liste paths reais de arquivos e contexto relevante.
+## 4. Comportamentos Observados
 
-## Evidências
+## 5. Divergencias Identificadas
 
-Resuma outputs e trechos curtos de código/logs.
-
-## Conclusões Parciais
-
-O que foi descoberto até este ponto.
+## 6. Lacunas de Informacao

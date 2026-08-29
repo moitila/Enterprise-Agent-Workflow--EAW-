@@ -55,9 +55,6 @@ Before consulting onboarding:
 
 Focus on:
 
-- README.md
-- boundaries.md
-- commands.md
 - provenance.md
 
 Use onboarding only to:

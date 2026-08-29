@@ -90,23 +90,79 @@ mv "$meta_backup" "$meta_file"
 "$REPO_ROOT/scripts/eaw" validate >/dev/null
 "$REPO_ROOT/scripts/eaw" prompt validate >/dev/null
 
-# T-RND-01: phase YAML with non-empty read_sources → READ_SOURCES block present in rendered prompt
+# T-RND-01: phase.read_sources renders as ordered lines in the runtime block
 rnd01_yaml="$WORK_ROOT/rnd01_phase.yaml"
+mkdir -p "$WORK_ROOT/rnd01_card/sources"
+touch "$WORK_ROOT/rnd01_card/sources/first.md" "$WORK_ROOT/rnd01_card/sources/second.md"
 cat <<'YAML' >"$rnd01_yaml"
 config_version: 1
-capabilities:
-  - knowledge.read
-read_sources:
-  - scripts/lib.sh
+phase:
+  id: rnd01
+  read_sources:
+    - "{{CARD_DIR}}/sources/first.md"
+    - "{{CARD_DIR}}/sources/second.md"
 YAML
 (
+	source "$REPO_ROOT/scripts/eaw_core.sh"
 	source "$REPO_ROOT/scripts/commands/eaw_commands.sh"
-	out="$(eaw_yaml_phase_read_sources "$rnd01_yaml")"
-	[[ -n "$out" ]] || {
-		echo "T-RND-01 FAIL: read_sources output empty" >&2
+	EAW_ROOT_DIR="$REPO_ROOT"
+	EAW_OUT_DIR="$EAW_WORKDIR/out"
+	RUNTIME_ROOT="$REPO_ROOT"
+	out="$(eaw_runtime_environment_block \
+		"RND-01" \
+		"$WORK_ROOT/rnd01_card" \
+		"smoke" \
+		"rnd01" \
+		"- $WORK_ROOT/rnd01_card" \
+		"- $REPO_ROOT/scripts/eaw" \
+		"- eaw => $REPO_ROOT" \
+		"$rnd01_yaml")"
+	expected_block=$'READ_SOURCES:\n'"$WORK_ROOT/rnd01_card/sources/first.md"$'\n'"$WORK_ROOT/rnd01_card/sources/second.md"$'\nCRITICAL_PATHS:'
+	[[ "$out" == *"$expected_block"* ]] || {
+		echo "T-RND-01 FAIL: READ_SOURCES block does not preserve ordered source lines" >&2
+		exit 1
+	}
+	[[ "$out" != *"\$'\\n'"* ]] || {
+		echo "T-RND-01 FAIL: READ_SOURCES block contains literal shell newline syntax" >&2
 		exit 1
 	}
 	echo "T-RND-01 PASS"
+)
+
+# T-RND-01b: missing read source remains best-effort and emits a warning
+rnd01b_yaml="$WORK_ROOT/rnd01b_phase.yaml"
+cat <<'YAML' >"$rnd01b_yaml"
+config_version: 1
+phase:
+  id: rnd01b
+  read_sources:
+    - "{{CARD_DIR}}/missing.md"
+YAML
+(
+	source "$REPO_ROOT/scripts/eaw_core.sh"
+	source "$REPO_ROOT/scripts/commands/eaw_commands.sh"
+	EAW_ROOT_DIR="$REPO_ROOT"
+	EAW_OUT_DIR="$EAW_WORKDIR/out"
+	RUNTIME_ROOT="$REPO_ROOT"
+	rnd01b_stderr="$WORK_ROOT/rnd01b.err"
+	out="$(eaw_runtime_environment_block \
+		"RND-01B" \
+		"$WORK_ROOT/rnd01_card" \
+		"smoke" \
+		"rnd01b" \
+		"- $WORK_ROOT/rnd01_card" \
+		"- $REPO_ROOT/scripts/eaw" \
+		"- eaw => $REPO_ROOT" \
+		"$rnd01b_yaml" 2>"$rnd01b_stderr")"
+	grep -F "RUNTIME: read_sources item skipped (resolution failed):" "$rnd01b_stderr" >/dev/null || {
+		echo "T-RND-01b FAIL: missing read source warning not emitted" >&2
+		exit 1
+	}
+	[[ "$out" != *"READ_SOURCES:"* ]] || {
+		echo "T-RND-01b FAIL: missing read source should be omitted from runtime block" >&2
+		exit 1
+	}
+	echo "T-RND-01b PASS"
 )
 
 # T-RND-02: phase YAML with read_sources: [] → READ_SOURCES block absent in rendered prompt

@@ -312,14 +312,37 @@ phase:
 
 Phase Read Sources Block
 ------------------------
-The optional `phase.read_sources` field declares the list of absolute paths that the executor is authorized to read during this phase execution. It corresponds to `RL` in the formal model defined in `docs/PHASE_CONTRACT_ENGINEERING.md` (Section 7, S3. Read Confinement).
+The optional `phase.read_sources` field declares the list of absolute paths (or portable
+placeholder expressions) that the executor is authorized to read during this phase
+execution. It corresponds to `RL` in the formal model defined in
+`docs/PHASE_CONTRACT_ENGINEERING.md` (Section 7, S3. Read Confinement).
+
+**Nesting requirement**: `read_sources` MUST be nested directly under `phase:` at
+2-space indentation. A top-level `read_sources:` key (0 indentation) is ignored by
+the parser. Incorrect nesting produces no READ_SOURCES block in the prompt.
 
 Permitted value:
-- A YAML list of absolute path strings. An empty list (`[]`) is treated as absent.
+- A YAML list of strings, each representing an absolute path or a portable placeholder
+  expression that resolves to an absolute path. An empty list (`[]`) is treated as absent.
 
-Semantics: each entry is an absolute path that the isolated agent may access as a declared read source. The executor enforces `reads(exec) ⊆ RL(C, p, T)`. Absent field or empty list implies no declared read sources and no `READ_SOURCES` section injected in the prompt.
+Portable placeholders (double-brace syntax):
+- `{{RUNTIME_ROOT}}` — resolved to the EAW runtime root directory
+- `{{CARD_DIR}}` — resolved to the card's output directory
+- `{{OUT_DIR}}` — resolved to the EAW output base directory
+- `{{EAW_WORKDIR}}` — resolved to the EAW working directory
+- Unknown placeholders block materialization with an error.
+- Relative paths (paths not starting with `/` after resolution) block materialization.
+- Paths with traversal (`/../`) block materialization.
+- Non-existent paths after resolution block materialization.
 
-Fallback: when `phase.read_sources` is absent or the list is empty, read access falls back to default runtime behavior (no `READ_SOURCES` section injected in prompt).
+Semantics: each entry is an absolute path (or directory root) that the isolated agent
+may access as a declared read source. The executor enforces `reads(exec) ⊆ RL(C, p, T)`.
+Directory roots are supported via prefix matching in `assert_read_scope`. Absent field
+or empty list implies no declared read sources and no `READ_SOURCES` section injected
+in the prompt.
+
+Fallback: when `phase.read_sources` is absent or the list is empty, read access falls
+back to default runtime behavior (no `READ_SOURCES` section injected in prompt).
 
 Valid examples:
 
@@ -330,23 +353,27 @@ phase:
   prompt:
     path: templates/prompts/feature/findings/prompt_v1.md
 
-# Phase with explicit read_sources
+# Phase with portable placeholder read_sources (correct nested format)
 phase:
   id: implementation_executor
   prompt:
     path: templates/prompts/feature/implementation_executor/prompt_v1.md
   read_sources:
-    - /home/user/dev/.eaw/out/SOME-CARD/ingest/00_intake.md
+    - "{{RUNTIME_ROOT}}/docs/WORKFLOW_YAML_CONTRACT.md"
+    - "{{CARD_DIR}}/investigations"
+    - "{{CARD_DIR}}/implementation"
 ```
 
 Invalid examples:
 
 ```yaml
-# Invalid: string instead of list
+# Invalid: read_sources at top level (ignored by parser — produces no READ_SOURCES block)
+read_sources:
+  - "{{RUNTIME_ROOT}}/docs/foo.md"
 phase:
-  read_sources: /some/path
+  id: test
 
-# Invalid: relative path (must be absolute)
+# Invalid: relative path (must be absolute after placeholder resolution)
 phase:
   read_sources:
     - ingest/00_intake.md
@@ -354,7 +381,12 @@ phase:
 # Invalid: path with traversal
 phase:
   read_sources:
-    - /home/user/dev/.eaw/out/SOME-CARD/../OTHER-CARD/file.md
+    - "{{CARD_DIR}}/../OTHER-CARD/file.md"
+
+# Invalid: unknown placeholder (blocks materialization)
+phase:
+  read_sources:
+    - "{{MY_CUSTOM_VAR}}/docs/file.md"
 ```
 
 Card State Contract

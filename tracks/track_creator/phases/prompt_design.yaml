@@ -1,0 +1,38 @@
+config_version: 1
+
+phase:
+  id: prompt_design
+  name: Prompt Design
+  description: >
+    Design the prompt blueprint for each phase of the new track.
+    Produces one prompt specification per phase: ROLE, OBJECTIVE, INPUT,
+    READ_SCOPE, WRITE_SCOPE, OUTPUT, OUTPUT_STRUCTURE, RULES, FORBIDDEN,
+    FAIL_CONDITIONS, required skills, and handoff relation.
+
+  skills:
+    - eaw_prompt_creator
+    - eaw_track_creator
+
+  prompt:
+    active: 1
+    path: templates/prompts/track_creator/prompt_design/prompt_v1.md
+
+  outputs:
+    create_directories:
+      - investigations
+    create_artifacts:
+      - investigations/20_prompt_design.md
+    prompts:
+      - prompt_design
+
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - path: investigations/20_prompt_design.md
+        validation_mode: blocking
+
+  read_sources:
+    - "{{RUNTIME_ROOT}}/docs/PROMPT_GOVERNANCE.md"
+    - "{{RUNTIME_ROOT}}/docs/WORKFLOW_YAML_CONTRACT.md"
+    - "{{RUNTIME_ROOT}}/templates/prompts"
+    - "{{CARD_DIR}}/investigations"

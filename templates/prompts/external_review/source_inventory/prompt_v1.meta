@@ -1,0 +1,3 @@
+version=v1
+required_substrings=ROLE|OBJECTIVE|INPUT|OUTPUT|OUTPUT_STRUCTURE|READ_SCOPE|WRITE_SCOPE|RULES|FORBIDDEN|FAIL_CONDITIONS|00_source_manifest.md|01_source_gaps.md|from_phase":"source_inventory|messages":[]|codes":[]
+forbidden_words=${CARD_DIR}|${EAW_WORKDIR}|${RUNTIME_ROOT}|checkout|fetch|pull|push|commit

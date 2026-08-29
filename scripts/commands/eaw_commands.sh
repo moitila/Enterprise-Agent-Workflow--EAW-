@@ -1639,11 +1639,43 @@ eaw_detect_card_template_type() {
 	state_candidates=("$card_dir"/state_card_*.yaml)
 	shopt -u nullglob
 
-	if [[ ${#state_candidates[@]} -eq 1 ]]; then
-		track_id="$(eaw_yaml_state_scalar "${state_candidates[0]}" "track_id")"
+	if [[ ${#state_candidates[@]} -eq 0 ]]; then
+		echo "eaw_detect_card_template_type: no state_card_*.yaml found in $card_dir" >&2
+		return 1
+	elif [[ ${#state_candidates[@]} -gt 1 ]]; then
+		echo "eaw_detect_card_template_type: multiple state_card_*.yaml found in $card_dir" >&2
+		return 1
 	fi
 
-	printf "%s\n" "${track_id:-feature}"
+	track_id="$(eaw_yaml_state_scalar "${state_candidates[0]}" "track_id")"
+
+	if [[ -z "$track_id" ]]; then
+		echo "eaw_detect_card_template_type: track_id missing in ${state_candidates[0]}" >&2
+		return 1
+	fi
+
+	if [[ ! "$track_id" =~ ^[a-zA-Z0-9_-]+$ ]]; then
+		echo "eaw_detect_card_template_type: track_id contains invalid characters: $track_id" >&2
+		return 1
+	fi
+
+	track_id="${track_id,,}"
+
+	if [[ -f "${EAW_TEMPLATES_DIR}/intake_${track_id}.md" ]]; then
+		printf "%s\n" "$track_id"
+		return 0
+	fi
+
+	# Legacy fallback when no dedicated template exists
+	if [[ -f "$card_dir/bug_${card}.md" ]]; then
+		printf "bug\n"
+	elif [[ -f "$card_dir/spike_${card}.md" ]]; then
+		printf "spike\n"
+	elif compgen -G "$card_dir/state_card_repo_onboarding.yaml" >/dev/null 2>&1; then
+		printf "repo_onboarding\n"
+	else
+		printf "feature\n"
+	fi
 }
 
 eaw_card_markdown_list_after_label() {
@@ -1930,7 +1962,76 @@ eaw_yaml_phase_capabilities() {
 eaw_yaml_phase_read_sources() {
 	local phase_file="${1:-}"
 	[[ -z "$phase_file" || ! -f "$phase_file" ]] && return 0
-	awk '/^read_sources:/{p=1; next} p && /^  - /{print $2} p && !/^  - /{p=0}' "$phase_file"
+	awk '
+		BEGIN { in_phase=0; in_rs=0 }
+		/^phase:[[:space:]]*$/ { in_phase=1; in_rs=0; next }
+		in_phase && /^  read_sources:[[:space:]]*$/ { in_rs=1; next }
+		in_phase && in_rs && /^    - / {
+			val=$0; sub(/^    - /, "", val)
+			if (val ~ /^".*"$/) { sub(/^"/, "", val); sub(/"$/, "", val) }
+			else if (val ~ /^'"'"'.*'"'"'$/) { sub(/^'"'"'/, "", val); sub(/'"'"'$/, "", val) }
+			print val
+			next
+		}
+		in_phase && in_rs && /^  [^[:space:]]/ { in_rs=0 }
+		in_phase && in_rs && /^[^[:space:]]/ { in_rs=0; in_phase=0 }
+		in_phase && !in_rs && /^[^[:space:]]/ && !/^phase:[[:space:]]*$/ { in_phase=0 }
+	' "$phase_file"
+}
+
+eaw_resolve_read_source_item() {
+	local raw_path="${1:-}"
+	local resolved="$raw_path"
+
+	# Resolve known placeholders
+	if [[ "$resolved" == *"{{RUNTIME_ROOT}}"* ]]; then
+		[[ -z "${RUNTIME_ROOT:-}" ]] && { echo "eaw_resolve_read_source_item: RUNTIME_ROOT is empty" >&2; return 1; }
+		resolved="${resolved//\{\{RUNTIME_ROOT\}\}/${RUNTIME_ROOT}}"
+	fi
+	if [[ "$resolved" == *"{{CARD_DIR}}"* ]]; then
+		[[ -z "${CARD_DIR:-}" ]] && { echo "eaw_resolve_read_source_item: CARD_DIR is empty" >&2; return 1; }
+		resolved="${resolved//\{\{CARD_DIR\}\}/${CARD_DIR}}"
+	fi
+	if [[ "$resolved" == *"{{OUT_DIR}}"* ]]; then
+		[[ -z "${OUT_DIR:-}" ]] && { echo "eaw_resolve_read_source_item: OUT_DIR is empty" >&2; return 1; }
+		resolved="${resolved//\{\{OUT_DIR\}\}/${OUT_DIR}}"
+	fi
+	if [[ "$resolved" == *"{{EAW_WORKDIR}}"* ]]; then
+		[[ -z "${EAW_WORKDIR:-}" ]] && { echo "eaw_resolve_read_source_item: EAW_WORKDIR is empty" >&2; return 1; }
+		resolved="${resolved//\{\{EAW_WORKDIR\}\}/${EAW_WORKDIR}}"
+	fi
+
+	# Reject any remaining unknown placeholders
+	if [[ "$resolved" =~ \{\{[a-zA-Z_][a-zA-Z0-9_]*\}\} ]]; then
+		echo "eaw_resolve_read_source_item: unknown placeholder in: $resolved" >&2
+		return 1
+	fi
+
+	# Must be absolute
+	if [[ "$resolved" != /* ]]; then
+		echo "eaw_resolve_read_source_item: path is not absolute after resolution: $resolved" >&2
+		return 1
+	fi
+
+	# Reject traversal
+	if [[ "$resolved" == *"/../"* || "$resolved" == *"/.." ]]; then
+		echo "eaw_resolve_read_source_item: path contains traversal: $resolved" >&2
+		return 1
+	fi
+
+	# Remove duplicate slashes
+	while [[ "$resolved" == *//* ]]; do
+		resolved="${resolved//\/\///}"
+	done
+
+	# Path must exist
+	if [[ ! -e "$resolved" ]]; then
+		echo "eaw_resolve_read_source_item: path does not exist: $resolved" >&2
+		return 1
+	fi
+
+	echo "$resolved"
+	return 0
 }
 
 eaw_runtime_environment_block() {
@@ -1993,8 +2094,21 @@ ${skill_lines%$'\n'}"
 	capabilities_block="$(eaw_yaml_phase_capabilities "${phase_file:-}")"
 	local capabilities_section=""
 	[[ -n "$capabilities_block" ]] && capabilities_section=$'CAPABILITIES_DECLARED:\n'"${capabilities_block}"
-	local read_sources_block
-	read_sources_block="$(eaw_yaml_phase_read_sources "${phase_file:-}")"
+	local read_sources_block=""
+	local rs_raw
+	rs_raw="$(eaw_yaml_phase_read_sources "${phase_file:-}")"
+	if [[ -n "$rs_raw" ]]; then
+		local rs_line rs_resolved rs_resolved_list=""
+		while IFS= read -r rs_line; do
+			[[ -n "$rs_line" ]] || continue
+			rs_resolved="$(CARD_DIR="$card_dir" eaw_resolve_read_source_item "$rs_line" 2>/dev/null)" || {
+				echo "RUNTIME: read_sources item skipped (resolution failed): $rs_line" >&2
+				continue
+			}
+			rs_resolved_list+="${rs_resolved}"$'\n'
+		done <<< "$rs_raw"
+		read_sources_block="${rs_resolved_list%$'\n'}"
+	fi
 	local read_sources_section=""
 	[[ -n "$read_sources_block" ]] && read_sources_section=$'READ_SOURCES:\n'"${read_sources_block}"
 
@@ -2016,7 +2130,7 @@ ${capabilities_section:+${capabilities_section}$'\n'}
 WRITE_ALLOWLIST:
 $write_allowlist
 $write_allowlist_extra
-${read_sources_section:+${read_sources_section}$'\n'}
+${read_sources_section}
 CRITICAL_PATHS:
 $critical_paths
 EOF
@@ -2059,9 +2173,20 @@ eaw_scaffold_phase_artifact() {
 		cat >"$target_path" <<EOF
 # Scope Lock - Card $card
 
+## Base Obrigatoria
+
+## Hipotese(s) Base
+
+## Contexto
+
 ## In Scope
 
 ## Out of Scope
+
+## Allowlist de Escrita
+Substitua este bloco por paths absolutos reais — um por linha, sem exemplos fictícios.
+
+## Regra de Escrita
 EOF
 		;;
 	implementation/10_change_plan.md)
@@ -2354,20 +2479,56 @@ eaw_render_phase_prompt_template() {
 	local resolved_repo_key
 	resolved_repo_key="$(printf "%s\n" "$target_repos" | awk 'NF { sub(/^[[:space:]]*-[[:space:]]/, ""); print $1; exit }')"
 
-	# BL-CI-16: for bug_ONBOARD track, override resolved_repo_key from investigations/00_intake.md.
-	# The correct onboarding repo is stored in '## Repositorio principal de onboarding' by the intake agent.
-	# Falls back silently to target_repos resolution when 00_intake.md does not yet exist (intake phase).
-	if [[ "$track_id" == "bug_ONBOARD" ]]; then
-		local _intake_md_bl16="$card_dir/investigations/00_intake.md"
-		if [[ -f "$_intake_md_bl16" ]]; then
-			local _onboarding_repo_bl16
-			_onboarding_repo_bl16="$(awk '/^## Repositorio principal de onboarding/{found=1; next} /^## Reposit.*rio principal de onboarding/{found=1; next} found && /^[[:space:]]*$/{next} found && /^#/{exit} found {gsub(/^[[:space:]]+|[[:space:]]+$/, ""); if ($0 != "") {print; exit}}' "$_intake_md_bl16")"
-			if [[ -n "$_onboarding_repo_bl16" ]]; then
-				resolved_repo_key="$_onboarding_repo_bl16"
-			else
-				echo "ERROR: bug_ONBOARD: campo '## Repositorio principal de onboarding' vazio em $_intake_md_bl16; abortando renderizacao." >&2
-				return 1
+	# BL-CI-16-EXT: resolve resolved_repo_key hierarquicamente para todas as tracks.
+	# Nivel 1: investigations/00_intake.md (section ## Repositorio principal de onboarding)
+	local _awk_bl16='
+		/^## Repositorio principal de onboarding/{found=1; repo_section=0; next}
+		/^## Reposit.*rio principal de onboarding/{found=1; repo_section=0; next}
+		/^## Repo \/ componente afetado/{found=1; repo_section=1; next}
+		found && /^[[:space:]]*$/{next}
+		found && /^#/{exit}
+		found {
+			gsub(/^[[:space:]]+|[[:space:]]+$/, "")
+			if ($0 != "") {
+				if (repo_section) { sub(/[[:space:]].*$/, "") }
+				print; exit
+			}
+		}
+	'
+	local _intake_md_bl16="$card_dir/investigations/00_intake.md"
+	local _resolved_from_intake_bl16=0
+	if [[ -f "$_intake_md_bl16" ]]; then
+		local _onboarding_repo_bl16
+		_onboarding_repo_bl16="$(awk "$_awk_bl16" "$_intake_md_bl16")"
+		if [[ -n "$_onboarding_repo_bl16" ]]; then
+			resolved_repo_key="$_onboarding_repo_bl16"
+			_resolved_from_intake_bl16=1
+		elif grep -Eq '^## Reposit.*rio principal de onboarding[[:space:]]*$' "$_intake_md_bl16"; then
+			echo "ERROR: BL-CI-16: campo '## Repositorio principal de onboarding' vazio em $_intake_md_bl16; abortando renderizacao." >&2
+			return 1
+		fi
+	fi
+	if [[ "$_resolved_from_intake_bl16" -eq 0 ]]; then
+		# Nivel 2: ingest/raw_card_explication.md
+		local _raw_md_bl16="$card_dir/ingest/raw_card_explication.md"
+		if [[ -f "$_raw_md_bl16" ]]; then
+			local _onboarding_repo_raw
+			_onboarding_repo_raw="$(awk "$_awk_bl16" "$_raw_md_bl16")"
+			if [[ -n "$_onboarding_repo_raw" ]]; then
+				resolved_repo_key="$_onboarding_repo_raw"
 			fi
+			# campo vazio ou ausente -> Nivel 3 (fallback com WARNING)
+		fi
+		# Nivel 3: fallback ja inicializado como 1o entry de target_repos
+		if [[ "$resolved_repo_key" == "$(printf "%s\n" "$target_repos" | awk 'NF { sub(/^[[:space:]]*-[[:space:]]/, ""); print $1; exit }')" ]]; then
+			echo "WARNING: BL-CI-16: resolved_repo_key fallback to first TARGET_REPO='$resolved_repo_key'; define '## Repositorio principal de onboarding' in investigations/00_intake.md or ingest/raw_card_explication.md" >&2
+		fi
+	fi
+	# BL-CI-16-EXT D3: warn when resolved onboarding directory is absent
+	if [[ -n "${EAW_WORKDIR:-}" ]]; then
+		local _onboarding_dir_check="${EAW_WORKDIR}/context_sources/onboarding/${resolved_repo_key}"
+		if [[ ! -d "$_onboarding_dir_check" ]]; then
+			echo "WARNING: BL-CI-16: onboarding directory absent for repo=${resolved_repo_key} path=${_onboarding_dir_check}; agent will receive invalid path" >&2
 		fi
 	fi
 
@@ -2537,12 +2698,23 @@ EAW_CI_FEEDBACK_REF
 eaw_lint_rendered_prompt() {
 	local output_file="$1"
 	local residual
-	residual="$(grep -Eon '\{\{[A-Z_]+\}\}|<[a-z][a-z_]*>' "$output_file" 2>/dev/null || true)"
+	local lint_failed=0
+	residual="$(grep -Eon '\{\{[A-Z_]+\}\}|<[a-z][a-z_]*>|<!--' "$output_file" 2>/dev/null || true)"
 	if [[ -n "$residual" ]]; then
-		echo "WARNING: unresolved template variables in ${output_file}:"
+		echo "ERROR: unresolved template variables in ${output_file}:"
 		printf "%s\n" "$residual"
+		lint_failed=1
 	fi
-	return 0
+	local operational_residual
+	operational_residual="$(grep -Eon \
+		'\$\{(CONTEXT_BLOCK|SKILLS_BLOCK|WARNINGS_BLOCK|TOOLING_HINTS)\}' \
+		"$output_file" 2>/dev/null || true)"
+	if [[ -n "$operational_residual" ]]; then
+		echo "ERROR: unresolved EAW operational tokens in ${output_file}:"
+		printf "%s\n" "$operational_residual"
+		lint_failed=1
+	fi
+	return "$lint_failed"
 }
 
 eaw_primary_target_repo() {
@@ -2950,7 +3122,14 @@ cmd_card() {
 		ensure_dir "$outdir/ingest"
 		local _intake_signal="$outdir/ingest/intake_bug.md"
 		if [[ ! -f "$_intake_signal" ]]; then
-			printf '# Intake Bug — %s\n' "$card" >"$_intake_signal"
+			{
+				printf '# Intake Bug — %s\n\n' "$card"
+				printf '## Sintoma observado\n\n'
+				printf '## Evidencia / reproducao minima\n\n'
+				printf '## Comportamento esperado\n\n'
+				printf '## Repo / componente afetado\n\n'
+				printf '## Referencias (ADO, PR, log)\n'
+			} >"$_intake_signal"
 			echo "Wrote ingest/intake_bug.md (bug_ONBOARD type signal)"
 		fi
 	fi

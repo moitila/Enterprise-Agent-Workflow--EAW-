@@ -1,0 +1,36 @@
+config_version: 1
+
+phase:
+  id: backlog_finalization
+  name: Backlog Finalization
+  description: >
+    Generate prioritized backlog by cause class, register idempotent appends on
+    original feedback files, and validate review completeness by set identity.
+    Final phase — no outbound handoff emitted.
+
+  prompt:
+    active: 1
+    path: templates/prompts/feedback_review/backlog_finalization/prompt_v<active>.md
+
+  outputs:
+    create_artifacts:
+      - analysis/60_backlog.md
+      - analysis/61_appends_log.md
+      - analysis/62_validation_report.md
+    prompts:
+      - backlog_finalization
+
+  read_sources:
+    - "{{CARD_DIR}}/analysis/50_diagnosis.md"
+    - "{{CARD_DIR}}/corpus/00_manifest.md"
+    - "{{CARD_DIR}}/corpus/10_inventory.md"
+
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - path: analysis/60_backlog.md
+        validation_mode: blocking
+      - path: analysis/61_appends_log.md
+        validation_mode: blocking
+      - path: analysis/62_validation_report.md
+        validation_mode: blocking

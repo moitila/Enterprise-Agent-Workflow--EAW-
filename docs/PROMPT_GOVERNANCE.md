@@ -78,9 +78,37 @@ Render + Write to prompts/{alias}.md
 Provenance Log
 ```
 
-## Architectural Decisions
+## Tokens Operacionais e Lint
 
-- `phase.prompt.path` é a fonte de verdade para qual track e template são usados na renderização.
+### Tokens Operacionais EAW Canonicos
+
+Lista positiva fechada de tokens que DEVEM ser resolvidos antes de entregar o prompt ao agente.
+Se qualquer token desta lista aparecer no prompt renderizado em dollar-brace, o lint retorna 1 (ERROR).
+
+| Token (double-brace no template) | Funcao de resolucao | Exit se residual |
+|---|---|---|
+| CONTEXT_BLOCK | `eaw_apply_context_block_to_prompt` (linha ~2333) | ERROR, exit 1 |
+| SKILLS_BLOCK | `eaw_apply_skills_block_to_prompt` (linha ~2402) | ERROR, exit 1 |
+| WARNINGS_BLOCK | awk inline (linha ~2541) | ERROR, exit 1 |
+| TOOLING_HINTS | awk inline (linha ~2545) | ERROR, exit 1 |
+
+**Nota de digitacao**: usar SEMPRE double-brace no template (ex: o formato de token com dupla-chave e maiusculas).
+Usar dollar-brace no template e erro de digitacao: o awk nao o substitui e o token passa literal ao agente.
+
+### Comportamento de eaw_lint_rendered_prompt
+
+A funcao `eaw_lint_rendered_prompt` (eaw_commands.sh) retorna:
+- **0**: arquivo renderizado sem residuos detectados.
+- **1 (ERROR)**: ao menos um dos seguintes residuos foi encontrado:
+  - Token de template double-brace nao resolvido (padrao maiusculo).
+  - Tag angular residual minuscula.
+  - Abertura de HTML comment (`<!--`).
+  - Token operacional EAW em dollar-brace (lista canonica acima).
+
+A chamada esta em `eaw_render_phase_prompt` (linha ~2576); o exit code e propagado para o pipeline.
+Tokens de shell legitimos como PATH, HOME, USER nao estao na lista canonica e nao produzem falso-positivo.
+
+## Architectural Decisions para qual track e template são usados na renderização.
 - O nome/path do artefato gerado (`prompts/<alias>.md`) é determinado pelo alias da fase, não pelo path declarado.
 - O track nunca é inferido por alias fixo quando `phase.prompt.path` está declarado.
 - O fallback para track `default` ocorre apenas quando `phase.prompt.path` está ausente ou indecifrável; nunca silenciosamente.
@@ -147,7 +175,7 @@ um item (lista não-vazia). Omitido quando o campo está ausente ou é `read_sou
   <item1>
   <item2>
   ```
-- **Campo YAML de fase correspondente**: `read_sources:` top-level no YAML da fase.
+- **Campo YAML de fase correspondente**: `phase.read_sources` (aninhado sob `phase:`, indentação de 2 espaços). Placeholders portáveis com delimitadores duplos são suportados: `{{RUNTIME_ROOT}}`, `{{CARD_DIR}}`, `{{OUT_DIR}}`, `{{EAW_WORKDIR}}`. O runtime resolve cada placeholder para o path absoluto correspondente antes de injetar o bloco READ_SOURCES no prompt. Paths relativos ou placeholders desconhecidos bloqueiam a materialização.
 - **Compatibilidade retroativa**: fases sem o campo ou com `read_sources: []` mantêm
   comportamento inalterado — o bloco simplesmente não aparece no prompt.
 - **Função extratora**: `eaw_yaml_phase_read_sources` em `scripts/commands/eaw_commands.sh`.
@@ -183,3 +211,41 @@ INV-03 em `tests/invariants.sh` valida que prompts ativos com CONTEXT_BLOCK
 têm ao menos um mecanismo de resolução declarado no YAML da fase correspondente
 (`onboarding_template:` ou `dynamic_context_template:`). Um prompt com
 CONTEXT_BLOCK e sem mecanismo declarado é considerado configuração inválida.
+
+## Resolução de resolved_repo_key (BL-CI-16-EXT)
+
+O mecanismo ONBOARDING CONTEXT injeta o path `context_sources/onboarding/<resolved_repo_key>/`
+nos prompts renderizados via substituição dos tokens `<resolved_repo_key>` e `{{RESOLVED_REPO_KEY}}`.
+A partir do commit BL-CI-16-EXT (card EAW-BUG-ONBOARD-CONTEXT-FIX, 2026-08-19), a resolução
+é universal para todas as tracks via fallback hierárquico de 3 níveis:
+
+| Nível | Fonte | Condição |
+|-------|-------|----------|
+| 1 | `investigations/00_intake.md` — seção `## Repositorio principal de onboarding` | arquivo existe |
+| 2 | `ingest/raw_card_explication.md` — mesma seção | `00_intake.md` ausente |
+| 3 | Primeiro entry de `TARGET_REPOS` (fallback) | com WARNING em stderr |
+
+**Preservação de contrato:** quando `00_intake.md` existe mas a seção está vazia, o runtime
+emite `ERROR:` e aborta a renderização (contrato de bug_ONBOARD pós-intake mantido).
+
+**WARNING de diretório ausente:** se `context_sources/onboarding/<resolved_repo_key>/` não existir,
+o runtime emite WARNING em stderr antes de injetar o path. A renderização prossegue.
+
+### Filenames de onboarding garantidos em todos os repositórios onboardados
+
+Os seguintes filenames são confirmados presentes nos 9 repositórios de onboarding e devem
+ser usados nas priority orders dos prompts:
+
+- `INDEX.md`
+- `65_implementation_patterns.md`
+- `66_canonical_examples.md`
+- `67_reuse_rules.md`
+- `provenance.md` (garantido nos repos ARCH_REFACTOR_ONBOARD)
+
+Os seguintes filenames foram removidos das priority orders por estarem ausentes em todos os repositórios:
+
+- `75_rich_editor_and_ckeditor.md` — removido de bug_ONBOARD×5 + feature_dynamic×1
+- `README.md`, `boundaries.md`, `commands.md` — removidos de ARCH_REFACTOR_ONBOARD×5
+
+Novos filenames só devem ser adicionados a priority orders após confirmação de existência
+nos repositórios de onboarding relevantes.

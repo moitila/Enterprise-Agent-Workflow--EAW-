@@ -15,7 +15,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-expected_output=$'ARCH_REFACTOR\nARCH_REFACTOR_ONBOARD\nbug\nbug_ONBOARD\nfeature\nfeature_dynamic\npatch\nrepo_onboarding\nrepo_onboarding_refresh\nspike\nstandard'
+expected_output=$'ARCH_REFACTOR\nARCH_REFACTOR_ONBOARD\nbug\nbug_ONBOARD\nexternal_review\nfeature\nfeature_dynamic\nfeedback_review\npatch\nrepo_onboarding\nrepo_onboarding_refresh\nspike\nstandard\ntrack_creator'
 actual_output="$(./scripts/eaw tracks)"
 [[ "$actual_output" == "$expected_output" ]] || fail "unexpected output for current repository"
 
@@ -28,6 +28,7 @@ cp -R "$REPO_ROOT/scripts" "$fixture_root/"
 cp -R "$REPO_ROOT/config" "$fixture_root/"
 cp -R "$REPO_ROOT/tracks" "$fixture_root/"
 cp -R "$REPO_ROOT/templates" "$fixture_root/"
+cp -R "$REPO_ROOT/skills" "$fixture_root/"
 
 mkdir -p "$fixture_root/tracks/invalid-no-phases"
 cat >"$fixture_root/tracks/invalid-no-phases/track.yaml" <<'EOF'
@@ -74,6 +75,7 @@ cp -R "$REPO_ROOT/scripts" "$validate_root/"
 cp -R "$REPO_ROOT/config" "$validate_root/"
 cp -R "$REPO_ROOT/tracks" "$validate_root/"
 cp -R "$REPO_ROOT/templates" "$validate_root/"
+cp -R "$REPO_ROOT/skills" "$validate_root/"
 rm -f "$validate_root/tracks/tracks.yaml"
 
 validate_wf_output="$(cd "$validate_root" && ./scripts/eaw validate workflow --track bug 2>&1)"
@@ -86,6 +88,7 @@ cp -R "$REPO_ROOT/scripts" "$install_root/"
 cp -R "$REPO_ROOT/config" "$install_root/"
 cp -R "$REPO_ROOT/tracks" "$install_root/"
 cp -R "$REPO_ROOT/templates" "$install_root/"
+cp -R "$REPO_ROOT/skills" "$install_root/"
 rm -f "$install_root/tracks/tracks.yaml"
 
 set +e

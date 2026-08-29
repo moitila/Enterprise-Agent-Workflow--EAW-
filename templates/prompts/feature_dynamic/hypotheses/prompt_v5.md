@@ -36,7 +36,6 @@ Priority order:
 
 1. INDEX.md
 2. 70_debug_playbook.md
-3. 75_rich_editor_and_ckeditor.md (if applicable)
 4. 66_canonical_examples.md
 5. 67_reuse_rules.md
 

@@ -1,0 +1,32 @@
+config_version: 1
+
+phase:
+  id: change_mapping
+  name: Change Mapping
+  description: Map the proven diff and its impact surface without classifying findings.
+  skills: []
+  prompt:
+    active: 1
+    path: templates/prompts/external_review/change_mapping/prompt_v<active>.md
+  tooling_hints: []
+  outputs:
+    create_artifacts:
+      - review/30_change_map.md
+      - review/31_impact_matrix.md
+      - investigations/20_handoff.json
+    prompts:
+      - change_mapping
+  read_sources:
+    - "{{CARD_DIR}}/review/10_baseline.md"
+    - "{{CARD_DIR}}/review/11_diff_identity.md"
+    - "{{CARD_DIR}}/review/20_requirements_matrix.md"
+    - "{{CARD_DIR}}/review/21_context_limits.md"
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - path: review/30_change_map.md
+        validation_mode: blocking
+      - path: review/31_impact_matrix.md
+        validation_mode: blocking
+      - path: investigations/20_handoff.json
+        validation_mode: blocking

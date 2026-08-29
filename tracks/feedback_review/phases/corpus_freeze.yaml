@@ -1,0 +1,31 @@
+config_version: 1
+
+phase:
+  id: corpus_freeze
+  name: Corpus Freeze
+  description: Define and freeze the review corpus by set identity, without silent sampling.
+
+  prompt:
+    active: 1
+    path: templates/prompts/feedback_review/corpus_freeze/prompt_v<active>.md
+
+  outputs:
+    create_directories:
+      - corpus
+    create_artifacts:
+      - corpus/00_manifest.md
+      - corpus/10_inventory.md
+    prompts:
+      - corpus_freeze
+
+  read_sources:
+    - "{{CARD_DIR}}/ingest/raw_card_explication.md"
+    - "{{CARD_DIR}}/investigations/00_intake.md"
+
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - path: corpus/00_manifest.md
+        validation_mode: blocking
+      - path: corpus/10_inventory.md
+        validation_mode: blocking

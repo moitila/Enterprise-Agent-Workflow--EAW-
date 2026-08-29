@@ -1,0 +1,9 @@
+out/FBREV-TEST/corpus/00_manifest.md
+out/FBREV-TEST/corpus/10_inventory.md
+out/FBREV-TEST/execution.log
+out/FBREV-TEST/execution_journal.jsonl
+out/FBREV-TEST/feedback_review_FBREV-TEST.md
+out/FBREV-TEST/ingest/raw_card_explication.md
+out/FBREV-TEST/prompts/corpus_freeze.md
+out/FBREV-TEST/provenance/prompts_used.yaml
+out/FBREV-TEST/state_card_feedback_review.yaml

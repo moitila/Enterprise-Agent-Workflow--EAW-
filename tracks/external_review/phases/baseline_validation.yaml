@@ -1,0 +1,30 @@
+config_version: 1
+
+phase:
+  id: baseline_validation
+  name: Baseline Validation
+  description: Prove the Git identities and boundaries of the review corpus or record a blocked baseline.
+  skills: []
+  prompt:
+    active: 1
+    path: templates/prompts/external_review/baseline_validation/prompt_v<active>.md
+  tooling_hints: []
+  outputs:
+    create_artifacts:
+      - review/10_baseline.md
+      - review/11_diff_identity.md
+      - investigations/20_handoff.json
+    prompts:
+      - baseline_validation
+  read_sources:
+    - "{{CARD_DIR}}/review/00_source_manifest.md"
+    - "{{CARD_DIR}}/review/01_source_gaps.md"
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - path: review/10_baseline.md
+        validation_mode: blocking
+      - path: review/11_diff_identity.md
+        validation_mode: blocking
+      - path: investigations/20_handoff.json
+        validation_mode: blocking

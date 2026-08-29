@@ -1,0 +1,35 @@
+config_version: 1
+
+phase:
+  id: diagnosis
+  name: Diagnosis
+  description: >
+    Consolidate all findings and alignment analysis into a track health diagnosis.
+    Classify by canonical cause category; distinguish local from recurring patterns.
+
+  skills:
+    - eaw_reviewer
+
+  prompt:
+    active: 1
+    path: templates/prompts/feedback_review/diagnosis/prompt_v<active>.md
+
+  outputs:
+    create_artifacts:
+      - analysis/50_diagnosis.md
+    prompts:
+      - diagnosis
+
+  read_sources:
+    - "{{CARD_DIR}}/analysis/30_findings.md"
+    - "{{CARD_DIR}}/analysis/35_feedback_matrix.md"
+    - "{{CARD_DIR}}/analysis/36_prompt_quality.md"
+    - "{{CARD_DIR}}/analysis/37_feedback_prompt_eval.md"
+    - "{{CARD_DIR}}/analysis/40_alignment_matrix.md"
+    - "{{CARD_DIR}}/corpus/00_manifest.md"
+
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - path: analysis/50_diagnosis.md
+        validation_mode: blocking

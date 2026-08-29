@@ -1,0 +1,41 @@
+config_version: 1
+
+phase:
+  id: findings
+  name: Findings
+  description: >
+    Evaluate each feedback against reconstructed evidence using canonical classification.
+    Assess operational prompt quality and feedback prompt quality as separate entities.
+
+  skills:
+    - eaw_reviewer
+
+  prompt:
+    active: 1
+    path: templates/prompts/feedback_review/findings/prompt_v<active>.md
+
+  outputs:
+    create_artifacts:
+      - analysis/30_findings.md
+      - analysis/35_feedback_matrix.md
+      - analysis/36_prompt_quality.md
+      - analysis/37_feedback_prompt_eval.md
+    prompts:
+      - findings
+
+  read_sources:
+    - "{{CARD_DIR}}/analysis/20_cases.md"
+    - "{{CARD_DIR}}/corpus/00_manifest.md"
+    - "{{CARD_DIR}}/corpus/10_inventory.md"
+
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - path: analysis/30_findings.md
+        validation_mode: blocking
+      - path: analysis/35_feedback_matrix.md
+        validation_mode: blocking
+      - path: analysis/36_prompt_quality.md
+        validation_mode: blocking
+      - path: analysis/37_feedback_prompt_eval.md
+        validation_mode: blocking

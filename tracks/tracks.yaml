@@ -9,15 +9,21 @@ tracks:
     status: installed
   - track_id: feature
     status: installed
+  - track_id: feature_dynamic
+    status: installed
+  - track_id: patch
+    status: installed
   - track_id: repo_onboarding
+    status: installed
+  - track_id: repo_onboarding_refresh
     status: installed
   - track_id: spike
     status: installed
   - track_id: standard
     status: installed
-  - track_id: feature_dynamic
+  - track_id: track_creator
     status: installed
-  - track_id: repo_onboarding_refresh
+  - track_id: feedback_review
     status: installed
-  - track_id: patch
+  - track_id: external_review
     status: installed
