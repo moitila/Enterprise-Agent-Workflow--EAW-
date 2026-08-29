@@ -2496,16 +2496,19 @@ eaw_render_phase_prompt_template() {
 		}
 	'
 	local _intake_md_bl16="$card_dir/investigations/00_intake.md"
+	local _resolved_from_intake_bl16=0
 	if [[ -f "$_intake_md_bl16" ]]; then
 		local _onboarding_repo_bl16
 		_onboarding_repo_bl16="$(awk "$_awk_bl16" "$_intake_md_bl16")"
 		if [[ -n "$_onboarding_repo_bl16" ]]; then
 			resolved_repo_key="$_onboarding_repo_bl16"
-		else
+			_resolved_from_intake_bl16=1
+		elif grep -Eq '^## Reposit.*rio principal de onboarding[[:space:]]*$' "$_intake_md_bl16"; then
 			echo "ERROR: BL-CI-16: campo '## Repositorio principal de onboarding' vazio em $_intake_md_bl16; abortando renderizacao." >&2
 			return 1
 		fi
-	else
+	fi
+	if [[ "$_resolved_from_intake_bl16" -eq 0 ]]; then
 		# Nivel 2: ingest/raw_card_explication.md
 		local _raw_md_bl16="$card_dir/ingest/raw_card_explication.md"
 		if [[ -f "$_raw_md_bl16" ]]; then
