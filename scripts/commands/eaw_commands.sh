@@ -2797,7 +2797,10 @@ eaw_generate_phase_prompt_artifacts() {
 		return 1
 	fi
 
-	type="$(eaw_detect_card_template_type "$card" "$card_dir")"
+	type="${EAW_CARD_WORKFLOW_TRACK_ID:-}"
+	if [[ -z "$type" ]]; then
+		type="$(eaw_detect_card_template_type "$card" "$card_dir")"
+	fi
 	repo_blocks="$(collect_repos_lists)"
 	target_repos="$(printf "%s\n" "$repo_blocks" | sed -n '1,/^$/p' | sed '/^$/d')"
 	excluded_repos="$(printf "%s\n" "$repo_blocks" | sed -n '/^$/,$p' | sed '1d;/^$/d')"

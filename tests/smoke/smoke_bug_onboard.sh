@@ -321,7 +321,7 @@ run_regression_clear_matrix_scenario() {
 }
 
 run_debug_first_scenario() {
-	local tmpdir workdir repo_dir card repo_key output prompt_file
+	local tmpdir workdir repo_dir card repo_key output prompt_file provenance_file
 	tmpdir="$(mktemp -d)"
 	trap 'rm -rf "$tmpdir"' RETURN
 
@@ -346,7 +346,16 @@ run_debug_first_scenario() {
 	grep -Fq "CARD ${card}: findings -> hypotheses" <<<"$output" || fail "debug_first scenario did not advance to hypotheses"
 
 	prompt_file="$workdir/out/$card/prompts/hypotheses.md"
+	provenance_file="$workdir/out/$card/provenance/prompts_used.yaml"
 	test -f "$prompt_file" || fail "debug_first scenario missing hypotheses prompt"
+	test -f "$provenance_file" || fail "debug_first scenario missing prompt provenance"
+	grep -Fq "TRACK_ID: ${TRACK_ID}" "$prompt_file" || fail "debug_first scenario prompt missing TRACK_ID=${TRACK_ID}"
+	grep -Fq "TYPE=${TRACK_ID}" "$prompt_file" || fail "debug_first scenario prompt missing TYPE=${TRACK_ID}"
+	grep -Fq "track: ${TRACK_ID}" "$provenance_file" || fail "debug_first scenario provenance missing track=${TRACK_ID}"
+	grep -Fq "templates/prompts/${TRACK_ID}" "$provenance_file" || fail "debug_first scenario provenance missing ${TRACK_ID} prompt source"
+	! grep -Fq "TYPE=feature" "$prompt_file" || fail "debug_first scenario rendered TYPE=feature"
+	! grep -Fq "TYPE: feature" "$prompt_file" || fail "debug_first scenario rendered TYPE: feature"
+	! grep -Fq "(feature)" "$prompt_file" || fail "debug_first scenario rendered card label as feature"
 	grep -Fq "context_sources/onboarding/" "$prompt_file" || fail "debug_first scenario prompt missing path-reference onboarding directive"
 }
 
