@@ -1,0 +1,32 @@
+config_version: 1
+
+phase:
+  id: remediation_handoff
+  name: Remediation Handoff
+  description: >
+    Traduz o veredito tecnico em um pacote de recomendacao acionavel
+    (tipo de proxima acao, justificativa e referencias), sem executar
+    essa recomendacao. Fase final da track; sem handoff de saida.
+
+  skills: []
+
+  prompt:
+    active: 1
+    path: templates/prompts/adversarial_review/remediation_handoff/prompt_v<active>.md
+
+  tooling_hints: []
+
+  outputs:
+    create_artifacts:
+      - audit/50_remediation_handoff.md
+    prompts:
+      - remediation_handoff
+
+  read_sources:
+    - "{{CARD_DIR}}/audit"
+
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - path: audit/50_remediation_handoff.md
+        validation_mode: blocking

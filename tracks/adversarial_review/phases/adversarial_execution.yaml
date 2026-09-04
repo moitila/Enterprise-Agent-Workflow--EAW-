@@ -1,0 +1,35 @@
+config_version: 1
+
+phase:
+  id: adversarial_execution
+  name: Adversarial Execution
+  description: >
+    Aplica exatamente as tecnicas selecionadas em adversarial_design,
+    registrando os resultados observados e preservando rigorosamente a
+    distincao entre execucao real confirmada e suporte meramente
+    estrutural.
+
+  skills:
+    - eaw_reviewer
+
+  prompt:
+    active: 1
+    path: templates/prompts/adversarial_review/adversarial_execution/prompt_v<active>.md
+
+  tooling_hints: []
+
+  outputs:
+    create_artifacts:
+      - audit/30_adversarial_results.md
+    prompts:
+      - adversarial_execution
+
+  read_sources:
+    - "{{CARD_DIR}}/audit"
+    - "{{OUT_DIR}}"
+
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - path: audit/30_adversarial_results.md
+        validation_mode: blocking

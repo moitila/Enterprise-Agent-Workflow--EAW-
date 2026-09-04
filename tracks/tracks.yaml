@@ -7,9 +7,13 @@ tracks:
     status: installed
   - track_id: bug_ONBOARD
     status: installed
+  - track_id: external_review
+    status: installed
   - track_id: feature
     status: installed
   - track_id: feature_dynamic
+    status: installed
+  - track_id: feedback_review
     status: installed
   - track_id: patch
     status: installed
@@ -23,7 +27,5 @@ tracks:
     status: installed
   - track_id: track_creator
     status: installed
-  - track_id: feedback_review
-    status: installed
-  - track_id: external_review
+  - track_id: adversarial_review
     status: installed

@@ -1,0 +1,34 @@
+config_version: 1
+
+phase:
+  id: verdict
+  name: Verdict
+  description: >
+    Sintetiza os achados de todas as fases anteriores em um veredito
+    multi-eixo objetivo, separando ao menos os seis eixos fixos, cada um
+    com classificacao objetiva e citacao da evidencia/lacuna que a
+    sustenta.
+
+  skills:
+    - eaw_reviewer
+
+  prompt:
+    active: 1
+    path: templates/prompts/adversarial_review/verdict/prompt_v<active>.md
+
+  tooling_hints: []
+
+  outputs:
+    create_artifacts:
+      - audit/40_verdict.md
+    prompts:
+      - verdict
+
+  read_sources:
+    - "{{CARD_DIR}}/audit"
+
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - path: audit/40_verdict.md
+        validation_mode: blocking

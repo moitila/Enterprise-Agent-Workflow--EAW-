@@ -1,0 +1,33 @@
+config_version: 1
+
+phase:
+  id: adversarial_design
+  name: Adversarial Design
+  description: >
+    Seleciona, com base nas lacunas de evidence_audit, quais tecnicas
+    adversariais sao pertinentes a este card especifico e se execucao
+    real e autorizada. Produz um plano, nao os resultados.
+
+  skills:
+    - eaw_reviewer
+
+  prompt:
+    active: 1
+    path: templates/prompts/adversarial_review/adversarial_design/prompt_v<active>.md
+
+  tooling_hints: []
+
+  outputs:
+    create_artifacts:
+      - audit/20_adversarial_plan.md
+    prompts:
+      - adversarial_design
+
+  read_sources:
+    - "{{CARD_DIR}}/audit"
+
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - path: audit/20_adversarial_plan.md
+        validation_mode: blocking
