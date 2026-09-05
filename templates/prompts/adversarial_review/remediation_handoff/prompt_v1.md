@@ -36,6 +36,20 @@ RULES
 - A acao recomendada deve ser exatamente uma da lista fixa declarada em OBJECTIVE.
 - A justificativa deve citar pelo menos um eixo de 40_verdict.md.
 - Esta e a final_phase da track; nao declara next nem produz artefato de transicao.
+- Rubrica objetiva de decisao (distingue bug, feature, spike, ENCERRAR e as demais quatro acoes fixas por padrao dos 6 eixos de 40_verdict.md; orienta a escolha sem substituir o julgamento sobre a evidencia citada):
+
+  | Padrao observado nos eixos de 40_verdict.md | Acao recomendada |
+  | --- | --- |
+  | CORRECAO FUNCIONAL nao comprovada e CAUSA RAIZ nao comprovada, com comportamento observavel divergente do criterio de aceite | bug |
+  | CORRECAO FUNCIONAL comprovada, CRITERIOS DE ACEITE atendidos e COERENCIA DO FECHAMENTO EAW coerente, sem lacuna relevante nos demais eixos | ENCERRAR |
+  | CRITERIOS DE ACEITE pendente ou incompleto por ausencia de escopo/funcionalidade, nao por defeito de comportamento ja existente | feature |
+  | QUALIDADE DA EVIDENCIA insuficiente ou REGRESSAO nao avaliavel por incerteza tecnica genuina sobre a causa, nao por evidencia ausente e recuperavel | spike |
+  | investigations/00_intake.md ou ingest do card alvo aponta origem em processo de onboarding malconduzido, distinto de defeito de codigo | bug_ONBOARD |
+  | Lacuna concentrada em legibilidade, padrao ou manutenibilidade do codigo, sem violacao de comportamento ou criterio de aceite | code review |
+  | Eixo(s) remanescente(s) exigem tecnica adversarial nao coberta em adversarial_design/adversarial_execution deste card | nova fase adversarial |
+  | QUALIDADE DA EVIDENCIA insuficiente por ausencia de artefato externo ao EAW (log, banco, ambiente) que nenhuma tecnica adversarial interna pode produzir | evidencia externa necessaria |
+
+  Quando mais de um padrao se aplicar, a justificativa deve declarar explicitamente qual eixo foi decisivo e por que os demais padroes candidatos foram descartados.
 
 FORBIDDEN
 - Criar, sugerir criacao automatica, comitar ou dar push em qualquer card, PR, branch ou arquivo de TARGET_REPOS.

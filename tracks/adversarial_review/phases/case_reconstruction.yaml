@@ -32,5 +32,7 @@ phase:
   completion:
     strategy: required_artifacts_exist
     required_artifacts:
+      - path: investigations/00_intake.md
+        validation_mode: blocking
       - path: audit/00_case_reconstruction.md
         validation_mode: blocking

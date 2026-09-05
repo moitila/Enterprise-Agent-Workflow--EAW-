@@ -1661,7 +1661,11 @@ EOF
 	if [[ "$track_has_ingest" != "true" ]]; then
 		if [[ ! -f "$intake_file" ]]; then
 			if [[ -f "$intake_tpl" ]]; then
-				cp "$intake_tpl" "$intake_file"
+				eaw_render_phase_template_with_card "$intake_tpl" "$intake_file" "$card"
+				sed -i \
+					-e "s|{{CARD}}|${card}|g" \
+					-e "s|{{OUT_DIR}}|${outdir}|g" \
+					"$intake_file"
 			else
 				echo "WARNING: missing intake template for type '$type': $intake_tpl; using minimal fallback"
 				cat >"$intake_file" <<EOF

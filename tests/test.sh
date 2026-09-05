@@ -210,6 +210,9 @@ bash "$REPO_ROOT/tests/smoke_preflight_worktree.sh"
 bash "$REPO_ROOT/tests/smoke_external_review.sh"
 bash "$REPO_ROOT/tests/smoke_adversarial_review.sh"
 
+printf "[test] regression scope\n"
+bash "$REPO_ROOT/tests/regression_adversarial_review_classification.sh"
+
 printf "[test] integration scope\n"
 bash "$REPO_ROOT/tests/integration/integration_suite.sh"
 
