@@ -449,6 +449,12 @@ Rules:
 - Prompt-oriented execution through `intake`, `analyze`, and `implement` remains available as a compatibility flow alongside the phase-driven lifecycle.
 - Future iterations can refine whether a phase is automatic or manual and how completion is validated without requiring new top-level commands.
 
+### Resolução de tipo de card
+
+O tipo do card é determinado exclusivamente lendo `card_state.track_id` do arquivo
+`state_card_*.yaml`. Quando não existe `templates/intake_<track_id>.md`
+correspondente, o tipo resolvido é `feature`.
+
 Field Meanings
 --------------
 - `initial_phase`: first workflow phase allowed by the track.

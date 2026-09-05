@@ -16,6 +16,7 @@ Inputs
   - `repos.conf` — lines in format `key|path` (legacy) or `key|path|role`, where role is `target` or `infra` (path may be absolute, ~/, or relative to EAW root). Missing role defaults to `target`.
   - `search.conf` — newline-separated search patterns (optional).
 - Templates: `templates/<type>.md` must exist for dossier rendering compatibility. This filename/template family does not replace `track` as the primary workflow classification.
+- Card type/template resolution reads exclusively `card_state.track_id` from `state_card_*.yaml`; when no matching `templates/intake_<track_id>.md` exists, the resolved type is `feature`.
 
 Command semantics
 -----------------

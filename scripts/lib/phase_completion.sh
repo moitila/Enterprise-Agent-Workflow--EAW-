@@ -164,16 +164,7 @@ eaw_phase_completion_detect_card_template_type() {
 		return 0
 	fi
 
-	# Legacy fallback when no dedicated template exists
-	if [[ -f "$card_dir/bug_${card}.md" ]]; then
-		printf "bug\n"
-	elif [[ -f "$card_dir/spike_${card}.md" ]]; then
-		printf "spike\n"
-	elif compgen -G "$card_dir/state_card_repo_onboarding.yaml" >/dev/null 2>&1; then
-		printf "repo_onboarding\n"
-	else
-		printf "feature\n"
-	fi
+	printf "feature\n"
 }
 
 eaw_phase_completion_render_expected_scaffold() {

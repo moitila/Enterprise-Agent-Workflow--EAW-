@@ -233,6 +233,33 @@ for phase in track_design prompt_design implementation_planning implementation_e
 done
 [[ $all9 -eq 1 ]] && pass "TC-09 (READ_SCOPE sections aligned in all phases)"
 
+# ─── TC-10: mechanism check — track_id wins over mismatched artifact ─────
+card="TC10"
+card_dir="$tmpdir/tc10"
+mkdir -p "$card_dir"
+mk_state "$card" "$card_dir" "feature"
+: >"$card_dir/bug_${card}.md"
+type10a="$(call_detect "$card" "$card_dir")" && ret10a=0 || ret10a=$?
+type10b="$(call_cmd_detect "$card" "$card_dir")" && ret10b=0 || ret10b=$?
+[[ $ret10a -eq 0 && "$type10a" == "feature" && $ret10b -eq 0 && "$type10b" == "feature" ]] \
+  && pass "TC-10 (mechanism: track_id wins over mismatched bug_*.md artifact)" \
+  || fail "TC-10" "expected feature/feature, got completion='$type10a'(ret=$ret10a) cmd='$type10b'(ret=$ret10b)"
+
+# ─── TC-11: mechanism check — empty track_id fails loud, no artifact guess ─
+card="TC11"
+card_dir="$tmpdir/tc11"
+mkdir -p "$card_dir"
+cat >"$card_dir/state_card_empty.yaml" <<EOF
+card_state:
+  card_id: $card
+  track_id: ""
+EOF
+: >"$card_dir/bug_${card}.md"
+err11="$(eaw_phase_completion_detect_card_template_type "$card" "$card_dir" 2>&1 1>/dev/null)" && ret11=0 || ret11=$?
+[[ $ret11 -ne 0 && -n "$err11" ]] \
+  && pass "TC-11 (mechanism: empty track_id fails loud, ignores bug_*.md)" \
+  || fail "TC-11" "expected non-zero exit + stderr, got ret=$ret11 err='$err11'"
+
 # ─── Summary ──────────────────────────────────────────────────────────────
 total=$((PASS + FAIL))
 echo ""

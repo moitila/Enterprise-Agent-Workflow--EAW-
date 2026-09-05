@@ -2086,44 +2086,6 @@ validate_intake_heading_group() {
 	fi
 }
 
-detect_card_type_with_warnings() {
-	local card="$1"
-	local outdir="$2"
-	local type_ref="$3"
-	local warn_ref="$4"
-	local found=()
-
-	if [[ -f "$outdir/bug_${card}.md" ]]; then
-		found+=("bug")
-	fi
-	if [[ -f "$outdir/feature_${card}.md" ]]; then
-		found+=("feature")
-	fi
-	if [[ -f "$outdir/spike_${card}.md" ]]; then
-		found+=("spike")
-	fi
-
-	if [[ "${#found[@]}" -eq 0 ]]; then
-		append_warn "$warn_ref" "no dossier file found in $outdir; defaulting type to bug"
-		eval "$type_ref='bug'"
-		return 0
-	fi
-
-	if [[ "${#found[@]}" -gt 1 ]]; then
-		append_warn "$warn_ref" "ambiguous card type (${found[*]}); applying priority bug > feature > spike"
-	fi
-
-	if [[ " ${found[*]} " == *" bug "* ]]; then
-		eval "$type_ref='bug'"
-		return 0
-	fi
-	if [[ " ${found[*]} " == *" feature "* ]]; then
-		eval "$type_ref='feature'"
-		return 0
-	fi
-	eval "$type_ref='spike'"
-}
-
 count_required_intake_headings() {
 	local type="$1"
 	local file="$2"
