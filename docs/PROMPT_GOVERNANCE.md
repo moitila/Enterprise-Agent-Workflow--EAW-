@@ -38,9 +38,9 @@ A função operacional de binding permanece no `ACTIVE` de cada fase.
 O loader utiliza `load_prompt` para resolver o template efetivo por fase.
 Referências concretas:
 - `scripts/eaw_core.sh` (funções `load_prompt` e `prompt_resolve_active_metadata`)
-- `scripts/commands/cmd_intake.sh`
-- `scripts/commands/cmd_analyze.sh`
-- `scripts/commands/cmd_implement.sh`
+- `scripts/commands/eaw_commands.sh` (materialização da fase via `eaw next`, incluindo renderização do prompt, injeção de contexto e skills)
+
+Nota: comandos legados de compatibilidade descontinuados (superfície intake/analyze/implement citada em `docs/ARCHITECTURE.md`, seção Runtime Flow) não são carregados via `source` por `scripts/eaw` e não fazem parte do loader ativo.
 
 ## Prompt Provenance
 A provenance registra o prompt efetivamente utilizado na execução.

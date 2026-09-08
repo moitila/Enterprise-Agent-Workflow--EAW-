@@ -273,9 +273,9 @@ Resolution order (skill routing tiers):
 - Tier 2 — declared: when `phase.skills` is present and non-empty, the declared list is the effective skill set (with `workspace` always present per the auto-inclusion invariant).
 - Tier 3 — track context override: reserved for future runtime versions. Not implemented in the current runtime. When implemented, it will not break Tier 1 or Tier 2 compatibility.
 
-Validation limitation (Known Limitation D-03): `workflow_validation.sh` accepts `phase.skills` without semantic validation. The structure of the list and the existence of each declared skill name are not verified in the current version of the validator. A malformed value (non-list, non-string items, undeclared skill name) passes the validator silently. This is expected behavior in the current runtime version.
+Validation behavior (formerly documented as Known Limitation D-03): when `phase.skills` is non-empty, `workflow_validation.sh` (function `eaw_validate_workflow_phase_skills`) validates each declared skill name against `skills/registry.yaml` and verifies that the corresponding skill file exists on disk; a malformed value (undeclared skill name, missing skill file) is reported as an explicit validation error and increments the error count. When the list is empty (Tier 1 fallback), no validation is performed.
 
-Current runtime state: `implementation_executor` (feature track) operates under Tier 1 fallback (`[workspace]`) because no phase.yaml in the current installation declares `phase.skills`. This is valid and expected prior to explicit skill declarations.
+Current runtime state: many phase.yaml files in the installation declare `phase.skills` with explicit skill lists (e.g., `tracks/feature/phases/implementation_executor.yaml` declares `eaw_implementation_quality`), operating under Tier 2; phases without a `phase.skills` declaration operate under Tier 1 fallback (`[workspace]`).
 
 Valid examples:
 

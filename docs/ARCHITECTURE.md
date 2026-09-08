@@ -4,6 +4,13 @@ Canonical architecture document for EAW.
 
 Conceptual model for onboarding and positioning: `docs/CONCEPTUAL_MODEL.md`.
 
+## Normative vs Factual Sections
+
+This document mixes normative content (design principles and invariants that define required system behavior) with factual content (descriptions of current observed behavior, correctable as the implementation evolves).
+
+- **Normative (preserve):** `Deterministic Output Boundaries`, `Operational Constraints`, `Testable Architecture Invariants`, and the Modo D cycle/executor-role definition in `Deterministic Agent Mode (Modo D)`.
+- **Factual/correctable:** `Overview`, `Runtime Flow`, `Phase Transition Semantics`, and the `Current runtime state`, `Post-execution skills`, and `Skills invariant` paragraphs within `Deterministic Agent Mode (Modo D)`.
+
 ## Overview
 
 EAW v0.6.0 uses a modular shell architecture that keeps CLI behavior stable while separating internal responsibilities.
@@ -50,11 +57,11 @@ next → load phase.yaml → read phase.skills → materialize prompt/context �
 
 **Executor role:** the executor (`./scripts/eaw next`) is the entry point and governor of the Modo D cycle. It reads `phase.skills`, resolves the effective skill set, materializes the prompt/context handoff, and advances the card state after completion. The agent does not govern the cycle — it operates within the boundaries defined by the executor and the operator/orchestrator handoff.
 
-**Current runtime state:** `implementation_executor` (feature track) operates under the Tier 1 skills fallback (`[workspace]`) because no phase.yaml in the current installation declares `phase.skills`. This is valid and expected; the Modo D cycle is active regardless of whether `phase.skills` is explicitly declared.
+**Current runtime state:** many phase.yaml files in the installation declare `phase.skills` with explicit skill lists (e.g., `tracks/feature/phases/implementation_executor.yaml` declares `eaw_implementation_quality`), operating under the Tier 2 declared skill set rather than the Tier 1 fallback; phases without a `phase.skills` declaration still operate correctly under the Tier 1 fallback (`[workspace]`). This is valid and expected; the Modo D cycle is active regardless of whether `phase.skills` is explicitly declared.
 
 **Post-execution skills:** skills `reviewer` and `delivery` are post-execution capabilities. They are not loaded through `phase.skills` during normal execution phases. They operate outside the Modo D spawn cycle.
 
-**Skills invariant:** the executor does not modify prompt content to mention or include skill names. Skills are provided to the agent as operational context external to the prompt and external to the injected context declared by `phase.context`. This separation is absolute.
+**Skills invariant:** skills are delivered through two channels: (1) external operational context, provided to the agent outside the prompt and outside the injected context declared by `phase.context` (the default channel), and (2) inline injection into the prompt content when the two-brace placeholder `SKILLS_BLOCK` is present in the phase prompt file, resolved by the `eaw_apply_skills_block_to_prompt` function. Both channels are legitimate; delivery is not exclusively external to the prompt.
 
 Cross-document references:
 - Formal contract for `phase.skills` field: `docs/WORKFLOW_YAML_CONTRACT.md` (Phase Skills Block).

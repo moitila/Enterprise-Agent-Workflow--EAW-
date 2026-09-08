@@ -30,8 +30,7 @@ When `EAW_WORKDIR` is defined:
 - Workspace configuration is mandatory.
 - Core config is not used as fallback.
 - Templates:
-  - Workspace override is optional.
-  - Fallback to core templates is allowed.
+  - Template path is not overridable via workspace configuration; it is fixed at runtime to `$EAW_ROOT_DIR/templates`.
 
 ### 4) Output Contract
 
