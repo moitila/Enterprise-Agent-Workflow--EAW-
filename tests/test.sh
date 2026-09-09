@@ -225,5 +225,8 @@ bash "$REPO_ROOT/tests/golden/golden_suite.sh"
 printf "[test] onboarding runtime scope\n"
 run_onboarding_runtime_suite
 
+printf "[test] baseline scope\n"
+bash "$REPO_ROOT/tests/baseline/run_content_baseline.sh"
+
 assert_repos_conf_unchanged
 printf "[test] repos.conf tripwire OK\n"
