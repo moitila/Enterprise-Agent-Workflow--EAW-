@@ -3,7 +3,7 @@ Enterprise Agent Workflow (EAW)
 
 Status: OFFICIAL
 Scope: Analyze prompt generation
-Applies to: fluxo normal `eaw next <CARD>`; a superficie direta de Analyze e mantida apenas como compatibilidade/deprecated
+Applies to: fluxo normal `eaw next <CARD>` (unica superficie ativa). A superficie direta de Analyze (`eaw analyze <CARD>`) foi removida; `scripts/commands/cmd_analyze.sh` nao existe mais e nao ha owner ativo para essa rota.
 
 ---
 
@@ -72,7 +72,7 @@ A fase Analyze:
 
 1. Executa somente apos Intake concluido
 2. Consome `investigations/00_intake.md`
-3. Gera os prompts auxiliares `investigations/findings_agent_prompt.md`, `investigations/hypotheses_agent_prompt.md` e `investigations/planning_agent_prompt.md`
+3. Gera os prompts `prompts/findings.md`, `prompts/hypotheses.md` e `prompts/planning.md`
 4. Pode materializar `TEST_PLAN_<CARD>.md` na raiz do card quando ausente
 5. Produz `investigations/20_findings.md`
 6. Produz `investigations/30_hypotheses.md`
@@ -86,16 +86,15 @@ Nenhuma etapa fora desta sequencia pode ser adicionada pelo prompt.
 | Categoria | Caminho | Regra |
 | --- | --- | --- |
 | Entrada obrigatoria | `investigations/00_intake.md` | Deve existir antes do inicio da fase |
-| Artefato runtime | `investigations/findings_agent_prompt.md` | Prompt auxiliar gerado pelo runtime |
-| Artefato runtime | `investigations/hypotheses_agent_prompt.md` | Prompt auxiliar gerado pelo runtime |
-| Artefato runtime | `investigations/planning_agent_prompt.md` | Prompt auxiliar gerado pelo runtime |
+| Artefato runtime | `prompts/findings.md` | Prompt final materializado pelo runtime phase-driven ao executar `eaw next <CARD>` |
+| Artefato runtime | `prompts/hypotheses.md` | Prompt final materializado pelo runtime phase-driven ao executar `eaw next <CARD>` |
+| Artefato runtime | `prompts/planning.md` | Prompt final materializado pelo runtime phase-driven ao executar `eaw next <CARD>` |
 | Artefato runtime | `TEST_PLAN_<CARD>.md` | Placeholder auxiliar criado na raiz do card quando ausente |
 | Saida obrigatoria | `investigations/20_findings.md` | Consolida evidencias observadas |
 | Saida obrigatoria | `investigations/30_hypotheses.md` | Formaliza hipoteses rastreaveis via `H[0-9]+` |
 | Saida obrigatoria | `investigations/40_next_steps.md` | Define proximo passo deterministico para Implementation |
 | Dependencia de baseline | `docs/PROMPT_CONTRACT_v1.md` | Define o nivel minimo de rigor estrutural |
-| Dependencia runtime | `RUNTIME_ROOT/scripts/commands/cmd_analyze.sh` | Fonte de verdade de execucao no runtime validado por `./scripts/eaw` |
-| Espelho no repositorio | `scripts/commands/cmd_analyze.sh` | Espelho versionado no target repo, atualmente identico ao runtime validado |
+| Dependencia runtime | `scripts/commands/eaw_commands.sh` (funcao `eaw_materialize_current_phase`) | Lifecycle e materializacao do prompt, conduzidos por `eaw next <CARD>`, validado por `./scripts/eaw` |
 
 Nao ha permissao para escrever em `prompts/`, `scripts/commands/`, `docs/` fora do proprio contrato, ou fora do target repo autorizado pela allowlist.
 
@@ -106,7 +105,7 @@ O prompt de Analyze deve:
 - Declarar `EAW_WORKDIR`, `RUNTIME_ROOT`, `CONFIG_SOURCE`, `OUT_DIR` e `CARD_DIR` no header
 - Declarar `CARD_ID`, `TRACK_ID`, `STEP_ID`, `TARGET_REPOSITORIES`, `WRITE_ALLOWLIST` e `CRITICAL_PATHS` no bloco `RUNTIME_ENVIRONMENT`
 - Tratar `investigations/00_intake.md` como unica entrada obrigatoria da fase
-- Permitir os artefatos auxiliares `findings_agent_prompt.md`, `hypotheses_agent_prompt.md`, `planning_agent_prompt.md` e `TEST_PLAN_<CARD>.md` quando emitidos pelo runtime
+- Permitir os artefatos auxiliares `prompts/findings.md`, `prompts/hypotheses.md`, `prompts/planning.md` e `TEST_PLAN_<CARD>.md` quando emitidos pelo runtime
 - Preservar a relacao causal entre findings, hypotheses e next steps
 - Referenciar explicitamente identificadores `H[0-9]+` quando uma hipotese for promovida para plano
 - Manter rastreabilidade suficiente para a fase Implementation operar sobre `investigations/40_next_steps.md`
@@ -126,7 +125,7 @@ Fail conditions bloqueantes da fase:
 - `RUNTIME_ROOT` invalido ou sem `./scripts/eaw`
 - `CONFIG_SOURCE` ausente
 - Tentativa de escrita fora de `CARD_DIR`
-- Tentativa de emitir saida fora dos artefatos observados da fase: `investigations/findings_agent_prompt.md`, `investigations/hypotheses_agent_prompt.md`, `investigations/planning_agent_prompt.md`, `TEST_PLAN_<CARD>.md`, `investigations/20_findings.md`, `investigations/30_hypotheses.md` e `investigations/40_next_steps.md`
+- Tentativa de emitir saida fora dos artefatos observados da fase: `prompts/findings.md`, `prompts/hypotheses.md`, `prompts/planning.md`, `TEST_PLAN_<CARD>.md`, `investigations/20_findings.md`, `investigations/30_hypotheses.md` e `investigations/40_next_steps.md`
 
 ## 8. Compatibilidade
 
@@ -138,7 +137,7 @@ Este contrato nao altera:
 - Runtime em `RUNTIME_ROOT`, validado pela existencia de `./scripts/eaw`
 - Suporte multi-repo
 
-Backward compatibility preservada. Quando mencionada em documentacao historica, a superficie direta de Analyze e somente compatibilidade/deprecated; o fluxo operacional normal e phase-driven via `eaw next <CARD>`.
+A superficie direta de Analyze (`eaw analyze <CARD>`, `scripts/commands/cmd_analyze.sh`) foi removida do runtime e nao possui owner ativo. O fluxo operacional e exclusivamente phase-driven via `eaw next <CARD>`.
 
 ## 9. Evolucao
 

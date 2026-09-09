@@ -3,7 +3,7 @@ Enterprise Agent Workflow (EAW)
 
 Status: OFFICIAL
 Scope: Intake phase
-Applies to: fluxo normal `eaw next <CARD>`; a superficie direta de intake e mantida apenas como compatibilidade/deprecated
+Applies to: fluxo normal `eaw next <CARD>` (unica superficie ativa). A superficie direta `eaw intake <CARD>` foi removida; `scripts/commands/cmd_intake.sh` nao existe mais e nao ha owner ativo para essa rota.
 
 ---
 
@@ -24,23 +24,22 @@ Seu proposito e:
 | --- | --- | --- |
 | Entrada obrigatoria | `out/<CARD>/ingest/` | Quando existir, deve ser tratada como origem primaria dos insumos brutos |
 | Compatibilidade de entrada | `out/<CARD>/intake/` | Pode ser usada como fallback temporario durante a transicao |
-| Artefato runtime | `out/<CARD>/investigations/intake_agent_prompt.round_<N>.md` | Prompt auxiliar emitido pelo runtime da fase Intake |
+| Artefato runtime | `out/<CARD>/prompts/intake.md` | Prompt final materializado pelo runtime phase-driven ao executar `eaw next <CARD>` |
 | Saida obrigatoria do fluxo | `out/<CARD>/investigations/00_intake.md` | Artefato preenchido a partir do prompt gerado e das evidencias de `intake/` |
 | Saida obrigatoria do fluxo | `out/<CARD>/investigations/_intake_provenance.md` | Proveniencia obrigatoria do intake |
 
 ## 3. Inputs Obrigatorios e Dependencias de Runtime
 
 - Runtime root: `RUNTIME_ROOT`, validado pela existencia de `./scripts/eaw`
-- Implementacao observada da fase: `scripts/commands/cmd_intake.sh`
-- Template efetivo observado: `templates/prompts/default/intake/prompt_v{ACTIVE}.md` (resolvido via `ACTIVE`)
+- Lifecycle e materializacao do prompt: conduzidos por `eaw next <CARD>` (funcao `eaw_materialize_current_phase` em `scripts/commands/eaw_commands.sh`)
+- Template efetivo observado: resolvido pelo binding `ACTIVE` da fase `intake` declarada na track do card
 - Contrato estrutural complementar do prompt: `docs/PROMPT_CONTRACT_v1.md`
 - Configuracao obrigatoria: `config/repos.conf`
 - Diretorio primario de entrada por card: `out/<CARD>/ingest/`
 - Diretorio de compatibilidade observado por card: `out/<CARD>/intake/`
 - Parametro obrigatorio: `<CARD>`
-- Parametro opcional observado: `--round=N`
-- Superficie operacional normal: `eaw next <CARD>` em modo phase-driven
-- Superficie direta historica: compatibilidade/deprecated para operadores e automacoes legadas
+- Superficie operacional: `eaw next <CARD>` em modo phase-driven, unica rota ativa
+- Superficie direta removida: `eaw intake <CARD>` e `scripts/commands/cmd_intake.sh` foram removidos do runtime; nao ha owner ativo nem rota de compatibilidade remanescente
 
 ## 4. READ_SCOPE
 
@@ -52,7 +51,7 @@ Seu proposito e:
 
 ## 5. WRITE_SCOPE
 
-- O runtime observado escreve `out/<CARD>/investigations/intake_agent_prompt.round_<N>.md`.
+- O runtime phase-driven materializa `out/<CARD>/prompts/intake.md` ao executar `eaw next <CARD>`.
 - O fluxo da fase Intake permite escrita somente em `out/<CARD>/investigations/00_intake.md` e `out/<CARD>/investigations/_intake_provenance.md`.
 - Qualquer tentativa de escrita fora de `out/<CARD>/investigations/` deve falhar.
 
@@ -60,7 +59,7 @@ Seu proposito e:
 
 - Executar o pre-check com `cd "$RUNTIME_ROOT"`, `test -f ./scripts/eaw`, `test -f "$CONFIG_SOURCE"` e validar `"$CARD_DIR/ingest"` ou `"$CARD_DIR/intake"` como fonte de entrada.
 - Resolver os templates de header e corpo a partir de `EAW_TEMPLATES_DIR`, com fallback para `EAW_ROOT_DIR/templates/` quando necessario.
-- Gerar o prompt deterministico em `investigations/intake_agent_prompt.round_<N>.md`.
+- Gerar o prompt deterministico em `prompts/intake.md` via `eaw next <CARD>`.
 - Materializar o bloco `RUNTIME_ENVIRONMENT` no inicio do prompt final, mantendo a sequencia imediata `RUNTIME_ENVIRONMENT -> ROLE`.
 - Restringir leitura ao perimetro de entrada bruta (`ingest/`, com fallback para `intake/`) e escrita a `investigations/` no prompt gerado.
 - Declarar no fluxo de Intake a producao de `investigations/00_intake.md` e `investigations/_intake_provenance.md`.
@@ -77,22 +76,20 @@ Seu proposito e:
 - Ausencia simultanea de `"$CARD_DIR/ingest"` e `"$CARD_DIR/intake"`.
 - Template de header nao encontrado no path primario nem no fallback.
 - Template de body nao encontrado no path primario nem no fallback.
-- Uso invalido da CLI fora da superficie phase-driven `eaw next <CARD>` ou da superficie direta historica de compatibilidade/deprecated.
+- Uso invalido da CLI fora da superficie phase-driven `eaw next <CARD>`, unica rota ativa.
 - Qualquer tentativa de escrita fora do perimetro permitido da fase.
 
 ## 8. Fonte de Verdade Observavel do Runtime
 
-O comportamento observavel do runtime desta fase e definido pela implementacao em `scripts/commands/cmd_intake.sh`.
+`scripts/commands/cmd_intake.sh` foi removido do runtime e nao possui owner ativo. O comportamento observavel da fase Intake e definido exclusivamente pelo fluxo phase-driven de `eaw next <CARD>` (funcao `eaw_materialize_current_phase`, em `scripts/commands/eaw_commands.sh`).
 
-Nessa implementacao observada:
+Nesse fluxo:
 
-- o comando aceita `<CARD>` e `--round=N`
-- o runtime cria `card_dir` e `investigations_dir`
-- o prompt final e materializado em `investigations/intake_agent_prompt.round_<N>.md`
+- o prompt final e materializado em `out/<CARD>/prompts/intake.md`
 - o prompt final inicia com `RUNTIME_ENVIRONMENT` e preserva `ROLE` logo apos o header
-- os placeholders `CARD`, `ROUND`, `EAW_WORKDIR`, `RUNTIME_ROOT`, `CONFIG_SOURCE`, `OUT_DIR` e `CARD_DIR` sao resolvidos no prompt gerado
+- os placeholders `CARD`, `EAW_WORKDIR`, `RUNTIME_ROOT`, `CONFIG_SOURCE`, `OUT_DIR` e `CARD_DIR` sao resolvidos no prompt gerado
 
-Em caso de conflito entre documentacao auxiliar e o comportamento observado em `scripts/commands/cmd_intake.sh`, prevalece a implementacao observada do runtime em conjunto com o prompt efetivamente gerado.
+Em caso de conflito entre documentacao auxiliar e o comportamento observado em `eaw next <CARD>`, prevalece o comportamento observado do runtime phase-driven em conjunto com o prompt efetivamente gerado.
 
 ## 9. Relacao com Outros Contratos
 
@@ -102,7 +99,7 @@ Em caso de conflito entre documentacao auxiliar e o comportamento observado em `
 
 ## 10. Limitacoes Conhecidas
 
-- A implementacao observada em `scripts/commands/cmd_intake.sh` materializa diretamente o prompt de round; `00_intake.md` e `_intake_provenance.md` aparecem no fluxo como saidas exigidas pelo prompt ativo.
+- O fluxo phase-driven de `eaw next <CARD>` materializa diretamente `prompts/intake.md`; `00_intake.md` e `_intake_provenance.md` aparecem no fluxo como saidas exigidas pelo prompt ativo.
 - Este contrato descreve o comportamento observavel atual e nao amplia escopo, arquitetura ou contratos publicos da CLI.
 
 ## 11. Status

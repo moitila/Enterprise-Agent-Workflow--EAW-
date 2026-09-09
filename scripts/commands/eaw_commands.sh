@@ -2788,11 +2788,6 @@ eaw_execute_workflow_phase() {
 	return 0
 }
 
-eaw_warn_compatibility_wrapper() {
-	local command_name="$1"
-	printf "WARNING: '%s' is deprecated and planned for removal in v1.0. Prefer 'eaw next'.\n" "$command_name" >&2
-}
-
 eaw_phase_index_in_track() {
 	local track_file="$1"
 	local target_phase="$2"
@@ -2809,18 +2804,6 @@ eaw_phase_index_in_track() {
 	done < <(eaw_yaml_track_phases "$track_file")
 
 	return 1
-}
-
-eaw_execute_current_phase_for_wrapper() {
-	local card="$1"
-	local card_dir="$EAW_OUT_DIR/$card"
-
-	if ! eaw_load_card_workflow_context "$card_dir"; then
-		return 1
-	fi
-
-	OUTDIR="$card_dir"
-	run_phase "workflow_phase_${EAW_CARD_WORKFLOW_CURRENT_PHASE}" true eaw_execute_workflow_phase "$card"
 }
 
 eaw_materialize_current_phase() {
@@ -2846,121 +2829,6 @@ eaw_materialize_current_phase() {
 			echo "RUNTIME: scope_lock enriched with write_allowlist: [] (TARGET_REPOS empty)"
 		fi
 	fi
-}
-
-eaw_mark_current_phase_complete_for_wrapper() {
-	local card="$1"
-	local card_dir="$EAW_OUT_DIR/$card"
-	local current_phase
-	local current_phase_file
-	local previous_phase
-	local completed_phases
-	local phase_status
-	local phase_started_at
-	local phase_completed_at
-
-	if ! eaw_load_card_workflow_context "$card_dir"; then
-		return 1
-	fi
-
-	current_phase="$EAW_CARD_WORKFLOW_CURRENT_PHASE"
-	current_phase_file="$EAW_CARD_WORKFLOW_CURRENT_PHASE_FILE"
-	previous_phase="$(eaw_normalize_phase_id "$(eaw_yaml_state_scalar "$EAW_CARD_WORKFLOW_STATE_FILE" "previous_phase")")"
-	completed_phases="${EAW_CARD_WORKFLOW_COMPLETED_PHASES:-}"
-	phase_status="$(eaw_state_phase_status_for_next)"
-	phase_started_at="$(eaw_state_scalar_or_default "$EAW_CARD_WORKFLOW_STATE_FILE" "phase_started_at" "null")"
-
-	if ! eaw_validate_phase_completion_strict "$card" "$card_dir" "$current_phase" "$current_phase_file"; then
-		return 1
-	fi
-	if [[ "$phase_status" == "COMPLETE" ]]; then
-		return 0
-	fi
-
-	phase_completed_at="$(utc_timestamp)"
-	eaw_write_phase_status "$EAW_CARD_WORKFLOW_STATE_FILE" "COMPLETE" "$previous_phase" "$current_phase" "$completed_phases" "$phase_started_at" "true" "$phase_completed_at"
-	return 0
-}
-
-eaw_advance_to_next_phase_for_wrapper() {
-	local card="$1"
-	local card_dir="$EAW_OUT_DIR/$card"
-	local current_phase
-	local current_phase_file
-	local next_phase
-	local completed_phases
-	local phase_started_at
-
-	if ! eaw_load_card_workflow_context "$card_dir"; then
-		return 1
-	fi
-
-	current_phase="$EAW_CARD_WORKFLOW_CURRENT_PHASE"
-	current_phase_file="$EAW_CARD_WORKFLOW_CURRENT_PHASE_FILE"
-	if [[ "$current_phase" == "$EAW_CARD_WORKFLOW_FINAL_PHASE" ]]; then
-		if [[ "$(eaw_state_phase_completed_for_next "$EAW_CARD_WORKFLOW_STATE_FILE")" != "true" ]]; then
-			if ! eaw_mark_current_phase_complete_for_wrapper "$card"; then
-				return 1
-			fi
-		fi
-		echo "CARD ${card}: workflow already complete"
-		return 0
-	fi
-
-	if ! eaw_validate_phase_completion_strict "$card" "$card_dir" "$current_phase" "$current_phase_file"; then
-		return 1
-	fi
-
-	next_phase="$EAW_CARD_WORKFLOW_NEXT_PHASE"
-	completed_phases="$(eaw_state_completed_phases_with_current "$current_phase")"
-	phase_started_at="$(utc_timestamp)"
-	eaw_write_next_state "$EAW_CARD_WORKFLOW_STATE_FILE" "$current_phase" "$next_phase" "$completed_phases" "RUN" "$phase_started_at" "false" "null"
-
-	echo "CARD ${card}: ${current_phase} -> ${next_phase}"
-	eaw_materialize_current_phase "$card" || return 1
-	return 0
-}
-
-eaw_wrapper_materialize_until_phase() {
-	local card="$1"
-	local target_phase="$2"
-	local card_dir="$EAW_OUT_DIR/$card"
-	local current_phase
-	local current_index
-	local target_index
-
-	if ! eaw_card_has_workflow_config "$card_dir"; then
-		echo "ERROR: card ${card} is missing canonical workflow YAMLs in $card_dir/intake (MVP requires canonical YAML structure)" >&2
-		return 1
-	fi
-	if ! eaw_load_card_workflow_context "$card_dir"; then
-		return 1
-	fi
-
-	current_phase="$EAW_CARD_WORKFLOW_CURRENT_PHASE"
-	current_index="$(eaw_phase_index_in_track "$EAW_CARD_WORKFLOW_TRACK_FILE" "$current_phase")" || return 1
-	target_index="$(eaw_phase_index_in_track "$EAW_CARD_WORKFLOW_TRACK_FILE" "$target_phase")" || return 1
-
-	if ((current_index > target_index)); then
-		echo "ERROR: card ${card} is already beyond compatibility target phase '${target_phase}' (current_phase=${current_phase})" >&2
-		return 1
-	fi
-
-	while true; do
-		if ! eaw_load_card_workflow_context "$card_dir"; then
-			return 1
-		fi
-		current_phase="$EAW_CARD_WORKFLOW_CURRENT_PHASE"
-
-		if [[ "$current_phase" == "$target_phase" ]]; then
-			eaw_execute_current_phase_for_wrapper "$card"
-			return $?
-		fi
-
-		eaw_execute_current_phase_for_wrapper "$card" || return 1
-		eaw_mark_current_phase_complete_for_wrapper "$card" || return 1
-		eaw_advance_to_next_phase_for_wrapper "$card" || return 1
-	done
 }
 
 phase_load_workflow_context() {
