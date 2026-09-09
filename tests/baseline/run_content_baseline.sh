@@ -177,6 +177,127 @@ run_one() {
 	capture_flow "$run_root" "$capture_file"
 }
 
+# Negative check: `eaw complete` no longer exists as a public command (removed in
+# EAW-ARQ-016-NEXT-CLOSURE); it must fail with a non-zero exit code.
+run_negative_complete_check() {
+	local run_root="$1"
+	local repo_dir="$run_root/repo"
+	local workdir="$run_root/workdir"
+	local output rc
+
+	create_repo "$repo_dir"
+	"$REPO_ROOT/scripts/eaw" init --workdir "$workdir" --force >/dev/null
+	write_repos_conf "$workdir" "$repo_dir"
+
+	set +e
+	output="$(EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" complete "anycard" 2>&1)"
+	rc=$?
+	set -e
+	[[ "$rc" -ne 0 ]] || fail "negative completion check: 'eaw complete' unexpectedly succeeded (exit 0); output: $output"
+	printf 'run_content_baseline: negative completion check PASS (eaw complete rejected, exit=%s)\n' "$rc"
+}
+
+# Positive check: `eaw next` auto-close on the final phase is the sole route that
+# emits card_completed/track_completed. Drives a disposable `bug` card through every
+# phase, then confirms the journal and state file reflect completion.
+run_positive_completion_check() {
+	local run_root="$1"
+	local repo_dir="$run_root/repo"
+	local workdir="$run_root/workdir"
+	local card="BASELINE_FINAL01"
+	local track="bug"
+	local card_dir="$workdir/out/$card"
+	local output
+
+	write_fixture_markdown() {
+		local path="$1"
+		local label="$2"
+		mkdir -p "$(dirname "$path")"
+		{
+			printf '# %s\n\n' "$label"
+			printf 'Deterministic non-scaffold content for the baseline final-closure fixture.\n'
+			printf 'Additional line to keep content above the minimum phase content gate.\n'
+		} >"$path"
+	}
+
+	create_repo "$repo_dir"
+	"$REPO_ROOT/scripts/eaw" init --workdir "$workdir" --force >/dev/null
+	write_repos_conf "$workdir" "$repo_dir"
+	EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" card "$card" --track "$track" "baseline final closure fixture" >/dev/null
+
+	write_fixture_markdown "$card_dir/investigations/00_intake.md" "Intake"
+	write_fixture_markdown "$card_dir/investigations/_intake_provenance.md" "Intake Provenance"
+	EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" next "$card" >/dev/null 2>&1 || fail "positive completion check: next(intake) failed"
+
+	write_fixture_markdown "$card_dir/investigations/20_findings.md" "Findings"
+	EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" next "$card" >/dev/null 2>&1 || fail "positive completion check: next(findings) failed"
+
+	write_fixture_markdown "$card_dir/investigations/30_hypotheses.md" "Hypotheses"
+	EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" next "$card" >/dev/null 2>&1 || fail "positive completion check: next(hypotheses) failed"
+
+	write_fixture_markdown "$card_dir/investigations/40_next_steps.md" "Planning"
+	EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" next "$card" >/dev/null 2>&1 || fail "positive completion check: next(planning) failed"
+
+	mkdir -p "$card_dir/implementation"
+	cat >"$card_dir/implementation/00_scope.lock.md" <<'EOF'
+# Scope Lock
+
+## Base Obrigatoria
+Baseline fixture base.
+
+## Hipotese(s) Base
+Baseline fixture hypothesis.
+
+## Contexto
+Baseline fixture context.
+
+## In Scope
+- fixture file
+
+## Out of Scope
+- nothing else
+
+## Allowlist de Escrita
+- implementation/20_patch_notes.md
+
+## Regra de Escrita
+Only the allowlist above may be written.
+EOF
+	cat >"$card_dir/implementation/10_change_plan.md" <<'EOF'
+# Change Plan
+
+## Objetivo de Execucao
+Baseline fixture objective.
+
+## Hipotese(s) Selecionada(s)
+Baseline fixture hypothesis selection.
+
+## Assuncoes Explicitas
+Baseline fixture assumption.
+
+## Steps
+1. Write patch notes fixture.
+
+## Validacao Tecnica Obrigatoria
+Baseline fixture validation.
+
+## Rollback
+Baseline fixture rollback note.
+EOF
+	EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" next "$card" >/dev/null 2>&1 || fail "positive completion check: next(implementation_planning) failed"
+
+	write_fixture_markdown "$card_dir/implementation/20_patch_notes.md" "Patch Notes"
+	output="$(EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" next "$card" 2>&1)" || fail "positive completion check: next(implementation_executor) auto-close failed: $output"
+	grep -Fq "marked COMPLETE" <<<"$output" || fail "positive completion check: missing 'marked COMPLETE' in auto-close output"
+	grep -Fq "workflow already complete" <<<"$output" || fail "positive completion check: missing 'workflow already complete' in auto-close output"
+
+	grep -q '"event_type":"card_completed"' "$card_dir/execution_journal.jsonl" || fail "positive completion check: card_completed missing from journal"
+	grep -q '"event_type":"track_completed"' "$card_dir/execution_journal.jsonl" || fail "positive completion check: track_completed missing from journal"
+	grep -Fq "phase_completed: true" "$card_dir/state_card_${track}.yaml" || fail "positive completion check: phase_completed: true missing from state file"
+
+	printf 'run_content_baseline: positive completion check PASS (card_completed/track_completed emitted via eaw next auto-close)\n'
+}
+
 compare_captures() {
 	local left="$1"
 	local right="$2"
@@ -246,6 +367,10 @@ main() {
 
 	test -f "$expected" || fail "expected baseline missing: $expected; run with --update-expected deliberately"
 	compare_captures "$expected" "$capture1" "regression check failed: actual capture differs from expected baseline"
+
+	run_negative_complete_check "$tmp_root/neg_complete"
+	run_positive_completion_check "$tmp_root/pos_complete"
+
 	printf 'run_content_baseline: PASS (determinism and regression checks passed)\n'
 }
 

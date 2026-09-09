@@ -42,7 +42,7 @@ Each phase execution produces one `phase_started` event followed by one `phase_c
 
 **`track_completed`:** Emitted by `cmd_next` when `current_phase` equals `final_phase` (as declared in `track.yaml`) and the final phase completion contract is satisfied. Signals normal lifecycle auto-close: the track workflow has reached its terminal state through `eaw next <CARD>`. `status` is `"OK"`, `duration_ms` is `0` (not applicable at track level), and `phase` contains the name of the terminal phase. Emission is idempotent: `cmd_next` checks for an existing `track_completed` event in the journal before emitting and skips if one is already present.
 
-**`card_completed`:** Emitted by `cmd_complete` (`eaw complete <CARD>`) after explicit final-phase validation, and by normal `cmd_next` auto-close with `track_completed`. Its status is `"OK"`, duration is `0`, and phase is the terminal phase. Both paths avoid duplicate journal entries.
+**`card_completed`:** Emitted exclusively by `cmd_next` auto-close, alongside `track_completed`, when `current_phase` equals `final_phase` and the final phase completion contract is satisfied. Its status is `"OK"`, duration is `0`, and phase is the terminal phase. Emission is idempotent: `cmd_next` checks for an existing `card_completed` event in the journal before emitting and skips if one is already present.
 
 ## Semantics
 

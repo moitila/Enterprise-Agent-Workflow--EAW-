@@ -125,13 +125,6 @@ main() {
 		validate_runtime_workdir
 		cmd_next "$2"
 		;;
-	complete)
-		if [[ $# -ne 2 ]]; then
-			die "usage: eaw complete <CARD>"
-		fi
-		validate_runtime_workdir
-		cmd_complete "$2"
-		;;
 	rollback)
 		if [[ $# -ne 2 ]]; then
 			die "usage: eaw rollback <CARD>"

@@ -1836,76 +1836,6 @@ eaw_card_write_allowlist_entries() {
 	fi
 }
 
-eaw_generate_followup_candidates() {
-	local card_dir="$1"
-	local scope_lock_file="$card_dir/implementation/00_scope.lock.md"
-
-	# Fail-soft: scope.lock ausente -> skip
-	[[ -f "$scope_lock_file" ]] || return 0
-
-	# Extrair secao bruta de ## Out of Scope
-	local raw_section
-	raw_section="$(awk '/^## Out of Scope$/{found=1; next} found && /^## /{exit} found{print}' "$scope_lock_file")"
-
-	# Secao vazia -> skip
-	[[ -n "$raw_section" ]] || return 0
-
-	# Detectar formatos nao-suportados
-	local unsupported=0
-	grep -qE "^\|" <<<"$raw_section" && unsupported=1
-	grep -qE "^### " <<<"$raw_section" && unsupported=1
-
-	local out_file="$card_dir/_followup_candidates.md"
-	local timestamp
-	timestamp="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
-
-	if [[ "$unsupported" -eq 1 ]]; then
-		printf "[WARNING] FOLLOWUP_CANDIDATES: Out of Scope contains unsupported format (tables or subsections): %s\n" "$scope_lock_file" >&2
-		cat >"$out_file" <<EOF
-# Follow-up Candidates — $(basename "$card_dir")
-
-generated_at: $timestamp
-source: implementation/00_scope.lock.md § "Out of Scope"
-
-NOTE: These are candidates only. No cards have been created automatically.
-NOTE: V1 extracts only direct bullet items under "## Out of Scope".
-
-## Unsupported Out of Scope content
-
-The source section contained unsupported structures (tables, subsections, or nested content).
-These were not converted into candidates automatically.
-EOF
-		return 0
-	fi
-
-	# Extrair bullets diretos
-	local bullets
-	bullets="$(eaw_card_markdown_section_list "$scope_lock_file" "## Out of Scope" | sed '/^[[:space:]]*$/d')"
-
-	# Bullets vazios -> skip
-	[[ -n "$bullets" ]] || return 0
-
-	# Gerar arquivo
-	{
-		printf "# Follow-up Candidates — %s\n\n" "$(basename "$card_dir")"
-		printf "generated_at: %s\n" "$timestamp"
-		printf "source: implementation/00_scope.lock.md § \"Out of Scope\"\n\n"
-		printf "NOTE: These are candidates only. No cards have been created automatically.\n"
-		printf "NOTE: V1 extracts only direct bullet items under \"## Out of Scope\".\n"
-		local n=0
-		while IFS= read -r line; do
-			n=$(( n + 1 ))
-			local desc="${line#- }"
-			printf "\n## Candidate %d\n\n" "$n"
-			printf "Description: %s\n" "$desc"
-			printf "Suggested track: TBD\n"
-			printf "Suggested scope: Review and convert into a dedicated card if still relevant.\n"
-		done <<<"$bullets"
-	} >"$out_file"
-
-	return 0
-}
-
 eaw_card_write_allowlist_block() {
 	local card_dir="$1"
 	local phase_file="${2:-}"
@@ -3183,7 +3113,7 @@ cmd_next() {
 	if [[ "$current_phase" == "$EAW_CARD_WORKFLOW_FINAL_PHASE" ]]; then
 		phase_completed="$(eaw_state_phase_completed_for_next "$EAW_CARD_WORKFLOW_STATE_FILE")"
 		if [[ "$phase_completed" != "true" ]]; then
-			# AUTO-CLOSE INLINE (H02): replicate cmd_complete canonical sequence
+			# AUTO-CLOSE INLINE (H02): sole route for card_completed/track_completed emission
 			# [614C] skip_when on final_phase: detect skip envelope, bypass artifact validation
 			local _fskip_po_file="${card_dir}/investigations/10_phase_output.json"
 			local _final_phase_skipped=false
@@ -3342,55 +3272,6 @@ cmd_next() {
 		printf "Agent bundle: %s\n" "$card_dir/runtime/agent_bundle_${next_phase}.md"
 	fi
 	eaw_materialize_current_phase "$card" || return 1
-	return 0
-}
-
-cmd_complete() {
-	local card="$1"
-	local card_dir="$EAW_OUT_DIR/$card"
-	local current_phase current_phase_file completed_phases previous_phase phase_started_at phase_completed_at
-
-	if ! eaw_card_has_workflow_config "$card_dir"; then
-		echo "ERROR: card ${card} is missing canonical workflow YAMLs in $card_dir/intake (MVP requires canonical YAML structure)" >&2
-		return 1
-	fi
-	if ! eaw_load_card_workflow_context "$card_dir"; then
-		return 1
-	fi
-
-	current_phase="$EAW_CARD_WORKFLOW_CURRENT_PHASE"
-	current_phase_file="$EAW_CARD_WORKFLOW_CURRENT_PHASE_FILE"
-	previous_phase="$(eaw_normalize_phase_id "$(eaw_yaml_state_scalar "$EAW_CARD_WORKFLOW_STATE_FILE" "previous_phase")")"
-	completed_phases="${EAW_CARD_WORKFLOW_COMPLETED_PHASES:-}"
-	phase_started_at="$(eaw_state_scalar_or_default "$EAW_CARD_WORKFLOW_STATE_FILE" "phase_started_at" "null")"
-
-	if ! eaw_validate_phase_completion_strict "$card" "$card_dir" "$current_phase" "$current_phase_file"; then
-		return 1
-	fi
-
-	# 616: validate agent envelope schema
-	if ! eaw_validate_envelope_schema "$EAW_CARD_WORKFLOW_TRACK_FILE" "$current_phase" "$card_dir"; then
-		echo "CARD ${card}: ${current_phase} envelope schema validation failed" >&2
-		return 1
-	fi
-
-	# 617: capture context summary for completed phase
-	eaw_emit_context_summary "$current_phase" "$card_dir" "$EAW_CARD_WORKFLOW_TRACK_FILE"
-
-	OUTDIR="$card_dir"
-	if [[ "$current_phase" == "$EAW_CARD_WORKFLOW_FINAL_PHASE" ]]; then
-		if ! grep -q '"event_type":"card_completed"' "${OUTDIR}/execution_journal.jsonl" 2>/dev/null; then
-			eaw_journal_append "${EAW_CARD_WORKFLOW_CARD}" "${EAW_CARD_WORKFLOW_TRACK_ID}" \
-				"${EAW_CARD_WORKFLOW_FINAL_PHASE}" "OK" "0" "card_completed"
-		fi
-		# 618: emit card-level metrics from journal
-		eaw_emit_card_metrics "$card_dir"
-		# 619: generate follow-up candidates from Out of Scope
-		eaw_generate_followup_candidates "$card_dir" || true
-	fi
-	phase_completed_at="$(utc_timestamp)"
-	eaw_write_phase_status "$EAW_CARD_WORKFLOW_STATE_FILE" "COMPLETE" "$previous_phase" "$current_phase" "$completed_phases" "$phase_started_at" "true" "$phase_completed_at"
-	echo "CARD ${card}: ${current_phase} marked COMPLETE"
 	return 0
 }
 

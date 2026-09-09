@@ -22,7 +22,7 @@ Command semantics
 -----------------
 Primary workflow classification remains the selected `track`, persisted as `card_state.track_id`. The declarative lifecycle advances through `card_state.current_phase` and `track.transitions`; `eaw next <CARD>` is the runtime command that first validates the current phase `completion` contract, then applies the transition and executes the destination phase using the declared workflow outputs and prompt bindings. When the validated phase is the final phase, `eaw next <CARD>` performs normal lifecycle auto-close. The command sections below document the public CLI surface and the legacy compatibility modules that remain in the tree for internal reference.
 In the current runtime model, `eaw next <CARD>` is the phase-driven entrypoint. `eaw intake <CARD>`, `eaw analyze <CARD>`, and `eaw implement <CARD>` are no longer exposed by `scripts/eaw` as public commands.
-The current contract documents phase completion through `phase.completion` and the `eaw next <CARD>` transition gate. `eaw complete <CARD>` is reserved as an escape/standalone closure command; callers should treat `eaw next` as the normal lifecycle path.
+The current contract documents phase completion through `phase.completion` and the `eaw next <CARD>` transition gate. `eaw next` is the sole route to lifecycle closure: `card_completed`/`track_completed` are emitted exclusively by its final-phase auto-close. There is no separate standalone closure command.
 
 ### Lifecycle for existing materialized cards and `read_sources`
 

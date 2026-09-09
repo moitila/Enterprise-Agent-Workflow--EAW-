@@ -300,10 +300,31 @@ O comportamento é genérico: é determinado pela lógica `current_phase == fina
 não por configuração específica do track. Aplica-se a qualquer track cujo fluxo `next` percorra uma
 fase final.
 
-**`eaw complete` não é necessário** no fluxo normal. Ele existe como comando standalone de escape
-para contextos em que `eaw run` (em vez de `next`) foi usado, ou quando o state file precisou de
-correção manual. Em operações normais orquestradas pelo orquestrador, `eaw complete` nunca deve ser
-chamado.
+**`eaw complete` foi removido.** Não existe mais comando standalone de fechamento. `eaw next` é a
+única rota de fechamento de card em qualquer cenário, incluindo os dois procedimentos abaixo,
+porque o bloco de auto-close de `cmd_next` decide exclusivamente a partir do estado persistido
+(`current_phase` e `phase_completed` no state file), não a partir de qual comando foi usado
+anteriormente:
+
+- **Escape após `eaw run` (em vez de `next`):** se `eaw run` foi abortado ou interrompido deixando
+  o card na fase final sem fechamento, basta chamar `eaw next <CARD_ID>` normalmente. O runtime
+  detecta `current_phase == final_phase` e `phase_completed != true` e executa o auto-close inline
+  (validação de artefatos, schema do envelope, resumo de contexto, emissão dedupificada de
+  `card_completed`/`track_completed`, métricas, escrita de state) da mesma forma que faria se o
+  card tivesse chegado ali via `next`.
+- **Correção manual de state file:** se o state file precisou de correção manual (ex.: `current_phase`
+  ou `phase_completed` inconsistentes), corrija o YAML para refletir o estado real do card e então
+  chame `eaw next <CARD_ID>`. `cmd_next` só entra no bloco de auto-close (validação de artefatos e
+  emissão de `card_completed`) quando `current_phase == final_phase` **e** `phase_completed != true`;
+  se a correção deixar `phase_completed: true` na fase final, `cmd_next` pula esse bloco inteiro e
+  apenas garante `track_completed` de forma incondicional, sem nunca emitir `card_completed`. Por
+  isso, ao corrigir manualmente o state file para a fase final, defina sempre `phase_completed: false`
+  (nunca `true`) antes de chamar `next` — é isso que aciona o auto-close inline completo. Se a
+  correção resultar em uma fase intermediária, `eaw next` retoma o fluxo normal de validação/avanço
+  de fase a partir desse ponto.
+
+Em operações normais orquestradas pelo orquestrador, `eaw next` é o único comando de fechamento —
+não há mais rota alternativa, fallback ou alias.
 
 **Nota**: nenhuma mensagem `"ERROR: final phase is not marked complete"` é emitida pelo runtime em
 nenhuma condição — essa string não existe em `eaw_commands.sh`. Qualquer documentação que a

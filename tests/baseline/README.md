@@ -16,12 +16,14 @@ From the repository root:
 bash tests/baseline/run_content_baseline.sh
 ```
 
-Normal mode performs two separate checks:
+Normal mode performs four separate checks:
 
 1. Determinism: fixture A versus fixture B.
 2. Regression: fixture A versus `expected/bug_intake.capture`.
+3. Negative completion: `eaw complete <CARD>` fails (the command was removed in EAW-ARQ-016-NEXT-CLOSURE; `eaw next` is now the sole route to lifecycle closure).
+4. Positive completion: a disposable `bug` card is driven through every phase via `eaw next`; on the final phase, auto-close emits `card_completed` and `track_completed` in `execution_journal.jsonl` and writes `phase_completed: true` to the state file.
 
-`PASS` means both checks passed. It means the covered flow still matches the approved reference, not that every EAW workflow is covered.
+`PASS` means all four checks passed. It means the covered flow still matches the approved reference and the single closure route behaves correctly, not that every EAW workflow is covered. Checks 3 and 4 only run in normal (non `--update-expected`) mode.
 
 After an approved behavior change, update the expected baseline deliberately:
 
@@ -61,9 +63,10 @@ Other prompt and artifact content does not receive global date, ID, or path mask
 
 ## Limitations
 
-- One `bug` intake flow is covered; other tracks and alternate operational paths remain outside this baseline.
+- One `bug` intake flow is covered by the determinism/regression capture; other tracks and alternate operational paths remain outside that specific capture.
 - The baseline does not inventory fallback precedence or compare direct internal calls against CLI orchestration.
 - AS-IS behavior such as `doctor` exit code behavior and `validate` card argument handling is characterized, not corrected.
+- The positive/negative completion checks cover the single closure route (`eaw next` auto-close) for the `bug` track only; they do not add coverage for recovery-specific fixtures (e.g. simulating an aborted `eaw run` or a hand-corrected state file).
 
 ## Dependencies
 
