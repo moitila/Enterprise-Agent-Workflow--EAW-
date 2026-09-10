@@ -1155,17 +1155,6 @@ eaw_load_card_workflow_context() {
 			echo "ERROR: current phase '$current_phase' has no declarative next transition in $track_file" >&2
 			return 1
 		fi
-		# 614A: evaluate skip_when if declared for current_phase
-		local _skip_codes
-		_skip_codes="$(eaw_yaml_track_skip_when "$track_file" "$current_phase")"
-		if [[ -n "$_skip_codes" ]] && eaw_eval_skip_when "$_skip_codes" "${EAW_PHASE_EXIT_CODES:-}"; then
-			# 615: emit skip envelope for the phase being skipped
-			local _inherited_from _inherited_codes
-			_inherited_from="$(eaw_resolve_inherited_from "$card_dir")"
-			_inherited_codes="${EAW_PHASE_EXIT_CODES:-}"
-			eaw_emit_skip_envelope "$next_phase" "$card_dir" "$_skip_codes" "$_inherited_from" "$_inherited_codes"
-			next_phase="${transition_map[$next_phase]:-$next_phase}"
-		fi
 	fi
 
 	EAW_CARD_WORKFLOW_TRACK_ID="$track_id"
@@ -1181,6 +1170,37 @@ eaw_load_card_workflow_context() {
 	EAW_CARD_WORKFLOW_COMPLETED_PHASES="$(printf "%s\n" "${completed_phase_list[@]}")"
 	EAW_CARD_WORKFLOW_SOURCE="$workflow_source"
 	return 0
+}
+
+# 614A/615: evaluate skip_when for current_phase and emit skip envelope if matched.
+# Legitimate caller is exclusively cmd_next, after EAW_PHASE_EXIT_CODES is populated
+# from the real handoff of the previous phase (eaw_load_phase_exit_codes). Prints the
+# resulting next_phase (unchanged if skip does not apply) on stdout.
+eaw_evaluate_skip_when() {
+	local track_file="$1"
+	local current_phase="$2"
+	local card_dir="$3"
+	local next_phase="$4"
+	local _skip_codes
+	_skip_codes="$(eaw_yaml_track_skip_when "$track_file" "$current_phase")"
+	if [[ -n "$_skip_codes" ]] && eaw_eval_skip_when "$_skip_codes" "${EAW_PHASE_EXIT_CODES:-}"; then
+		local _inherited_from _inherited_codes
+		_inherited_from="$(eaw_resolve_inherited_from "$card_dir")"
+		_inherited_codes="${EAW_PHASE_EXIT_CODES:-}"
+		eaw_emit_skip_envelope "$next_phase" "$card_dir" "$_skip_codes" "$_inherited_from" "$_inherited_codes"
+		local _raw_transition _from_phase _to_phase
+		while IFS= read -r _raw_transition; do
+			[[ -n "$_raw_transition" ]] || continue
+			IFS='|' read -r _from_phase _to_phase <<<"$_raw_transition"
+			_from_phase="$(eaw_normalize_phase_id "$_from_phase")"
+			_to_phase="$(eaw_normalize_phase_id "$_to_phase")"
+			if [[ "$_from_phase" == "$next_phase" ]]; then
+				next_phase="$_to_phase"
+				break
+			fi
+		done < <(eaw_yaml_track_transitions "$track_file")
+	fi
+	printf '%s\n' "$next_phase"
 }
 
 eaw_state_completed_phases_with_current() {
@@ -3058,6 +3078,9 @@ cmd_next() {
 	current_phase="$EAW_CARD_WORKFLOW_CURRENT_PHASE"
 	current_phase_file="$EAW_CARD_WORKFLOW_CURRENT_PHASE_FILE"
 	next_phase="$EAW_CARD_WORKFLOW_NEXT_PHASE"
+	# 614A/615: skip_when is evaluated exclusively here, where EAW_PHASE_EXIT_CODES
+	# was populated legitimately above from the real handoff of the previous phase.
+	next_phase="$(eaw_evaluate_skip_when "$EAW_CARD_WORKFLOW_TRACK_FILE" "$current_phase" "$card_dir" "$next_phase")"
 
 	printf "Current phase: %s\n" "$current_phase"
 	printf "Next phase: %s\n" "$next_phase"
