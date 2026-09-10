@@ -2042,7 +2042,7 @@ ${skill_lines%$'\n'}"
 		local rs_line rs_resolved rs_resolved_list=""
 		while IFS= read -r rs_line; do
 			[[ -n "$rs_line" ]] || continue
-			rs_resolved="$(CARD_DIR="$card_dir" eaw_resolve_read_source_item "$rs_line" 2>/dev/null)" || {
+			rs_resolved="$(CARD_DIR="$card_dir" RUNTIME_ROOT="$EAW_ROOT_DIR" OUT_DIR="$EAW_OUT_DIR" eaw_resolve_read_source_item "$rs_line" 2>/dev/null)" || {
 				echo "RUNTIME: read_sources item skipped (resolution failed): $rs_line" >&2
 				continue
 			}
