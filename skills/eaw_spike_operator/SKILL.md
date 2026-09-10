@@ -49,6 +49,40 @@ investigations/40_backlog_or_handoff.md <- backlog e rastreamento do intake
 - Cada fase produz apenas seus artefatos declarados — nada alem.
 - `eaw next` e a unica autoridade para validar avanco de fase.
 
+## Onboarding publicado sob demanda
+
+`phase.context.onboarding_template` controla somente a injecao automatica de
+onboarding no prompt renderizado. A ausencia dessa declaracao nao significa que
+nao exista onboarding publicado no workspace e nao obriga a fase a consulta-lo.
+
+Nas fases que ja podem investigar repositorios em modo leitura, consulte
+onboarding publicado somente quando houver necessidade concreta de compreender
+fatos estaveis, convencoes ou regras operacionais do repositorio relevante para
+uma evidencia ou decisao. Nao carregue onboarding por padrao e nao consulte
+onboardings de repositorios que nao sejam relevantes para a investigacao.
+
+Para cada repositorio que precise dessa consulta:
+
+1. Identifique o repositorio relevante a partir da evidencia do card e do
+   escopo da investigacao.
+2. Obtenha sua `repo_key` exata conforme `repos.conf` e as chaves efetivamente
+   presentes em `TARGET_REPOSITORIES`. Nao invente aliases, nao derive formatos
+   alternativos e nao escolha uma chave ambigua.
+3. Verifique se existe
+   `$EAW_WORKDIR/context_sources/onboarding/<repo_key>/INDEX.md`.
+4. Se existir, leia primeiro o `INDEX.md` e depois somente os documentos que
+   ele indicar como necessarios para a investigacao corrente.
+5. Trate onboarding como contexto estavel: valide no fonte atual qualquer fato
+   necessario para sustentar um finding e nao o use como substituto de evidencia.
+
+Se mais de um repositorio for relevante, repita o procedimento para cada
+`repo_key` necessaria. A ausencia de onboarding injetado no prompt nunca deve
+ser interpretada, por si so, como ausencia de onboarding publicado.
+
+Esta regra nao altera a injecao de contexto: ela nao se aplica a `intake` ou
+`hypotheses`, que nao investigam repositorios, e nao exige consulta quando a
+fase nao precisa de contexto estavel adicional.
+
 ## Campo capabilities nas fases spike
 
 As fases `findings` e `technical_decision` da track `spike` carregam o campo:
