@@ -2,7 +2,7 @@
 
 cmd_rollback() {
 	local card="$1"
-	local card_dir="$EAW_WORKDIR/out/$card"
+	local card_dir="$EAW_OUT_DIR/$card"
 	local scope_lock="$card_dir/implementation/00_scope.lock.md"
 
 	if [[ ! -d "$card_dir" ]]; then
