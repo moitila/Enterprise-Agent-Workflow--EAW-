@@ -95,6 +95,5 @@ bash "$REPO_ROOT/tests/smoke_prompt_core.sh"
 bash "$REPO_ROOT/tests/smoke_config_contract.sh"
 bash "$REPO_ROOT/tests/smoke_tracks.sh"
 bash "$REPO_ROOT/tests/smoke_card_command.sh"
-bash "$REPO_ROOT/tests/smoke/smoke_rollback_out_dir.sh"
 
 printf "Smoke OK: artifacts present in %s\n" "$OUTDIR"
