@@ -94,7 +94,7 @@ nao afirma que os arquivos atuais ja respeitam a distribuicao.
 | Resolucao, renderizacao e provenance de prompts | Servico de prompts | Aplica bindings e composicao contratual; nao inventa conteudo especifico de track. |
 | Selecao e delimitacao de evidencias | Servico de context | Distingue onboarding estavel de contexto dinamico; nao produz conclusoes analiticas como coleta. |
 | Resolucao de Skills e instrucoes operacionais | Servico de contexto operacional | Resolve declaracoes e entrega instrucoes; nao confunde orientacao com evidencia nem redefine lifecycle. |
-| Workspace, repositorios e escopos de leitura/escrita | Servico de escopo e ambiente | Resolve configuracao e aplica limites contratados, sem inferir papel pelo nome do repo. |
+| Workspace, repositorios e escopos de leitura/escrita | Servico de escopo e ambiente | Resolve configuracao e aplica limites contratados, sem inferir papel pelo nome do repo; pode coletar provenance observacional, mas nao muta repositorios target. |
 | Journal, provenance comum e diagnosticos de execucao | Servico de auditoria | Registra fatos e razoes dos owners; nao decide transicoes nem redefine estado. |
 | Tipos, schemas, vocabulario de regras e resultados | Contracts | Define significado e compatibilidade, independentemente da implementacao do parser ou storage. |
 | Parsing, caminhos, relogio e I/O elementar | Primitives | Mecanismos tecnicos sem semantica de track ou apresentacao CLI. |
@@ -110,6 +110,19 @@ O runtime prepara e valida a fronteira de execucao; nao deve absorver o raciocin
 do agente ou a implementacao do produto. Materializar um prompt nao equivale a
 executar com sucesso o trabalho descrito nele. Uma allowlist textual tambem nao
 prova isolamento do processo executor; garantias devem indicar seu mecanismo.
+
+### Fronteira Git para repositorios target
+
+Conforme [EAW-ADR-0001](adr/0001-runtime-git-observational-boundary.md), o
+runtime PODE usar Git apenas para provenance, diagnostico e comparacao de efeito
+observacional. Ele NAO DEVE executar Git que altere fontes, indice, branch,
+historico ou remoto de um repositorio target. A classificacao depende do efeito,
+nao de uma lista fechada de nomes de comandos.
+
+Mudancas em fontes de repositorios target pertencem ao agente executor
+autorizado pelo escopo do card. Essa atribuicao nao concede permissao fora do
+escopo: o runtime continua responsavel por preparar contexto, aplicar gates,
+registrar provenance e validar limites.
 
 ## Modelo de runtime e commands
 

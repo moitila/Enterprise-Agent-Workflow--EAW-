@@ -53,10 +53,10 @@ Desvios atuais sao divida a avaliar, nao precedentes para novas implementacoes.
 
 ## EAW-ARCH-P007 - Ownership explicito
 
-- Regra: antes de implementar, o agente DEVE identificar o owner na matriz do TARGET_ARCHITECTURE e reutiliza-lo; lacunas DEVEM ser registradas antes de criar implementacoes concorrentes.
-- Racional: uma regra com varios owners diverge e perde rastreabilidade.
-- Conformidade: requisitos especificos ficam na definicao da track, sua validacao no servico de artifacts e a decisao de avancar no lifecycle.
-- Violacao: copiar resolucao de template para cada consumidor ou guardar regra sem owner em utilitarios.
+- Regra: antes de implementar, o agente DEVE identificar o owner na matriz do TARGET_ARCHITECTURE e reutiliza-lo; lacunas DEVEM ser registradas antes de criar implementacoes concorrentes. O runtime pode usar Git para observacao; a mutacao de fontes em repositorio target pertence somente ao agente executor autorizado pelo escopo, conforme [EAW-ADR-0001](adr/0001-runtime-git-observational-boundary.md).
+- Racional: uma regra com varios owners diverge e perde rastreabilidade; separar governanca de workflow da alteracao de fontes preserva essa responsabilidade.
+- Conformidade: requisitos especificos ficam na definicao da track, sua validacao no servico de artifacts e a decisao de avancar no lifecycle; o runtime registra o estado do repositorio e o agente executor autorizado realiza uma alteracao de fonte.
+- Violacao: copiar resolucao de template para cada consumidor, guardar regra sem owner em utilitarios ou o runtime executar Git com efeito mutante em repositorio target.
 
 ## EAW-ARCH-P008 - Compatibilidade explicita
 
@@ -74,7 +74,7 @@ Desvios atuais sao divida a avaliar, nao precedentes para novas implementacoes.
 
 ## EAW-ARCH-P010 - Auditabilidade
 
-- Regra: decisoes de workflow DEVEM ser explicaveis por contratos, estado e evidencia; mecanismos DEVEM favorecer determinismo, rastreabilidade e diagnosticos reproduziveis.
+- Regra: decisoes de workflow DEVEM ser explicaveis por contratos, estado e evidencia; mecanismos DEVEM favorecer determinismo, rastreabilidade e diagnosticos reproduziveis. Quando coletar provenance de repositorio, o runtime DEVE usar apenas meios observacionais, conforme [EAW-ADR-0001](adr/0001-runtime-git-observational-boundary.md).
 - Racional: um operador precisa entender por que houve transicao, prompt, artifact ou bloqueio.
 - Conformidade: preservar origem e binding efetivo e distinguir materializacao de execucao concluida; explicitar entradas variaveis como tempo e ambiente.
 - Violacao: heuristica oculta por nome de track, fallback sem diagnostico ou abstracao que perde a origem da decisao.
