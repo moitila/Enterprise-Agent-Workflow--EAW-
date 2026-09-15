@@ -13,11 +13,6 @@ O runtime precisa de fatos sobre repositorios para estabelecer provenance,
 diagnosticos e comparacoes de um card. Operacoes Git observacionais fornecem
 esses fatos sem alterar um repositorio target.
 
-A investigacao AS-IS identificou uma rota legada de `eaw rollback` que invoca
-`git checkout HEAD --` em repositorio target. Esse comportamento altera fontes.
-Ele e evidencia da implementacao atual, nao uma excecao arquitetural nem uma
-justificativa para atribuir mutacao de fontes ao runtime.
-
 ## Decisao e escopo
 
 O runtime PODE usar Git somente para operacoes de efeito observacional, como ler
@@ -34,10 +29,6 @@ comandos. O agente executor autorizado pelo escopo do card possui alteracoes de
 fontes em repositorios target. O runtime prepara contexto, aplica gates de
 workflow, registra provenance e valida limites declarados; ele nao realiza
 essas alteracoes de fonte.
-
-Esta ADR nao remove, migra, preserva nem altera `eaw rollback`. Tambem nao
-decide cardinalidade de targets, politica de selecao de paths, `ingest-pr` ou o
-status de compatibilidade de qualquer comando legado.
 
 ## Alternativas consideradas
 
@@ -63,12 +54,6 @@ para reparar ou modificar repositorio target. Uma necessidade futura de mutacao
 de fontes deve ser executada por agente executor autorizado e governada por
 escopo proprio de card.
 
-Comandos legados do runtime que mutam targets exigem decisao explicita de
-migracao ou retirada. Esta ADR deixa seus contratos observaveis inalterados ate
-que esse trabalho seja autorizado separadamente. O risco residual principal e
-o comportamento legado permanecer enquanto consumidores e rota de migracao nao
-forem caracterizados.
-
 ## Owners, principios e contratos afetados
 
 - Servicos de runtime possuem contexto observacional, provenance, diagnosticos
@@ -82,24 +67,9 @@ forem caracterizados.
   legado.
 
 Esta decisao nao altera os contratos de CLI, track, phase, state, artifact,
-prompt ou journal/audit. Uma futura mudanca de comportamento observavel de
-comando legado deve identificar consumidores afetados e atualizar explicitamente
-o contrato pertinente.
-
-## Compatibilidade e migracao
-
-`eaw rollback` permanece somente AS-IS. Esta ADR nao o classifica como
-compatibilidade suportada porque consumidores, comportamento preservado, owner,
-gatilho e criterio de retirada nao foram estabelecidos.
-
-Card futuro deve caracterizar essa superficie e decidir se ela sera removida,
-migrada ou alterada. Esta ADR nao autoriza tal trabalho nem exige mecanismo de
-migracao especifico.
+prompt ou journal/audit.
 
 ## Evidencias e relacoes
 
 - Decisao do mantenedor registrada em `EAW-ARCH-RUNTIME-GIT-BOUNDARY`.
-- Findings de `EAW-ARQ-009-ROLLBACK-MULTI-TARGET-POLICY` e do card de boundary
-  confirmam a distincao entre provenance observacional existente e rollback
-  legado mutante.
 - Nao existe ADR anterior; nenhuma relacao de supersession se aplica.
