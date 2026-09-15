@@ -203,6 +203,7 @@ PY
 printf "[test] smoke scope\n"
 REPOS_CONF_SHA0="$(repos_conf_sha "$REPOS_CONF")"
 verify_repos_conf_guard_detects_mutation
+bash "$REPO_ROOT/tests/smoke_read_scope.sh"
 bash "$REPO_ROOT/tests/smoke/smoke_baseline.sh"
 bash "$REPO_ROOT/tests/smoke_audit_skip.sh"
 bash "$REPO_ROOT/tests/smoke_completion_content.sh"

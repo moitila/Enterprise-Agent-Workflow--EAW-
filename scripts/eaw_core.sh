@@ -1,5 +1,45 @@
 #!/usr/bin/env bash
 
+eaw_normalize_phase_id() {
+	local phase="${1:-}"
+	case "$phase" in
+	hypoteses)
+		printf "hypotheses\n"
+		;;
+	planing)
+		printf "planning\n"
+		;;
+	implement_planing)
+		printf "implementation_planning\n"
+		;;
+	*)
+		printf "%s\n" "$phase"
+		;;
+	esac
+}
+
+eaw_yaml_state_scalar() {
+	local file="$1"
+	local key="$2"
+	awk -v key="$key" '
+		function trim(s) {
+			sub(/^[[:space:]]+/, "", s)
+			sub(/[[:space:]]+$/, "", s)
+			sub(/^"/, "", s)
+			sub(/"$/, "", s)
+			return s
+		}
+		/^card_state:[[:space:]]*$/ { in_state=1; next }
+		in_state && /^[^[:space:]]/ { in_state=0 }
+		in_state && $0 ~ ("^  " key ":[[:space:]]*") {
+			line=$0
+			sub("^  " key ":[[:space:]]*", "", line)
+			print trim(line)
+			exit
+		}
+	' "$file"
+}
+
 read_config_version() {
 	local conf="$1"
 	if [[ ! -f "$conf" ]]; then
