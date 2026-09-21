@@ -1,0 +1,43 @@
+config_version: 1
+
+track:
+  id: adversarial_review
+  name: Adversarial Review
+  description: >
+    Audita se as conclusoes, criterios de aceite e status final declarados de
+    um card alvo ja executado sao sustentados pela evidencia produzida e pelo
+    comportamento observavel do sistema. Leitura-primaria, fail-closed,
+    nao-destrutiva por padrao; nunca cria automaticamente o card de
+    remediacao recomendado.
+  initial_phase: case_reconstruction
+  final_phase: remediation_handoff
+
+  initial_outputs:
+    create_directories:
+      - ingest
+      - audit
+
+  phases:
+    - case_reconstruction
+    - evidence_audit
+    - adversarial_design
+    - adversarial_execution
+    - verdict
+    - remediation_handoff
+
+  transitions:
+    case_reconstruction:
+      next: evidence_audit
+    evidence_audit:
+      next: adversarial_design
+    adversarial_design:
+      next: adversarial_execution
+    adversarial_execution:
+      next: verdict
+    verdict:
+      next: remediation_handoff
+
+  rules:
+    one_prompt_per_phase: true
+    generated_artifacts_of_each_phase_must_be_non_empty: true
+    allow_manual_phase_skip: false

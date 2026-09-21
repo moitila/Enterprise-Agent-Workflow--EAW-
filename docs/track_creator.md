@@ -52,10 +52,10 @@ A fase `intake` exige as 5 seções obrigatórias (`required_headings`):
 
 ## Resolução de template por track
 
-O runtime detecta o tipo de card lendo o campo `card_state.track_id` do arquivo
-`state_card_*.yaml` no `CARD_DIR`. Se `templates/intake_<track_id>.md` existir, esse
-template é usado para o scaffold. Caso contrário, a lógica legada
-(bug/spike/repo_onboarding/feature) é ativada como fallback.
+O tipo do card é determinado exclusivamente lendo o campo `card_state.track_id`
+do arquivo `state_card_*.yaml` dentro do `CARD_DIR`. Se `templates/intake_<track_id>.md`
+existir, esse template é usado para o scaffold; caso contrário, o tipo resolvido é
+`feature`.
 
 A lógica de resolução é idêntica em `eaw_detect_card_template_type`
 (`scripts/commands/eaw_commands.sh`) e `eaw_phase_completion_detect_card_template_type`

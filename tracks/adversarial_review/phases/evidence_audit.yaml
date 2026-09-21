@@ -1,0 +1,37 @@
+config_version: 1
+
+phase:
+  id: evidence_audit
+  name: Evidence Audit
+  description: >
+    Classifica cada evidencia inventariada por case_reconstruction nas
+    classes de evidencia aplicaveis e a vincula a claims/criterios de
+    aceite especificos do card alvo, isolando lacunas.
+
+  skills:
+    - eaw_reviewer
+
+  prompt:
+    active: 1
+    path: templates/prompts/adversarial_review/evidence_audit/prompt_v<active>.md
+
+  tooling_hints: []
+
+  outputs:
+    create_artifacts:
+      - audit/10_evidence_matrix.md
+      - audit/11_evidence_gaps.md
+    prompts:
+      - evidence_audit
+
+  read_sources:
+    - "{{CARD_DIR}}/audit"
+    - "{{OUT_DIR}}"
+
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - path: audit/10_evidence_matrix.md
+        validation_mode: blocking
+      - path: audit/11_evidence_gaps.md
+        validation_mode: blocking

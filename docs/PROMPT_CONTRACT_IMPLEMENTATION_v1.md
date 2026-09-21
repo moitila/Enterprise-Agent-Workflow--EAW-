@@ -3,7 +3,7 @@ Enterprise Agent Workflow (EAW)
 
 Status: OFFICIAL
 Scope: Implementation prompt generation
-Applies to: fluxo normal `eaw next <CARD>`; a superficie direta de Implementation e mantida apenas como compatibilidade/deprecated
+Applies to: fluxo normal `eaw next <CARD>` (unica superficie ativa). A superficie direta de Implementation (`eaw implement <CARD>`) foi removida; `scripts/commands/cmd_implement.sh` nao existe mais e nao ha owner ativo para essa rota.
 
 ---
 
@@ -74,8 +74,8 @@ A fase Implementation:
 
 1. Executa somente apos Analyze concluido
 2. Consome `investigations/40_next_steps.md`
-3. Gera `implementation/implementation_planning_agent_prompt.md`
-4. Gera `implementation/implementation_executor_agent_prompt.md`
+3. Gera `prompts/implementation_planning.md`
+4. Gera `prompts/implementation_executor.md`
 5. Materializa ou preserva `implementation/00_scope.lock.md`
 6. Materializa ou preserva `implementation/10_change_plan.md`
 7. Materializa ou preserva `implementation/20_patch_notes.md`
@@ -88,15 +88,14 @@ Nenhuma etapa fora desta sequencia pode ser adicionada pelo prompt.
 | Categoria | Caminho | Regra |
 | --- | --- | --- |
 | Entrada obrigatoria | `investigations/40_next_steps.md` | Deve existir antes do inicio da fase |
-| Artefato runtime | `implementation/implementation_planning_agent_prompt.md` | Prompt auxiliar gerado pelo runtime |
-| Artefato runtime | `implementation/implementation_executor_agent_prompt.md` | Prompt auxiliar gerado pelo runtime |
+| Artefato runtime | `prompts/implementation_planning.md` | Prompt final materializado pelo runtime phase-driven ao executar `eaw next <CARD>` |
+| Artefato runtime | `prompts/implementation_executor.md` | Prompt final materializado pelo runtime phase-driven ao executar `eaw next <CARD>` |
 | Artefato obrigatorio | `implementation/00_scope.lock.md` | Define in scope, out of scope e allowlist soberana |
 | Artefato obrigatorio | `implementation/10_change_plan.md` | Define steps numerados, hipoteses `H[0-9]+` selecionadas e validacao obrigatoria |
 | Artefato obrigatorio | `implementation/20_patch_notes.md` | Permanece parte do layout oficial da fase |
 | Gate obrigatorio | `investigations/20_findings.md`, `investigations/30_hypotheses.md`, `investigations/40_next_steps.md`, `implementation/00_scope.lock.md`, `implementation/10_change_plan.md` | Devem, em conjunto, cobrir o objetivo soberano do card antes da execucao corretiva |
 | Boundary de escrita | `implementation/` | Artefatos da fase ficam confinados a este diretorio |
-| Dependencia runtime | `RUNTIME_ROOT/scripts/commands/cmd_implement.sh` | Fonte de verdade de execucao no runtime validado por `./scripts/eaw` |
-| Espelho no repositorio | `scripts/commands/cmd_implement.sh` | Espelho versionado no target repo, atualmente identico ao runtime validado |
+| Dependencia runtime | `scripts/commands/eaw_commands.sh` (funcao `eaw_materialize_current_phase`) | Lifecycle e materializacao do prompt, conduzidos por `eaw next <CARD>`, validado por `./scripts/eaw` |
 
 Nao ha permissao para alterar `prompts/`, `scripts/commands/`, repositorios fora da allowlist ou qualquer layout externo da trilha como parte deste contrato.
 
@@ -107,7 +106,7 @@ O prompt de Implementation deve:
 - Declarar `EAW_WORKDIR`, `RUNTIME_ROOT`, `CONFIG_SOURCE`, `OUT_DIR` e `CARD_DIR` no header
 - Declarar `CARD_ID`, `TRACK_ID`, `STEP_ID`, `TARGET_REPOSITORIES`, `WRITE_ALLOWLIST` e `CRITICAL_PATHS` no bloco `RUNTIME_ENVIRONMENT`
 - Tratar `investigations/40_next_steps.md` como base unica do planejamento
-- Permitir os artefatos auxiliares `implementation/implementation_planning_agent_prompt.md` e `implementation/implementation_executor_agent_prompt.md` quando emitidos pelo runtime
+- Permitir os artefatos auxiliares `prompts/implementation_planning.md` e `prompts/implementation_executor.md` quando emitidos pelo runtime
 - Exigir rastreabilidade explicita entre hipoteses `H[0-9]+` selecionadas, `40_next_steps.md` e `implementation/10_change_plan.md`
 - Exigir que `implementation/00_scope.lock.md` contenha allowlist de escrita e regra de escrita
 - Preservar a existencia de `implementation/20_patch_notes.md` no layout oficial da fase
@@ -133,7 +132,7 @@ Fail conditions bloqueantes da fase:
 - Ausencia de `implementation/00_scope.lock.md` ou `implementation/10_change_plan.md` quando exigidos pelo fluxo
 - Tentativa de escrita fora da allowlist ou fora de `CARD_DIR`
 - Divergencia sem justificativa rastreavel entre o objetivo soberano do card e o escopo operacional gerado
-- Tentativa de emitir saida fora dos artefatos observados da fase: `implementation/implementation_planning_agent_prompt.md`, `implementation/implementation_executor_agent_prompt.md`, `implementation/00_scope.lock.md`, `implementation/10_change_plan.md` e `implementation/20_patch_notes.md`
+- Tentativa de emitir saida fora dos artefatos observados da fase: `prompts/implementation_planning.md`, `prompts/implementation_executor.md`, `implementation/00_scope.lock.md`, `implementation/10_change_plan.md` e `implementation/20_patch_notes.md`
 - Tentativa de alterar runtime, templates, CLI, layout externo ou arquivos fora do escopo aprovado
 
 ## 8. Compatibilidade
@@ -146,7 +145,7 @@ Este contrato nao altera:
 - Runtime em `RUNTIME_ROOT`, validado pela existencia de `./scripts/eaw`
 - Suporte multi-repo
 
-Backward compatibility preservada. Quando mencionada em documentacao historica, a superficie direta de Implementation e somente compatibilidade/deprecated; o fluxo operacional normal e phase-driven via `eaw next <CARD>`.
+A superficie direta de Implementation (`eaw implement <CARD>`, `scripts/commands/cmd_implement.sh`) foi removida do runtime e nao possui owner ativo. O fluxo operacional e exclusivamente phase-driven via `eaw next <CARD>`.
 
 ## 9. Evolucao
 

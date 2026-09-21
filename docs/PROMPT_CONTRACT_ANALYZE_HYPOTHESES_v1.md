@@ -3,7 +3,7 @@ Enterprise Agent Workflow (EAW)
 
 Status: OFFICIAL
 Scope: Analyze subphase `hypotheses`
-Applies to: fluxo normal `eaw next <CARD>`; a superficie direta de Analyze e mantida apenas como compatibilidade/deprecated -> `investigations/hypotheses_agent_prompt.md`
+Applies to: fluxo normal `eaw next <CARD>` (unica superficie ativa) -> `prompts/hypotheses.md`. A superficie direta de Analyze (`eaw analyze <CARD>`) foi removida e nao possui owner ativo.
 
 ---
 
@@ -24,7 +24,7 @@ Seu proposito e:
 | --- | --- | --- |
 | Entrada obrigatoria | `investigations/00_intake.md` | Deve existir antes do inicio da subfase |
 | Entrada obrigatoria | `investigations/20_findings.md` | Deve existir antes do inicio da subfase |
-| Artefato runtime | `investigations/hypotheses_agent_prompt.md` | Prompt auxiliar emitido pelo runtime da subfase Hypotheses |
+| Artefato runtime | `prompts/hypotheses.md` | Prompt final materializado pelo runtime phase-driven ao executar `eaw next <CARD>` |
 | Saida obrigatoria | `investigations/30_hypotheses.md` | Registra coverage map, hipoteses `H[0-9]+`, ranking, risco residual e provenance |
 
 ## 3. READ_SCOPE
@@ -63,8 +63,8 @@ Seu proposito e:
 ## 7. Dependencias de Runtime
 
 - Runtime root: `RUNTIME_ROOT`, validado pela existencia de `./scripts/eaw`
-- Implementacao observada da fase: `scripts/commands/cmd_analyze.sh`
-- Template efetivo da subfase: `templates/prompts/default/analyze_hypotheses/prompt_v{ACTIVE}.md` (resolvido via `ACTIVE`)
+- Lifecycle e materializacao do prompt: conduzidos por `eaw next <CARD>` (funcao `eaw_materialize_current_phase` em `scripts/commands/eaw_commands.sh`); `scripts/commands/cmd_analyze.sh` foi removido e nao possui owner ativo
+- Template efetivo da subfase: resolvido pelo binding `ACTIVE` da fase `hypotheses` declarada na track do card
 - Contrato consolidado complementar: `docs/PROMPT_CONTRACT_ANALYZE_v1.md`
 
 ## 8. Limitacoes Conhecidas
@@ -75,7 +75,7 @@ Seu proposito e:
 
 ## 9. Relacao com o Contrato Consolidado
 
-Este documento complementa `PROMPT_CONTRACT_ANALYZE_v1.md` com o detalhamento exclusivo da subfase Hypotheses. Em caso de conflito com o comportamento real do runtime, prevalece a evidencia observada em `cmd_analyze.sh` e no prompt gerado `hypotheses_agent_prompt.md`.
+Este documento complementa `PROMPT_CONTRACT_ANALYZE_v1.md` com o detalhamento exclusivo da subfase Hypotheses. Em caso de conflito com o comportamento real do runtime, prevalece o comportamento observado em `eaw next <CARD>` e no prompt gerado `prompts/hypotheses.md`.
 
 ## 10. Status
 

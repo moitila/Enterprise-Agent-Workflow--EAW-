@@ -3,7 +3,7 @@ Enterprise Agent Workflow (EAW)
 
 Status: OFFICIAL
 Scope: Analyze subphase `planning`
-Applies to: fluxo normal `eaw next <CARD>`; a superficie direta de Analyze e mantida apenas como compatibilidade/deprecated -> `investigations/planning_agent_prompt.md`
+Applies to: fluxo normal `eaw next <CARD>` (unica superficie ativa) -> `prompts/planning.md`. A superficie direta de Analyze (`eaw analyze <CARD>`) foi removida e nao possui owner ativo.
 
 ---
 
@@ -25,7 +25,7 @@ Seu proposito e:
 | Entrada obrigatoria | `investigations/00_intake.md` | Deve existir antes do inicio da subfase |
 | Entrada obrigatoria | `investigations/20_findings.md` | Deve existir antes do inicio da subfase |
 | Entrada obrigatoria | `investigations/30_hypotheses.md` | Deve existir antes do inicio da subfase |
-| Artefato runtime | `investigations/planning_agent_prompt.md` | Prompt auxiliar emitido pelo runtime da subfase Planning |
+| Artefato runtime | `prompts/planning.md` | Prompt final materializado pelo runtime phase-driven ao executar `eaw next <CARD>` |
 | Saida obrigatoria | `investigations/40_next_steps.md` | Registra hipoteses `H[0-9]+` selecionadas, objetivo, estrategia, plano atomico, criterios de aceite, riscos e rollback |
 | Saida opcional | `investigations/_warnings.md` | Permitida somente se necessario |
 
@@ -65,8 +65,8 @@ Seu proposito e:
 ## 7. Dependencias de Runtime
 
 - Runtime root: `RUNTIME_ROOT`, validado pela existencia de `./scripts/eaw`
-- Implementacao observada da fase: `scripts/commands/cmd_analyze.sh`
-- Template efetivo da subfase: `templates/prompts/default/analyze_planning/prompt_v{ACTIVE}.md` (resolvido via `ACTIVE`)
+- Lifecycle e materializacao do prompt: conduzidos por `eaw next <CARD>` (funcao `eaw_materialize_current_phase` em `scripts/commands/eaw_commands.sh`); `scripts/commands/cmd_analyze.sh` foi removido e nao possui owner ativo
+- Template efetivo da subfase: resolvido pelo binding `ACTIVE` da fase `planning` declarada na track do card
 - Contrato consolidado complementar: `docs/PROMPT_CONTRACT_ANALYZE_v1.md`
 - Dependencia de saida para a proxima fase: `investigations/40_next_steps.md` como entrada obrigatoria de Implementation
 
@@ -79,7 +79,7 @@ Seu proposito e:
 
 ## 9. Relacao com o Contrato Consolidado
 
-Este documento complementa `PROMPT_CONTRACT_ANALYZE_v1.md` com o detalhamento exclusivo da subfase Planning. Em caso de conflito com o comportamento real do runtime, prevalece a evidencia observada em `cmd_analyze.sh` e no prompt gerado `planning_agent_prompt.md`.
+Este documento complementa `PROMPT_CONTRACT_ANALYZE_v1.md` com o detalhamento exclusivo da subfase Planning. Em caso de conflito com o comportamento real do runtime, prevalece o comportamento observado em `eaw next <CARD>` e no prompt gerado `prompts/planning.md`.
 
 ## 10. Status
 

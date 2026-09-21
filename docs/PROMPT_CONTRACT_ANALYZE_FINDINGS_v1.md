@@ -24,7 +24,7 @@ Seu proposito e:
 | --- | --- | --- |
 | Entrada obrigatoria | `investigations/00_intake.md` | Deve existir antes do inicio da subfase |
 | Superficie canonica da fase | `templates/prompts/feature/findings/prompt_v4.md` | Prompt ativo da fase `findings`, resolvido pelo binding operacional da track |
-| Artefato runtime auxiliar | `investigations/findings_agent_prompt.md` | Materializacao opcional do prompt da fase para auditoria, sem autoridade separada |
+| Artefato runtime | `prompts/findings.md` | Prompt final materializado pelo runtime phase-driven ao executar `eaw next <CARD>` |
 | Saida obrigatoria | `investigations/20_findings.md` | Consolida contexto confirmado, evidencias, criterios, comportamentos, divergencias e lacunas |
 | Saida opcional | `investigations/_warnings.md` | Permitida somente se a subfase precisar registrar warnings |
 
@@ -63,7 +63,7 @@ Seu proposito e:
 ## 7. Dependencias de Runtime
 
 - Runtime root: `RUNTIME_ROOT`, validado pela existencia de `./scripts/eaw`
-- Implementacao observada da fase: `scripts/commands/cmd_analyze.sh`
+- Lifecycle e materializacao do prompt: conduzidos por `eaw next <CARD>` (funcao `eaw_materialize_current_phase` em `scripts/commands/eaw_commands.sh`); `scripts/commands/cmd_analyze.sh` foi removido e nao possui owner ativo
 - Binding operacional da fase: `tracks/feature/phases/findings.yaml` com `active: 4`
 - Template efetivo da subfase: `templates/prompts/feature/findings/prompt_v4.md`
 - Contrato consolidado complementar: `docs/PROMPT_CONTRACT_ANALYZE_v1.md`
@@ -76,7 +76,7 @@ Seu proposito e:
 
 ## 9. Relacao com o Contrato Consolidado
 
-Este documento complementa `PROMPT_CONTRACT_ANALYZE_v1.md` com o detalhamento exclusivo da subfase Findings. O prompt materializado `findings_agent_prompt.md`, quando existir, deve refletir a mesma superficie canonica descrita aqui e nao define autoridade paralela. A orquestracao via `eaw next` garante a sequencia de execucao, mas nao substitui o contrato visivel da fase.
+Este documento complementa `PROMPT_CONTRACT_ANALYZE_v1.md` com o detalhamento exclusivo da subfase Findings. O prompt materializado `prompts/findings.md`, quando existir, deve refletir a mesma superficie canonica descrita aqui e nao define autoridade paralela. A orquestracao via `eaw next` garante a sequencia de execucao e e a unica rota ativa de materializacao.
 
 ## 10. Status
 

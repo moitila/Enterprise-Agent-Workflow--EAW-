@@ -16,12 +16,13 @@ Inputs
   - `repos.conf` — lines in format `key|path` (legacy) or `key|path|role`, where role is `target` or `infra` (path may be absolute, ~/, or relative to EAW root). Missing role defaults to `target`.
   - `search.conf` — newline-separated search patterns (optional).
 - Templates: `templates/<type>.md` must exist for dossier rendering compatibility. This filename/template family does not replace `track` as the primary workflow classification.
+- Card type/template resolution reads exclusively `card_state.track_id` from `state_card_*.yaml`; when no matching `templates/intake_<track_id>.md` exists, the resolved type is `feature`.
 
 Command semantics
 -----------------
 Primary workflow classification remains the selected `track`, persisted as `card_state.track_id`. The declarative lifecycle advances through `card_state.current_phase` and `track.transitions`; `eaw next <CARD>` is the runtime command that first validates the current phase `completion` contract, then applies the transition and executes the destination phase using the declared workflow outputs and prompt bindings. When the validated phase is the final phase, `eaw next <CARD>` performs normal lifecycle auto-close. The command sections below document the public CLI surface and the legacy compatibility modules that remain in the tree for internal reference.
 In the current runtime model, `eaw next <CARD>` is the phase-driven entrypoint. `eaw intake <CARD>`, `eaw analyze <CARD>`, and `eaw implement <CARD>` are no longer exposed by `scripts/eaw` as public commands.
-The current contract documents phase completion through `phase.completion` and the `eaw next <CARD>` transition gate. `eaw complete <CARD>` is reserved as an escape/standalone closure command; callers should treat `eaw next` as the normal lifecycle path.
+The current contract documents phase completion through `phase.completion` and the `eaw next <CARD>` transition gate. `eaw next` is the sole route to lifecycle closure: `card_completed`/`track_completed` are emitted exclusively by its final-phase auto-close. There is no separate standalone closure command.
 
 ### Lifecycle for existing materialized cards and `read_sources`
 
@@ -43,39 +44,35 @@ Behavior:
 - Treats the declared workflow as the source of truth: it validates `track_id` and `current_phase` before iterating and does not call `intake`, `analyze`, or `implement` directly.
 - Wave 1 scope is intentionally limited: `--resume`, `--from`, `--dry-run`, automatic retry, and extra metrics are out of scope.
 
-### Legacy compatibility module: `intake`
+### Legacy compatibility module: `intake` (removed)
 
 Syntax:
 Not exposed by `scripts/eaw`.
 
 Behavior:
-- Generates a deterministic intake prompt in `out/<CARD>/prompts/intake.md`.
-- Does not modify source code repositories.
-- The generated prompt constrains evidence reading to `out/<CARD>/intake/**`.
-- Emits a warning in `stderr` marking the wrapper as deprecated, points callers to `eaw next`, and keeps the wrapper functional during the transition until the planned `v1.0` removal target.
+- Historical wrapper, fully removed from the tree; no code path remains.
+- Prior behavior generated a deterministic intake prompt in `out/<CARD>/prompts/intake.md` without modifying source code repositories.
+- Superseded entirely by `eaw next <CARD>`.
 
-### Legacy compatibility module: `analyze`
-
-Syntax:
-Not exposed by `scripts/eaw`.
-
-Behavior:
-- Generates prompt artifacts only at `out/<CARD>/prompts/<prompt_alias>.md` when the current phase declares `outputs.prompts`.
-- In `out/<CARD>/prompts/`, the filename is the declared alias exactly.
-- Validates intake structure heuristically using the available intake/dossier template family and emits warnings in the generated prompt when intake is incomplete.
-- Ensures deterministic auxiliary artifacts for analysis flow, including `TEST_PLAN_<CARD>.md` when absent.
-- Does not modify source code repositories.
-- Emits a warning in `stderr` marking the wrapper as deprecated, points callers to `eaw next`, and keeps the wrapper functional during the transition until the planned `v1.0` removal target.
-
-### Legacy compatibility module: `implement`
+### Legacy compatibility module: `analyze` (removed)
 
 Syntax:
 Not exposed by `scripts/eaw`.
 
 Behavior:
-- Creates implementation scaffolds in `out/<CARD>/implementation/`.
-- Generates implementation prompt artifacts only in `out/<CARD>/prompts/implementation_planning.md` and `out/<CARD>/prompts/implementation_executor.md`.
-- Emits a warning in `stderr` marking the wrapper as deprecated, points callers to `eaw next`, and keeps the wrapper functional during the transition until the planned `v1.0` removal target.
+- Historical wrapper, fully removed from the tree; no code path remains.
+- Prior behavior generated prompt artifacts only at `out/<CARD>/prompts/<prompt_alias>.md` and validated intake structure heuristically, without modifying source code repositories.
+- Superseded entirely by `eaw next <CARD>`.
+
+### Legacy compatibility module: `implement` (removed)
+
+Syntax:
+Not exposed by `scripts/eaw`.
+
+Behavior:
+- Historical wrapper, fully removed from the tree; no code path remains.
+- Prior behavior created implementation scaffolds in `out/<CARD>/implementation/` and generated implementation prompt artifacts.
+- Superseded entirely by `eaw next <CARD>`.
 
 ### `eaw doctor-hardening`
 

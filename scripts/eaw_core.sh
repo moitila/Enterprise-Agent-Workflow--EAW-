@@ -1,22 +1,43 @@
 #!/usr/bin/env bash
 
-usage() {
-	cat <<EOF
-Usage: eaw init [--workdir <path>] [--force] [--upgrade]
-Example:
-  eaw init --workdir ./.eaw --upgrade
-  eaw card <CARD> --track <TRACK> ["<TITLE>"]
-  eaw intake <CARD> [--round=N]
-  eaw analyze <CARD>
-  eaw implement <CARD>
-  eaw suggest-prompt <CARD> --track <TRACK> --phase <PHASE>
-  eaw prompt validate
-  eaw validate-prompt <TRACK> <PHASE> <CANDIDATE>
-  eaw propose-prompt <CARD> <TRACK> <PHASE> <BASE_CANDIDATE> <NEW_CANDIDATE>
-  eaw apply-prompt <TRACK> <PHASE> <CANDIDATE>
-  eaw validate
-  eaw doctor
-EOF
+eaw_normalize_phase_id() {
+	local phase="${1:-}"
+	case "$phase" in
+	hypoteses)
+		printf "hypotheses\n"
+		;;
+	planing)
+		printf "planning\n"
+		;;
+	implement_planing)
+		printf "implementation_planning\n"
+		;;
+	*)
+		printf "%s\n" "$phase"
+		;;
+	esac
+}
+
+eaw_yaml_state_scalar() {
+	local file="$1"
+	local key="$2"
+	awk -v key="$key" '
+		function trim(s) {
+			sub(/^[[:space:]]+/, "", s)
+			sub(/[[:space:]]+$/, "", s)
+			sub(/^"/, "", s)
+			sub(/"$/, "", s)
+			return s
+		}
+		/^card_state:[[:space:]]*$/ { in_state=1; next }
+		in_state && /^[^[:space:]]/ { in_state=0 }
+		in_state && $0 ~ ("^  " key ":[[:space:]]*") {
+			line=$0
+			sub("^  " key ":[[:space:]]*", "", line)
+			print trim(line)
+			exit
+		}
+	' "$file"
 }
 
 read_config_version() {
@@ -1661,7 +1682,11 @@ EOF
 	if [[ "$track_has_ingest" != "true" ]]; then
 		if [[ ! -f "$intake_file" ]]; then
 			if [[ -f "$intake_tpl" ]]; then
-				cp "$intake_tpl" "$intake_file"
+				eaw_render_phase_template_with_card "$intake_tpl" "$intake_file" "$card"
+				sed -i \
+					-e "s|{{CARD}}|${card}|g" \
+					-e "s|{{OUT_DIR}}|${outdir}|g" \
+					"$intake_file"
 			else
 				echo "WARNING: missing intake template for type '$type': $intake_tpl; using minimal fallback"
 				cat >"$intake_file" <<EOF
@@ -1882,131 +1907,6 @@ eaw_generate_context_bundle() {
 	return 0
 }
 
-eaw_sha256_file() {
-	local file="$1"
-	if command -v sha256sum >/dev/null 2>&1; then
-		sha256sum "$file" | awk '{print $1}'
-	elif command -v shasum >/dev/null 2>&1; then
-		shasum -a 256 "$file" | awk '{print $1}'
-	else
-		cksum "$file" | awk '{print $1}'
-	fi
-}
-
-eaw_sha256_text() {
-	local text="$1"
-	if command -v sha256sum >/dev/null 2>&1; then
-		printf "%s" "$text" | sha256sum | awk '{print $1}'
-	elif command -v shasum >/dev/null 2>&1; then
-		printf "%s" "$text" | shasum -a 256 | awk '{print $1}'
-	else
-		printf "%s" "$text" | cksum | awk '{print $1}'
-	fi
-}
-
-eaw_onboarding_relpath_is_allowed() {
-	local rel_path="$1"
-	case "$rel_path" in
-	*.md | *.txt | *.yaml | *.yml | *.json)
-		return 0
-		;;
-	esac
-	return 1
-}
-
-eaw_onboarding_relpath_is_excluded() {
-	local rel_path="$1"
-	case "$rel_path" in
-	.git/* | node_modules/* | dist/* | build/* | target/*)
-		return 0
-		;;
-	esac
-	return 1
-}
-
-eaw_onboarding_file_is_text() {
-	local file="$1"
-	# Use grep's binary sniffing to avoid requiring python3.
-	# Empty files should still count as text for onboarding purposes.
-	if [[ ! -s "$file" ]]; then
-		return 0
-	fi
-	LC_ALL=C grep -Iq . "$file"
-}
-
-eaw_onboarding_write_provenance() {
-	local provenance_file="$1"
-	local onboarding_tpl="$2"
-	local repo_key="$3"
-	local source_root="$4"
-	local source_status="$5"
-	local max_files_onboarding="$6"
-	local max_bytes_total_onboarding="$7"
-	local max_bytes_per_file_onboarding="$8"
-	local considered_file="$9"
-	local materialized_file="${10}"
-	local ignored_file="${11}"
-	local bytes_materialized="${12}"
-	local fingerprint="${13}"
-	local considered_count materialized_count ignored_count
-
-	considered_count=0
-	materialized_count=0
-	ignored_count=0
-	if [[ -f "$considered_file" ]]; then
-		considered_count=$(awk 'NF { count++ } END { print count + 0 }' "$considered_file")
-	fi
-	if [[ -f "$materialized_file" ]]; then
-		materialized_count=$(awk 'NF { count++ } END { print count + 0 }' "$materialized_file")
-	fi
-	if [[ -f "$ignored_file" ]]; then
-		ignored_count=$(awk 'NF { count++ } END { print count + 0 }' "$ignored_file")
-	fi
-
-	{
-		printf "# Onboarding Provenance\n\n"
-		printf -- "- onboarding_template: %s\n" "$onboarding_tpl"
-		printf -- "- repo_key: %s\n" "${repo_key:-unresolved}"
-		printf -- "- source_root: %s\n" "${source_root:-unresolved}"
-		printf -- "- source_status: %s\n" "$source_status"
-		printf -- "- max_files_onboarding: %s\n" "$max_files_onboarding"
-		printf -- "- max_bytes_total_onboarding: %s\n" "$max_bytes_total_onboarding"
-		printf -- "- max_bytes_per_file_onboarding: %s\n" "$max_bytes_per_file_onboarding"
-		printf -- "- files_considered: %s\n" "$considered_count"
-		printf -- "- files_materialized: %s\n" "$materialized_count"
-		printf -- "- files_ignored: %s\n" "$ignored_count"
-		printf -- "- bytes_materialized: %s\n" "$bytes_materialized"
-		printf -- "- fingerprint: %s\n" "$fingerprint"
-		printf "\n## Considered Files\n\n"
-		if [[ -s "$considered_file" ]]; then
-			sed 's/^/- /' "$considered_file"
-		else
-			printf -- "- (none)\n"
-		fi
-		printf "\n## Materialized Files\n\n"
-		if [[ -s "$materialized_file" ]]; then
-			sed 's/^/- /' "$materialized_file"
-		else
-			printf -- "- (none)\n"
-		fi
-		printf "\n## Ignored Files\n\n"
-		if [[ -s "$ignored_file" ]]; then
-			sed 's/^/- /' "$ignored_file"
-		else
-			printf -- "- (none)\n"
-		fi
-		printf "\n## Notes\n\n"
-		if [[ "$source_status" == "absent" ]]; then
-			printf -- "- onboarding source absent; execution continued without error.\n"
-		elif [[ "$source_status" == "unresolved" ]]; then
-			printf -- "- target repository key could not be resolved; onboarding remained observational only.\n"
-		else
-			printf -- "- onboarding materialized from governed workspace source with deterministic path ordering.\n"
-		fi
-	} >"$provenance_file"
-}
-
-
 phase_collect_context() {
 	# Collect context for a card phase based on phase.context declarations.
 	# Conditions injection on materialization under out/<CARD>/context/.
@@ -2074,91 +1974,6 @@ grep_heading_match() {
 	else
 		grep -Eiq -- "$pattern" "$file"
 	fi
-}
-
-validate_intake_heading_group() {
-	local file="$1"
-	local warn_ref="$2"
-	local label="$3"
-	local pattern="$4"
-	if ! grep_heading_match "$file" "$pattern"; then
-		append_warn "$warn_ref" "intake missing heading for '${label}'"
-	fi
-}
-
-detect_card_type_with_warnings() {
-	local card="$1"
-	local outdir="$2"
-	local type_ref="$3"
-	local warn_ref="$4"
-	local found=()
-
-	if [[ -f "$outdir/bug_${card}.md" ]]; then
-		found+=("bug")
-	fi
-	if [[ -f "$outdir/feature_${card}.md" ]]; then
-		found+=("feature")
-	fi
-	if [[ -f "$outdir/spike_${card}.md" ]]; then
-		found+=("spike")
-	fi
-
-	if [[ "${#found[@]}" -eq 0 ]]; then
-		append_warn "$warn_ref" "no dossier file found in $outdir; defaulting type to bug"
-		eval "$type_ref='bug'"
-		return 0
-	fi
-
-	if [[ "${#found[@]}" -gt 1 ]]; then
-		append_warn "$warn_ref" "ambiguous card type (${found[*]}); applying priority bug > feature > spike"
-	fi
-
-	if [[ " ${found[*]} " == *" bug "* ]]; then
-		eval "$type_ref='bug'"
-		return 0
-	fi
-	if [[ " ${found[*]} " == *" feature "* ]]; then
-		eval "$type_ref='feature'"
-		return 0
-	fi
-	eval "$type_ref='spike'"
-}
-
-count_required_intake_headings() {
-	local type="$1"
-	local file="$2"
-	local count=0
-	case "$type" in
-	bug)
-		if grep_heading_match "$file" '^##[[:space:]]*(Resumo do problema|Resumo)[[:space:]]*$'; then count=$((count + 1)); fi
-		if grep_heading_match "$file" '^##[[:space:]]*Comportamento esperado[[:space:]]*$'; then count=$((count + 1)); fi
-		if grep_heading_match "$file" '^##[[:space:]]*Comportamento atual[[:space:]]*$'; then count=$((count + 1)); fi
-		if grep_heading_match "$file" '^##[[:space:]]*Passos para reproduzir[[:space:]]*$'; then count=$((count + 1)); fi
-		;;
-	feature)
-		if grep_heading_match "$file" '^##[[:space:]]*(Problema|Objetivo)[[:space:]]*$'; then count=$((count + 1)); fi
-		if grep_heading_match "$file" '^##[[:space:]]*Critérios de aceite[[:space:]]*$'; then count=$((count + 1)); fi
-		if grep_heading_match "$file" '^##[[:space:]]*Escopo([[:space:]]*\(In/Out\))?[[:space:]]*$'; then count=$((count + 1)); fi
-		;;
-	spike)
-		if grep_heading_match "$file" '^##[[:space:]]*(Pergunta[[:space:]]*/[[:space:]]*Hipótese|Pergunta|Hipótese)[[:space:]]*$'; then count=$((count + 1)); fi
-		if grep_heading_match "$file" '^##[[:space:]]*Critério de conclusão[[:space:]]*$'; then count=$((count + 1)); fi
-		;;
-	esac
-	echo "$count"
-}
-
-intake_is_structurally_incomplete() {
-	local type="$1"
-	local file="$2"
-	local size_bytes=0
-	local required_hits=0
-	size_bytes=$(wc -c <"$file" | tr -d '[:space:]')
-	required_hits="$(count_required_intake_headings "$type" "$file")"
-	if [[ "$size_bytes" -lt 50 || "$required_hits" -le 1 ]]; then
-		return 0
-	fi
-	return 1
 }
 
 intake_has_section_headings() {

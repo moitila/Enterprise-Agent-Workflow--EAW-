@@ -34,7 +34,7 @@ with this model — it would conflate stable onboarding with dynamic phase
 context, and deliver indiscriminate context to every agent session regardless
 of the actual phase being executed.
 
-**Current skills registry** (`skills/registry.yaml`): 11 skills covering
+**Current skills registry** (`skills/registry.yaml`): 13 skills currently listed in registry.yaml, covering
 workspace operation, card execution, card creation, delivery, review, prompt
 creation, track creation, repo onboarding, spike operations, workspace
 bootstrap, and ADO connector.

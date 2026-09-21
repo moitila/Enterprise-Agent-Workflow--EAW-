@@ -150,6 +150,41 @@ grep -qE 'context_sources/onboarding.*resolved_repo_key|resolved_repo_key.*conte
     && pass "D3_onboarding_dir_check_present" \
     || fail "D3: verificacao de existencia do diretorio de onboarding ausente"
 
+extract_bl16_awk() {
+    awk -v sq="'" '
+        index($0, "local _awk_bl16=" sq) { in_script=1; next }
+        in_script && $0 ~ "^[[:space:]]*" sq "[[:space:]]*$" { exit }
+        in_script { print }
+    ' scripts/commands/eaw_commands.sh
+}
+
+tmpdir="$(mktemp -d)"
+trap 'rm -rf "$tmpdir"' EXIT
+bl16_awk="$(extract_bl16_awk)"
+
+bl16_intake="$tmpdir/bl16_intake.md"
+printf '## Repositorio principal de onboarding\n\n`emr-tasy-plsql`\n' >"$bl16_intake"
+normalized_repo_key="$(awk "$bl16_awk" "$bl16_intake")"
+[[ "$normalized_repo_key" == "emr-tasy-plsql" ]] \
+    && pass "BL-CI-16-EXT_markdown_repo_key_normalized value=${normalized_repo_key}" \
+    || fail "BL-CI-16-EXT: expected emr-tasy-plsql got=${normalized_repo_key}"
+[[ "$normalized_repo_key" != *'`'* ]] \
+    && pass "BL-CI-16-EXT_markdown_repo_key_no_backticks" \
+    || fail "BL-CI-16-EXT: repo key still contains backticks value=${normalized_repo_key}"
+
+missing_workdir="$tmpdir/eaw_workdir"
+missing_repo_key="repo-sem-onboarding"
+mkdir -p "$missing_workdir/context_sources/onboarding"
+missing_onboarding_dir="${missing_workdir}/context_sources/onboarding/${missing_repo_key}"
+missing_warning="$({
+    if [[ ! -d "$missing_onboarding_dir" ]]; then
+        echo "WARNING: BL-CI-16: onboarding directory absent for repo=${missing_repo_key} path=${missing_onboarding_dir}; agent will receive invalid path" >&2
+    fi
+} 2>&1)"
+[[ "$missing_warning" == *"onboarding directory absent for repo=${missing_repo_key}"* ]] \
+    && pass "D3_missing_onboarding_still_warns" \
+    || fail "D3: ausencia real de onboarding nao gerou warning esperado"
+
 # syntax check for all modified shell files
 bash -n scripts/commands/eaw_commands.sh && pass "eaw_commands_syntax_ok" || fail "eaw_commands.sh syntax error"
 bash -n scripts/lib/phase_completion.sh  && pass "phase_completion_syntax_ok" || fail "phase_completion.sh syntax error"

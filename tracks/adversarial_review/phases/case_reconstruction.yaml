@@ -1,0 +1,38 @@
+config_version: 1
+
+phase:
+  id: case_reconstruction
+  name: Case Reconstruction
+  description: >
+    Reconstroi, a partir dos artefatos existentes do card alvo, o que foi
+    prometido, o que foi de fato alterado, quais evidencias foram
+    efetivamente produzidas e um mapa inicial de lacunas/contradicoes
+    observaveis, sem julgar merito.
+
+  skills: []
+
+  prompt:
+    active: 1
+    path: templates/prompts/adversarial_review/case_reconstruction/prompt_v<active>.md
+
+  tooling_hints: []
+
+  outputs:
+    create_directories:
+      - ingest
+    create_artifacts:
+      - audit/00_case_reconstruction.md
+    prompts:
+      - case_reconstruction
+
+  read_sources:
+    - "{{CARD_DIR}}/ingest"
+    - "{{OUT_DIR}}"
+
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - path: investigations/00_intake.md
+        validation_mode: blocking
+      - path: audit/00_case_reconstruction.md
+        validation_mode: blocking

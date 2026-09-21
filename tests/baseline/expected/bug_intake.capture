@@ -1,0 +1,297 @@
+## CLI: card
+### stdout
+Wrote <WORKDIR>/out/BASELINE01/bug_BASELINE01.md
+Wrote <WORKDIR>/out/BASELINE01/state_card_bug.yaml
+Wrote <WORKDIR>/out/BASELINE01/investigations/00_intake.md
+[phase] init_runtime -> OK (<DURATION_MS>)
+RUNTIME: loaded track id=bug file=<RUNTIME_ROOT>/tracks/bug/track.yaml source=official
+RUNTIME: loaded state file=<WORKDIR>/out/BASELINE01/state_card_bug.yaml current_phase=intake
+RUNTIME: loaded phase file=<RUNTIME_ROOT>/tracks/bug/phases/intake.yaml prompt_track=bug prompt_phase=intake prompt_path=templates/prompts/bug/intake/prompt_v<active>.md
+[phase] load_workflow_context -> OK (<DURATION_MS>)
+RUNTIME: next_phase=findings resolved_via=track.transitions current_phase=intake
+[phase] resolve_workflow_transition -> OK (<DURATION_MS>)
+[phase] load_config -> OK (<DURATION_MS>)
+[phase] resolve_repos -> OK (<DURATION_MS>)
+[phase] finalize -> OK (<DURATION_MS>)
+RUNTIME: phase=intake created_dir=investigations
+RUNTIME: phase=intake created_dir=context
+RUNTIME: phase=intake preserve_artifact=investigations/00_intake.md
+RUNTIME: phase=intake created_artifact=investigations/_intake_provenance.md
+RUNTIME: wrote_prompt=prompts/intake.md
+RUNTIME: phase=intake action=phase_driven_execution
+[phase] workflow_phase_intake -> OK (<DURATION_MS>)
+### stderr
+Execution log for BASELINE01:
+phase|status|duration_ms|note
+load_workflow_context|OK|<DURATION_MS>|
+resolve_workflow_transition|OK|<DURATION_MS>|
+load_config|OK|<DURATION_MS>|
+resolve_repos|OK|<DURATION_MS>|
+WARNING: BL-CI-16: onboarding directory absent for repo=<repo_key_from_repos.conf> path=<WORKDIR>/context_sources/onboarding/<repo_key_from_repos.conf>; agent will receive invalid path
+### exit_code
+0
+## CLI: doctor
+### stdout
+EAW doctor
+Resolved dirs:
+  RUNTIME_ROOT=<RUNTIME_ROOT>
+  CONFIG_SOURCE=<WORKDIR>/config/repos.conf
+  EAW_ROOT_DIR=<RUNTIME_ROOT>
+  EAW_WORKDIR=<WORKDIR>
+  EAW_CONFIG_DIR=<WORKDIR>/config
+  EAW_TEMPLATES_DIR=<RUNTIME_ROOT>/templates
+  EAW_OUT_DIR=<WORKDIR>/out
+  Tip: use 'eaw status <CARD>' for a single card or 'eaw status --all' for the global status list.
+Tools:
+  git: OK
+  rg: OK
+  awk: OK
+  sed: OK
+  bash: <BASH_VERSION>
+Files:
+  repos.conf: OK (<WORKDIR>/config/repos.conf)
+  search.conf: OK (<WORKDIR>/config/search.conf)
+  eaw.conf: OK (<WORKDIR>/config/eaw.conf, config_version=1)
+  EAW_SMOKE_SH: OK (<RUNTIME_ROOT>/smoke.sh)
+  git hook: commit-msg <HOOK_STATE>
+STATUS: OK (errors=0 warnings=0)
+### stderr
+### exit_code
+0
+## CLI: validate
+### stdout
+EAW validate
+Resolved dirs:
+  EAW_ROOT_DIR=<RUNTIME_ROOT>
+  EAW_WORKDIR=<WORKDIR>
+  EAW_CONFIG_DIR=<WORKDIR>/config
+  EAW_TEMPLATES_DIR=<RUNTIME_ROOT>/templates
+  EAW_OUT_DIR=<WORKDIR>/out
+OK: repos.conf parsed
+OK: search.conf found: <WORKDIR>/config/search.conf
+SUMMARY: workflow card=BASELINE01 track=bug current_phase=intake prompt_phase=intake prompt_path=templates/prompts/bug/intake/prompt_v<active>.md next_phase=findings final_phase=implementation_executor
+SUMMARY: errors=0 warnings=0
+### stderr
+### exit_code
+0
+## CLI: preflight
+### stdout
+PASS (4/4 checks)
+### stderr
+### exit_code
+0
+## CLI: status
+### stdout
+card_id: CARD_BASELINE01
+track_id: bug
+current_phase: intake
+phase_status: RUN
+completed_phases:
+  - none
+pending_required_artifacts:
+  - none
+latest_journal_entry: {"card_id":"BASELINE01","track":"bug","phase":"workflow_phase_intake","timestamp":"<TIMESTAMP>","agent":"runtime","mode":"phase_driven","status":"OK","duration_ms":<DURATION_MS>,"event_type":"phase_completed"}
+### stderr
+### exit_code
+0
+## CLI: next
+### stdout
+RUNTIME: phase=intake created_dir=investigations
+RUNTIME: phase=intake created_dir=context
+RUNTIME: phase=intake preserve_artifact=investigations/00_intake.md
+RUNTIME: phase=intake preserve_artifact=investigations/_intake_provenance.md
+RUNTIME: wrote_prompt=prompts/intake.md
+RUNTIME: phase=intake action=phase_driven_execution
+[phase] workflow_phase_intake -> OK (<DURATION_MS>)
+Current phase: intake
+Next phase: findings
+
+Required artifacts:
+[unfilled] investigations/00_intake.md
+[unfilled] investigations/_intake_provenance.md
+
+Validation: blocked
+
+Reason:
+unfilled required artifacts
+
+CARD BASELINE01: intake remains current; unfilled required artifacts
+### stderr
+WARNING: BL-CI-16: onboarding directory absent for repo=<repo_key_from_repos.conf> path=<WORKDIR>/context_sources/onboarding/<repo_key_from_repos.conf>; agent will receive invalid path
+ERROR: card BASELINE01 phase 'intake' is incomplete; unfilled required artifacts: investigations/00_intake.md investigations/_intake_provenance.md
+### exit_code
+0
+## PROMPTS
+--- prompts/intake.md ---
+RUNTIME_ENVIRONMENT
+
+CARD_ID: BASELINE01
+TRACK_ID: bug
+STEP_ID: intake
+CANONICAL_PATH: <EXECUTION_PATH>
+WORKDIR: <WORKDIR>
+CARD_DIR: <WORKDIR>/out/BASELINE01
+OUT_DIR: <WORKDIR>/out
+
+TARGET_REPOSITORIES:
+- baseline-target => <REPO_DIR>
+
+
+WRITE_ALLOWLIST:
+- <WORKDIR>/out/BASELINE01
+
+
+CRITICAL_PATHS:
+- <RUNTIME_ROOT>/scripts/eaw
+- <WORKDIR>/out/BASELINE01/state_card_bug.yaml
+- <RUNTIME_ROOT>/tracks/bug/track.yaml
+- <RUNTIME_ROOT>/tracks/bug/phases/intake.yaml
+- <WORKDIR>/out/BASELINE01/investigations/00_intake.md
+
+ROLE
+- Analista Tecnico Senior (EAW) responsavel pelo intake do card BASELINE01.
+
+OBJECTIVE
+- Preencher `00_intake.md` com base nas evidencias existentes em `ingest/` quando esse diretorio existir, usando `intake/` apenas como fallback compativel.
+- Ler todos os arquivos encontrados em `ingest/` ou `intake/` — nao filtrar por nome de arquivo.
+
+INPUT
+- CARD=BASELINE01
+- ROUND=1
+- EAW_WORKDIR=<WORKDIR>
+- RUNTIME_ROOT=<RUNTIME_ROOT>
+- CONFIG_SOURCE=<WORKDIR>/config/repos.conf
+- OUT_DIR=<WORKDIR>/out
+- CARD_DIR=<WORKDIR>/out/BASELINE01
+- TEMPLATE=`00_intake.md`
+- EVIDENCIAS=`out/<CARD>/ingest/** (primario)`, fallback=`out/<CARD>/intake/**`
+
+OUTPUT
+- Escrever somente `<WORKDIR>/out/BASELINE01/investigations/00_intake.md`.
+- Escrever somente `<WORKDIR>/out/BASELINE01/investigations/_intake_provenance.md`.
+- Preencher o intake apenas com fatos observaveis e perguntas abertas reais.
+
+OUTPUT_STRUCTURE
+- `00_intake.md`: headings fixos do template; somente fatos observaveis; perguntas em aberto terminando com `?`; inconsistencias com citacao objetiva.
+- `_intake_provenance.md`: diretorio selecionado, arquivos encontrados, arquivos consumidos, arquivos ignorados com motivo, lacunas detectadas, observacoes de processo.
+- Nenhuma secao adicional fora das previstas nos templates e permitida.
+
+READ_SCOPE
+- Ler `<WORKDIR>/out/BASELINE01/ingest` quando existir.
+- Ler `<WORKDIR>/out/BASELINE01/intake` apenas como fallback compativel quando `<WORKDIR>/out/BASELINE01/ingest` nao existir.
+- Consumir arquivos de texto `.md`, `.txt` e `.log`.
+- Para imagens `.png`, `.jpg`, `.jpeg` e `.webp`, descrever apenas o visivel.
+
+WRITE_SCOPE
+- Escrever somente em `<WORKDIR>/out/BASELINE01/investigations/00_intake.md`.
+- Escrever somente em `<WORKDIR>/out/BASELINE01/investigations/_intake_provenance.md`.
+
+RULES
+- Executar o pre-check: `cd "<RUNTIME_ROOT>"`, `test -f ./scripts/eaw`, `test -f "<WORKDIR>/config/repos.conf"` e validar que `<WORKDIR>/out/BASELINE01/ingest` ou `<WORKDIR>/out/BASELINE01/intake` existe.
+- Selecionar `<WORKDIR>/out/BASELINE01/ingest` como diretorio de entrada quando existir; caso contrario selecionar `<WORKDIR>/out/BASELINE01/intake` como fallback compativel.
+- Ler todos os arquivos encontrados no diretorio de entrada selecionado — nao depender de nomes especificos de arquivo.
+- Listar recursivamente os arquivos do diretorio de entrada selecionado em ordem lexicografica.
+- Registrar em `_intake_provenance.md`: diretorio de entrada selecionado, arquivos encontrados, arquivos consumidos, arquivos ignorados com motivo, lacunas detectadas e observacoes de processo.
+- Preencher `00_intake.md` somente com fatos observaveis.
+- Nao repetir no intake o inventario tecnico de arquivos.
+- Manter os headings existentes do template e nao adicionar secoes novas.
+- Em `Perguntas em aberto`, escrever somente perguntas e terminar cada linha com `?`.
+- Em `Inconsistencias`, registrar apenas conflitos explicitos entre arquivos com citacao objetiva.
+- Se o card for FEATURE, evidencias sao opcionais e nao devem gerar secao nova.
+- Considerar concluido apenas se `00_intake.md` estiver preenchido com fatos, `Perguntas em aberto` contiver apenas perguntas reais e `_intake_provenance.md` tiver sido criado.
+
+FORBIDDEN
+- Nao investigar codigo.
+- Nao ler TARGET_REPOS.
+- Nao escanear source code.
+- Nao inventar comportamento.
+- Nao inferir regra implicita sem evidencia textual.
+- Nao misturar auditoria de processo com requisitos do intake.
+- Nao escrever fora de `<WORKDIR>/out/BASELINE01/investigations`.
+
+FAIL_CONDITIONS
+- Falhar se `cd "<RUNTIME_ROOT>"` nao funcionar.
+- Falhar se `./scripts/eaw` nao existir.
+- Falhar se `<WORKDIR>/config/repos.conf` nao existir.
+- Falhar se `<WORKDIR>/out/BASELINE01/ingest` e `<WORKDIR>/out/BASELINE01/intake` estiverem ambos ausentes.
+- Falhar se houver tentativa de escrita fora do `CARD_DIR`.
+
+PHASE_CONTRACTS
+
+REQUIRED_ARTIFACTS:
+- investigations/00_intake.md
+- investigations/_intake_provenance.md
+
+COMPLETION_STRATEGY: required_artifacts_exist
+## STATE
+--- state_card_bug.yaml ---
+config_version: 1
+
+card_state:
+  card_id: CARD_BASELINE01
+  track_id: bug
+  current_phase: intake
+  phase_started_at: <TIMESTAMP>
+  phase_completed: false
+  phase_completed_at: null
+  previous_phase: null
+  phase_status: RUN
+  completed_phases: []
+  created_at: <TIMESTAMP>
+  updated_at: <TIMESTAMP>
+## JOURNAL
+--- execution_journal.jsonl ---
+{"card_id":"BASELINE01","track":"bug","phase":"load_workflow_context","timestamp":"<TIMESTAMP>","agent":"runtime","mode":"phase_driven","status":"OK","duration_ms":<DURATION_MS>,"event_type":"phase_completed"}
+{"card_id":"BASELINE01","track":"bug","phase":"resolve_workflow_transition","timestamp":"<TIMESTAMP>","agent":"runtime","mode":"phase_driven","status":"STARTED","duration_ms":<DURATION_MS>,"event_type":"phase_started"}
+{"card_id":"BASELINE01","track":"bug","phase":"resolve_workflow_transition","timestamp":"<TIMESTAMP>","agent":"runtime","mode":"phase_driven","status":"OK","duration_ms":<DURATION_MS>,"event_type":"phase_completed"}
+{"card_id":"BASELINE01","track":"bug","phase":"load_config","timestamp":"<TIMESTAMP>","agent":"runtime","mode":"phase_driven","status":"STARTED","duration_ms":<DURATION_MS>,"event_type":"phase_started"}
+{"card_id":"BASELINE01","track":"bug","phase":"load_config","timestamp":"<TIMESTAMP>","agent":"runtime","mode":"phase_driven","status":"OK","duration_ms":<DURATION_MS>,"event_type":"phase_completed"}
+{"card_id":"BASELINE01","track":"bug","phase":"resolve_repos","timestamp":"<TIMESTAMP>","agent":"runtime","mode":"phase_driven","status":"STARTED","duration_ms":<DURATION_MS>,"event_type":"phase_started"}
+{"card_id":"BASELINE01","track":"bug","phase":"resolve_repos","timestamp":"<TIMESTAMP>","agent":"runtime","mode":"phase_driven","status":"OK","duration_ms":<DURATION_MS>,"event_type":"phase_completed"}
+{"card_id":"BASELINE01","track":"bug","phase":"finalize","timestamp":"<TIMESTAMP>","agent":"runtime","mode":"phase_driven","status":"STARTED","duration_ms":<DURATION_MS>,"event_type":"phase_started"}
+{"card_id":"BASELINE01","track":"bug","phase":"finalize","timestamp":"<TIMESTAMP>","agent":"runtime","mode":"phase_driven","status":"OK","duration_ms":<DURATION_MS>,"event_type":"phase_completed"}
+{"card_id":"BASELINE01","track":"bug","phase":"workflow_phase_intake","timestamp":"<TIMESTAMP>","agent":"runtime","mode":"phase_driven","status":"STARTED","duration_ms":<DURATION_MS>,"event_type":"phase_started"}
+{"card_id":"BASELINE01","track":"bug","phase":"workflow_phase_intake","timestamp":"<TIMESTAMP>","agent":"runtime","mode":"phase_driven","status":"OK","duration_ms":<DURATION_MS>,"event_type":"phase_completed"}
+{"card_id":"BASELINE01","track":"bug","phase":"workflow_phase_intake","timestamp":"<TIMESTAMP>","agent":"runtime","mode":"phase_driven","status":"STARTED","duration_ms":<DURATION_MS>,"event_type":"phase_started"}
+{"card_id":"BASELINE01","track":"bug","phase":"workflow_phase_intake","timestamp":"<TIMESTAMP>","agent":"runtime","mode":"phase_driven","status":"OK","duration_ms":<DURATION_MS>,"event_type":"phase_completed"}
+## ARTIFACTS
+--- investigations/00_intake.md ---
+# Intake BUG BASELINE01
+
+## Resumo do problema
+
+## Comportamento esperado
+
+## Comportamento atual
+
+## Passos para reproduzir
+
+## Evidências fornecidas
+
+## Impacto / Escopo
+
+## Perguntas em aberto
+
+## Hipóteses iniciais
+
+## Repositório principal de onboarding
+
+<repo_key_from_repos.conf>
+
+## Repositórios relacionados
+
+<!-- Listar repos adicionais relevantes (somente leitura, sem onboarding carregado) -->
+--- investigations/_intake_provenance.md ---
+# intake artifact
+
+Generated by phase-driven execution for card BASELINE01.
+--- provenance/git_snapshot.md ---
+# Git Snapshot - BASELINE01
+
+| Repo | Path | Branch | Commit | Dirty |
+|------|------|--------|--------|-------|
+| baseline-target | <REPO_DIR> | master | <GIT_COMMIT> | clean |
+
+## Dirty details
+
+_No dirty details._

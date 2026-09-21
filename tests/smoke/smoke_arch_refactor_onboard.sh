@@ -271,8 +271,9 @@ run_full_flow_no_skip_scenario() {
 	test -f "$workdir/out/$card/prompts/implementation_executor.md" || fail "full flow missing implementation_executor prompt"
 
 	fill_patch_notes "$workdir" "$card"
-	output="$(EAW_WORKDIR="$workdir" bash "$REPO_ROOT/scripts/eaw" complete "$card" 2>&1)"
+	output="$(run_next "$workdir" "$card")"
 	grep -Fq "marked COMPLETE" <<<"$output" || fail "full flow missing completion message on final phase"
+	grep -Fq "workflow already complete" <<<"$output" || fail "full flow missing auto-close confirmation on final phase"
 	grep -Fq "phase_completed: true" "$(state_file "$workdir" "$card")" || fail "full flow did not mark final phase complete"
 }
 

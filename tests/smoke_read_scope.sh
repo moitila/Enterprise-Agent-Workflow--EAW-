@@ -62,7 +62,11 @@ outside_link_target="$tmpdir/outside/link_target.txt"
 mkdir -p "$(dirname "$outside_link_target")"
 touch "$outside_link_target"
 ln -s "$outside_link_target" "$allowed/evil_symlink.txt"
-assert_read_violation "test_phase" "NEG-05" "$allowed/evil_symlink.txt" "$allowed"
+if [[ -L "$allowed/evil_symlink.txt" ]]; then
+	assert_read_violation "test_phase" "NEG-05" "$allowed/evil_symlink.txt" "$allowed"
+else
+	printf "smoke_read_scope: NEG-05 skipped (filesystem did not create a symbolic link)\n"
+fi
 
 # POS-01: arquivo existente dentro de $allowed — deve retornar 0
 touch "$allowed/legit.txt"

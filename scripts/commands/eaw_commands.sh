@@ -27,24 +27,6 @@ Example:
 EOF
 }
 
-eaw_normalize_phase_id() {
-	local phase="${1:-}"
-	case "$phase" in
-	hypoteses)
-		printf "hypotheses\n"
-		;;
-	planing)
-		printf "planning\n"
-		;;
-	implement_planing)
-		printf "implementation_planning\n"
-		;;
-	*)
-		printf "%s\n" "$phase"
-		;;
-	esac
-}
-
 eaw_yaml_trim() {
 	local value="${1:-}"
 	value="${value#"${value%%[![:space:]]*}"}"
@@ -114,28 +96,6 @@ eaw_yaml_phase_scalar() {
 		/^phase:[[:space:]]*$/ { in_phase=1; next }
 		in_phase && /^[^[:space:]]/ { in_phase=0 }
 		in_phase && $0 ~ ("^  " key ":[[:space:]]*") {
-			line=$0
-			sub("^  " key ":[[:space:]]*", "", line)
-			print trim(line)
-			exit
-		}
-	' "$file"
-}
-
-eaw_yaml_state_scalar() {
-	local file="$1"
-	local key="$2"
-	awk -v key="$key" '
-		function trim(s) {
-			sub(/^[[:space:]]+/, "", s)
-			sub(/[[:space:]]+$/, "", s)
-			sub(/^"/, "", s)
-			sub(/"$/, "", s)
-			return s
-		}
-		/^card_state:[[:space:]]*$/ { in_state=1; next }
-		in_state && /^[^[:space:]]/ { in_state=0 }
-		in_state && $0 ~ ("^  " key ":[[:space:]]*") {
 			line=$0
 			sub("^  " key ":[[:space:]]*", "", line)
 			print trim(line)
@@ -1155,17 +1115,6 @@ eaw_load_card_workflow_context() {
 			echo "ERROR: current phase '$current_phase' has no declarative next transition in $track_file" >&2
 			return 1
 		fi
-		# 614A: evaluate skip_when if declared for current_phase
-		local _skip_codes
-		_skip_codes="$(eaw_yaml_track_skip_when "$track_file" "$current_phase")"
-		if [[ -n "$_skip_codes" ]] && eaw_eval_skip_when "$_skip_codes" "${EAW_PHASE_EXIT_CODES:-}"; then
-			# 615: emit skip envelope for the phase being skipped
-			local _inherited_from _inherited_codes
-			_inherited_from="$(eaw_resolve_inherited_from "$card_dir")"
-			_inherited_codes="${EAW_PHASE_EXIT_CODES:-}"
-			eaw_emit_skip_envelope "$next_phase" "$card_dir" "$_skip_codes" "$_inherited_from" "$_inherited_codes"
-			next_phase="${transition_map[$next_phase]:-$next_phase}"
-		fi
 	fi
 
 	EAW_CARD_WORKFLOW_TRACK_ID="$track_id"
@@ -1181,6 +1130,37 @@ eaw_load_card_workflow_context() {
 	EAW_CARD_WORKFLOW_COMPLETED_PHASES="$(printf "%s\n" "${completed_phase_list[@]}")"
 	EAW_CARD_WORKFLOW_SOURCE="$workflow_source"
 	return 0
+}
+
+# 614A/615: evaluate skip_when for current_phase and emit skip envelope if matched.
+# Legitimate caller is exclusively cmd_next, after EAW_PHASE_EXIT_CODES is populated
+# from the real handoff of the previous phase (eaw_load_phase_exit_codes). Prints the
+# resulting next_phase (unchanged if skip does not apply) on stdout.
+eaw_evaluate_skip_when() {
+	local track_file="$1"
+	local current_phase="$2"
+	local card_dir="$3"
+	local next_phase="$4"
+	local _skip_codes
+	_skip_codes="$(eaw_yaml_track_skip_when "$track_file" "$current_phase")"
+	if [[ -n "$_skip_codes" ]] && eaw_eval_skip_when "$_skip_codes" "${EAW_PHASE_EXIT_CODES:-}"; then
+		local _inherited_from _inherited_codes
+		_inherited_from="$(eaw_resolve_inherited_from "$card_dir")"
+		_inherited_codes="${EAW_PHASE_EXIT_CODES:-}"
+		eaw_emit_skip_envelope "$next_phase" "$card_dir" "$_skip_codes" "$_inherited_from" "$_inherited_codes"
+		local _raw_transition _from_phase _to_phase
+		while IFS= read -r _raw_transition; do
+			[[ -n "$_raw_transition" ]] || continue
+			IFS='|' read -r _from_phase _to_phase <<<"$_raw_transition"
+			_from_phase="$(eaw_normalize_phase_id "$_from_phase")"
+			_to_phase="$(eaw_normalize_phase_id "$_to_phase")"
+			if [[ "$_from_phase" == "$next_phase" ]]; then
+				next_phase="$_to_phase"
+				break
+			fi
+		done < <(eaw_yaml_track_transitions "$track_file")
+	fi
+	printf '%s\n' "$next_phase"
 }
 
 eaw_state_completed_phases_with_current() {
@@ -1666,16 +1646,7 @@ eaw_detect_card_template_type() {
 		return 0
 	fi
 
-	# Legacy fallback when no dedicated template exists
-	if [[ -f "$card_dir/bug_${card}.md" ]]; then
-		printf "bug\n"
-	elif [[ -f "$card_dir/spike_${card}.md" ]]; then
-		printf "spike\n"
-	elif compgen -G "$card_dir/state_card_repo_onboarding.yaml" >/dev/null 2>&1; then
-		printf "repo_onboarding\n"
-	else
-		printf "feature\n"
-	fi
+	printf "feature\n"
 }
 
 eaw_card_markdown_list_after_label() {
@@ -1843,76 +1814,6 @@ eaw_card_write_allowlist_entries() {
 			printf -- "- %s\n" "$(eval echo "$extra_path")"
 		done < <(eaw_yaml_phase_output_write_paths "$phase_file")
 	fi
-}
-
-eaw_generate_followup_candidates() {
-	local card_dir="$1"
-	local scope_lock_file="$card_dir/implementation/00_scope.lock.md"
-
-	# Fail-soft: scope.lock ausente -> skip
-	[[ -f "$scope_lock_file" ]] || return 0
-
-	# Extrair secao bruta de ## Out of Scope
-	local raw_section
-	raw_section="$(awk '/^## Out of Scope$/{found=1; next} found && /^## /{exit} found{print}' "$scope_lock_file")"
-
-	# Secao vazia -> skip
-	[[ -n "$raw_section" ]] || return 0
-
-	# Detectar formatos nao-suportados
-	local unsupported=0
-	grep -qE "^\|" <<<"$raw_section" && unsupported=1
-	grep -qE "^### " <<<"$raw_section" && unsupported=1
-
-	local out_file="$card_dir/_followup_candidates.md"
-	local timestamp
-	timestamp="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
-
-	if [[ "$unsupported" -eq 1 ]]; then
-		printf "[WARNING] FOLLOWUP_CANDIDATES: Out of Scope contains unsupported format (tables or subsections): %s\n" "$scope_lock_file" >&2
-		cat >"$out_file" <<EOF
-# Follow-up Candidates — $(basename "$card_dir")
-
-generated_at: $timestamp
-source: implementation/00_scope.lock.md § "Out of Scope"
-
-NOTE: These are candidates only. No cards have been created automatically.
-NOTE: V1 extracts only direct bullet items under "## Out of Scope".
-
-## Unsupported Out of Scope content
-
-The source section contained unsupported structures (tables, subsections, or nested content).
-These were not converted into candidates automatically.
-EOF
-		return 0
-	fi
-
-	# Extrair bullets diretos
-	local bullets
-	bullets="$(eaw_card_markdown_section_list "$scope_lock_file" "## Out of Scope" | sed '/^[[:space:]]*$/d')"
-
-	# Bullets vazios -> skip
-	[[ -n "$bullets" ]] || return 0
-
-	# Gerar arquivo
-	{
-		printf "# Follow-up Candidates — %s\n\n" "$(basename "$card_dir")"
-		printf "generated_at: %s\n" "$timestamp"
-		printf "source: implementation/00_scope.lock.md § \"Out of Scope\"\n\n"
-		printf "NOTE: These are candidates only. No cards have been created automatically.\n"
-		printf "NOTE: V1 extracts only direct bullet items under \"## Out of Scope\".\n"
-		local n=0
-		while IFS= read -r line; do
-			n=$(( n + 1 ))
-			local desc="${line#- }"
-			printf "\n## Candidate %d\n\n" "$n"
-			printf "Description: %s\n" "$desc"
-			printf "Suggested track: TBD\n"
-			printf "Suggested scope: Review and convert into a dedicated card if still relevant.\n"
-		done <<<"$bullets"
-	} >"$out_file"
-
-	return 0
 }
 
 eaw_card_write_allowlist_block() {
@@ -2101,7 +2002,7 @@ ${skill_lines%$'\n'}"
 		local rs_line rs_resolved rs_resolved_list=""
 		while IFS= read -r rs_line; do
 			[[ -n "$rs_line" ]] || continue
-			rs_resolved="$(CARD_DIR="$card_dir" eaw_resolve_read_source_item "$rs_line" 2>/dev/null)" || {
+			rs_resolved="$(CARD_DIR="$card_dir" RUNTIME_ROOT="$EAW_ROOT_DIR" OUT_DIR="$EAW_OUT_DIR" eaw_resolve_read_source_item "$rs_line" 2>/dev/null)" || {
 				echo "RUNTIME: read_sources item skipped (resolution failed): $rs_line" >&2
 				continue
 			}
@@ -2491,6 +2392,12 @@ eaw_render_phase_prompt_template() {
 			gsub(/^[[:space:]]+|[[:space:]]+$/, "")
 			if ($0 != "") {
 				if (repo_section) { sub(/[[:space:]].*$/, "") }
+				if ($0 ~ /^`.*`$/) { sub(/^`/, ""); sub(/`$/, "") }
+				if ($0 ~ /^\*\*.*\*\*$/) { sub(/^\*\*/, ""); sub(/\*\*$/, "") }
+				if ($0 ~ /^__.*__$/) { sub(/^__/, ""); sub(/__$/, "") }
+				if ($0 ~ /^\*.*\*$/) { sub(/^\*/, ""); sub(/\*$/, "") }
+				if ($0 ~ /^_.*_$/) { sub(/^_/, ""); sub(/_$/, "") }
+				gsub(/^[[:space:]]+|[[:space:]]+$/, "")
 				print; exit
 			}
 		}
@@ -2791,7 +2698,10 @@ eaw_generate_phase_prompt_artifacts() {
 		return 1
 	fi
 
-	type="$(eaw_detect_card_template_type "$card" "$card_dir")"
+	type="${EAW_CARD_WORKFLOW_TRACK_ID:-}"
+	if [[ -z "$type" ]]; then
+		type="$(eaw_detect_card_template_type "$card" "$card_dir")"
+	fi
 	repo_blocks="$(collect_repos_lists)"
 	target_repos="$(printf "%s\n" "$repo_blocks" | sed -n '1,/^$/p' | sed '/^$/d')"
 	excluded_repos="$(printf "%s\n" "$repo_blocks" | sed -n '/^$/,$p' | sed '1d;/^$/d')"
@@ -2858,11 +2768,6 @@ eaw_execute_workflow_phase() {
 	return 0
 }
 
-eaw_warn_compatibility_wrapper() {
-	local command_name="$1"
-	printf "WARNING: '%s' is deprecated and planned for removal in v1.0. Prefer 'eaw next'.\n" "$command_name" >&2
-}
-
 eaw_phase_index_in_track() {
 	local track_file="$1"
 	local target_phase="$2"
@@ -2879,18 +2784,6 @@ eaw_phase_index_in_track() {
 	done < <(eaw_yaml_track_phases "$track_file")
 
 	return 1
-}
-
-eaw_execute_current_phase_for_wrapper() {
-	local card="$1"
-	local card_dir="$EAW_OUT_DIR/$card"
-
-	if ! eaw_load_card_workflow_context "$card_dir"; then
-		return 1
-	fi
-
-	OUTDIR="$card_dir"
-	run_phase "workflow_phase_${EAW_CARD_WORKFLOW_CURRENT_PHASE}" true eaw_execute_workflow_phase "$card"
 }
 
 eaw_materialize_current_phase() {
@@ -2916,121 +2809,6 @@ eaw_materialize_current_phase() {
 			echo "RUNTIME: scope_lock enriched with write_allowlist: [] (TARGET_REPOS empty)"
 		fi
 	fi
-}
-
-eaw_mark_current_phase_complete_for_wrapper() {
-	local card="$1"
-	local card_dir="$EAW_OUT_DIR/$card"
-	local current_phase
-	local current_phase_file
-	local previous_phase
-	local completed_phases
-	local phase_status
-	local phase_started_at
-	local phase_completed_at
-
-	if ! eaw_load_card_workflow_context "$card_dir"; then
-		return 1
-	fi
-
-	current_phase="$EAW_CARD_WORKFLOW_CURRENT_PHASE"
-	current_phase_file="$EAW_CARD_WORKFLOW_CURRENT_PHASE_FILE"
-	previous_phase="$(eaw_normalize_phase_id "$(eaw_yaml_state_scalar "$EAW_CARD_WORKFLOW_STATE_FILE" "previous_phase")")"
-	completed_phases="${EAW_CARD_WORKFLOW_COMPLETED_PHASES:-}"
-	phase_status="$(eaw_state_phase_status_for_next)"
-	phase_started_at="$(eaw_state_scalar_or_default "$EAW_CARD_WORKFLOW_STATE_FILE" "phase_started_at" "null")"
-
-	if ! eaw_validate_phase_completion_strict "$card" "$card_dir" "$current_phase" "$current_phase_file"; then
-		return 1
-	fi
-	if [[ "$phase_status" == "COMPLETE" ]]; then
-		return 0
-	fi
-
-	phase_completed_at="$(utc_timestamp)"
-	eaw_write_phase_status "$EAW_CARD_WORKFLOW_STATE_FILE" "COMPLETE" "$previous_phase" "$current_phase" "$completed_phases" "$phase_started_at" "true" "$phase_completed_at"
-	return 0
-}
-
-eaw_advance_to_next_phase_for_wrapper() {
-	local card="$1"
-	local card_dir="$EAW_OUT_DIR/$card"
-	local current_phase
-	local current_phase_file
-	local next_phase
-	local completed_phases
-	local phase_started_at
-
-	if ! eaw_load_card_workflow_context "$card_dir"; then
-		return 1
-	fi
-
-	current_phase="$EAW_CARD_WORKFLOW_CURRENT_PHASE"
-	current_phase_file="$EAW_CARD_WORKFLOW_CURRENT_PHASE_FILE"
-	if [[ "$current_phase" == "$EAW_CARD_WORKFLOW_FINAL_PHASE" ]]; then
-		if [[ "$(eaw_state_phase_completed_for_next "$EAW_CARD_WORKFLOW_STATE_FILE")" != "true" ]]; then
-			if ! eaw_mark_current_phase_complete_for_wrapper "$card"; then
-				return 1
-			fi
-		fi
-		echo "CARD ${card}: workflow already complete"
-		return 0
-	fi
-
-	if ! eaw_validate_phase_completion_strict "$card" "$card_dir" "$current_phase" "$current_phase_file"; then
-		return 1
-	fi
-
-	next_phase="$EAW_CARD_WORKFLOW_NEXT_PHASE"
-	completed_phases="$(eaw_state_completed_phases_with_current "$current_phase")"
-	phase_started_at="$(utc_timestamp)"
-	eaw_write_next_state "$EAW_CARD_WORKFLOW_STATE_FILE" "$current_phase" "$next_phase" "$completed_phases" "RUN" "$phase_started_at" "false" "null"
-
-	echo "CARD ${card}: ${current_phase} -> ${next_phase}"
-	eaw_materialize_current_phase "$card" || return 1
-	return 0
-}
-
-eaw_wrapper_materialize_until_phase() {
-	local card="$1"
-	local target_phase="$2"
-	local card_dir="$EAW_OUT_DIR/$card"
-	local current_phase
-	local current_index
-	local target_index
-
-	if ! eaw_card_has_workflow_config "$card_dir"; then
-		echo "ERROR: card ${card} is missing canonical workflow YAMLs in $card_dir/intake (MVP requires canonical YAML structure)" >&2
-		return 1
-	fi
-	if ! eaw_load_card_workflow_context "$card_dir"; then
-		return 1
-	fi
-
-	current_phase="$EAW_CARD_WORKFLOW_CURRENT_PHASE"
-	current_index="$(eaw_phase_index_in_track "$EAW_CARD_WORKFLOW_TRACK_FILE" "$current_phase")" || return 1
-	target_index="$(eaw_phase_index_in_track "$EAW_CARD_WORKFLOW_TRACK_FILE" "$target_phase")" || return 1
-
-	if ((current_index > target_index)); then
-		echo "ERROR: card ${card} is already beyond compatibility target phase '${target_phase}' (current_phase=${current_phase})" >&2
-		return 1
-	fi
-
-	while true; do
-		if ! eaw_load_card_workflow_context "$card_dir"; then
-			return 1
-		fi
-		current_phase="$EAW_CARD_WORKFLOW_CURRENT_PHASE"
-
-		if [[ "$current_phase" == "$target_phase" ]]; then
-			eaw_execute_current_phase_for_wrapper "$card"
-			return $?
-		fi
-
-		eaw_execute_current_phase_for_wrapper "$card" || return 1
-		eaw_mark_current_phase_complete_for_wrapper "$card" || return 1
-		eaw_advance_to_next_phase_for_wrapper "$card" || return 1
-	done
 }
 
 phase_load_workflow_context() {
@@ -3183,7 +2961,7 @@ cmd_next() {
 	if [[ "$current_phase" == "$EAW_CARD_WORKFLOW_FINAL_PHASE" ]]; then
 		phase_completed="$(eaw_state_phase_completed_for_next "$EAW_CARD_WORKFLOW_STATE_FILE")"
 		if [[ "$phase_completed" != "true" ]]; then
-			# AUTO-CLOSE INLINE (H02): replicate cmd_complete canonical sequence
+			# AUTO-CLOSE INLINE (H02): sole route for card_completed/track_completed emission
 			# [614C] skip_when on final_phase: detect skip envelope, bypass artifact validation
 			local _fskip_po_file="${card_dir}/investigations/10_phase_output.json"
 			local _final_phase_skipped=false
@@ -3260,6 +3038,9 @@ cmd_next() {
 	current_phase="$EAW_CARD_WORKFLOW_CURRENT_PHASE"
 	current_phase_file="$EAW_CARD_WORKFLOW_CURRENT_PHASE_FILE"
 	next_phase="$EAW_CARD_WORKFLOW_NEXT_PHASE"
+	# 614A/615: skip_when is evaluated exclusively here, where EAW_PHASE_EXIT_CODES
+	# was populated legitimately above from the real handoff of the previous phase.
+	next_phase="$(eaw_evaluate_skip_when "$EAW_CARD_WORKFLOW_TRACK_FILE" "$current_phase" "$card_dir" "$next_phase")"
 
 	printf "Current phase: %s\n" "$current_phase"
 	printf "Next phase: %s\n" "$next_phase"
@@ -3342,55 +3123,6 @@ cmd_next() {
 		printf "Agent bundle: %s\n" "$card_dir/runtime/agent_bundle_${next_phase}.md"
 	fi
 	eaw_materialize_current_phase "$card" || return 1
-	return 0
-}
-
-cmd_complete() {
-	local card="$1"
-	local card_dir="$EAW_OUT_DIR/$card"
-	local current_phase current_phase_file completed_phases previous_phase phase_started_at phase_completed_at
-
-	if ! eaw_card_has_workflow_config "$card_dir"; then
-		echo "ERROR: card ${card} is missing canonical workflow YAMLs in $card_dir/intake (MVP requires canonical YAML structure)" >&2
-		return 1
-	fi
-	if ! eaw_load_card_workflow_context "$card_dir"; then
-		return 1
-	fi
-
-	current_phase="$EAW_CARD_WORKFLOW_CURRENT_PHASE"
-	current_phase_file="$EAW_CARD_WORKFLOW_CURRENT_PHASE_FILE"
-	previous_phase="$(eaw_normalize_phase_id "$(eaw_yaml_state_scalar "$EAW_CARD_WORKFLOW_STATE_FILE" "previous_phase")")"
-	completed_phases="${EAW_CARD_WORKFLOW_COMPLETED_PHASES:-}"
-	phase_started_at="$(eaw_state_scalar_or_default "$EAW_CARD_WORKFLOW_STATE_FILE" "phase_started_at" "null")"
-
-	if ! eaw_validate_phase_completion_strict "$card" "$card_dir" "$current_phase" "$current_phase_file"; then
-		return 1
-	fi
-
-	# 616: validate agent envelope schema
-	if ! eaw_validate_envelope_schema "$EAW_CARD_WORKFLOW_TRACK_FILE" "$current_phase" "$card_dir"; then
-		echo "CARD ${card}: ${current_phase} envelope schema validation failed" >&2
-		return 1
-	fi
-
-	# 617: capture context summary for completed phase
-	eaw_emit_context_summary "$current_phase" "$card_dir" "$EAW_CARD_WORKFLOW_TRACK_FILE"
-
-	OUTDIR="$card_dir"
-	if [[ "$current_phase" == "$EAW_CARD_WORKFLOW_FINAL_PHASE" ]]; then
-		if ! grep -q '"event_type":"card_completed"' "${OUTDIR}/execution_journal.jsonl" 2>/dev/null; then
-			eaw_journal_append "${EAW_CARD_WORKFLOW_CARD}" "${EAW_CARD_WORKFLOW_TRACK_ID}" \
-				"${EAW_CARD_WORKFLOW_FINAL_PHASE}" "OK" "0" "card_completed"
-		fi
-		# 618: emit card-level metrics from journal
-		eaw_emit_card_metrics "$card_dir"
-		# 619: generate follow-up candidates from Out of Scope
-		eaw_generate_followup_candidates "$card_dir" || true
-	fi
-	phase_completed_at="$(utc_timestamp)"
-	eaw_write_phase_status "$EAW_CARD_WORKFLOW_STATE_FILE" "COMPLETE" "$previous_phase" "$current_phase" "$completed_phases" "$phase_started_at" "true" "$phase_completed_at"
-	echo "CARD ${card}: ${current_phase} marked COMPLETE"
 	return 0
 }
 

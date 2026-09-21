@@ -203,11 +203,16 @@ PY
 printf "[test] smoke scope\n"
 REPOS_CONF_SHA0="$(repos_conf_sha "$REPOS_CONF")"
 verify_repos_conf_guard_detects_mutation
+bash "$REPO_ROOT/tests/smoke_read_scope.sh"
 bash "$REPO_ROOT/tests/smoke/smoke_baseline.sh"
 bash "$REPO_ROOT/tests/smoke_audit_skip.sh"
 bash "$REPO_ROOT/tests/smoke_completion_content.sh"
 bash "$REPO_ROOT/tests/smoke_preflight_worktree.sh"
 bash "$REPO_ROOT/tests/smoke_external_review.sh"
+bash "$REPO_ROOT/tests/smoke_adversarial_review.sh"
+
+printf "[test] regression scope\n"
+bash "$REPO_ROOT/tests/regression_adversarial_review_classification.sh"
 
 printf "[test] integration scope\n"
 bash "$REPO_ROOT/tests/integration/integration_suite.sh"
@@ -220,6 +225,9 @@ bash "$REPO_ROOT/tests/golden/golden_suite.sh"
 
 printf "[test] onboarding runtime scope\n"
 run_onboarding_runtime_suite
+
+printf "[test] baseline scope\n"
+bash "$REPO_ROOT/tests/baseline/run_content_baseline.sh"
 
 assert_repos_conf_unchanged
 printf "[test] repos.conf tripwire OK\n"
