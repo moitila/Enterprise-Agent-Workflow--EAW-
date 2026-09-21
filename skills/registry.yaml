@@ -52,3 +52,7 @@ skills:
   eaw_implementation_quality:
     file: skills/eaw_implementation_quality/SKILL.md
     description: Auto-validates quality gates (CodeScene thresholds, @SuppressWarnings) during implementation_executor phases, with repo-specific overrides via 62_*.md onboarding files.
+
+  tasy_financial_accounting_db:
+    file: skills/tasy_financial_accounting_db/SKILL.md
+    description: Operational knowledge for the FINANCIAL_ACCOUNTING/TASY Oracle environment — connection details, parametros_conta_contabil precedence mechanism, internal-COMMIT traps in atualizar_conta_contabil_conta/atualizar_resumo_conta, and a reusable test fixture.
