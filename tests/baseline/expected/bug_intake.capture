@@ -47,13 +47,13 @@ Tools:
   rg: OK
   awk: OK
   sed: OK
-  bash: GNU bash, version 5.2.21(1)-release (x86_64-pc-linux-gnu)
+  bash: <BASH_VERSION>
 Files:
   repos.conf: OK (<WORKDIR>/config/repos.conf)
   search.conf: OK (<WORKDIR>/config/search.conf)
   eaw.conf: OK (<WORKDIR>/config/eaw.conf, config_version=1)
   EAW_SMOKE_SH: OK (<RUNTIME_ROOT>/smoke.sh)
-  git hook: commit-msg installed
+  git hook: commit-msg <HOOK_STATE>
 STATUS: OK (errors=0 warnings=0)
 ### stderr
 ### exit_code

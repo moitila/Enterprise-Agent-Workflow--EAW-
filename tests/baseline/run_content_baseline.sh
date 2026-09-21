@@ -65,7 +65,10 @@ normalize_cli() {
 		-e 's/\([0-9]+ms\)/(<DURATION_MS>)/g' \
 		-e 's/^([[:alnum:]_]+\|[A-Z_]+\|)[0-9]+\|/\1<DURATION_MS>|/' \
 		-e 's/"timestamp":"[^"]+"/"timestamp":"<TIMESTAMP>"/g' \
-		-e 's/"duration_ms":[0-9]+/"duration_ms":<DURATION_MS>/g'
+		-e 's/"duration_ms":[0-9]+/"duration_ms":<DURATION_MS>/g' \
+		-e 's/^  bash: .*/  bash: <BASH_VERSION>/' \
+		-e 's/^  git hook: commit-msg (installed|not found)$/  git hook: commit-msg <HOOK_STATE>/' \
+		-e '/^    run: bash governance\/scripts\/install-hooks\.sh$/d'
 }
 
 normalize_provenance() {
@@ -86,7 +89,9 @@ capture_command() {
 	local rc
 
 	set +e
-	EAW_WORKDIR="$run_root/workdir" "$REPO_ROOT/scripts/eaw" "$@" >"$stdout_file" 2>"$stderr_file"
+	EAW_WORKDIR="$run_root/workdir" \
+		EAW_SMOKE_SH="$REPO_ROOT/smoke.sh" \
+		"$REPO_ROOT/scripts/eaw" "$@" >"$stdout_file" 2>"$stderr_file"
 	rc=$?
 	set -e
 
@@ -304,7 +309,7 @@ compare_captures() {
 	local label="$3"
 	local diff_output
 
-	if diff_output="$(diff -u "$left" "$right")"; then
+	if diff_output="$(diff -u <(sed 's/\r$//' "$left") <(sed 's/\r$//' "$right"))"; then
 		return 0
 	fi
 	printf '%s\n' "$diff_output" >&2
