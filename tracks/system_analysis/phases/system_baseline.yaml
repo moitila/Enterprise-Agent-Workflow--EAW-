@@ -1,0 +1,36 @@
+config_version: 1
+
+phase:
+  id: system_baseline
+  name: System Baseline
+  description: Consolidate a traceable system baseline without deciding repository authority.
+  skills: []
+  prompt:
+    active: 1
+    path: templates/prompts/system_analysis/system_baseline/prompt_v<active>.md
+  outputs:
+    create_directories:
+      - analysis
+      - investigations
+    create_artifacts:
+      - analysis/10_system_analysis.candidate.md
+      - analysis/11_decision_register.yaml
+      - analysis/12_open_questions.md
+      - investigations/20_handoff.json
+    prompts:
+      - system_baseline
+  read_sources:
+    - "{{CARD_DIR}}"
+    - "{{EAW_WORKDIR}}/config/repos.conf"
+    - "{{RUNTIME_ROOT}}/tracks/system_analysis"
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - path: analysis/10_system_analysis.candidate.md
+        validation_mode: blocking
+      - path: analysis/11_decision_register.yaml
+        validation_mode: blocking
+      - path: analysis/12_open_questions.md
+        validation_mode: blocking
+      - path: investigations/20_handoff.json
+        validation_mode: blocking

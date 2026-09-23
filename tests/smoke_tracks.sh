@@ -15,7 +15,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-expected_output=$'ARCH_REFACTOR\nARCH_REFACTOR_ONBOARD\nadversarial_review\nbug\nbug_ONBOARD\nexternal_review\nfeature\nfeature_dynamic\nfeedback_review\npatch\nrepo_onboarding\nrepo_onboarding_refresh\nspike\nstandard\ntrack_creator'
+expected_output=$'ARCH_REFACTOR\nARCH_REFACTOR_ONBOARD\nadversarial_review\nbug\nbug_ONBOARD\nexternal_review\nfeature\nfeature_dynamic\nfeedback_review\npatch\nrepo_onboarding\nrepo_onboarding_refresh\nspike\nstandard\nsystem_analysis\ntrack_creator'
 actual_output="$(./scripts/eaw tracks)"
 [[ "$actual_output" == "$expected_output" ]] || fail "unexpected output for current repository"
 
@@ -101,6 +101,9 @@ set -e
 grep -Fq "track_id:" "$install_root/tracks/tracks.yaml" || fail "fresh install must register valid tracks in tracks/tracks.yaml"
 
 # Case 3: second run is idempotent — already-installed tracks preserved
+install_registry_before_second="$tmp_root/install-registry-before-second.yaml"
+cp "$install_root/tracks/tracks.yaml" "$install_registry_before_second"
+
 set +e
 install2_out="$(cd "$install_root" && ./scripts/eaw tracks install 2>&1)"
 install2_rc=$?
@@ -109,8 +112,20 @@ set -e
 
 grep -Fq "preserved:" <<<"$install2_out" || fail "second install should report preserved tracks"
 grep -Fq "installed:" <<<"$install2_out" && fail "second install should not report new installations" || true
+cmp -s "$install_registry_before_second" "$install_root/tracks/tracks.yaml" || fail "second install must not change registry bytes"
 
-# Case 4: invalid candidate rejected with stderr; batch not interrupted; registry written
+# Case 4: existing registry order and bytes are preserved while missing tracks are appended
+cat >"$fixture_root/tracks/tracks.yaml" <<'EOF'
+tracks:
+  - track_id: track_creator
+    status: installed
+  - track_id: adversarial_review
+    status: installed
+EOF
+fixture_registry_prefix="$tmp_root/fixture-registry-prefix.yaml"
+cp "$fixture_root/tracks/tracks.yaml" "$fixture_registry_prefix"
+fixture_prefix_size="$(wc -c <"$fixture_registry_prefix")"
+
 set +e
 reject_out="$(cd "$fixture_root" && ./scripts/eaw tracks install 2>&1)"
 reject_rc=$?
@@ -120,5 +135,25 @@ set -e
 grep -Fq "rejected:" <<<"$reject_out" || fail "install should report rejected candidates on stderr"
 [[ -f "$fixture_root/tracks/tracks.yaml" ]] || fail "registry must exist after install with partial rejections"
 grep -Fq "preserved:" <<<"$reject_out" || fail "valid tracks must be preserved when invalid candidates are present"
+cmp -n "$fixture_prefix_size" "$fixture_registry_prefix" "$fixture_root/tracks/tracks.yaml" || fail "existing registry bytes and order must remain unchanged"
+
+expected_appended="$(cd "$fixture_root" && ./scripts/eaw tracks 2>/dev/null | awk '$0 != "track_creator" && $0 != "adversarial_review"')"
+actual_appended="$(awk '/^[[:space:]]*-[[:space:]]+track_id:[[:space:]]*/ { print $3 }' "$fixture_root/tracks/tracks.yaml" | tail -n +3)"
+[[ "$actual_appended" == "$expected_appended" ]] || fail "missing tracks must be appended in discovery order"
+
+while IFS= read -r track_id; do
+	track_count="$(awk -v id="$track_id" '/^[[:space:]]*-[[:space:]]+track_id:[[:space:]]*/ && $3 == id { count++ } END { print count + 0 }' "$fixture_root/tracks/tracks.yaml")"
+	[[ "$track_count" -eq 1 ]] || fail "track '$track_id' must appear exactly once"
+done < <(awk '/^[[:space:]]*-[[:space:]]+track_id:[[:space:]]*/ { print $3 }' "$fixture_root/tracks/tracks.yaml")
+
+fixture_registry_after_first="$tmp_root/fixture-registry-after-first.yaml"
+cp "$fixture_root/tracks/tracks.yaml" "$fixture_registry_after_first"
+set +e
+reject_second_out="$(cd "$fixture_root" && ./scripts/eaw tracks install 2>&1)"
+reject_second_rc=$?
+set -e
+[[ "$reject_second_rc" -eq 0 ]] || fail "second install with partial rejections should succeed"
+grep -Fq "installed:" <<<"$reject_second_out" && fail "second install should not append existing tracks" || true
+cmp -s "$fixture_registry_after_first" "$fixture_root/tracks/tracks.yaml" || fail "second install must preserve the complete registry byte for byte"
 
 printf "smoke tracks OK\n"

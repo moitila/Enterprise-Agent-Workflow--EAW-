@@ -1,0 +1,33 @@
+config_version: 1
+
+phase:
+  id: approval_gate
+  name: Approval Gate
+  description: Request and validate external approval bound to the frozen candidate.
+  skills: []
+  prompt:
+    active: 1
+    path: templates/prompts/system_analysis/approval_gate/prompt_v<active>.md
+  outputs:
+    create_directories:
+      - approval
+      - investigations
+    create_artifacts:
+      - approval/approval_request.json
+      - approval/approval_validation.json
+      - investigations/20_handoff.json
+    prompts:
+      - approval_gate
+  read_sources:
+    - "{{CARD_DIR}}"
+    - "{{EAW_WORKDIR}}/config/repos.conf"
+    - "{{RUNTIME_ROOT}}/tracks/system_analysis"
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - path: approval/approval_request.json
+        validation_mode: blocking
+      - path: approval/approval_validation.json
+        validation_mode: blocking
+      - path: investigations/20_handoff.json
+        validation_mode: blocking

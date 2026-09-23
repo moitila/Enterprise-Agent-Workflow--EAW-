@@ -1,0 +1,36 @@
+config_version: 1
+
+phase:
+  id: repository_topology
+  name: Repository Topology
+  description: Model zero, one, or many repositories without deriving authority from order.
+  skills: []
+  prompt:
+    active: 1
+    path: templates/prompts/system_analysis/repository_topology/prompt_v<active>.md
+  outputs:
+    create_directories:
+      - analysis
+      - investigations
+    create_artifacts:
+      - analysis/20_repository_topology.candidate.md
+      - analysis/21_repository_manifest.candidate.yaml
+      - analysis/22_topology_validation.json
+      - investigations/20_handoff.json
+    prompts:
+      - repository_topology
+  read_sources:
+    - "{{CARD_DIR}}"
+    - "{{EAW_WORKDIR}}/config/repos.conf"
+    - "{{RUNTIME_ROOT}}/tracks/system_analysis"
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - path: analysis/20_repository_topology.candidate.md
+        validation_mode: blocking
+      - path: analysis/21_repository_manifest.candidate.yaml
+        validation_mode: blocking
+      - path: analysis/22_topology_validation.json
+        validation_mode: blocking
+      - path: investigations/20_handoff.json
+        validation_mode: blocking

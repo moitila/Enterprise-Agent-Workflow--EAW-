@@ -1,0 +1,78 @@
+config_version: 1
+
+track:
+  id: system_analysis
+  name: System Analysis
+  description: >
+    Build, approve, publish, and consume an authoritative system baseline and
+    repository topology for greenfield or existing systems.
+  initial_phase: source_inventory
+  final_phase: consumption_handoff
+
+  initial_outputs:
+    create_directories:
+      - ingest
+      - investigations
+      - analysis
+      - candidate
+      - approval
+      - publication
+      - consumption
+
+  phases:
+    - source_inventory
+    - system_baseline
+    - repository_topology
+    - authority_resolution
+    - candidate_freeze
+    - approval_gate
+    - publication
+    - consumption_handoff
+
+  transitions:
+    source_inventory:
+      next: system_baseline
+      contract:
+        emit_handoff: true
+        consume_previous: true
+    system_baseline:
+      next: repository_topology
+      contract:
+        emit_handoff: true
+        consume_previous: true
+    repository_topology:
+      next: authority_resolution
+      contract:
+        emit_handoff: true
+        consume_previous: true
+    authority_resolution:
+      next: candidate_freeze
+      waiting_when:
+        - WAITING
+      contract:
+        emit_handoff: true
+        consume_previous: true
+    candidate_freeze:
+      next: approval_gate
+      contract:
+        emit_handoff: true
+        consume_previous: true
+    approval_gate:
+      next: publication
+      waiting_when:
+        - WAITING
+      contract:
+        emit_handoff: true
+        consume_previous: true
+    publication:
+      next: consumption_handoff
+      waiting_when:
+        - WAITING
+      contract:
+        emit_handoff: true
+        consume_previous: true
+
+  rules:
+    one_prompt_per_phase: true
+    generated_artifacts_of_each_phase_must_be_non_empty: true
+    authority_must_be_explicit: true

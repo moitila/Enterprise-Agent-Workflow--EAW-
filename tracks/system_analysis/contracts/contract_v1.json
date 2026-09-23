@@ -1,0 +1,36 @@
+{
+  "contract_version": 1,
+  "track_id": "system_analysis",
+  "decision_states": ["DECIDED", "PROPOSED", "TBD", "SIMULATED", "OUT_OF_SCOPE", "SUPERSEDED"],
+  "repository_statuses": ["active", "planned", "retired"],
+  "handoff_statuses": ["completed", "waiting"],
+  "waiting_code": "WAITING",
+  "waiting_phases": ["authority_resolution", "approval_gate", "publication"],
+  "permanent_paths": [
+    "docs/system/repository-topology.md",
+    "docs/system/repositories.yaml",
+    "docs/system/system-analysis.manifest.json",
+    "docs/system/system-analysis.md"
+  ],
+  "digest": {
+    "algorithm": "sha256",
+    "ordering": "destination_lexicographic",
+    "entry_encoding": "destination, NUL byte, lowercase sha256, LF"
+  },
+  "external_artifacts": [
+    "analysis/32_bootstrap_result.json",
+    "approval/approval_record.json",
+    "publication/publication_result.json"
+  ],
+  "negative_cases": [
+    "candidate_changed_after_approval",
+    "request_id_mismatch",
+    "authority_missing_or_multiple",
+    "base_revision_mismatch",
+    "unauthorized_destination"
+  ],
+  "proof_limits": [
+    "local",
+    "sequential"
+  ]
+}

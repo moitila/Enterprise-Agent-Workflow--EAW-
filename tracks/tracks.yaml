@@ -29,3 +29,5 @@ tracks:
     status: installed
   - track_id: adversarial_review
     status: installed
+  - track_id: system_analysis
+    status: installed

@@ -319,12 +319,37 @@ eaw_phase_completion_artifact_has_meaningful_content() {
 
 	# FIX-IDENTITY: reject unrendered template variables (identity, not size). The
 	# card-token scaffold case (<CARD>) is already covered by the anti-scaffold cmp
-	# above (the template IS the scaffold); here we additionally reject files that
-	# still carry unrendered {{...}} template variables outside the canonical
-	# prompt-design blueprint, where those tokens are intentional design data.
-	if grep -Eq '\{\{[A-Za-z0-9_]+\}\}' "$file" &&
-		[[ "$phase_id" != "prompt_design" || "$rel_path" != "investigations/20_prompt_design.md" ]]; then
-		return 1
+	# above (the template IS the scaffold). Runtime-recognized canonical tokens are
+	# intentional data only for the exact planning and design artifact pairs below.
+	if grep -Eq '\{\{[A-Za-z0-9_]+\}\}' "$file"; then
+		case "$phase_id:$rel_path" in
+		planning:investigations/40_next_steps.md | planning:implementation/10_change_plan.md | implementation_planning:implementation/10_change_plan.md | track_design:investigations/10_track_design.md | prompt_design:investigations/20_prompt_design.md)
+			;;
+		*)
+			return 1
+			;;
+		esac
+
+		local template_token
+		while IFS= read -r template_token; do
+			template_token="${template_token#\{\{}"
+			template_token="${template_token%\}\}}"
+			case "$template_token" in
+			ARTIFACT_PATHS | CARD | CARD_DIR | CONFIG_SOURCE | CONTEXT_BLOCK | CRITICAL_PATHS)
+				;;
+			DATE | EAW_WORKDIR | EXCLUDED_REPOS | INTAKE_PATH | OUT_DIR | PHASE | PHASE_HEADER)
+				;;
+			PROMPT_PATH | RESOLVED_REPO_KEY | ROUND | RUNTIME_ENVIRONMENT | RUNTIME_ROOT | SKILLS_BLOCK)
+				;;
+			STEP_ID | SUCCESS_CRITERIA | TARGET_REPOS | TITLE | TOOLING_HINTS | TRACK | TRACK_ID)
+				;;
+			TYPE | WARNINGS_BLOCK | WRITE_ALLOWLIST)
+				;;
+			*)
+				return 1
+				;;
+			esac
+		done < <(grep -Eo '\{\{[A-Za-z0-9_]+\}\}' "$file")
 	fi
 
 	# FIX-SCOPELOCK: scope.lock has its own deterministic structural parse (no size).

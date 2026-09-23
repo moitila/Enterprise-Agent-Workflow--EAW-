@@ -748,7 +748,7 @@ cmd_tracks() {
 cmd_tracks_install() {
 	local tracks_dir="$EAW_TRACKS_DIR"
 	local tracks_registry="$EAW_TRACKS_DIR/tracks.yaml"
-	local track_dir track_dir_name
+	local track_dir track_dir_name last_byte
 	local -a discovered=()
 	local -a preserved=()
 	local -a new_installed=()
@@ -764,7 +764,7 @@ cmd_tracks_install() {
 		while IFS= read -r track_dir_name; do
 			[[ -n "$track_dir_name" ]] || continue
 			installed_set["$track_dir_name"]=1
-		done < <(awk '/track_id:/ { print $3 }' "$tracks_registry")
+		done < <(awk '/^[[:space:]]*-[[:space:]]+track_id:[[:space:]]*/ { print $3 }' "$tracks_registry")
 	fi
 
 	# Step 2: Discover candidate directories
@@ -790,16 +790,18 @@ cmd_tracks_install() {
 		fi
 	done
 
-	# Step 7: Write final registry once
-	{
-		printf "tracks:\n"
-		for track_dir_name in "${preserved[@]}" "${new_installed[@]}"; do
-			printf "  - track_id: %s\n" "$track_dir_name"
-			printf "    status: installed\n"
-		done
-	} >"$tracks_registry"
-
 	if [[ ${#new_installed[@]} -gt 0 ]]; then
+		if [[ ! -f "$tracks_registry" ]]; then
+			printf "tracks:\n" >"$tracks_registry"
+		elif [[ -s "$tracks_registry" ]]; then
+			last_byte="$(tail -c 1 "$tracks_registry" | od -An -t u1 | tr -d '[:space:]')"
+			[[ "$last_byte" == "10" ]] || printf "\n" >>"$tracks_registry"
+		fi
+		for track_dir_name in "${new_installed[@]}"; do
+			printf "  - track_id: %s\n" "$track_dir_name" >>"$tracks_registry"
+			printf "    status: installed\n" >>"$tracks_registry"
+		done
+
 		printf "installed: %d\n" "${#new_installed[@]}"
 		for track_dir_name in "${new_installed[@]}"; do
 			printf "  + %s\n" "$track_dir_name"

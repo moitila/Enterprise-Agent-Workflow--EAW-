@@ -26,8 +26,6 @@ phase:
   outputs:
     create_directories:
       - investigations
-    write_paths:
-      - $EAW_WORKDIR/context_sources/onboarding/
 
   completion:
     strategy: required_artifacts_exist

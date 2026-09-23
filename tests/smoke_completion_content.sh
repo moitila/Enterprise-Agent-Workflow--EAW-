@@ -81,6 +81,60 @@ seed_file "$cAPD" investigations/20_prompt_design.md \
 	fail "(a''') blueprint de prompt_design com token canonico literal deveria PASSAR (exit 0)"
 pass "(a''') blueprint de prompt_design com token canonico literal aprovado (exit 0)"
 
+# ── (a'''') tokens canonicos passam somente nos pares de planejamento/design autorizados ──
+authorized_token_contexts=(
+	"planning|investigations/40_next_steps.md"
+	"planning|implementation/10_change_plan.md"
+	"implementation_planning|implementation/10_change_plan.md"
+	"track_design|investigations/10_track_design.md"
+	"prompt_design|investigations/20_prompt_design.md"
+)
+authorized_index=0
+for context in "${authorized_token_contexts[@]}"; do
+	IFS='|' read -r phase_id rel_path <<<"$context"
+	card_dir="$WORK/authorized_$authorized_index"
+	seed_file "$card_dir" "$rel_path" \
+		$'# Referencia canonica\n\nDocumenta {{RUNTIME_ENVIRONMENT}} para templates futuros.\n'
+	[[ "$(has_content "$card_dir" "$phase_id" "$rel_path")" -eq 0 ]] ||
+		fail "(a'''') par autorizado $phase_id:$rel_path deveria PASSAR (exit 0)"
+	authorized_index=$((authorized_index + 1))
+done
+pass "(a'''') tokens canonicos aprovados nos cinco pares autorizados"
+
+# ── (a''''') plano autorizado aceita todos os tokens canonicos do caso original ──
+cABP="$WORK/authorized_blocked_plan"
+seed_file "$cABP" implementation/10_change_plan.md \
+	$'# Plano real\n\n{{CARD}} {{CARD_DIR}} {{CONFIG_SOURCE}} {{EAW_WORKDIR}} {{RUNTIME_ENVIRONMENT}} {{RUNTIME_ROOT}}\n'
+[[ "$(has_content "$cABP" implementation_planning implementation/10_change_plan.md)" -eq 0 ]] ||
+	fail "(a''''') tokens canonicos do plano bloqueado deveriam PASSAR (exit 0)"
+pass "(a''''') tokens canonicos do plano bloqueado aprovados"
+
+# ── (a'''''') placeholder editorial desconhecido falha mesmo em par autorizado ──
+cAUE="$WORK/authorized_unknown_editorial"
+seed_file "$cAUE" implementation/10_change_plan.md \
+	$'# Plano incompleto\n\nDecisao pendente: {{EDITORIAL_TODO}}.\n'
+[[ "$(has_content "$cAUE" implementation_planning implementation/10_change_plan.md)" -eq 1 ]] ||
+	fail "(a'''''') placeholder editorial desconhecido em par autorizado deveria FALHAR (exit 1)"
+pass "(a'''''') placeholder editorial desconhecido rejeitado em par autorizado"
+
+# ── (a''''''') tokens canonicos continuam rejeitados fora dos pares autorizados ──
+rejected_token_contexts=(
+	"hypotheses|investigations/30_hypotheses.md"
+	"planning|prompts/planning.md"
+	"implementation_executor|implementation/20_patch_notes.md"
+)
+rejected_index=0
+for context in "${rejected_token_contexts[@]}"; do
+	IFS='|' read -r phase_id rel_path <<<"$context"
+	card_dir="$WORK/rejected_$rejected_index"
+	seed_file "$card_dir" "$rel_path" \
+		$'# Placeholder pendente\n\nValor {{WRITE_ALLOWLIST}} ainda nao materializado.\n'
+	[[ "$(has_content "$card_dir" "$phase_id" "$rel_path")" -eq 1 ]] ||
+		fail "(a''''''') contexto $phase_id:$rel_path deveria FALHAR (exit 1)"
+	rejected_index=$((rejected_index + 1))
+done
+pass "(a''''''') tokens canonicos rejeitados nos tres contextos nao autorizados"
+
 # ── (b) .md CURTO nao-scaffold sem placeholder (~40 bytes) -> exit 0 (SEM piso) ──
 cB="$WORK/b"
 seed_file "$cB" investigations/40_next_steps.md $'# Passo 1\nfoo bar baz.\n'
@@ -174,10 +228,10 @@ seed_file "$cF" implementation/00_scope.lock.md $'# scope lock\n\nconteudo gener
 	fail "(f) scope.lock generico sem estrutura deveria FALHAR (exit 1)"
 pass "(f) scope.lock por estrutura: write_allowlist/headings passa; generico falha"
 
-if [[ "$PASS_COUNT" -ne 9 ]]; then
-	fail "esperados 9 casos aprovados, obtidos $PASS_COUNT"
+if [[ "$PASS_COUNT" -ne 13 ]]; then
+	fail "esperados 13 casos aprovados, obtidos $PASS_COUNT"
 fi
-printf "smoke_completion_content OK (%d/9)\n" "$PASS_COUNT"
+printf "smoke_completion_content OK (%d/13)\n" "$PASS_COUNT"
 
 # --- Allowlist gate tests (BL-03) ---
 # g: scope.lock com In Scope + Out of Scope mas SEM Allowlist de Escrita -> deve FALHAR

@@ -1,0 +1,42 @@
+config_version: 1
+
+phase:
+  id: candidate_freeze
+  name: Candidate Freeze
+  description: Freeze the exact publishable package and its aggregate digest.
+  skills: []
+  prompt:
+    active: 1
+    path: templates/prompts/system_analysis/candidate_freeze/prompt_v<active>.md
+  outputs:
+    create_directories:
+      - candidate
+      - investigations
+    create_artifacts:
+      - candidate/system-analysis.md
+      - candidate/repository-topology.md
+      - candidate/repositories.yaml
+      - candidate/system-analysis.manifest.json
+      - candidate/candidate_validation.json
+      - investigations/20_handoff.json
+    prompts:
+      - candidate_freeze
+  read_sources:
+    - "{{CARD_DIR}}"
+    - "{{EAW_WORKDIR}}/config/repos.conf"
+    - "{{RUNTIME_ROOT}}/tracks/system_analysis"
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - path: candidate/system-analysis.md
+        validation_mode: blocking
+      - path: candidate/repository-topology.md
+        validation_mode: blocking
+      - path: candidate/repositories.yaml
+        validation_mode: blocking
+      - path: candidate/system-analysis.manifest.json
+        validation_mode: blocking
+      - path: candidate/candidate_validation.json
+        validation_mode: blocking
+      - path: investigations/20_handoff.json
+        validation_mode: blocking

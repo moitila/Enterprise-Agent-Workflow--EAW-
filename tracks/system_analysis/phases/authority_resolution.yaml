@@ -1,0 +1,36 @@
+config_version: 1
+
+phase:
+  id: authority_resolution
+  name: Authority Resolution
+  description: Resolve one authority or wait for an explicit correlated decision or bootstrap.
+  skills: []
+  prompt:
+    active: 1
+    path: templates/prompts/system_analysis/authority_resolution/prompt_v<active>.md
+  outputs:
+    create_directories:
+      - analysis
+      - investigations
+    create_artifacts:
+      - analysis/30_authority_resolution.yaml
+      - analysis/31_bootstrap_request.json
+      - analysis/33_authority_validation.json
+      - investigations/20_handoff.json
+    prompts:
+      - authority_resolution
+  read_sources:
+    - "{{CARD_DIR}}"
+    - "{{EAW_WORKDIR}}/config/repos.conf"
+    - "{{RUNTIME_ROOT}}/tracks/system_analysis"
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - path: analysis/30_authority_resolution.yaml
+        validation_mode: blocking
+      - path: analysis/31_bootstrap_request.json
+        validation_mode: blocking
+      - path: analysis/33_authority_validation.json
+        validation_mode: blocking
+      - path: investigations/20_handoff.json
+        validation_mode: blocking
