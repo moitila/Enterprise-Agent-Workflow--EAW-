@@ -31,3 +31,5 @@ tracks:
     status: installed
   - track_id: system_analysis
     status: installed
+  - track_id: domain_analysis
+    status: installed

@@ -1,0 +1,42 @@
+config_version: 1
+
+phase:
+  id: candidate_freeze
+  name: Candidate Freeze
+  description: Freeze the exact four-document package and aggregate digest.
+  skills: []
+  prompt:
+    active: 1
+    path: templates/prompts/domain_analysis/candidate_freeze/prompt_v<active>.md
+  outputs:
+    create_directories:
+      - candidate
+      - investigations
+    create_artifacts:
+      - candidate/domain-analysis.md
+      - candidate/domain-glossary.yaml
+      - candidate/domain-capabilities.yaml
+      - candidate/domain-analysis.manifest.json
+      - candidate/candidate_validation.json
+      - investigations/20_handoff.json
+    prompts:
+      - candidate_freeze
+  read_sources:
+    - "{{CARD_DIR}}"
+    - "{{EAW_WORKDIR}}/config/repos.conf"
+    - "{{RUNTIME_ROOT}}/tracks/domain_analysis"
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - path: candidate/domain-analysis.md
+        validation_mode: blocking
+      - path: candidate/domain-glossary.yaml
+        validation_mode: blocking
+      - path: candidate/domain-capabilities.yaml
+        validation_mode: blocking
+      - path: candidate/domain-analysis.manifest.json
+        validation_mode: blocking
+      - path: candidate/candidate_validation.json
+        validation_mode: blocking
+      - path: investigations/20_handoff.json
+        validation_mode: blocking

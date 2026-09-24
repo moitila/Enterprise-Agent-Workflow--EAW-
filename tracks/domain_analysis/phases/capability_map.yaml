@@ -1,0 +1,36 @@
+config_version: 1
+
+phase:
+  id: capability_map
+  name: Capability Map
+  description: Relate goals, actors and conceptual capabilities with evidence.
+  skills: []
+  prompt:
+    active: 1
+    path: templates/prompts/domain_analysis/capability_map/prompt_v<active>.md
+  outputs:
+    create_directories:
+      - analysis
+      - investigations
+    create_artifacts:
+      - analysis/20_capability_map.md
+      - analysis/21_capabilities.yaml
+      - analysis/22_domain_validation.json
+      - investigations/20_handoff.json
+    prompts:
+      - capability_map
+  read_sources:
+    - "{{CARD_DIR}}"
+    - "{{EAW_WORKDIR}}/config/repos.conf"
+    - "{{RUNTIME_ROOT}}/tracks/domain_analysis"
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - path: analysis/20_capability_map.md
+        validation_mode: blocking
+      - path: analysis/21_capabilities.yaml
+        validation_mode: blocking
+      - path: analysis/22_domain_validation.json
+        validation_mode: blocking
+      - path: investigations/20_handoff.json
+        validation_mode: blocking

@@ -1,0 +1,33 @@
+config_version: 1
+
+phase:
+  id: publication
+  name: Publication
+  description: Request and validate external publication of the approved package.
+  skills: []
+  prompt:
+    active: 1
+    path: templates/prompts/domain_analysis/publication/prompt_v<active>.md
+  outputs:
+    create_directories:
+      - publication
+      - investigations
+    create_artifacts:
+      - publication/publication_request.json
+      - publication/publication_validation.json
+      - investigations/20_handoff.json
+    prompts:
+      - publication
+  read_sources:
+    - "{{CARD_DIR}}"
+    - "{{EAW_WORKDIR}}/config/repos.conf"
+    - "{{RUNTIME_ROOT}}/tracks/domain_analysis"
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - path: publication/publication_request.json
+        validation_mode: blocking
+      - path: publication/publication_validation.json
+        validation_mode: blocking
+      - path: investigations/20_handoff.json
+        validation_mode: blocking

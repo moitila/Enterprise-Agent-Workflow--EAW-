@@ -1,0 +1,36 @@
+config_version: 1
+
+phase:
+  id: source_inventory
+  name: Source Inventory
+  description: Verify upstream publication identity and inventory declared sources.
+  skills: []
+  prompt:
+    active: 1
+    path: templates/prompts/domain_analysis/source_inventory/prompt_v<active>.md
+  outputs:
+    create_directories:
+      - analysis
+      - investigations
+    create_artifacts:
+      - analysis/00_source_manifest.yaml
+      - analysis/01_source_gaps.md
+      - analysis/02_upstream_validation.json
+      - investigations/20_handoff.json
+    prompts:
+      - source_inventory
+  read_sources:
+    - "{{CARD_DIR}}"
+    - "{{EAW_WORKDIR}}/config/repos.conf"
+    - "{{RUNTIME_ROOT}}/tracks/domain_analysis"
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - path: analysis/00_source_manifest.yaml
+        validation_mode: blocking
+      - path: analysis/01_source_gaps.md
+        validation_mode: blocking
+      - path: analysis/02_upstream_validation.json
+        validation_mode: blocking
+      - path: investigations/20_handoff.json
+        validation_mode: blocking
