@@ -6,7 +6,7 @@ phase:
   description: Freeze the exact four-document package and aggregate digest.
   skills: []
   prompt:
-    active: 1
+    active: 2
     path: templates/prompts/domain_analysis/candidate_freeze/prompt_v<active>.md
   outputs:
     create_directories:

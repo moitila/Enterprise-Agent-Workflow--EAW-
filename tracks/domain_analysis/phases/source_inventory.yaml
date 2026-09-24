@@ -6,7 +6,7 @@ phase:
   description: Verify upstream publication identity and inventory declared sources.
   skills: []
   prompt:
-    active: 1
+    active: 2
     path: templates/prompts/domain_analysis/source_inventory/prompt_v<active>.md
   outputs:
     create_directories:
