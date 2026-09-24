@@ -51,7 +51,7 @@ RULES
 - Se `32_bootstrap_result.json` existir, exigir request id, repo key, destino e autorizacao correlacionados; resultado presente invalido falha fechado.
 - Executar `python3 "{{RUNTIME_ROOT}}/tracks/system_analysis/tools/contract_tool.py" authority "{{CARD_DIR}}/analysis/30_authority_resolution.yaml" > "{{CARD_DIR}}/analysis/33_authority_validation.json"` e exigir exit 0.
 - No estado resolved, executar `printf '%s' '{"from_phase":"authority_resolution","status":"completed","messages":[],"codes":[]}' > "{{CARD_DIR}}/investigations/20_handoff.json"`.
-- No estado waiting, carregar o request id validado em `request_id` e executar `printf '{"from_phase":"authority_resolution","status":"waiting","messages":["request_id=%s;inject={{CARD_DIR}}/analysis/32_bootstrap_result.json"],"codes":["WAITING"]}' "$request_id" > "{{CARD_DIR}}/investigations/20_handoff.json"`.
+- No estado waiting, carregar o request id validado em `request_id` e executar `printf '{"from_phase":"authority_resolution","status":"waiting","blocker":"Aguardando resultado de bootstrap para request_id=%s;inject={{CARD_DIR}}/analysis/32_bootstrap_result.json","messages":[],"codes":["WAITING"]}' "$request_id" > "{{CARD_DIR}}/investigations/20_handoff.json"`.
 - Validar o handoff com `contract_tool.py handoff`, usando status igual ao estado emitido.
 
 FORBIDDEN

@@ -80,8 +80,17 @@ def validate_handoff(
 ) -> dict[str, Any]:
     value = require_object(handoff, "handoff")
     expected_keys = {"from_phase", "status", "messages", "codes"}
-    if set(value) != expected_keys:
+    optional_keys = {"code_origin", "inherited_from"}
+    if status == "waiting":
+        expected_keys.update(contract["waiting_required_fields"])
+    if not expected_keys <= set(value) or set(value) - expected_keys - optional_keys:
         raise ContractError("handoff keys mismatch")
+    if "code_origin" in value and value["code_origin"] not in ("emitted", "inherited"):
+        raise ContractError("handoff code origin is invalid")
+    if "inherited_from" in value:
+        if value.get("code_origin") != "inherited":
+            raise ContractError("handoff inheritance requires inherited code origin")
+        require_non_empty_string(value["inherited_from"], "inherited_from")
     if value["from_phase"] != phase:
         raise ContractError("handoff phase mismatch")
     if status not in contract["handoff_statuses"] or value["status"] != status:
@@ -96,6 +105,9 @@ def validate_handoff(
     else:
         if phase not in contract["waiting_phases"]:
             raise ContractError("phase cannot wait")
+        require_non_empty_string(value["blocker"], "blocker")
+        if value["messages"] != []:
+            raise ContractError("waiting handoff messages must be empty")
         if value["codes"] != [contract["waiting_code"]]:
             raise ContractError("waiting handoff code mismatch")
     return value

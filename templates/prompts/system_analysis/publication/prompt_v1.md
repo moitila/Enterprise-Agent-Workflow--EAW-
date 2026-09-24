@@ -49,7 +49,7 @@ RULES
 - Se o result externo estiver ausente, executar `python3 "{{RUNTIME_ROOT}}/tracks/system_analysis/tools/contract_tool.py" publication "{{CARD_DIR}}/publication/publication_request.json" - > "{{CARD_DIR}}/publication/publication_validation.json"`.
 - Se o result existir, executar o mesmo comando com `{{CARD_DIR}}/publication/publication_result.json`; resultado presente invalido falha fechado.
 - No estado published, executar `printf '%s' '{"from_phase":"publication","status":"completed","messages":[],"codes":[]}' > "{{CARD_DIR}}/investigations/20_handoff.json"`.
-- No estado waiting, carregar o request id validado em `request_id` e executar `printf '{"from_phase":"publication","status":"waiting","messages":["request_id=%s;inject={{CARD_DIR}}/publication/publication_result.json"],"codes":["WAITING"]}' "$request_id" > "{{CARD_DIR}}/investigations/20_handoff.json"`.
+- No estado waiting, carregar o request id validado em `request_id` e executar `printf '{"from_phase":"publication","status":"waiting","blocker":"Aguardando resultado de publicacao para request_id=%s;inject={{CARD_DIR}}/publication/publication_result.json","messages":[],"codes":["WAITING"]}' "$request_id" > "{{CARD_DIR}}/investigations/20_handoff.json"`.
 - Validar o handoff com `contract_tool.py handoff`, usando status igual ao estado emitido.
 
 FORBIDDEN

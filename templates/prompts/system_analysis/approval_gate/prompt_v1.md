@@ -47,7 +47,7 @@ RULES
 - Se o record externo estiver ausente, executar `python3 "{{RUNTIME_ROOT}}/tracks/system_analysis/tools/contract_tool.py" approval "{{CARD_DIR}}/approval/approval_request.json" - > "{{CARD_DIR}}/approval/approval_validation.json"`.
 - Se o record existir, executar o mesmo comando com `{{CARD_DIR}}/approval/approval_record.json`; resultado presente rejeitado ou invalido falha fechado.
 - No estado approved, executar `printf '%s' '{"from_phase":"approval_gate","status":"completed","messages":[],"codes":[]}' > "{{CARD_DIR}}/investigations/20_handoff.json"`.
-- No estado waiting, carregar o request id validado em `request_id` e executar `printf '{"from_phase":"approval_gate","status":"waiting","messages":["request_id=%s;inject={{CARD_DIR}}/approval/approval_record.json"],"codes":["WAITING"]}' "$request_id" > "{{CARD_DIR}}/investigations/20_handoff.json"`.
+- No estado waiting, carregar o request id validado em `request_id` e executar `printf '{"from_phase":"approval_gate","status":"waiting","blocker":"Aguardando approval externo para request_id=%s;inject={{CARD_DIR}}/approval/approval_record.json","messages":[],"codes":["WAITING"]}' "$request_id" > "{{CARD_DIR}}/investigations/20_handoff.json"`.
 - Validar o handoff com `contract_tool.py handoff`, usando status igual ao estado emitido.
 
 FORBIDDEN

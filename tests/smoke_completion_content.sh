@@ -167,6 +167,50 @@ seed_file "$cD" investigations/20_handoff.json '{}'
 	fail "(d) envelope {} deveria FALHAR por schema (exit 1)"
 pass "(d) envelope JSON por schema, curto passa e {} falha"
 
+# O gate de conteudo reconhece waiting; a regra do blocker pertence ao validador operacional.
+cDW="$WORK/d_waiting"
+seed_file "$cDW" investigations/20_handoff.json \
+	'{"from_phase":"findings","status":"waiting","blocker":"dependency pending","messages":[],"codes":["WAITING"]}'
+jq -e '.status == "waiting"' "$cDW/investigations/20_handoff.json" >/dev/null ||
+	fail "(d waiting) status deveria ser waiting"
+jq -e 'has("blocker") and (.blocker | type == "string" and length > 0)' "$cDW/investigations/20_handoff.json" >/dev/null ||
+	fail "(d waiting) blocker deveria ser nao vazio"
+[[ "$(has_content "$cDW" findings investigations/20_handoff.json)" -eq 0 ]] ||
+	fail "(d waiting) blocker nao vazio deveria passar no gate de conteudo"
+
+seed_file "$cDW" investigations/20_handoff.json \
+	'{"from_phase":"findings","status":"waiting","blocker":"","messages":[],"codes":[]}'
+jq -e '.status == "waiting"' "$cDW/investigations/20_handoff.json" >/dev/null ||
+	fail "(d waiting) status com blocker vazio deveria ser waiting"
+jq -e 'has("blocker") and .blocker == ""' "$cDW/investigations/20_handoff.json" >/dev/null ||
+	fail "(d waiting) blocker deveria estar vazio"
+[[ "$(has_content "$cDW" findings investigations/20_handoff.json)" -eq 0 ]] ||
+	fail "(d waiting) blocker vazio deveria chegar ao validador operacional"
+
+seed_file "$cDW" investigations/20_handoff.json \
+	'{"from_phase":"findings","status":"waiting","messages":[],"codes":[]}'
+jq -e '.status == "waiting"' "$cDW/investigations/20_handoff.json" >/dev/null ||
+	fail "(d waiting) status sem blocker deveria ser waiting"
+jq -e 'has("blocker") | not' "$cDW/investigations/20_handoff.json" >/dev/null ||
+	fail "(d waiting) blocker deveria estar ausente"
+[[ "$(has_content "$cDW" findings investigations/20_handoff.json)" -eq 0 ]] ||
+	fail "(d waiting) blocker ausente deveria chegar ao validador operacional"
+pass "(d waiting) tres estados do blocker chegam ao validador operacional"
+
+seed_file "$cDW" investigations/20_handoff.json \
+	'{"from_phase":"findings","status":"waiting","blocker":"pending","codes":[]}'
+[[ "$(has_content "$cDW" findings investigations/20_handoff.json)" -eq 1 ]] ||
+	fail "(d waiting) messages ausente deveria falhar no gate de conteudo"
+seed_file "$cDW" investigations/20_handoff.json \
+	'{"from_phase":"findings","status":"waiting","blocker":"pending","messages":[]}'
+[[ "$(has_content "$cDW" findings investigations/20_handoff.json)" -eq 1 ]] ||
+	fail "(d waiting) codes ausente deveria falhar no gate de conteudo"
+seed_file "$cDW" investigations/20_handoff.json \
+	'{"from_phase":"findings","status":"waiting","blocker":"pending","messages":[],"codes":[],"scaffold":true}'
+[[ "$(has_content "$cDW" findings investigations/20_handoff.json)" -eq 1 ]] ||
+	fail "(d waiting) scaffold deveria falhar no gate de conteudo"
+pass "(d waiting) demais criterios do gate de conteudo preservados"
+
 # ── (e) audit reusa o predicado por identidade (skip/track-aware preservado) ──
 make_state_e() {
 	local card_dir="$1" track="$2"
@@ -228,10 +272,10 @@ seed_file "$cF" implementation/00_scope.lock.md $'# scope lock\n\nconteudo gener
 	fail "(f) scope.lock generico sem estrutura deveria FALHAR (exit 1)"
 pass "(f) scope.lock por estrutura: write_allowlist/headings passa; generico falha"
 
-if [[ "$PASS_COUNT" -ne 13 ]]; then
-	fail "esperados 13 casos aprovados, obtidos $PASS_COUNT"
+if [[ "$PASS_COUNT" -ne 15 ]]; then
+	fail "esperados 15 casos aprovados, obtidos $PASS_COUNT"
 fi
-printf "smoke_completion_content OK (%d/13)\n" "$PASS_COUNT"
+printf "smoke_completion_content OK (%d/15)\n" "$PASS_COUNT"
 
 # --- Allowlist gate tests (BL-03) ---
 # g: scope.lock com In Scope + Out of Scope mas SEM Allowlist de Escrita -> deve FALHAR

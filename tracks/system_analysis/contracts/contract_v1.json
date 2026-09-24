@@ -4,6 +4,7 @@
   "decision_states": ["DECIDED", "PROPOSED", "TBD", "SIMULATED", "OUT_OF_SCOPE", "SUPERSEDED"],
   "repository_statuses": ["active", "planned", "retired"],
   "handoff_statuses": ["completed", "waiting"],
+  "waiting_required_fields": ["blocker"],
   "waiting_code": "WAITING",
   "waiting_phases": ["authority_resolution", "approval_gate", "publication"],
   "permanent_paths": [

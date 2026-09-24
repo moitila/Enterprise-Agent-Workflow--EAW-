@@ -67,12 +67,142 @@ class ContractToolTests(unittest.TestCase):
         }
         return request, record
 
+    def run_handoff(self, value, phase="system_baseline", status="completed"):
+        with tempfile.TemporaryDirectory() as directory:
+            path = self.write_json(directory, "handoff.json", value)
+            return self.run_tool("handoff", path, phase, status)
+
+    def handoff(self, **fields):
+        return {
+            "from_phase": "system_baseline",
+            "status": "completed",
+            "messages": [],
+            "codes": [],
+            **fields,
+        }
+
+    def test_handoff_accepts_core_and_runtime_provenance(self):
+        metadata_cases = (
+            {},
+            {"code_origin": "emitted"},
+            {"code_origin": "inherited"},
+            {"code_origin": "inherited", "inherited_from": "source_inventory"},
+        )
+        for metadata in metadata_cases:
+            with self.subTest(metadata=metadata):
+                handoff = self.handoff(**metadata)
+                result = self.run_handoff(handoff)
+                self.assertEqual(0, result.returncode, result.stderr)
+                self.assertEqual(handoff, json.loads(result.stdout))
+
+    def test_handoff_rejects_missing_or_unknown_keys(self):
+        for key in ("from_phase", "status", "messages", "codes"):
+            with self.subTest(missing=key):
+                handoff = self.handoff()
+                del handoff[key]
+                result = self.run_handoff(handoff)
+                self.assertEqual(1, result.returncode)
+                self.assertIn("handoff keys mismatch", result.stderr)
+        result = self.run_handoff(self.handoff(unknown="value"))
+        self.assertEqual(1, result.returncode)
+        self.assertIn("handoff keys mismatch", result.stderr)
+
+    def test_handoff_rejects_invalid_provenance(self):
+        non_empty_error = "inherited_from must be a non-empty string"
+        inheritance_error = "handoff inheritance requires inherited code origin"
+        invalid_cases = (
+            ({"code_origin": "other"}, "handoff code origin is invalid"),
+            ({"code_origin": ""}, "handoff code origin is invalid"),
+            ({"code_origin": None}, "handoff code origin is invalid"),
+            ({"code_origin": []}, "handoff code origin is invalid"),
+            ({"code_origin": "inherited", "inherited_from": ""}, non_empty_error),
+            ({"code_origin": "inherited", "inherited_from": "  "}, non_empty_error),
+            ({"code_origin": "inherited", "inherited_from": None}, non_empty_error),
+            ({"code_origin": "inherited", "inherited_from": 7}, non_empty_error),
+            ({"code_origin": "emitted", "inherited_from": "source_inventory"}, inheritance_error),
+            ({"inherited_from": "source_inventory"}, inheritance_error),
+        )
+        for metadata, expected_error in invalid_cases:
+            with self.subTest(metadata=metadata):
+                result = self.run_handoff(self.handoff(**metadata))
+                self.assertEqual(1, result.returncode)
+                self.assertIn(expected_error, result.stderr)
+
+    def test_handoff_preserves_core_validation(self):
+        invalid_cases = (
+            (self.handoff(from_phase="source_inventory"), "handoff phase mismatch"),
+            (self.handoff(status="skipped", code_origin="inherited"), "handoff status mismatch"),
+            (
+                self.handoff(messages=[{"text": "not a string"}]),
+                "handoff messages must be a string array",
+            ),
+            (self.handoff(codes=["WAITING"]), "completed handoff codes must be empty"),
+        )
+        for handoff, expected_error in invalid_cases:
+            with self.subTest(handoff=handoff):
+                result = self.run_handoff(handoff)
+                self.assertEqual(1, result.returncode)
+                self.assertIn(expected_error, result.stderr)
+
+    def test_waiting_handoff_accepts_all_waiting_phases(self):
+        for phase in ("authority_resolution", "approval_gate", "publication"):
+            with self.subTest(phase=phase):
+                handoff = {
+                    "from_phase": phase,
+                    "status": "waiting",
+                    "blocker": f"Aguardando resultado externo para {phase}",
+                    "messages": [],
+                    "codes": ["WAITING"],
+                }
+                result = self.run_handoff(handoff, phase, "waiting")
+                self.assertEqual(0, result.returncode, result.stderr)
+                self.assertEqual(handoff, json.loads(result.stdout))
+
+    def test_waiting_handoff_rejects_missing_or_invalid_blocker(self):
+        handoff = self.handoff(
+            from_phase="authority_resolution",
+            status="waiting",
+            blocker="Aguardando bootstrap",
+            codes=["WAITING"],
+        )
+        for blocker in (None, "", "  ", 42, []):
+            with self.subTest(blocker=blocker):
+                invalid = {**handoff, "blocker": blocker}
+                if blocker is None:
+                    del invalid["blocker"]
+                result = self.run_handoff(invalid, "authority_resolution", "waiting")
+                self.assertEqual(1, result.returncode)
+                self.assertIn(
+                    "handoff keys mismatch" if blocker is None else "blocker must be a non-empty string",
+                    result.stderr,
+                )
+
+    def test_waiting_handoff_preserves_messages_codes_and_phase_rules(self):
+        handoff = self.handoff(
+            from_phase="authority_resolution",
+            status="waiting",
+            blocker="Aguardando bootstrap",
+            codes=["WAITING"],
+        )
+        cases = (
+            ({"messages": ["request_id=1"]}, "waiting handoff messages must be empty", "authority_resolution"),
+            ({"codes": []}, "waiting handoff code mismatch", "authority_resolution"),
+            ({"codes": ["WAITING", "OTHER"]}, "waiting handoff code mismatch", "authority_resolution"),
+            ({"from_phase": "system_baseline"}, "phase cannot wait", "system_baseline"),
+        )
+        for fields, expected_error, phase in cases:
+            with self.subTest(fields=fields):
+                result = self.run_handoff({**handoff, **fields}, phase, "waiting")
+                self.assertEqual(1, result.returncode)
+                self.assertIn(expected_error, result.stderr)
+
     def test_contract_file(self):
         contract = json.loads(CONTRACT.read_text(encoding="utf-8"))
         self.assertEqual(1, contract["contract_version"])
         self.assertEqual("system_analysis", contract["track_id"])
         self.assertEqual(PERMANENT_PATHS, contract["permanent_paths"])
         self.assertEqual(5, len(contract["negative_cases"]))
+        self.assertEqual(["blocker"], contract["waiting_required_fields"])
 
     def test_self_test(self):
         result = self.run_tool("self-test")
