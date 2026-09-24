@@ -15,7 +15,10 @@ cleanup() {
 }
 trap cleanup EXIT
 
-expected_output=$'ARCH_REFACTOR\nARCH_REFACTOR_ONBOARD\nadversarial_review\nbug\nbug_ONBOARD\nexternal_review\nfeature\nfeature_dynamic\nfeedback_review\npatch\nrepo_onboarding\nrepo_onboarding_refresh\nspike\nstandard\nsystem_analysis\ntrack_creator'
+python3 tracks/domain_analysis/tools/contract_tool.py self-test >/dev/null
+python3 -m unittest tracks/domain_analysis/tests/test_contract_tool.py
+
+expected_output=$'ARCH_REFACTOR\nARCH_REFACTOR_ONBOARD\nadversarial_review\nbug\nbug_ONBOARD\ndomain_analysis\nexternal_review\nfeature\nfeature_dynamic\nfeedback_review\npatch\nrepo_onboarding\nrepo_onboarding_refresh\nspike\nstandard\nsystem_analysis\ntrack_creator'
 actual_output="$(./scripts/eaw tracks)"
 [[ "$actual_output" == "$expected_output" ]] || fail "unexpected output for current repository"
 

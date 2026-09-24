@@ -1,0 +1,36 @@
+{
+  "contract_version": 1,
+  "track_id": "domain_analysis",
+  "handoff_statuses": ["completed", "waiting"],
+  "waiting_required_fields": ["blocker"],
+  "waiting_code": "WAITING",
+  "waiting_phases": ["source_inventory", "approval_gate", "publication"],
+  "permanent_paths": [
+    "docs/domain/domain-analysis.md",
+    "docs/domain/domain-analysis.manifest.json",
+    "docs/domain/domain-capabilities.yaml",
+    "docs/domain/domain-glossary.yaml"
+  ],
+  "digest": {
+    "algorithm": "sha256",
+    "case": "lowercase",
+    "ordering": "destination_lexicographic",
+    "entry_encoding": "destination + NUL + hash + LF"
+  },
+  "external_artifacts": [
+    "approval/approval_record.json",
+    "publication/publication_result.json"
+  ],
+  "negative_cases": [
+    "candidate_changed_after_approval",
+    "request_id_mismatch",
+    "base_revision_mismatch",
+    "mutable_or_missing_revision",
+    "unauthorized_destination",
+    "digest_mismatch",
+    "invalid_handoff",
+    "manifest_mismatch",
+    "file_hash_mismatch"
+  ],
+  "proof_limits": ["local", "sequential"]
+}
