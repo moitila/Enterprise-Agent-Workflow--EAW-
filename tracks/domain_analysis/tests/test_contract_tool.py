@@ -54,10 +54,30 @@ class ContractToolTests(unittest.TestCase):
             right_path = self.write(directory, "right.json", right)
             return self.run_tool(command, left_path, right_path)
 
+    def semantic_files(self, directory, *, narrative=None, concepts=None, capabilities=None, applicable=None):
+        if narrative is None:
+            narrative = [{"concept_id": "concept.alpha", "type": "entity"}]
+        if concepts is None:
+            concepts = [{"concept_id": "concept.alpha", "type": "entity", "term": "Alpha",
+                         "definition": "Synthetic concept", "source_id": "source.synthetic",
+                         "certainty": "confirmed", "canonicalization": {"status": "canonical"}}]
+        if capabilities is None:
+            capabilities = [{"capability_id": "cap.alpha", "concept_ids": ["concept.alpha"]}]
+        markdown = Path(directory) / "model.md"
+        markdown.write_text("\n".join(f'<!-- concept: {json.dumps(item, separators=(",", ":"))} -->' for item in narrative), encoding="utf-8")
+        glossary = self.write(directory, "glossary.yaml", {"contract_version": 1, "concepts": concepts})
+        capability_path = self.write(directory, "capabilities.yaml", {"contract_version": 1, "capabilities": capabilities,
+                                                                        "applicable_concept_ids": applicable or ["concept.alpha"]})
+        return markdown, glossary, capability_path
+
     def test_contract_and_self_test(self):
         self.assertEqual("domain_analysis", self.contract["track_id"])
         self.assertEqual(["source_inventory", "approval_gate", "publication"], self.contract["waiting_phases"])
         self.assertEqual(4, len(self.paths))
+        self.assertEqual(self.contract["authoritative_consumer_track_ids"],
+                         [item["track_id"] for item in self.contract["authoritative_consumers"]])
+        self.assertTrue(all(item["authoritative"] and not item["installed"]
+                            for item in self.contract["authoritative_consumers"]))
         result = self.run_tool("self-test")
         self.assertEqual(0, result.returncode, result.stderr)
         self.assertTrue(json.loads(result.stdout)["valid"])
@@ -75,6 +95,72 @@ class ContractToolTests(unittest.TestCase):
         for result in results:
             self.assertEqual(0, result.returncode, result.stderr)
             self.assertTrue(json.loads(result.stdout)["valid"])
+
+    def test_semantic_parity_and_candidate_preservation(self):
+        candidate, *_ = self.fixtures()
+        with tempfile.TemporaryDirectory() as directory:
+            semantic = self.semantic_files(directory)
+            result = self.run_tool("semantic", *semantic)
+            self.assertEqual(0, result.returncode, result.stderr)
+            payload = json.loads(result.stdout)
+            self.assertTrue(payload["valid"])
+            candidate_path = self.write(directory, "candidate.json", candidate)
+            result = self.run_tool("candidate", candidate_path, *semantic)
+            self.assertEqual(0, result.returncode, result.stderr)
+            self.assertTrue(json.loads(result.stdout)["semantic_validation"]["valid"])
+
+    def test_semantic_rejections_are_structured(self):
+        base = {"concept_id": "concept.alpha", "type": "entity", "term": "Alpha",
+                "definition": "Synthetic", "source_id": "source.synthetic", "certainty": "confirmed",
+                "canonicalization": {"status": "canonical"}}
+        cases = [
+            ([{"concept_id": "concept.missing", "type": "entity"}], [base], None, "narrative_without_glossary"),
+            ([], [base], None, "orphan_glossary_concept"),
+            ([{"concept_id": "concept.alpha", "type": "entity"}] * 2, [base], None, "duplicate_concept_id"),
+            ([{"concept_id": "concept.alpha", "type": "value_object"}], [base], None, "concept_type_mismatch"),
+            ([{"concept_id": "concept.alpha", "type": "entity"}], [{**base, "canonicalization": {"status": "hypothesis"}}], None, "missing_justification"),
+            ([{"concept_id": "concept.alpha", "type": "entity"}], [base], [{"capability_id": "cap", "concept_ids": ["concept.unknown"]}], "unknown_capability_concept"),
+            ([{"concept_id": "concept.alpha", "type": "entity"}], [base], [{"capability_id": "cap", "concept_ids": []}], "missing_applicable_coverage"),
+        ]
+        for narrative, concepts, capabilities, code in cases:
+            with self.subTest(code=code), tempfile.TemporaryDirectory() as directory:
+                paths = self.semantic_files(directory, narrative=narrative, concepts=concepts,
+                                            capabilities=capabilities, applicable=["concept.alpha"])
+                result = self.run_tool("semantic", *paths)
+                self.assertEqual(1, result.returncode, result.stderr)
+                payload = json.loads(result.stdout)
+                self.assertFalse(payload["valid"])
+                self.assertIn(code, {item["code"] for item in payload["errors"]})
+
+    def test_manifest_future_permission_and_installed_state_are_separate(self):
+        with tempfile.TemporaryDirectory() as directory:
+            manifest = self.write(directory, "manifest.yaml", {"authoritative_consumers": [
+                {"track_id": track_id, "authoritative": True}
+                for track_id in self.contract["authoritative_consumer_track_ids"]],
+                "informational_categories": [{"category_id": "reporting", "authoritative": False}]})
+            registry = self.write(directory, "registry.yaml", {"tracks": [{"track_id": "domain_analysis", "status": "installed"}]})
+            result = self.run_tool("manifest", manifest, registry)
+        self.assertEqual(0, result.returncode, result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertTrue(payload["valid"])
+        self.assertTrue(all(item["contractually_allowed"] and not item["installed"] for item in payload["consumer_installation"]))
+
+    def test_manifest_rejects_free_ids_and_category_routing(self):
+        cases = [
+            ({"authoritative_consumers": [{"track_id": "free_name", "authoritative": True}], "informational_categories": []}, "consumer_not_allowed"),
+            ({"authoritative_consumers": [{"track_id": "business_rules_analysis", "authoritative": False}], "informational_categories": []}, "consumer_not_authoritative"),
+            ({"authoritative_consumers": [], "informational_categories": [{"category_id": "reporting"}]}, "category_not_informational"),
+            ({"authoritative_consumers": [], "informational_categories": [{"category_id": "reporting", "authoritative": False, "route": "free"}]}, "category_routing_forbidden"),
+        ]
+        for manifest_value, code in cases:
+            with self.subTest(code=code), tempfile.TemporaryDirectory() as directory:
+                manifest = self.write(directory, "manifest.yaml", manifest_value)
+                registry = self.write(directory, "registry.yaml", {"tracks": []})
+                result = self.run_tool("manifest", manifest, registry)
+                self.assertEqual(1, result.returncode, result.stderr)
+                payload = json.loads(result.stdout)
+                self.assertFalse(payload["valid"])
+                self.assertIn(code, {item["code"] for item in payload["errors"]})
 
     def test_yaml_candidate_uses_parser(self):
         candidate, *_ = self.fixtures()

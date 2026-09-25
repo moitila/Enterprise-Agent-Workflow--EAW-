@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 import sys
 from pathlib import Path
 from typing import Any, Callable
@@ -58,6 +59,165 @@ def require_string(value: Any, label: str) -> str:
 def require_version(value: dict[str, Any]) -> None:
     if value.get("contract_version") != 1:
         raise ContractError("contract version mismatch")
+
+
+def error(code: str, artifact: str, message: str, concept_id: str | None = None) -> dict[str, str]:
+    value = {"code": code, "artifact": artifact, "message": message}
+    if concept_id is not None:
+        value["concept_id"] = concept_id
+    return value
+
+
+def parse_narrative(path: Path) -> list[dict[str, str]]:
+    raw = path.read_text(encoding="utf-8")
+    values = []
+    for match in re.finditer(r"<!--\s*concept:\s*(\{.*?\})\s*-->", raw):
+        try:
+            item = json.loads(match.group(1))
+        except json.JSONDecodeError as exc:
+            raise ContractError(f"invalid concept marker in {path}: {exc}") from exc
+        item = require_object(item, "narrative concept marker")
+        values.append({"concept_id": require_string(item.get("concept_id"), "concept_id"),
+                       "type": require_string(item.get("type"), "type")})
+    return values
+
+
+def parse_glossary(path: Path) -> list[dict[str, Any]]:
+    document = require_object(load_document(path), "glossary")
+    concepts = document.get("concepts")
+    if not isinstance(concepts, list):
+        raise ContractError("glossary concepts must be an array")
+    return [require_object(item, "glossary concept") for item in concepts]
+
+
+def parse_capabilities(path: Path) -> tuple[list[str], list[str]]:
+    document = require_object(load_document(path), "capabilities")
+    capabilities = document.get("capabilities")
+    if not isinstance(capabilities, list):
+        raise ContractError("capabilities must be an array")
+    referenced = []
+    for item in capabilities:
+        item = require_object(item, "capability")
+        concept_ids = item.get("concept_ids", [])
+        if not isinstance(concept_ids, list) or not all(isinstance(x, str) and x for x in concept_ids):
+            raise ContractError("capability concept_ids must be a string array")
+        referenced.extend(concept_ids)
+    applicable = document.get("applicable_concept_ids", [])
+    if not isinstance(applicable, list) or not all(isinstance(x, str) and x for x in applicable):
+        raise ContractError("applicable_concept_ids must be a string array")
+    return referenced, applicable
+
+
+def duplicates(values: list[str]) -> set[str]:
+    return {value for value in values if values.count(value) > 1}
+
+
+def validate_semantics(markdown_path: Path, glossary_path: Path, capabilities_path: Path,
+                       contract: dict[str, Any]) -> dict[str, Any]:
+    narrative = parse_narrative(markdown_path)
+    glossary = parse_glossary(glossary_path)
+    capability_ids, applicable_ids = parse_capabilities(capabilities_path)
+    errors: list[dict[str, str]] = []
+    narrative_ids = [item["concept_id"] for item in narrative]
+    glossary_ids = [str(item.get("concept_id", "")) for item in glossary]
+    for artifact, values in (("narrative", narrative_ids), ("glossary", glossary_ids)):
+        for concept_id in sorted(duplicates(values)):
+            errors.append(error("duplicate_concept_id", artifact, "concept_id must be unique", concept_id))
+    canonical_types = set(contract["canonical_types"])
+    statuses = set(contract["canonicalization_statuses"])
+    required = set(contract["concept_required_fields"])
+    glossary_types: dict[str, str] = {}
+    canonical_glossary_ids = []
+    for item in glossary:
+        concept_id = str(item.get("concept_id", ""))
+        missing = sorted(required - set(item))
+        if missing:
+            errors.append(error("missing_concept_fields", "glossary", f"missing fields: {','.join(missing)}", concept_id or None))
+        concept_type = item.get("type")
+        if concept_type not in canonical_types:
+            errors.append(error("invalid_concept_type", "glossary", "type is not canonical", concept_id or None))
+        canonicalization = item.get("canonicalization")
+        if not isinstance(canonicalization, dict) or canonicalization.get("status") not in statuses:
+            errors.append(error("invalid_canonicalization", "glossary", "canonicalization status is required", concept_id or None))
+            continue
+        status = canonicalization["status"]
+        if status != "canonical" and not isinstance(canonicalization.get("justification"), str):
+            errors.append(error("missing_justification", "glossary", "non-canonical concept requires justification", concept_id or None))
+        elif status != "canonical" and not canonicalization["justification"].strip():
+            errors.append(error("missing_justification", "glossary", "non-canonical concept requires justification", concept_id or None))
+        if status == "canonical" and concept_id:
+            canonical_glossary_ids.append(concept_id)
+            glossary_types[concept_id] = str(concept_type)
+    narrative_types = {item["concept_id"]: item["type"] for item in narrative}
+    narrative_set, glossary_set = set(narrative_ids), set(canonical_glossary_ids)
+    for concept_id in sorted(narrative_set - glossary_set):
+        errors.append(error("narrative_without_glossary", "narrative", "canonical narrative concept is absent from glossary", concept_id))
+    for concept_id in sorted(glossary_set - narrative_set):
+        errors.append(error("orphan_glossary_concept", "glossary", "canonical glossary concept is absent from narrative", concept_id))
+    for concept_id in sorted(narrative_set & glossary_set):
+        if narrative_types[concept_id] != glossary_types[concept_id]:
+            errors.append(error("concept_type_mismatch", "narrative", "narrative and glossary types differ", concept_id))
+    for concept_id in sorted(set(capability_ids) - glossary_set):
+        errors.append(error("unknown_capability_concept", "capabilities", "capability references an unknown canonical concept", concept_id))
+    for concept_id in sorted(set(applicable_ids) - set(capability_ids)):
+        errors.append(error("missing_applicable_coverage", "capabilities", "applicable concept is not referenced by a capability", concept_id))
+    errors.sort(key=lambda item: (item["code"], item["artifact"], item.get("concept_id", ""), item["message"]))
+    checks = {
+        "unique_ids": not any(x["code"] == "duplicate_concept_id" for x in errors),
+        "id_parity": narrative_set == glossary_set,
+        "type_parity": not any(x["code"] == "concept_type_mismatch" for x in errors),
+        "referential_integrity": set(capability_ids) <= glossary_set,
+        "applicable_coverage": set(applicable_ids) <= set(capability_ids),
+        "non_canonical_qualification": not any(x["code"] in {"invalid_canonicalization", "missing_justification"} for x in errors),
+    }
+    return {"contract_version": 1, "valid": not errors and all(checks.values()), "checks": checks,
+            "narrative_canonical_ids": sorted(narrative_set), "glossary_canonical_ids": sorted(glossary_set),
+            "capability_concept_ids": sorted(set(capability_ids)), "errors": errors}
+
+
+def installed_track_ids(path: Path) -> set[str]:
+    document = require_object(load_document(path), "track registry")
+    tracks = document.get("tracks")
+    if not isinstance(tracks, list):
+        raise ContractError("track registry tracks must be an array")
+    return {str(item.get("track_id")) for item in tracks if isinstance(item, dict) and item.get("status") == "installed"}
+
+
+def validate_manifest(value: Any, registry_path: Path, contract: dict[str, Any]) -> dict[str, Any]:
+    manifest = require_object(value, "downstream manifest")
+    consumers = manifest.get("authoritative_consumers")
+    categories = manifest.get("informational_categories")
+    if not isinstance(consumers, list) or not isinstance(categories, list):
+        raise ContractError("manifest consumer/category lists are required")
+    allowed = set(contract["authoritative_consumer_track_ids"])
+    installed = installed_track_ids(registry_path)
+    errors = []
+    states = []
+    for item in consumers:
+        item = require_object(item, "authoritative consumer")
+        track_id = str(item.get("track_id", ""))
+        if item.get("authoritative") is not True:
+            errors.append(error("consumer_not_authoritative", "downstream_manifest", "consumer requires authoritative true", track_id or None))
+        if track_id not in allowed:
+            errors.append(error("consumer_not_allowed", "downstream_manifest", "track_id is not contractually allowed", track_id or None))
+        states.append({"track_id": track_id, "contractually_allowed": track_id in allowed, "installed": track_id in installed})
+    forbidden = set(contract["consumer_contract"]["informational_categories"]["forbidden_fields"])
+    for item in categories:
+        item = require_object(item, "informational category")
+        category_id = str(item.get("category_id", ""))
+        if not category_id:
+            errors.append(error("missing_category_id", "downstream_manifest", "category_id is required"))
+        if item.get("authoritative") is not False:
+            errors.append(error("category_not_informational", "downstream_manifest", "category requires authoritative false", category_id or None))
+        for field in sorted(forbidden & set(item)):
+            errors.append(error("category_routing_forbidden", "downstream_manifest", f"informational category forbids {field}", category_id or None))
+    errors.sort(key=lambda item: (item["code"], item["artifact"], item.get("concept_id", ""), item["message"]))
+    checks = {"consumer_membership": not any(x["code"] == "consumer_not_allowed" for x in errors),
+              "typed_separation": not any(x["code"] in {"consumer_not_authoritative", "category_not_informational", "missing_category_id"} for x in errors),
+              "no_informational_routing": not any(x["code"] == "category_routing_forbidden" for x in errors)}
+    return {"contract_version": 1, "valid": not errors, "checks": checks,
+            "permission_kind": contract["consumer_contract"]["permission_kind"],
+            "consumer_installation": sorted(states, key=lambda item: item["track_id"]), "errors": errors}
 
 
 def is_sha256(value: Any) -> bool:
@@ -116,7 +276,7 @@ def validate_handoff(value: Any, phase: str, status: str, contract: dict[str, An
     return handoff
 
 
-def validate_candidate(value: Any, contract: dict[str, Any]) -> dict[str, Any]:
+def validate_candidate(value: Any, contract: dict[str, Any], semantic_paths: tuple[Path, Path, Path] | None = None) -> dict[str, Any]:
     candidate = require_object(value, "candidate")
     require_version(candidate)
     repo_key = require_string(candidate.get("repo_key"), "repo_key")
@@ -127,8 +287,14 @@ def validate_candidate(value: Any, contract: dict[str, Any]) -> dict[str, Any]:
     calculated = aggregate_digest(files)
     if candidate.get("candidate_digest") != calculated:
         raise ContractError("candidate digest mismatch")
+    semantic = None
+    if semantic_paths is not None:
+        semantic = validate_semantics(*semantic_paths, contract)
+        if not semantic["valid"]:
+            raise ContractError("candidate semantic validation failed")
     return {"contract_version": 1, "valid": True, "repo_key": repo_key,
-            "base_revision": revision, "files": files, "candidate_digest": calculated, "errors": []}
+            "base_revision": revision, "files": files, "candidate_digest": calculated,
+            "semantic_validation": semantic, "errors": []}
 
 
 def validate_approval(request_value: Any, record_value: Any | None, contract: dict[str, Any]) -> dict[str, Any]:
@@ -248,6 +414,9 @@ def build_parser() -> argparse.ArgumentParser:
     commands.add_parser("self-test")
     handoff = commands.add_parser("handoff"); handoff.add_argument("file", type=Path); handoff.add_argument("phase"); handoff.add_argument("status")
     candidate = commands.add_parser("candidate"); candidate.add_argument("file", type=Path)
+    candidate.add_argument("semantic_files", nargs="*", type=Path)
+    semantic = commands.add_parser("semantic"); semantic.add_argument("markdown", type=Path); semantic.add_argument("glossary", type=Path); semantic.add_argument("capabilities", type=Path)
+    manifest = commands.add_parser("manifest"); manifest.add_argument("file", type=Path); manifest.add_argument("registry", type=Path)
     approval = commands.add_parser("approval"); approval.add_argument("request", type=Path); approval.add_argument("record")
     publication = commands.add_parser("publication"); publication.add_argument("request", type=Path); publication.add_argument("result")
     consumption = commands.add_parser("consumption"); consumption.add_argument("file", type=Path)
@@ -260,11 +429,20 @@ def main(argv: list[str] | None = None) -> int:
         contract = load_contract()
         if args.command == "self-test": result = run_self_test(contract)
         elif args.command == "handoff": result = validate_handoff(load_document(args.file, compact=True), args.phase, args.status, contract)
-        elif args.command == "candidate": result = validate_candidate(load_document(args.file), contract)
+        elif args.command == "candidate":
+            if len(args.semantic_files) not in (0, 3):
+                raise ContractError("candidate requires zero or three semantic files")
+            semantic_paths = tuple(args.semantic_files) if args.semantic_files else None
+            result = validate_candidate(load_document(args.file), contract, semantic_paths)
+        elif args.command == "semantic": result = validate_semantics(args.markdown, args.glossary, args.capabilities, contract)
+        elif args.command == "manifest": result = validate_manifest(load_document(args.file), args.registry, contract)
         elif args.command == "approval": result = validate_approval(load_document(args.request), None if args.record == "-" else load_document(Path(args.record)), contract)
         elif args.command == "publication": result = validate_publication(load_document(args.request), None if args.result == "-" else load_document(Path(args.result)), contract)
         else: result = validate_consumption(load_document(args.file), contract)
-        return emit(result)
+        emit(result)
+        if args.command in {"semantic", "manifest"} and not result["valid"]:
+            return 1
+        return 0
     except ContractError as exc:
         print(str(exc), file=sys.stderr)
         return 1

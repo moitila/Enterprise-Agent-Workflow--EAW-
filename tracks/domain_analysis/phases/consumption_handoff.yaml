@@ -6,7 +6,7 @@ phase:
   description: Re-read the publication and issue a verifiable downstream contract.
   skills: []
   prompt:
-    active: 2
+    active: 3
     path: templates/prompts/domain_analysis/consumption_handoff/prompt_v<active>.md
   outputs:
     create_directories:

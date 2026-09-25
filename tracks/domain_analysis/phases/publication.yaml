@@ -6,7 +6,7 @@ phase:
   description: Request and validate external publication of the approved package.
   skills: []
   prompt:
-    active: 2
+    active: 3
     path: templates/prompts/domain_analysis/publication/prompt_v<active>.md
   outputs:
     create_directories:

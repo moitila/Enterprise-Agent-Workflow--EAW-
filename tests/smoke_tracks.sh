@@ -17,6 +17,12 @@ trap cleanup EXIT
 
 python3 tracks/domain_analysis/tools/contract_tool.py self-test >/dev/null
 python3 -m unittest tracks/domain_analysis/tests/test_contract_tool.py
+python3 -m json.tool tracks/domain_analysis/contracts/contract_v1.json >/dev/null
+for phase in source_inventory domain_model capability_map candidate_freeze approval_gate publication consumption_handoff; do
+	[[ "$(cat "templates/prompts/domain_analysis/$phase/ACTIVE")" == "3" ]] || fail "$phase ACTIVE must be 3"
+	[[ -s "templates/prompts/domain_analysis/$phase/prompt_v3.md" ]] || fail "$phase prompt_v3.md missing"
+	[[ -s "templates/prompts/domain_analysis/$phase/prompt_v3.meta" ]] || fail "$phase prompt_v3.meta missing"
+done
 
 expected_output=$'ARCH_REFACTOR\nARCH_REFACTOR_ONBOARD\nadversarial_review\nbug\nbug_ONBOARD\ndomain_analysis\nexternal_review\nfeature\nfeature_dynamic\nfeedback_review\npatch\nrepo_onboarding\nrepo_onboarding_refresh\nspike\nstandard\nsystem_analysis\ntrack_creator'
 actual_output="$(./scripts/eaw tracks)"

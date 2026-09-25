@@ -6,7 +6,7 @@ phase:
   description: Extract evidence-linked language, actors, concepts, relations and boundaries.
   skills: []
   prompt:
-    active: 2
+    active: 3
     path: templates/prompts/domain_analysis/domain_model/prompt_v<active>.md
   outputs:
     create_directories:

@@ -21,6 +21,55 @@
     "approval/approval_record.json",
     "publication/publication_result.json"
   ],
+  "canonical_types": [
+    "domain_area",
+    "bounded_context",
+    "entity",
+    "value_object",
+    "aggregate_candidate",
+    "domain_invariant"
+  ],
+  "canonicalization_statuses": ["canonical", "hypothesis", "candidate", "non_canonical"],
+  "concept_required_fields": [
+    "concept_id",
+    "type",
+    "term",
+    "definition",
+    "source_id",
+    "certainty",
+    "canonicalization"
+  ],
+  "semantic_checks": [
+    "unique_ids",
+    "id_parity",
+    "type_parity",
+    "referential_integrity",
+    "applicable_coverage",
+    "non_canonical_qualification"
+  ],
+  "authoritative_consumer_track_ids": [
+    "business_rules_analysis",
+    "data_model_analysis",
+    "backend_architecture"
+  ],
+  "authoritative_consumers": [
+    {"track_id": "business_rules_analysis", "authoritative": true, "installed": false},
+    {"track_id": "data_model_analysis", "authoritative": true, "installed": false},
+    {"track_id": "backend_architecture", "authoritative": true, "installed": false}
+  ],
+  "consumer_contract": {
+    "permission_kind": "future_contract",
+    "installation_source": "tracks/tracks.yaml",
+    "authoritative_consumers": {
+      "required_fields": ["track_id", "authoritative"],
+      "authoritative": true
+    },
+    "informational_categories": {
+      "required_fields": ["category_id", "authoritative"],
+      "authoritative": false,
+      "forbidden_fields": ["track_id", "target", "route", "workflow"]
+    }
+  },
   "negative_cases": [
     "candidate_changed_after_approval",
     "request_id_mismatch",
