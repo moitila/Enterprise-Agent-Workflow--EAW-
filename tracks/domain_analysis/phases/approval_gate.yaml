@@ -3,10 +3,10 @@ config_version: 1
 phase:
   id: approval_gate
   name: Approval Gate
-  description: Request and validate external approval of the frozen candidate.
+  description: Request and validate external approval of the frozen five-document candidate, including source coverage identity.
   skills: []
   prompt:
-    active: 3
+    active: 4
     path: templates/prompts/domain_analysis/approval_gate/prompt_v<active>.md
   outputs:
     create_directories:

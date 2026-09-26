@@ -6,7 +6,7 @@ phase:
   description: Relate goals, actors and conceptual capabilities with evidence.
   skills: []
   prompt:
-    active: 3
+    active: 4
     path: templates/prompts/domain_analysis/capability_map/prompt_v<active>.md
   outputs:
     create_directories:

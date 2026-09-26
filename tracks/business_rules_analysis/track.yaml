@@ -1,0 +1,79 @@
+config_version: 1
+
+track:
+  id: business_rules_analysis
+  name: Business Rules Analysis
+  description: >
+    Consume permanent system_analysis and domain_analysis publications together
+    and produce a traceable, versioned business-rules package.
+  initial_phase: source_inventory
+  final_phase: consumption_handoff
+
+  initial_outputs:
+    create_directories:
+      - ingest
+      - investigations
+      - analysis
+      - candidate
+      - approval
+      - publication
+      - consumption
+
+  phases:
+    - source_inventory
+    - rule_model
+    - rule_relationships
+    - consistency_validation
+    - candidate_freeze
+    - approval_gate
+    - publication
+    - consumption_handoff
+
+  transitions:
+    source_inventory:
+      next: rule_model
+      waiting_when:
+        - WAITING
+      contract:
+        emit_handoff: true
+        consume_previous: true
+    rule_model:
+      next: rule_relationships
+      contract:
+        emit_handoff: true
+        consume_previous: true
+    rule_relationships:
+      next: consistency_validation
+      contract:
+        emit_handoff: true
+        consume_previous: true
+    consistency_validation:
+      next: candidate_freeze
+      contract:
+        emit_handoff: true
+        consume_previous: true
+    candidate_freeze:
+      next: approval_gate
+      contract:
+        emit_handoff: true
+        consume_previous: true
+    approval_gate:
+      next: publication
+      waiting_when:
+        - WAITING
+      contract:
+        emit_handoff: true
+        consume_previous: true
+    publication:
+      next: consumption_handoff
+      waiting_when:
+        - WAITING
+      contract:
+        emit_handoff: true
+        consume_previous: true
+
+  rules:
+    one_prompt_per_phase: true
+    generated_artifacts_of_each_phase_must_be_non_empty: true
+    authority_must_be_explicit: true
+    upstream_status_must_be_preserved: true

@@ -9,7 +9,8 @@
     "docs/domain/domain-analysis.md",
     "docs/domain/domain-analysis.manifest.json",
     "docs/domain/domain-capabilities.yaml",
-    "docs/domain/domain-glossary.yaml"
+    "docs/domain/domain-glossary.yaml",
+    "docs/domain/domain-analysis-coverage.yaml"
   ],
   "digest": {
     "algorithm": "sha256",
@@ -47,6 +48,12 @@
     "applicable_coverage",
     "non_canonical_qualification"
   ],
+  "coverage_dispositions": ["CANONICAL", "CANDIDATE", "HYPOTHESIS", "NON_CANONICAL", "DEFERRED", "OUT_OF_SCOPE", "CONFLICT", "TBD"],
+  "coverage_required_fields": ["candidate_id", "observed_term", "candidate_category", "source_id", "locator", "evidence", "qualification", "upstream_status"],
+  "coverage_disposition_required_fields": ["candidate_id", "disposition", "upstream_status"],
+  "coverage_justification_required": ["NON_CANONICAL", "DEFERRED", "OUT_OF_SCOPE", "CONFLICT", "TBD"],
+  "coverage_checks": ["unique_candidate_ids", "disposition_parity", "valid_dispositions", "evidence_locators", "justified_noncanonical", "deferred_destination", "canonical_model_and_glossary", "no_silent_disappearance", "upstream_authority_preserved"],
+  "upstream_authority_statuses": ["PROPOSED", "TBD", "SIMULATED", "OUT_OF_SCOPE", "SUPERSEDED"],
   "authoritative_consumer_track_ids": [
     "business_rules_analysis",
     "data_model_analysis",

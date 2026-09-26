@@ -6,7 +6,7 @@ phase:
   description: Extract evidence-linked language, actors, concepts, relations and boundaries.
   skills: []
   prompt:
-    active: 3
+    active: 4
     path: templates/prompts/domain_analysis/domain_model/prompt_v<active>.md
   outputs:
     create_directories:
@@ -16,6 +16,7 @@ phase:
       - analysis/10_domain_model.md
       - analysis/11_domain_glossary.yaml
       - analysis/12_domain_questions.md
+      - analysis/13_coverage_disposition.yaml
       - investigations/20_handoff.json
     prompts:
       - domain_model
@@ -31,6 +32,8 @@ phase:
       - path: analysis/11_domain_glossary.yaml
         validation_mode: blocking
       - path: analysis/12_domain_questions.md
+        validation_mode: blocking
+      - path: analysis/13_coverage_disposition.yaml
         validation_mode: blocking
       - path: investigations/20_handoff.json
         validation_mode: blocking

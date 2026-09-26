@@ -175,6 +175,107 @@ def validate_semantics(markdown_path: Path, glossary_path: Path, capabilities_pa
             "capability_concept_ids": sorted(set(capability_ids)), "errors": errors}
 
 
+def validate_coverage(ledger_path: Path, dispositions_path: Path, markdown_path: Path,
+                      glossary_path: Path, contract: dict[str, Any],
+                      snapshot_path: Path | None = None) -> dict[str, Any]:
+    ledger_doc = require_object(load_document(ledger_path), "coverage ledger")
+    disposition_doc = require_object(load_document(dispositions_path), "coverage dispositions")
+    candidates = ledger_doc.get("candidates")
+    dispositions = disposition_doc.get("dispositions")
+    if not isinstance(candidates, list) or not isinstance(dispositions, list):
+        raise ContractError("coverage candidates and dispositions must be arrays")
+    required_candidate = set(contract["coverage_required_fields"])
+    required_disposition = set(contract["coverage_disposition_required_fields"])
+    allowed = set(contract["coverage_dispositions"])
+    errors: list[dict[str, str]] = []
+    candidate_ids: list[str] = []
+    disposition_ids: list[str] = []
+    candidate_by_id: dict[str, dict[str, Any]] = {}
+    disposition_by_id: dict[str, dict[str, Any]] = {}
+    for item in candidates:
+        item = require_object(item, "coverage candidate")
+        cid = str(item.get("candidate_id", ""))
+        candidate_ids.append(cid)
+        candidate_by_id.setdefault(cid, item)
+        missing = sorted(required_candidate - set(item))
+        if missing:
+            errors.append(error("missing_candidate_fields", "coverage_ledger", f"missing fields: {','.join(missing)}", cid or None))
+        for field in ("candidate_id", "observed_term", "candidate_category", "source_id", "locator", "evidence", "qualification"):
+            if not isinstance(item.get(field), str) or not item[field].strip():
+                errors.append(error("invalid_candidate_field", "coverage_ledger", f"{field} must be non-empty", cid or None))
+        if "upstream_status" in item and not isinstance(item["upstream_status"], str):
+            errors.append(error("invalid_upstream_status", "coverage_ledger", "upstream_status must be a string", cid or None))
+    for item in dispositions:
+        item = require_object(item, "coverage disposition")
+        cid = str(item.get("candidate_id", ""))
+        disposition_ids.append(cid)
+        disposition_by_id.setdefault(cid, item)
+        if required_disposition - set(item):
+            errors.append(error("missing_disposition_fields", "coverage_dispositions", "candidate_id and disposition are required", cid or None))
+        candidate = candidate_by_id.get(cid)
+        if candidate is not None and item.get("upstream_status") != candidate.get("upstream_status"):
+            errors.append(error("upstream_status_mismatch", "coverage_dispositions", "upstream_status must be preserved exactly", cid or None))
+        status = item.get("disposition")
+        if status not in allowed:
+            errors.append(error("invalid_disposition", "coverage_dispositions", "disposition is not in the closed enum", cid or None))
+            continue
+        if status in contract["coverage_justification_required"] and not (isinstance(item.get("rationale"), str) and item["rationale"].strip()):
+            errors.append(error("missing_disposition_rationale", "coverage_dispositions", "disposition requires rationale", cid or None))
+        if status == "DEFERRED":
+            targets = item.get("deferred_to")
+            if not isinstance(targets, list) or not targets or not all(isinstance(x, str) and x.strip() for x in targets):
+                errors.append(error("missing_deferred_destination", "coverage_dispositions", "DEFERRED requires non-empty deferred_to array", cid or None))
+        if status == "CANONICAL" and not (isinstance(item.get("canonical_concept_id"), str) and item["canonical_concept_id"].strip()):
+            errors.append(error("missing_canonical_reference", "coverage_dispositions", "CANONICAL requires canonical_concept_id", cid or None))
+    for cid in sorted(duplicates(candidate_ids)):
+        errors.append(error("duplicate_candidate_id", "coverage_ledger", "candidate_id must be unique", cid))
+    for cid in sorted(duplicates(disposition_ids)):
+        errors.append(error("duplicate_disposition_id", "coverage_dispositions", "candidate_id must be unique", cid))
+    for cid in sorted(set(candidate_ids) - set(disposition_ids)):
+        errors.append(error("candidate_without_disposition", "coverage_dispositions", "discovered candidate has no disposition", cid))
+    for cid in sorted(set(disposition_ids) - set(candidate_ids)):
+        errors.append(error("orphan_disposition", "coverage_dispositions", "disposition has no discovered candidate", cid))
+    narrative_ids = {item["concept_id"] for item in parse_narrative(markdown_path)}
+    glossary = parse_glossary(glossary_path)
+    canonical_glossary_ids = {str(item.get("concept_id", "")) for item in glossary
+                              if isinstance(item.get("canonicalization"), dict)
+                              and item["canonicalization"].get("status") == "canonical"}
+    for cid, item in sorted(disposition_by_id.items()):
+        if item.get("disposition") == "CANONICAL":
+            concept_id = str(item.get("canonical_concept_id", ""))
+            if concept_id and (concept_id not in narrative_ids or concept_id not in canonical_glossary_ids):
+                errors.append(error("canonical_missing_from_model_or_glossary", "coverage_dispositions", "canonical concept must occur in narrative and canonical glossary", cid))
+            candidate = candidate_by_id.get(cid, {})
+            if candidate.get("upstream_status") in contract["upstream_authority_statuses"]:
+                errors.append(error("upstream_status_promoted", "coverage_dispositions", "authoritative upstream status cannot be promoted to CANONICAL", cid))
+    errors.sort(key=lambda item: (item["code"], item["artifact"], item.get("concept_id", ""), item["message"]))
+    codes = {item["code"] for item in errors}
+    checks = {
+        "unique_candidate_ids": not codes.intersection({"duplicate_candidate_id", "duplicate_disposition_id"}),
+        "disposition_parity": not codes.intersection({"candidate_without_disposition", "orphan_disposition"}),
+        "valid_dispositions": not codes.intersection({"invalid_disposition", "missing_disposition_fields"}),
+        "evidence_locators": not codes.intersection({"missing_candidate_fields", "invalid_candidate_field"}),
+        "justified_noncanonical": "missing_disposition_rationale" not in codes,
+        "deferred_destination": "missing_deferred_destination" not in codes,
+        "canonical_model_and_glossary": not codes.intersection({"missing_canonical_reference", "canonical_missing_from_model_or_glossary"}),
+        "no_silent_disappearance": not codes.intersection({"candidate_without_disposition", "orphan_disposition"}),
+        "upstream_authority_preserved": not codes.intersection({"upstream_status_promoted", "upstream_status_mismatch"}),
+    }
+    normalized = {"contract_version": 1,
+                  "candidates": sorted(candidates, key=lambda x: str(x.get("candidate_id", ""))),
+                  "dispositions": sorted(dispositions, key=lambda x: str(x.get("candidate_id", "")))}
+    if snapshot_path is not None:
+        observed = require_object(load_document(snapshot_path), "coverage snapshot")
+        if observed != normalized:
+            errors.append(error("coverage_snapshot_mismatch", "coverage_snapshot", "snapshot differs from normalized ledger and dispositions"))
+            checks["snapshot_identity"] = False
+        else:
+            checks["snapshot_identity"] = True
+    errors.sort(key=lambda item: (item["code"], item["artifact"], item.get("concept_id", ""), item["message"]))
+    result = {**normalized, "valid": not errors and all(checks.values()), "checks": checks, "errors": errors}
+    return result
+
+
 def installed_track_ids(path: Path) -> set[str]:
     document = require_object(load_document(path), "track registry")
     tracks = document.get("tracks")
@@ -416,6 +517,8 @@ def build_parser() -> argparse.ArgumentParser:
     candidate = commands.add_parser("candidate"); candidate.add_argument("file", type=Path)
     candidate.add_argument("semantic_files", nargs="*", type=Path)
     semantic = commands.add_parser("semantic"); semantic.add_argument("markdown", type=Path); semantic.add_argument("glossary", type=Path); semantic.add_argument("capabilities", type=Path)
+    coverage = commands.add_parser("coverage"); coverage.add_argument("ledger", type=Path); coverage.add_argument("dispositions", type=Path)
+    coverage.add_argument("markdown", type=Path); coverage.add_argument("glossary", type=Path); coverage.add_argument("--snapshot", type=Path)
     manifest = commands.add_parser("manifest"); manifest.add_argument("file", type=Path); manifest.add_argument("registry", type=Path)
     approval = commands.add_parser("approval"); approval.add_argument("request", type=Path); approval.add_argument("record")
     publication = commands.add_parser("publication"); publication.add_argument("request", type=Path); publication.add_argument("result")
@@ -435,12 +538,13 @@ def main(argv: list[str] | None = None) -> int:
             semantic_paths = tuple(args.semantic_files) if args.semantic_files else None
             result = validate_candidate(load_document(args.file), contract, semantic_paths)
         elif args.command == "semantic": result = validate_semantics(args.markdown, args.glossary, args.capabilities, contract)
+        elif args.command == "coverage": result = validate_coverage(args.ledger, args.dispositions, args.markdown, args.glossary, contract, args.snapshot)
         elif args.command == "manifest": result = validate_manifest(load_document(args.file), args.registry, contract)
         elif args.command == "approval": result = validate_approval(load_document(args.request), None if args.record == "-" else load_document(Path(args.record)), contract)
         elif args.command == "publication": result = validate_publication(load_document(args.request), None if args.result == "-" else load_document(Path(args.result)), contract)
         else: result = validate_consumption(load_document(args.file), contract)
         emit(result)
-        if args.command in {"semantic", "manifest"} and not result["valid"]:
+        if args.command in {"semantic", "manifest", "coverage"} and not result["valid"]:
             return 1
         return 0
     except ContractError as exc:

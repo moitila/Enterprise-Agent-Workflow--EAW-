@@ -19,6 +19,7 @@ track:
       - consumption
   phases:
     - source_inventory
+    - source_discovery
     - domain_model
     - capability_map
     - candidate_freeze
@@ -27,9 +28,14 @@ track:
     - consumption_handoff
   transitions:
     source_inventory:
-      next: domain_model
+      next: source_discovery
       waiting_when:
         - WAITING
+      contract:
+        emit_handoff: true
+        consume_previous: true
+    source_discovery:
+      next: domain_model
       contract:
         emit_handoff: true
         consume_previous: true

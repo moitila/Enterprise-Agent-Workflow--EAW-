@@ -1,0 +1,3 @@
+version=v4
+required_substrings=ROLE|OBJECTIVE|INPUT|OUTPUT|OUTPUT_STRUCTURE|READ_SCOPE|WRITE_SCOPE|RULES|FORBIDDEN|FAIL_CONDITIONS|source_id|locator|upstream_status|nao cria conceitos
+forbidden_words=

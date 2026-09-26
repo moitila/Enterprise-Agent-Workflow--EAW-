@@ -1,0 +1,47 @@
+config_version: 1
+
+phase:
+  id: candidate_freeze
+  name: Candidate Freeze
+  description: Freeze the validated package with reproducible hashes and aggregate digest.
+
+  skills: []
+
+  prompt:
+    active: 1
+    path: templates/prompts/business_rules_analysis/candidate_freeze/prompt_v<active>.md
+
+  outputs:
+    create_directories:
+      - candidate
+      - investigations
+    create_artifacts:
+      - candidate/business-rules-analysis.md
+      - candidate/business-rules.yaml
+      - candidate/rule-relationships.yaml
+      - candidate/business-rules-analysis.manifest.json
+      - candidate/candidate_validation.json
+      - investigations/20_handoff.json
+    prompts:
+      - candidate_freeze
+
+  read_sources:
+    - "{{CARD_DIR}}"
+    - "{{CONFIG_SOURCE}}"
+    - "{{RUNTIME_ROOT}}/tracks/business_rules_analysis"
+
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - path: candidate/business-rules-analysis.md
+        validation_mode: blocking
+      - path: candidate/business-rules.yaml
+        validation_mode: blocking
+      - path: candidate/rule-relationships.yaml
+        validation_mode: blocking
+      - path: candidate/business-rules-analysis.manifest.json
+        validation_mode: blocking
+      - path: candidate/candidate_validation.json
+        validation_mode: blocking
+      - path: investigations/20_handoff.json
+        validation_mode: blocking

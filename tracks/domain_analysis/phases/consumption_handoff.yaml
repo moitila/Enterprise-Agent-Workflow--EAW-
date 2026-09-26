@@ -3,10 +3,10 @@ config_version: 1
 phase:
   id: consumption_handoff
   name: Consumption Handoff
-  description: Re-read the publication and issue a verifiable downstream contract.
+  description: Re-read the five-document publication and issue a verifiable downstream contract that preserves source coverage and unresolved items.
   skills: []
   prompt:
-    active: 3
+    active: 4
     path: templates/prompts/domain_analysis/consumption_handoff/prompt_v<active>.md
   outputs:
     create_directories:

@@ -1,0 +1,40 @@
+config_version: 1
+
+phase:
+  id: consumption_handoff
+  name: Consumption Handoff
+  description: Re-read the authoritative publication and emit a verifiable downstream contract.
+
+  skills: []
+
+  prompt:
+    active: 1
+    path: templates/prompts/business_rules_analysis/consumption_handoff/prompt_v<active>.md
+
+  outputs:
+    create_directories:
+      - consumption
+    create_artifacts:
+      - consumption/consumption_receipt.json
+      - consumption/downstream_manifest.yaml
+      - consumption/handoff.md
+      - consumption/validation_report.md
+    prompts:
+      - consumption_handoff
+
+  read_sources:
+    - "{{CARD_DIR}}"
+    - "{{CONFIG_SOURCE}}"
+    - "{{RUNTIME_ROOT}}/tracks/business_rules_analysis"
+
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - path: consumption/consumption_receipt.json
+        validation_mode: blocking
+      - path: consumption/downstream_manifest.yaml
+        validation_mode: blocking
+      - path: consumption/handoff.md
+        validation_mode: blocking
+      - path: consumption/validation_report.md
+        validation_mode: blocking

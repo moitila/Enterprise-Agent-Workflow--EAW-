@@ -3,10 +3,10 @@ config_version: 1
 phase:
   id: publication
   name: Publication
-  description: Request and validate external publication of the approved package.
+  description: Request and validate external publication of the approved five-document package and its coverage snapshot.
   skills: []
   prompt:
-    active: 3
+    active: 4
     path: templates/prompts/domain_analysis/publication/prompt_v<active>.md
   outputs:
     create_directories:

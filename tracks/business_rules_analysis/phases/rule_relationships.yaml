@@ -1,0 +1,41 @@
+config_version: 1
+
+phase:
+  id: rule_relationships
+  name: Rule Relationships
+  description: Model semantic relationships, conflicts, and ambiguities without changing the catalog.
+
+  skills: []
+
+  prompt:
+    active: 1
+    path: templates/prompts/business_rules_analysis/rule_relationships/prompt_v<active>.md
+
+  outputs:
+    create_directories:
+      - analysis
+      - investigations
+    create_artifacts:
+      - analysis/20_rule_relationships.md
+      - analysis/21_rule_graph.yaml
+      - analysis/22_conflicts_ambiguities.md
+      - investigations/20_handoff.json
+    prompts:
+      - rule_relationships
+
+  read_sources:
+    - "{{CARD_DIR}}"
+    - "{{CONFIG_SOURCE}}"
+    - "{{RUNTIME_ROOT}}/tracks/business_rules_analysis"
+
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - path: analysis/20_rule_relationships.md
+        validation_mode: blocking
+      - path: analysis/21_rule_graph.yaml
+        validation_mode: blocking
+      - path: analysis/22_conflicts_ambiguities.md
+        validation_mode: blocking
+      - path: investigations/20_handoff.json
+        validation_mode: blocking

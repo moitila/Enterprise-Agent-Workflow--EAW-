@@ -73,7 +73,7 @@ class ContractToolTests(unittest.TestCase):
     def test_contract_and_self_test(self):
         self.assertEqual("domain_analysis", self.contract["track_id"])
         self.assertEqual(["source_inventory", "approval_gate", "publication"], self.contract["waiting_phases"])
-        self.assertEqual(4, len(self.paths))
+        self.assertEqual(5, len(self.paths))
         self.assertEqual(self.contract["authoritative_consumer_track_ids"],
                          [item["track_id"] for item in self.contract["authoritative_consumers"]])
         self.assertTrue(all(item["authoritative"] and not item["installed"]
@@ -131,6 +131,39 @@ class ContractToolTests(unittest.TestCase):
                 payload = json.loads(result.stdout)
                 self.assertFalse(payload["valid"])
                 self.assertIn(code, {item["code"] for item in payload["errors"]})
+
+    def test_coverage_valid_snapshot_and_negative_cases(self):
+        candidate = {"candidate_id": "candidate.alpha", "observed_term": "Alpha", "candidate_category": "concept",
+                     "source_id": "source.synthetic", "locator": "section 1", "evidence": "Alpha appears",
+                     "qualification": "observed", "upstream_status": "CONFIRMED"}
+        disposition = {"candidate_id": "candidate.alpha", "disposition": "CANONICAL", "canonical_concept_id": "concept.alpha", "upstream_status": "CONFIRMED"}
+        with tempfile.TemporaryDirectory() as directory:
+            semantic = self.semantic_files(directory)
+            ledger = self.write(directory, "ledger.yaml", {"candidates": [candidate]})
+            dispositions = self.write(directory, "dispositions.yaml", {"dispositions": [disposition]})
+            snapshot = self.write(directory, "snapshot.yaml", {"contract_version": 1, "candidates": [candidate], "dispositions": [disposition]})
+            args = ["coverage", ledger, dispositions, semantic[0], semantic[1]]
+            result = self.run_tool(*args, "--snapshot", snapshot)
+            self.assertEqual(0, result.returncode, result.stderr)
+            self.assertTrue(json.loads(result.stdout)["valid"])
+
+        cases = [
+            ([candidate], [], "candidate_without_disposition"),
+            ([candidate], [{**disposition, "canonical_concept_id": "missing"}], "canonical_missing_from_model_or_glossary"),
+            ([candidate], [{"candidate_id": "candidate.alpha", "disposition": "DEFERRED", "rationale": "Later", "upstream_status": "CONFIRMED"}], "missing_deferred_destination"),
+            ([candidate], [{"candidate_id": "candidate.alpha", "disposition": "NON_CANONICAL", "upstream_status": "CONFIRMED"}], "missing_disposition_rationale"),
+            ([{**candidate, "upstream_status": "PROPOSED"}], [disposition], "upstream_status_promoted"),
+            ([candidate, candidate], [disposition], "duplicate_candidate_id"),
+            ([candidate], [{**disposition, "disposition": "UNKNOWN"}], "invalid_disposition"),
+        ]
+        for candidates, disposition_values, code in cases:
+            with self.subTest(code=code), tempfile.TemporaryDirectory() as directory:
+                semantic = self.semantic_files(directory)
+                ledger = self.write(directory, "ledger.yaml", {"candidates": candidates})
+                dispositions = self.write(directory, "dispositions.yaml", {"dispositions": disposition_values})
+                result = self.run_tool("coverage", ledger, dispositions, semantic[0], semantic[1])
+                self.assertEqual(1, result.returncode, result.stderr)
+                self.assertIn(code, {item["code"] for item in json.loads(result.stdout)["errors"]})
 
     def test_manifest_future_permission_and_installed_state_are_separate(self):
         with tempfile.TemporaryDirectory() as directory:

@@ -1,0 +1,33 @@
+config_version: 1
+
+phase:
+  id: source_discovery
+  name: Source Discovery
+  description: Enumerate relevant source candidates with stable identities and locatable evidence before selective consolidation.
+  skills: []
+  prompt:
+    active: 1
+    path: templates/prompts/domain_analysis/source_discovery/prompt_v<active>.md
+  outputs:
+    create_directories:
+      - analysis
+      - investigations
+    create_artifacts:
+      - analysis/03_candidate_coverage.yaml
+      - analysis/04_discovery_coverage_report.md
+      - investigations/20_handoff.json
+    prompts:
+      - source_discovery
+  read_sources:
+    - "{{CARD_DIR}}"
+    - "{{EAW_WORKDIR}}/config/repos.conf"
+    - "{{RUNTIME_ROOT}}/tracks/domain_analysis"
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - path: analysis/03_candidate_coverage.yaml
+        validation_mode: blocking
+      - path: analysis/04_discovery_coverage_report.md
+        validation_mode: blocking
+      - path: investigations/20_handoff.json
+        validation_mode: blocking
