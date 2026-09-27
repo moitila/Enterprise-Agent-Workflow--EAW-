@@ -1,0 +1,3 @@
+# Final domain analysis package
+
+Read source manifests, discovery coverage, domain model, capability map, and critical review. Incorporate only evidence-supported corrections. Preserve each candidate's disposition and upstream status; unexplained absences are defects in the analysis. Produce complete readable documents `analysis/domain-analysis.md`, `analysis/domain-glossary.yaml`, `analysis/domain-capabilities.yaml`, `analysis/domain-analysis-coverage.yaml`, and `analysis/open-questions.md`. Include provenance, evidence, limits, conflicts, and downstream questions. Do not create approval, release, publication, or consumer-registration records. Required output existence is the only phase completion condition; `eaw next` advances the track.

@@ -6,7 +6,7 @@ phase:
   description: Resolve one authority or wait for an explicit correlated decision or bootstrap.
   skills: []
   prompt:
-    active: 1
+    active: 2
     path: templates/prompts/system_analysis/authority_resolution/prompt_v<active>.md
   outputs:
     create_directories:

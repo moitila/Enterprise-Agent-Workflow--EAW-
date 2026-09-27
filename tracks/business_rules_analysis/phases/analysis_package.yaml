@@ -1,0 +1,27 @@
+config_version: 1
+phase:
+  id: analysis_package
+  name: Analysis Package
+  description: Incorporate justified corrections and produce the complete readable business-rules analysis and catalog.
+  skills: []
+  prompt:
+    active: 1
+    path: templates/prompts/business_rules_analysis/analysis_package/prompt_v<active>.md
+  outputs:
+    create_directories:
+      - analysis
+    create_artifacts:
+      - analysis
+      - analysis/business-rules-analysis.md
+      - analysis/business-rules.yaml
+      - analysis/rule-relationships.yaml
+      - analysis/open-questions.md
+    prompts:
+      - analysis_package
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - analysis/business-rules-analysis.md
+      - analysis/business-rules.yaml
+      - analysis/rule-relationships.yaml
+      - analysis/open-questions.md

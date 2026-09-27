@@ -3,12 +3,12 @@ config_version: 1
 phase:
   id: source_inventory
   name: Source Inventory
-  description: Validate permanent system and domain analysis publications together.
+  description: Inventory declared system and domain analyses together, preserving their revisions, provenance, gaps, and upstream status.
 
   skills: []
 
   prompt:
-    active: 1
+    active: 2
     path: templates/prompts/business_rules_analysis/source_inventory/prompt_v<active>.md
 
   outputs:

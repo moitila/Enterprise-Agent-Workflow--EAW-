@@ -3,71 +3,37 @@ config_version: 1
 track:
   id: domain_analysis
   name: Domain Analysis
-  description: >
-    Produce a traceable conceptual domain analysis from an authoritative
-    system publication and explicitly declared additional sources.
+  description: Produce a traceable conceptual domain analysis from declared sources.
   initial_phase: source_inventory
-  final_phase: consumption_handoff
+  final_phase: analysis_package
   initial_outputs:
     create_directories:
       - ingest
       - investigations
       - analysis
-      - candidate
-      - approval
-      - publication
-      - consumption
   phases:
     - source_inventory
     - source_discovery
     - domain_model
     - capability_map
-    - candidate_freeze
-    - approval_gate
-    - publication
-    - consumption_handoff
+    - critical_review
+    - analysis_package
   transitions:
     source_inventory:
       next: source_discovery
-      waiting_when:
-        - WAITING
-      contract:
-        emit_handoff: true
-        consume_previous: true
+      contract: {emit_handoff: true, consume_previous: true}
     source_discovery:
       next: domain_model
-      contract:
-        emit_handoff: true
-        consume_previous: true
+      contract: {emit_handoff: true, consume_previous: true}
     domain_model:
       next: capability_map
-      contract:
-        emit_handoff: true
-        consume_previous: true
+      contract: {emit_handoff: true, consume_previous: true}
     capability_map:
-      next: candidate_freeze
-      contract:
-        emit_handoff: true
-        consume_previous: true
-    candidate_freeze:
-      next: approval_gate
-      contract:
-        emit_handoff: true
-        consume_previous: true
-    approval_gate:
-      next: publication
-      waiting_when:
-        - WAITING
-      contract:
-        emit_handoff: true
-        consume_previous: true
-    publication:
-      next: consumption_handoff
-      waiting_when:
-        - WAITING
-      contract:
-        emit_handoff: true
-        consume_previous: true
+      next: critical_review
+      contract: {emit_handoff: true, consume_previous: true}
+    critical_review:
+      next: analysis_package
+      contract: {emit_handoff: true, consume_previous: true}
   rules:
     one_prompt_per_phase: true
     generated_artifacts_of_each_phase_must_be_non_empty: true

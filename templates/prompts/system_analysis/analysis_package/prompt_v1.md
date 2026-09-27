@@ -1,0 +1,3 @@
+# Final system analysis package
+
+Read the source inventory, all intermediate analyses, and critical review. Incorporate only evidence-supported corrections; preserve disagreement, uncertainty, and unresolved questions explicitly. Produce complete, readable final documents: `analysis/system-analysis.md`, `analysis/repository-topology.md`, `analysis/repositories.yaml`, and `analysis/open-questions.md`. Preserve source references and distinctions between observed fact, interpretation, and recommendation. Do not create approval, release, publication, or consumption records. This phase is complete when its required files exist; progression is controlled by `eaw next`.

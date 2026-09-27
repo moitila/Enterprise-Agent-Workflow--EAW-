@@ -3,10 +3,10 @@ config_version: 1
 phase:
   id: source_inventory
   name: Source Inventory
-  description: Verify upstream publication identity and inventory declared sources with locators, authority status, and coverage limits for the discovery phase.
+  description: Inventory upstream analysis and declared sources with revisions, provenance, gaps, and coverage limits for discovery.
   skills: []
   prompt:
-    active: 4
+    active: 2
     path: templates/prompts/domain_analysis/source_inventory/prompt_v<active>.md
   outputs:
     create_directories:

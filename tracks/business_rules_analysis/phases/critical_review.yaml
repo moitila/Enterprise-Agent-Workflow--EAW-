@@ -1,0 +1,23 @@
+config_version: 1
+phase:
+  id: critical_review
+  name: Critical Review
+  description: Confront rule catalog and relationships with upstream evidence; identify omissions, unsupported inferences, conflicts and unresolved states.
+  skills: []
+  prompt:
+    active: 1
+    path: templates/prompts/business_rules_analysis/critical_review/prompt_v<active>.md
+  outputs:
+    create_directories:
+      - analysis
+      - investigations
+    create_artifacts:
+      - analysis/30_critical_review.md
+      - investigations/20_handoff.json
+    prompts:
+      - critical_review
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - analysis/30_critical_review.md
+      - investigations/20_handoff.json

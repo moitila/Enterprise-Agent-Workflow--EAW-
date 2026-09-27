@@ -1,0 +1,3 @@
+version=v1
+required_substrings=critical review|source|evidence
+forbidden_words=

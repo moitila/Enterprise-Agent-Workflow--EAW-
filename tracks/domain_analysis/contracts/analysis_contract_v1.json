@@ -1,0 +1,6 @@
+{
+  "contract_version": 1,
+  "track_id": "domain_analysis",
+  "semantic_checks": ["unique_concept_ids", "source_traceability", "capability_references"],
+  "coverage_checks": ["unique_candidate_ids", "disposition_parity", "no_silent_disappearance"]
+}

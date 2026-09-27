@@ -6,7 +6,7 @@ phase:
   description: Freeze source identity, availability, provenance, and declared precedence.
   skills: []
   prompt:
-    active: 1
+    active: 2
     path: templates/prompts/system_analysis/source_inventory/prompt_v<active>.md
   outputs:
     create_directories:

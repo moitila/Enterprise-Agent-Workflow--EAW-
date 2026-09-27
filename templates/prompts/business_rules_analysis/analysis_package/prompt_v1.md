@@ -1,0 +1,3 @@
+# Final business-rules analysis package
+
+Read the upstream source inventory, extracted rules, relationships, and critical review. Incorporate only supported corrections; preserve traceability to upstream evidence and retain unresolved status rather than inventing decisions. Produce `analysis/business-rules-analysis.md`, `analysis/business-rules.yaml`, `analysis/rule-relationships.yaml`, and `analysis/open-questions.md` as useful, complete human-readable analysis and structured references. Do not create approval, release, publication, or consumption records. Completion is determined by required outputs and `eaw next`.

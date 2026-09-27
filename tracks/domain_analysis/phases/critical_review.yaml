@@ -1,0 +1,23 @@
+config_version: 1
+phase:
+  id: critical_review
+  name: Critical Review
+  description: Compare declared sources, discovery coverage, domain model and capability map; identify omissions, unsupported inferences and unresolved dispositions.
+  skills: []
+  prompt:
+    active: 1
+    path: templates/prompts/domain_analysis/critical_review/prompt_v<active>.md
+  outputs:
+    create_directories:
+      - analysis
+      - investigations
+    create_artifacts:
+      - analysis/30_critical_review.md
+      - investigations/20_handoff.json
+    prompts:
+      - critical_review
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - analysis/30_critical_review.md
+      - investigations/20_handoff.json

@@ -6,7 +6,7 @@ phase:
   description: Model zero, one, or many repositories without deriving authority from order.
   skills: []
   prompt:
-    active: 1
+    active: 2
     path: templates/prompts/system_analysis/repository_topology/prompt_v<active>.md
   outputs:
     create_directories:

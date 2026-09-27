@@ -1,0 +1,28 @@
+config_version: 1
+phase:
+  id: analysis_package
+  name: Analysis Package
+  description: Incorporate evidence-supported corrections and produce the complete readable domain analysis and coverage package.
+  skills: []
+  prompt:
+    active: 1
+    path: templates/prompts/domain_analysis/analysis_package/prompt_v<active>.md
+  outputs:
+    create_directories:
+      - analysis
+    create_artifacts:
+      - analysis/domain-analysis.md
+      - analysis/domain-glossary.yaml
+      - analysis/domain-capabilities.yaml
+      - analysis/domain-analysis-coverage.yaml
+      - analysis/open-questions.md
+    prompts:
+      - analysis_package
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - analysis/domain-analysis.md
+      - analysis/domain-glossary.yaml
+      - analysis/domain-capabilities.yaml
+      - analysis/domain-analysis-coverage.yaml
+      - analysis/open-questions.md

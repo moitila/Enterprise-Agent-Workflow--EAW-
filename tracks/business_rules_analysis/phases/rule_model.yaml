@@ -8,7 +8,7 @@ phase:
   skills: []
 
   prompt:
-    active: 1
+    active: 2
     path: templates/prompts/business_rules_analysis/rule_model/prompt_v<active>.md
 
   outputs:

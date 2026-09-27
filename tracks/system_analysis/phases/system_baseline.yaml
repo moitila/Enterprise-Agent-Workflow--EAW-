@@ -6,7 +6,7 @@ phase:
   description: Consolidate a traceable system baseline without deciding repository authority.
   skills: []
   prompt:
-    active: 1
+    active: 2
     path: templates/prompts/system_analysis/system_baseline/prompt_v<active>.md
   outputs:
     create_directories:
