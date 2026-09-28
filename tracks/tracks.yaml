@@ -35,3 +35,5 @@ tracks:
     status: installed
   - track_id: business_rules_analysis
     status: installed
+  - track_id: data_model_analysis
+    status: installed

@@ -1,0 +1,25 @@
+config_version: 1
+phase:
+  id: source_inventory
+  name: Source Inventory
+  description: Identify declared upstream materials and complementary sources, their observable identity, authority, availability, and limitations.
+  skills: []
+  prompt:
+    active: 1
+    path: templates/prompts/data_model_analysis/source_inventory/prompt_v<active>.md
+  outputs:
+    create_directories:
+      - analysis
+      - investigations
+    create_artifacts:
+      - analysis/00_source_manifest.yaml
+      - analysis/01_source_gaps.md
+      - investigations/20_handoff.json
+    prompts:
+      - source_inventory
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - analysis/00_source_manifest.yaml
+      - analysis/01_source_gaps.md
+      - investigations/20_handoff.json

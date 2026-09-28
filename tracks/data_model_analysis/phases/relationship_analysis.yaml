@@ -1,0 +1,22 @@
+config_version: 1
+phase:
+  id: relationship_analysis
+  name: Relationship Analysis
+  description: Analyze evidence-supported relationships, roles, cardinalities, dependencies, and temporal links among information objects.
+  skills: []
+  prompt:
+    active: 1
+    path: templates/prompts/data_model_analysis/relationship_analysis/prompt_v<active>.md
+  outputs:
+    create_directories:
+      - investigations
+    create_artifacts:
+      - investigations/20_relationship_analysis.md
+      - investigations/20_handoff.json
+    prompts:
+      - relationship_analysis
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - investigations/20_relationship_analysis.md
+      - investigations/20_handoff.json

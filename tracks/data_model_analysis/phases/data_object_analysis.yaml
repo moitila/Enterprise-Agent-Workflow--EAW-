@@ -1,0 +1,22 @@
+config_version: 1
+phase:
+  id: data_object_analysis
+  name: Data Object Analysis
+  description: Identify and characterize candidate information objects and their evidence-supported properties.
+  skills: []
+  prompt:
+    active: 1
+    path: templates/prompts/data_model_analysis/data_object_analysis/prompt_v<active>.md
+  outputs:
+    create_directories:
+      - investigations
+    create_artifacts:
+      - investigations/10_data_object_analysis.md
+      - investigations/20_handoff.json
+    prompts:
+      - data_object_analysis
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - investigations/10_data_object_analysis.md
+      - investigations/20_handoff.json

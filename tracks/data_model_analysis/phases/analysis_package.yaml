@@ -1,0 +1,28 @@
+config_version: 1
+phase:
+  id: analysis_package
+  name: Analysis Package
+  description: Consolidate the reviewed conceptual and logical analysis with traceable structured artifacts and explicit open questions.
+  skills: []
+  prompt:
+    active: 1
+    path: templates/prompts/data_model_analysis/analysis_package/prompt_v<active>.md
+  outputs:
+    create_directories:
+      - analysis
+    create_artifacts:
+      - analysis/data-model-analysis.md
+      - analysis/data-objects.yaml
+      - analysis/data-relationships.yaml
+      - analysis/data-lifecycles.yaml
+      - analysis/open-questions.md
+    prompts:
+      - analysis_package
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - analysis/data-model-analysis.md
+      - analysis/data-objects.yaml
+      - analysis/data-relationships.yaml
+      - analysis/data-lifecycles.yaml
+      - analysis/open-questions.md

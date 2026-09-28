@@ -1,0 +1,22 @@
+config_version: 1
+phase:
+  id: lifecycle_integrity_analysis
+  name: Lifecycle and Integrity Analysis
+  description: Relate objects to established lifecycles and assess versioning, history, provenance, and integrity requirements.
+  skills: []
+  prompt:
+    active: 1
+    path: templates/prompts/data_model_analysis/lifecycle_integrity_analysis/prompt_v<active>.md
+  outputs:
+    create_directories:
+      - investigations
+    create_artifacts:
+      - investigations/30_lifecycle_integrity_analysis.md
+      - investigations/20_handoff.json
+    prompts:
+      - lifecycle_integrity_analysis
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - investigations/30_lifecycle_integrity_analysis.md
+      - investigations/20_handoff.json

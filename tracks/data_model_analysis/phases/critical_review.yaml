@@ -1,0 +1,22 @@
+config_version: 1
+phase:
+  id: critical_review
+  name: Critical Review
+  description: Challenge model coverage and coherence against declared evidence and identify supported corrections and unresolved issues.
+  skills: []
+  prompt:
+    active: 1
+    path: templates/prompts/data_model_analysis/critical_review/prompt_v<active>.md
+  outputs:
+    create_directories:
+      - investigations
+    create_artifacts:
+      - investigations/40_critical_review.md
+      - investigations/20_handoff.json
+    prompts:
+      - critical_review
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - investigations/40_critical_review.md
+      - investigations/20_handoff.json
