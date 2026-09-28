@@ -33,10 +33,11 @@ RULES
 - Use baseline driver/constraint IDs; distinguish evidenced boundaries from proposals and record rationale and trade-offs.
 - Keep component and dependency identifiers stable and consistent between Markdown and YAML.
 - Describe internal interfaces conceptually only; leave public API contracts and physical persistence design to later or specialized work.
+- Determine the requested technical-resolution level from the card's raw explication and intake. If the card requests technology decisions, this phase may identify technology-relevant boundary consequences and alternatives needed by later decision analysis, but must not select a stack prematurely; final technical decisions belong in runtime/reliability and the final package.
 - Emit the handoff in one shell command line using printf with redirect on that same line. Example: printf '%s\n' '{"from_phase":"component_boundaries","status":"completed","messages":["Component catalog and dependency map recorded."],"codes":[]}' > "{{CARD_DIR}}/investigations/20_handoff.json"
 
 FORBIDDEN
-- Do not assume monoliths, microservices, cloud, queues, databases, languages, frameworks, or patterns without source evidence.
+- Do not assume monoliths, microservices, cloud, queues, databases, languages, frameworks, or patterns from convention or preference. When the card requests technical decisions, compare only evidence-relevant boundary consequences and leave selection to the designated decision phase.
 - Do not define public API schemas, physical database schemas, deployment topology, frontend, AI pipeline, security/privacy controls, or implementation tasks.
 - Do not present a proposed boundary as an established source fact.
 

@@ -4,7 +4,7 @@ ROLE
 - Architecture-baseline analyst. Derive and classify system-level architectural drivers, constraints, qualities, context, assumptions, and success criteria from inventoried evidence.
 
 OBJECTIVE
-- Give later decomposition a traceable, technology-neutral baseline separating explicit requirements and constraints from inference, proposal, conflict, and TBD.
+- Give later decomposition a traceable baseline separating explicit requirements and constraints from inference, proposal, conflict, and TBD. Determine the requested technical-resolution level from the card's raw explication and intake: remain technology-neutral when the card does not request technology decisions; when it does, capture relevant technical requirements, evidence, constraints, and unresolved questions without making premature selections assigned to later phases.
 
 INPUT
 - CARD={{CARD}}; CARD_DIR={{CARD_DIR}}.
@@ -32,7 +32,7 @@ OUTPUT_STRUCTURE
 RULES
 - Trace every driver and constraint to source IDs and distinguish explicit evidence from inference, proposal, conflict, and TBD.
 - Preserve unresolved source authority or conflicting claims; do not settle them by recency or convention.
-- Do not choose a technology, deployment style, component decomposition, or persistence product.
+- Do not make technology choices merely because a technology could fit. If the card explicitly requests technology decisions, identify evidence-backed technical constraints and decision criteria here; reserve comparative selection and rationale for the runtime/reliability and final-package phases unless an upstream decision is already explicit.
 - Emit the handoff in one shell command line using printf with redirect on that same line. Example: printf '%s\n' '{"from_phase":"architecture_baseline","status":"completed","messages":["Baseline, drivers, and open questions recorded."],"codes":[]}' > "{{CARD_DIR}}/investigations/20_handoff.json"
 
 FORBIDDEN

@@ -3,7 +3,7 @@ config_version: 1
 track:
   id: backend_architecture
   name: Backend Architecture Analysis
-  description: Produce a traceable, technology-neutral backend architecture analysis from declared evidence.
+  description: Produce a traceable backend architecture analysis at the technical-resolution level explicitly requested by the card, avoiding unsupported or premature decisions.
   initial_phase: source_inventory
   final_phase: analysis_package
   initial_outputs:

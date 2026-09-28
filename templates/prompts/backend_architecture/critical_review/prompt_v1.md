@@ -21,11 +21,12 @@ OUTPUT
 - Write exactly the two artifacts listed in WRITE_SCOPE.
 
 OUTPUT_STRUCTURE
-- 40_critical_review.md: review method and evidence boundary; substantive findings with stable IDs, affected artifact/element, evidence references, severity/context, reasoning, and recommended correction or explicit unresolved question; cross-cutting omissions/contradictions; coverage of driver-to-decision traceability, responsibility/ownership and coupling, compatibility with rules/lifecycles, consistency/transactions, failure/retry/idempotency/duplication/recovery, integrations/assumptions, observability, alternatives/trade-offs, immediate needs versus future evolution, counter-evidence, and uncertainty.
+- 40_critical_review.md: review method and evidence boundary; substantive findings with stable IDs, affected artifact/element, evidence references, severity/context, reasoning, and recommended correction or explicit unresolved question; cross-cutting omissions/contradictions; coverage of driver-to-decision traceability, responsibility/ownership and coupling, compatibility with rules/lifecycles, consistency/transactions, failure/retry/idempotency/duplication/recovery, integrations/assumptions, observability, alternatives/trade-offs, immediate needs versus future evolution, counter-evidence, and uncertainty. If the card requests technology decisions, also assess research currency/source quality, plausible alternatives, maintenance/support status, proportional complexity, unnecessary dependencies, lock-in, cost evidence, and whether each choice belongs to backend architecture or a later track.
 - 20_handoff.json: compact JSON with from_phase critical_review, status completed, messages summarizing findings and unresolved items, and codes as an empty array.
 
 RULES
 - Challenge evidence; do not treat previous conclusions as self-validating.
+- Determine the requested technical-resolution level from the card. Do not penalize a technology-neutral package when the card did not request technology decisions; when it did, challenge material choices for evidence, current research, alternatives, trade-offs, proportionality, and scope ownership, and identify blanket TBDs that avoid decisions despite sufficient evidence.
 - For each finding, state evidence and analytical consequence; distinguish defect, risk, unsupported proposal, and unavailable evidence.
 - Recommend a correction only when sources support it; otherwise formulate an explicit open question and impact.
 - This is analytical review, not a release, approval, or publication gate. Findings do not prevent the final phase from proceeding.

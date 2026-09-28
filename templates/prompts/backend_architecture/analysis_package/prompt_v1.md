@@ -34,7 +34,8 @@ RULES
 - For every review finding, record correction applied, correction not adopted with rationale, or question retained with impact.
 - Preserve upstream identifiers, states, caveats, and declared precedence. Do not resolve conflicts editorially or elevate proposals to established decisions.
 - Check YAML syntax, ID/reference integrity, declared cardinalities when present, and semantic agreement between Markdown and structured files. Avoid ambiguous flow-style prose.
-- Keep the package technology-neutral and within backend architecture scope; downstream analyses may use the artifacts, but do not perform them here.
+- Preserve the level of technical resolution explicitly requested by the card. If no technology decisions were requested, keep the package technology-neutral and do not add choices. If the card explicitly requests technology decisions, retain clear, researched, evidence-backed decisions and alternatives in scope; do not remove or weaken them merely to make the package appear neutral. Keep choices within backend architecture scope and leave decisions belonging to later/specialized tracks unresolved.
+- For requested material/current technology decisions, ensure the package records source URLs and research date/context, alternatives considered, rationale, trade-offs, status (for example DECIDED, PROPOSED, TBD, NOT_REQUIRED, SUPERSEDED), consequences, and revisit conditions. Do not treat internal model knowledge alone as evidence for time-sensitive ecosystem claims.
 - No handoff is required for this final phase.
 
 FORBIDDEN
