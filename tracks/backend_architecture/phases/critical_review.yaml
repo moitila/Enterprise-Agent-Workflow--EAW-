@@ -1,0 +1,23 @@
+config_version: 1
+phase:
+  id: critical_review
+  name: Critical Review
+  description: Substantively challenge the architecture model against evidence, upstream rules and data, and internal consistency.
+  skills: []
+  prompt:
+    active: 1
+    path: templates/prompts/backend_architecture/critical_review/prompt_v<active>.md
+  outputs:
+    create_directories:
+      - analysis
+      - investigations
+    create_artifacts:
+      - analysis/40_critical_review.md
+      - investigations/20_handoff.json
+    prompts:
+      - critical_review
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - analysis/40_critical_review.md
+      - investigations/20_handoff.json

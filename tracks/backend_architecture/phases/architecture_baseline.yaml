@@ -1,0 +1,27 @@
+config_version: 1
+phase:
+  id: architecture_baseline
+  name: Architecture Baseline
+  description: Derive traceable system-level architectural drivers, constraints, quality needs, assumptions, and open questions.
+  skills: []
+  prompt:
+    active: 1
+    path: templates/prompts/backend_architecture/architecture_baseline/prompt_v<active>.md
+  outputs:
+    create_directories:
+      - analysis
+      - investigations
+    create_artifacts:
+      - analysis/10_architecture_baseline.candidate.md
+      - analysis/11_architecture_drivers.yaml
+      - analysis/12_open_questions.md
+      - investigations/20_handoff.json
+    prompts:
+      - architecture_baseline
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - analysis/10_architecture_baseline.candidate.md
+      - analysis/11_architecture_drivers.yaml
+      - analysis/12_open_questions.md
+      - investigations/20_handoff.json

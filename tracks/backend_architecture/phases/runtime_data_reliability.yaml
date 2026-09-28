@@ -1,0 +1,27 @@
+config_version: 1
+phase:
+  id: runtime_data_reliability
+  name: Runtime, Data and Reliability
+  description: Analyze component interactions, state and consistency effects, failure behavior, recovery, and observability needs.
+  skills: []
+  prompt:
+    active: 1
+    path: templates/prompts/backend_architecture/runtime_data_reliability/prompt_v<active>.md
+  outputs:
+    create_directories:
+      - analysis
+      - investigations
+    create_artifacts:
+      - analysis/30_runtime_data_reliability.candidate.md
+      - analysis/31_interactions.yaml
+      - analysis/32_architecture_decisions.yaml
+      - investigations/20_handoff.json
+    prompts:
+      - runtime_data_reliability
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - analysis/30_runtime_data_reliability.candidate.md
+      - analysis/31_interactions.yaml
+      - analysis/32_architecture_decisions.yaml
+      - investigations/20_handoff.json

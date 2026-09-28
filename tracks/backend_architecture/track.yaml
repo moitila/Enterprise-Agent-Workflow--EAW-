@@ -1,0 +1,48 @@
+config_version: 1
+
+track:
+  id: backend_architecture
+  name: Backend Architecture Analysis
+  description: Produce a traceable, technology-neutral backend architecture analysis from declared evidence.
+  initial_phase: source_inventory
+  final_phase: analysis_package
+  initial_outputs:
+    create_directories:
+      - analysis
+      - investigations
+  phases:
+    - source_inventory
+    - architecture_baseline
+    - component_boundaries
+    - runtime_data_reliability
+    - critical_review
+    - analysis_package
+  transitions:
+    source_inventory:
+      next: architecture_baseline
+      contract:
+        emit_handoff: true
+        consume_previous: true
+    architecture_baseline:
+      next: component_boundaries
+      contract:
+        emit_handoff: true
+        consume_previous: true
+    component_boundaries:
+      next: runtime_data_reliability
+      contract:
+        emit_handoff: true
+        consume_previous: true
+    runtime_data_reliability:
+      next: critical_review
+      contract:
+        emit_handoff: true
+        consume_previous: true
+    critical_review:
+      next: analysis_package
+      contract:
+        emit_handoff: true
+        consume_previous: true
+  rules:
+    one_prompt_per_phase: true
+    generated_artifacts_of_each_phase_must_be_non_empty: true

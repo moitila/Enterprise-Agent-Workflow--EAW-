@@ -1,0 +1,28 @@
+config_version: 1
+phase:
+  id: analysis_package
+  name: Analysis Package
+  description: Consolidate reviewed findings into coherent human-readable and structured backend architecture artifacts.
+  skills: []
+  prompt:
+    active: 1
+    path: templates/prompts/backend_architecture/analysis_package/prompt_v<active>.md
+  outputs:
+    create_directories:
+      - analysis
+    create_artifacts:
+      - analysis/backend-architecture.md
+      - analysis/backend-components.yaml
+      - analysis/backend-interactions.yaml
+      - analysis/architecture-decisions.yaml
+      - analysis/open-questions.md
+    prompts:
+      - analysis_package
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - analysis/backend-architecture.md
+      - analysis/backend-components.yaml
+      - analysis/backend-interactions.yaml
+      - analysis/architecture-decisions.yaml
+      - analysis/open-questions.md
