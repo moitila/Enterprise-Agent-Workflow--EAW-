@@ -1,0 +1,28 @@
+config_version: 1
+
+phase:
+  id: ingest
+  name: Ingest
+  description: Preserve and catalog only source material explicitly supplied to the card.
+  skills: []
+  prompt:
+    active: 1
+    path: templates/prompts/ai_pipeline_analysis/ingest/prompt_v<active>.md
+  outputs:
+    create_directories:
+      - analysis
+      - investigations
+    create_artifacts:
+      - analysis/00_ingest_manifest.yaml
+      - investigations/20_handoff.json
+    prompts:
+      - ingest
+  read_sources:
+    - "{{CARD_DIR}}/ingest"
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - path: analysis/00_ingest_manifest.yaml
+        validation_mode: blocking
+      - path: investigations/20_handoff.json
+        validation_mode: blocking

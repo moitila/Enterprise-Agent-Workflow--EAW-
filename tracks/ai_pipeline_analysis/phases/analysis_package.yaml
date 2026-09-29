@@ -1,0 +1,25 @@
+config_version: 1
+
+phase:
+  id: analysis_package
+  name: Analysis Package
+  description: Persist a coherent, self-contained analysis package in the selected target repository and report its location.
+  skills: []
+  prompt:
+    active: 1
+    path: templates/prompts/ai_pipeline_analysis/analysis_package/prompt_v<active>.md
+  outputs:
+    create_directories:
+      - analysis
+    create_artifacts:
+      - analysis/60_package_handoff.md
+    prompts:
+      - analysis_package
+  read_sources:
+    - "{{CARD_DIR}}/analysis"
+    - "{{CARD_DIR}}/investigations/00_intake.md"
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - path: analysis/60_package_handoff.md
+        validation_mode: blocking

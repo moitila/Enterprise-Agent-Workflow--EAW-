@@ -1,0 +1,33 @@
+config_version: 1
+
+phase:
+  id: intake
+  name: Intake
+  description: Define analysis scope and select exactly one unambiguous target repository.
+  skills: []
+  prompt:
+    active: 1
+    path: templates/prompts/ai_pipeline_analysis/intake/prompt_v<active>.md
+  outputs:
+    create_directories:
+      - investigations
+      - analysis
+    create_artifacts:
+      - investigations/00_intake.md
+      - analysis/01_analysis_scope.yaml
+      - investigations/20_handoff.json
+    prompts:
+      - intake
+  read_sources:
+    - "{{CARD_DIR}}/ingest"
+    - "{{CARD_DIR}}/analysis/00_ingest_manifest.yaml"
+    - "{{EAW_WORKDIR}}/config/repos.conf"
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - path: investigations/00_intake.md
+        validation_mode: blocking
+      - path: analysis/01_analysis_scope.yaml
+        validation_mode: blocking
+      - path: investigations/20_handoff.json
+        validation_mode: blocking

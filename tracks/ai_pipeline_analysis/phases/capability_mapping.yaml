@@ -1,0 +1,32 @@
+config_version: 1
+
+phase:
+  id: capability_mapping
+  name: Capability Mapping
+  description: Classify each in-scope capability by whether AI is needed and document evidence and risk.
+  skills: []
+  prompt:
+    active: 1
+    path: templates/prompts/ai_pipeline_analysis/capability_mapping/prompt_v<active>.md
+  outputs:
+    create_directories:
+      - analysis
+      - investigations
+    create_artifacts:
+      - analysis/20_capability_map.yaml
+      - analysis/21_capability_rationale.md
+      - investigations/20_handoff.json
+    prompts:
+      - capability_mapping
+  read_sources:
+    - "{{CARD_DIR}}/analysis"
+    - "{{CARD_DIR}}/investigations/00_intake.md"
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - path: analysis/20_capability_map.yaml
+        validation_mode: blocking
+      - path: analysis/21_capability_rationale.md
+        validation_mode: blocking
+      - path: investigations/20_handoff.json
+        validation_mode: blocking

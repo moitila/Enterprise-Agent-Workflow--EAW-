@@ -1,0 +1,35 @@
+config_version: 1
+
+phase:
+  id: pipeline_design
+  name: Pipeline Design
+  description: Describe candidate AI pipeline components, data/control flows, authority, failures, and open questions.
+  skills: []
+  prompt:
+    active: 1
+    path: templates/prompts/ai_pipeline_analysis/pipeline_design/prompt_v<active>.md
+  outputs:
+    create_directories:
+      - analysis
+      - investigations
+    create_artifacts:
+      - analysis/30_pipeline_architecture.md
+      - analysis/31_data_and_control_flows.md
+      - analysis/32_open_questions.md
+      - investigations/20_handoff.json
+    prompts:
+      - pipeline_design
+  read_sources:
+    - "{{CARD_DIR}}/analysis"
+    - "{{CARD_DIR}}/investigations/00_intake.md"
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - path: analysis/30_pipeline_architecture.md
+        validation_mode: blocking
+      - path: analysis/31_data_and_control_flows.md
+        validation_mode: blocking
+      - path: analysis/32_open_questions.md
+        validation_mode: blocking
+      - path: investigations/20_handoff.json
+        validation_mode: blocking

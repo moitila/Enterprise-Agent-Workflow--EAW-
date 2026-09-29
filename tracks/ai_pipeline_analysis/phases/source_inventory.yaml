@@ -1,0 +1,36 @@
+config_version: 1
+
+phase:
+  id: source_inventory
+  name: Source Inventory
+  description: Inventory target, card, upstream, and relevant external sources with provenance and gaps.
+  skills: []
+  prompt:
+    active: 1
+    path: templates/prompts/ai_pipeline_analysis/source_inventory/prompt_v<active>.md
+  outputs:
+    create_directories:
+      - analysis
+      - investigations
+    create_artifacts:
+      - analysis/10_source_manifest.yaml
+      - analysis/11_source_provenance.md
+      - analysis/12_source_gaps.md
+      - investigations/20_handoff.json
+    prompts:
+      - source_inventory
+  read_sources:
+    - "{{CARD_DIR}}/analysis"
+    - "{{CARD_DIR}}/investigations/00_intake.md"
+    - "{{CARD_DIR}}/analysis/01_analysis_scope.yaml"
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - path: analysis/10_source_manifest.yaml
+        validation_mode: blocking
+      - path: analysis/11_source_provenance.md
+        validation_mode: blocking
+      - path: analysis/12_source_gaps.md
+        validation_mode: blocking
+      - path: investigations/20_handoff.json
+        validation_mode: blocking

@@ -1,0 +1,32 @@
+config_version: 1
+
+phase:
+  id: decision_evaluation
+  name: Decision Evaluation
+  description: Compare material alternatives with evidence, trade-offs, conditional recommendations, and review conditions.
+  skills: []
+  prompt:
+    active: 1
+    path: templates/prompts/ai_pipeline_analysis/decision_evaluation/prompt_v<active>.md
+  outputs:
+    create_directories:
+      - analysis
+      - investigations
+    create_artifacts:
+      - analysis/40_decision_register.yaml
+      - analysis/41_tradeoffs_and_evidence.md
+      - investigations/20_handoff.json
+    prompts:
+      - decision_evaluation
+  read_sources:
+    - "{{CARD_DIR}}/analysis"
+    - "{{CARD_DIR}}/investigations/00_intake.md"
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - path: analysis/40_decision_register.yaml
+        validation_mode: blocking
+      - path: analysis/41_tradeoffs_and_evidence.md
+        validation_mode: blocking
+      - path: investigations/20_handoff.json
+        validation_mode: blocking

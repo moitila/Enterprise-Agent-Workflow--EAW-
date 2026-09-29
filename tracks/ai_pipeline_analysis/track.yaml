@@ -1,0 +1,56 @@
+config_version: 1
+
+track:
+  id: ai_pipeline_analysis
+  name: AI Pipeline Analysis
+  description: >
+    Generic, evidence-based analysis of AI/LLM components and their integration
+    with an existing system, producing reusable technical documentation without
+    implementing the proposed pipeline.
+  initial_phase: ingest
+  final_phase: analysis_package
+  phases:
+    - ingest
+    - intake
+    - source_inventory
+    - capability_mapping
+    - pipeline_design
+    - decision_evaluation
+    - critical_review
+    - analysis_package
+  transitions:
+    ingest:
+      next: intake
+      contract:
+        emit_handoff: true
+        consume_previous: true
+    intake:
+      next: source_inventory
+      contract:
+        emit_handoff: true
+        consume_previous: true
+    source_inventory:
+      next: capability_mapping
+      contract:
+        emit_handoff: true
+        consume_previous: true
+    capability_mapping:
+      next: pipeline_design
+      contract:
+        emit_handoff: true
+        consume_previous: true
+    pipeline_design:
+      next: decision_evaluation
+      contract:
+        emit_handoff: true
+        consume_previous: true
+    decision_evaluation:
+      next: critical_review
+      contract:
+        emit_handoff: true
+        consume_previous: true
+    critical_review:
+      next: analysis_package
+      contract:
+        emit_handoff: true
+        consume_previous: true
