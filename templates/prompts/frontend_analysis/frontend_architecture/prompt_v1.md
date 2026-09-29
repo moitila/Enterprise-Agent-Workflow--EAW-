@@ -26,7 +26,7 @@ READ_SCOPE
 - {{CARD_DIR}}/analysis/00_source_manifest.yaml through {{CARD_DIR}}/analysis/22_ux_api_mapping.yaml
 - {{CARD_DIR}}/ingest/ only for inventoried sources
 - {{CARD_DIR}}/investigations/20_handoff.json
-- Official/primary external sources only when the card explicitly requests a current technology decision
+- Official/primary external sources when a material decision requires current verification of technology, a Web standard/specification, accessibility requirements, browser/platform behavior, or current technical practice; keep research concrete and decision-oriented
 
 WRITE_SCOPE
 - {{CARD_DIR}}/analysis/30_frontend_architecture.candidate.md
@@ -35,7 +35,7 @@ WRITE_SCOPE
 - {{CARD_DIR}}/investigations/20_handoff.json
 
 RULES
-- Resolve technology only when explicitly requested and justified; cite official/primary sources with access date. Otherwise record NOT_REQUIRED or justified TBD.
+- Research externally only when a material architecture or quality decision depends on current verification; connect each search to the concrete decision and cite official/primary sources with access date. Prefer W3C, WCAG, WHATWG, relevant official documentation, specifications, and official release/lifecycle documentation; use MDN as an appropriate complement. Do not conduct generic research. Resolve technology only when explicitly requested and justified; otherwise record NOT_REQUIRED or justified TBD.
 - Preserve upstream boundaries and statuses. Trace every architecture element and decision to a requirement, journey, interaction, or evidenced quality need.
 - Emit handoff using one command with redirect on the same line: printf '%s\n' '{"from_phase":"frontend_architecture","status":"completed","messages":[],"codes":[]}' > "{{CARD_DIR}}/investigations/20_handoff.json".
 

@@ -8,7 +8,7 @@ OBJECTIVE
 
 INPUT
 - CARD={{CARD}}
-- Consume all prior analysis artifacts, {{CARD_DIR}}/analysis/40_critical_review.md, inventoried sources, phase handoff, and intake when present.
+- Consume all prior analysis artifacts, including {{CARD_DIR}}/analysis/12_navigation_state_map.yaml, {{CARD_DIR}}/analysis/40_critical_review.md, inventoried sources, phase handoff, and intake when present.
 
 OUTPUT
 - {{CARD_DIR}}/analysis/frontend-analysis.md
@@ -20,8 +20,8 @@ OUTPUT
 - This final phase emits no handoff.
 
 OUTPUT_STRUCTURE
-- frontend-analysis.md: scope/sources, journeys, information/navigation, interactions/API, architecture/qualities, decisions, review dispositions, and open questions.
-- Four YAML files: each has schema_version, stable IDs/cross-references, evidence, and DECIDED/PROPOSED/TBD/NOT_REQUIRED/SUPERSEDED status for final journeys, interactions/API mapping, architecture, and decisions respectively.
+- frontend-analysis.md: scope/sources, journeys, information/navigation, interactions/API, architecture/qualities, decisions, review dispositions, and open questions. Explain the navigation concepts and relationships consistently with the structured YAML.
+- Four YAML files: each has schema_version, stable IDs/cross-references, evidence, and DECIDED/PROPOSED/TBD/NOT_REQUIRED/SUPERSEDED status for final journeys, interactions/API mapping, architecture, and decisions respectively. Preserve the relevant structured contents of 12_navigation_state_map.yaml explicitly in one existing final YAML, preferably frontend-journeys.yaml (or frontend-architecture.yaml when its existing model justifies that placement): navigation destinations/concepts, navigation relations, observable navigation states, journey links, evidence, status, and applicable open questions. Keep IDs and cross-references coherent with the other final artifacts; do not silently drop or flatten map information into Markdown alone.
 - open-questions.md: every unresolved gap/conflict with impact, owner, required resolution evidence, and an explicit disposition for every critical-review finding.
 
 READ_SCOPE
@@ -40,6 +40,7 @@ WRITE_SCOPE
 RULES
 - Keep narrative and structured artifacts coherent. Apply CORRECT findings, justify RETAIN_WITH_RATIONALE, and preserve OPEN_QUESTION with owner and evidence needed.
 - Preserve citations, authority, status, stable IDs, and downstream boundaries. Validate YAML syntax and cross-references before completion.
+- Reconcile navigation-map content across frontend-analysis.md, frontend-journeys.yaml, frontend-interactions.yaml, frontend-architecture.yaml, frontend-decisions.yaml, and open-questions.md. Retain applicable unresolved navigation questions with their owner/evidence needs in open-questions.md and preserve their status and references in the selected YAML.
 
 FORBIDDEN
 - Erasing divergence, inventing evidence or decisions, implementing product code, changing upstream sources/candidates, or emitting a handoff.
