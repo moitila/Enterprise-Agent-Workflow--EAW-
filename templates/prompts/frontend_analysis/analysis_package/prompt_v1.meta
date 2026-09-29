@@ -1,0 +1,4 @@
+version=v1
+required_sections=ROLE|OBJECTIVE|INPUT|OUTPUT|OUTPUT_STRUCTURE|READ_SCOPE|WRITE_SCOPE|RULES|FORBIDDEN|FAIL_CONDITIONS
+required_substrings={{RUNTIME_ENVIRONMENT}}|{{CARD_DIR}}/analysis/frontend-analysis.md|{{CARD_DIR}}/analysis/frontend-journeys.yaml|{{CARD_DIR}}/analysis/frontend-interactions.yaml|{{CARD_DIR}}/analysis/frontend-architecture.yaml|{{CARD_DIR}}/analysis/frontend-decisions.yaml|{{CARD_DIR}}/analysis/open-questions.md|40_critical_review.md
+forbidden_words=

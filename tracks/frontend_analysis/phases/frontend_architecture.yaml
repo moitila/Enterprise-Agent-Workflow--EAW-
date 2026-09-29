@@ -1,0 +1,29 @@
+config_version: 1
+
+phase:
+  id: frontend_architecture
+  name: Frontend Architecture
+  description: Define the evidence-backed frontend architecture and decisions needed to realize established journeys and interaction semantics.
+  skills: []
+  prompt:
+    active: 1
+    path: templates/prompts/frontend_analysis/frontend_architecture/prompt_v<active>.md
+  tooling_hints: []
+  outputs:
+    create_directories:
+      - analysis
+      - investigations
+    create_artifacts:
+      - analysis/30_frontend_architecture.candidate.md
+      - analysis/31_frontend_architecture.yaml
+      - analysis/32_frontend_decisions.yaml
+      - investigations/20_handoff.json
+    prompts:
+      - frontend_architecture
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - analysis/30_frontend_architecture.candidate.md
+      - analysis/31_frontend_architecture.yaml
+      - analysis/32_frontend_decisions.yaml
+      - investigations/20_handoff.json

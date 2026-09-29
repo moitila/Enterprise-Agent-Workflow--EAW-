@@ -1,0 +1,4 @@
+version=v1
+required_sections=ROLE|OBJECTIVE|INPUT|OUTPUT|OUTPUT_STRUCTURE|READ_SCOPE|WRITE_SCOPE|RULES|FORBIDDEN|FAIL_CONDITIONS
+required_substrings={{RUNTIME_ENVIRONMENT}}|{{CARD_DIR}}/analysis/20_interaction_semantics.candidate.md|{{CARD_DIR}}/analysis/21_interaction_contracts.yaml|{{CARD_DIR}}/analysis/22_ux_api_mapping.yaml|{{CARD_DIR}}/investigations/20_handoff.json|from_phase=interaction_api_semantics
+forbidden_words=

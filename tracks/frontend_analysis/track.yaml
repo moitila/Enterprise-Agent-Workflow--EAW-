@@ -1,0 +1,46 @@
+config_version: 1
+
+track:
+  id: frontend_analysis
+  name: Frontend Analysis
+  description: Produce an evidence-based, traceable frontend analysis package without implementing product code or redefining upstream authority.
+  initial_phase: source_inventory
+  final_phase: analysis_package
+  phases:
+    - source_inventory
+    - journey_information_architecture
+    - interaction_api_semantics
+    - frontend_architecture
+    - critical_review
+    - analysis_package
+  initial_outputs:
+    create_directories:
+      - ingest
+      - analysis
+      - investigations
+  transitions:
+    source_inventory:
+      next: journey_information_architecture
+      contract:
+        emit_handoff: true
+        consume_previous: true
+    journey_information_architecture:
+      next: interaction_api_semantics
+      contract:
+        emit_handoff: true
+        consume_previous: true
+    interaction_api_semantics:
+      next: frontend_architecture
+      contract:
+        emit_handoff: true
+        consume_previous: true
+    frontend_architecture:
+      next: critical_review
+      contract:
+        emit_handoff: true
+        consume_previous: true
+    critical_review:
+      next: analysis_package
+      contract:
+        emit_handoff: true
+        consume_previous: true

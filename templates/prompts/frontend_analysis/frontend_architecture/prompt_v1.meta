@@ -1,0 +1,4 @@
+version=v1
+required_sections=ROLE|OBJECTIVE|INPUT|OUTPUT|OUTPUT_STRUCTURE|READ_SCOPE|WRITE_SCOPE|RULES|FORBIDDEN|FAIL_CONDITIONS
+required_substrings={{RUNTIME_ENVIRONMENT}}|{{CARD_DIR}}/analysis/30_frontend_architecture.candidate.md|{{CARD_DIR}}/analysis/31_frontend_architecture.yaml|{{CARD_DIR}}/analysis/32_frontend_decisions.yaml|{{CARD_DIR}}/investigations/20_handoff.json|from_phase=frontend_architecture
+forbidden_words=

@@ -1,0 +1,4 @@
+version=v1
+required_sections=ROLE|OBJECTIVE|INPUT|OUTPUT|OUTPUT_STRUCTURE|READ_SCOPE|WRITE_SCOPE|RULES|FORBIDDEN|FAIL_CONDITIONS
+required_substrings={{RUNTIME_ENVIRONMENT}}|{{CARD_DIR}}/analysis/10_experience_baseline.candidate.md|{{CARD_DIR}}/analysis/11_journeys.yaml|{{CARD_DIR}}/analysis/12_navigation_state_map.yaml|{{CARD_DIR}}/analysis/13_experience_questions.md|{{CARD_DIR}}/investigations/20_handoff.json|from_phase=journey_information_architecture
+forbidden_words=

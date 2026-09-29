@@ -1,0 +1,31 @@
+config_version: 1
+
+phase:
+  id: journey_information_architecture
+  name: Journey and Information Architecture
+  description: Derive evidence-backed actors, journeys, tasks, information architecture, navigation, and observable states without designing detailed operations.
+  skills: []
+  prompt:
+    active: 1
+    path: templates/prompts/frontend_analysis/journey_information_architecture/prompt_v<active>.md
+  tooling_hints: []
+  outputs:
+    create_directories:
+      - analysis
+      - investigations
+    create_artifacts:
+      - analysis/10_experience_baseline.candidate.md
+      - analysis/11_journeys.yaml
+      - analysis/12_navigation_state_map.yaml
+      - analysis/13_experience_questions.md
+      - investigations/20_handoff.json
+    prompts:
+      - journey_information_architecture
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - analysis/10_experience_baseline.candidate.md
+      - analysis/11_journeys.yaml
+      - analysis/12_navigation_state_map.yaml
+      - analysis/13_experience_questions.md
+      - investigations/20_handoff.json

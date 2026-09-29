@@ -1,0 +1,29 @@
+config_version: 1
+
+phase:
+  id: interaction_api_semantics
+  name: Interaction and API Semantics
+  description: Define executable interface behavior and map it to evidenced API capabilities and limitations.
+  skills: []
+  prompt:
+    active: 1
+    path: templates/prompts/frontend_analysis/interaction_api_semantics/prompt_v<active>.md
+  tooling_hints: []
+  outputs:
+    create_directories:
+      - analysis
+      - investigations
+    create_artifacts:
+      - analysis/20_interaction_semantics.candidate.md
+      - analysis/21_interaction_contracts.yaml
+      - analysis/22_ux_api_mapping.yaml
+      - investigations/20_handoff.json
+    prompts:
+      - interaction_api_semantics
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - analysis/20_interaction_semantics.candidate.md
+      - analysis/21_interaction_contracts.yaml
+      - analysis/22_ux_api_mapping.yaml
+      - investigations/20_handoff.json

@@ -41,3 +41,5 @@ tracks:
     status: installed
   - track_id: api_contract_analysis
     status: installed
+  - track_id: frontend_analysis
+    status: installed
