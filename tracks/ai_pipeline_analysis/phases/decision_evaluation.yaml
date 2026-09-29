@@ -6,7 +6,7 @@ phase:
   description: Compare material alternatives with evidence, trade-offs, conditional recommendations, and review conditions.
   skills: []
   prompt:
-    active: 1
+    active: 2
     path: templates/prompts/ai_pipeline_analysis/decision_evaluation/prompt_v<active>.md
   outputs:
     create_directories:

@@ -6,7 +6,7 @@ phase:
   description: Classify each in-scope capability by whether AI is needed and document evidence and risk.
   skills: []
   prompt:
-    active: 1
+    active: 2
     path: templates/prompts/ai_pipeline_analysis/capability_mapping/prompt_v<active>.md
   outputs:
     create_directories:

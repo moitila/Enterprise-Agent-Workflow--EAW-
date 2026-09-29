@@ -6,7 +6,7 @@ phase:
   description: Independently challenge the proposed analysis and record traceable findings and required treatment.
   skills: []
   prompt:
-    active: 1
+    active: 2
     path: templates/prompts/ai_pipeline_analysis/critical_review/prompt_v<active>.md
   outputs:
     create_directories:

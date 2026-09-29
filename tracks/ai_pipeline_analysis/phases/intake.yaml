@@ -6,7 +6,7 @@ phase:
   description: Define analysis scope and select exactly one unambiguous target repository.
   skills: []
   prompt:
-    active: 1
+    active: 2
     path: templates/prompts/ai_pipeline_analysis/intake/prompt_v<active>.md
   outputs:
     create_directories:

@@ -6,7 +6,7 @@ phase:
   description: Preserve and catalog only source material explicitly supplied to the card.
   skills: []
   prompt:
-    active: 1
+    active: 2
     path: templates/prompts/ai_pipeline_analysis/ingest/prompt_v<active>.md
   outputs:
     create_directories:
