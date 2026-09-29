@@ -1,0 +1,46 @@
+config_version: 1
+
+track:
+  id: api_contract_analysis
+  name: API Contract Analysis
+  description: Produce a traceable, consumer-oriented external API contract analysis from declared upstream evidence without implementing the API or prescribing an unsupported protocol.
+  initial_phase: source_inventory
+  final_phase: analysis_package
+  phases:
+    - source_inventory
+    - contract_baseline
+    - operation_design
+    - interaction_semantics
+    - critical_review
+    - analysis_package
+  initial_outputs:
+    create_directories:
+      - ingest
+      - analysis
+      - investigations
+  transitions:
+    source_inventory:
+      next: contract_baseline
+      contract:
+        emit_handoff: true
+        consume_previous: true
+    contract_baseline:
+      next: operation_design
+      contract:
+        emit_handoff: true
+        consume_previous: true
+    operation_design:
+      next: interaction_semantics
+      contract:
+        emit_handoff: true
+        consume_previous: true
+    interaction_semantics:
+      next: critical_review
+      contract:
+        emit_handoff: true
+        consume_previous: true
+    critical_review:
+      next: analysis_package
+      contract:
+        emit_handoff: true
+        consume_previous: true

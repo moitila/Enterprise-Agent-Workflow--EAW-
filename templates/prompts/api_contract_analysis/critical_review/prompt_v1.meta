@@ -1,0 +1,4 @@
+version=v1
+required_sections=ROLE|OBJECTIVE|INPUT|OUTPUT|OUTPUT_STRUCTURE|READ_SCOPE|WRITE_SCOPE|RULES|FORBIDDEN|FAIL_CONDITIONS
+required_substrings={{RUNTIME_ENVIRONMENT}}|{{CARD_DIR}}/analysis/40_critical_review.md|{{CARD_DIR}}/investigations/20_handoff.json|from_phase=critical_review|OPEN_QUESTION
+forbidden_words=

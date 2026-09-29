@@ -1,0 +1,29 @@
+config_version: 1
+
+phase:
+  id: operation_design
+  name: Operation Design
+  description: Model evidence-based consumer operations, conceptual representations, and request, response, and validation intent independently of persistence internals.
+  skills: []
+  prompt:
+    active: 1
+    path: templates/prompts/api_contract_analysis/operation_design/prompt_v<active>.md
+  tooling_hints: []
+  outputs:
+    create_directories:
+      - analysis
+      - investigations
+    create_artifacts:
+      - analysis/20_operation_design.candidate.md
+      - analysis/21_api_operations.yaml
+      - analysis/22_api_representations.yaml
+      - investigations/20_handoff.json
+    prompts:
+      - operation_design
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - analysis/20_operation_design.candidate.md
+      - analysis/21_api_operations.yaml
+      - analysis/22_api_representations.yaml
+      - investigations/20_handoff.json

@@ -1,0 +1,4 @@
+version=v1
+required_sections=ROLE|OBJECTIVE|INPUT|OUTPUT|OUTPUT_STRUCTURE|READ_SCOPE|WRITE_SCOPE|RULES|FORBIDDEN|FAIL_CONDITIONS
+required_substrings={{RUNTIME_ENVIRONMENT}}|{{CARD_DIR}}/analysis/20_operation_design.candidate.md|{{CARD_DIR}}/analysis/21_api_operations.yaml|{{CARD_DIR}}/analysis/22_api_representations.yaml|from_phase=operation_design
+forbidden_words=

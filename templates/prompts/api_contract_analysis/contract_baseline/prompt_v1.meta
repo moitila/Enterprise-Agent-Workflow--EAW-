@@ -1,0 +1,4 @@
+version=v1
+required_sections=ROLE|OBJECTIVE|INPUT|OUTPUT|OUTPUT_STRUCTURE|READ_SCOPE|WRITE_SCOPE|RULES|FORBIDDEN|FAIL_CONDITIONS
+required_substrings={{RUNTIME_ENVIRONMENT}}|{{CARD_DIR}}/analysis/10_contract_baseline.candidate.md|{{CARD_DIR}}/analysis/11_capability_contract_map.yaml|{{CARD_DIR}}/analysis/12_contract_questions.md|from_phase=contract_baseline
+forbidden_words=

@@ -1,0 +1,29 @@
+config_version: 1
+
+phase:
+  id: interaction_semantics
+  name: Interaction Semantics
+  description: Resolve or explicitly classify cross-operation API behaviors, decisions, applicability, evidence, and consequences.
+  skills: []
+  prompt:
+    active: 1
+    path: templates/prompts/api_contract_analysis/interaction_semantics/prompt_v<active>.md
+  tooling_hints: []
+  outputs:
+    create_directories:
+      - analysis
+      - investigations
+    create_artifacts:
+      - analysis/30_interaction_semantics.candidate.md
+      - analysis/31_interaction_contract.yaml
+      - analysis/32_contract_decisions.yaml
+      - investigations/20_handoff.json
+    prompts:
+      - interaction_semantics
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - analysis/30_interaction_semantics.candidate.md
+      - analysis/31_interaction_contract.yaml
+      - analysis/32_contract_decisions.yaml
+      - investigations/20_handoff.json

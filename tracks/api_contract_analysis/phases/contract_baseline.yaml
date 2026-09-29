@@ -1,0 +1,29 @@
+config_version: 1
+
+phase:
+  id: contract_baseline
+  name: Contract Baseline
+  description: Derive traceable consumer-facing capabilities, constraints, and unresolved needs before designing concrete operations.
+  skills: []
+  prompt:
+    active: 1
+    path: templates/prompts/api_contract_analysis/contract_baseline/prompt_v<active>.md
+  tooling_hints: []
+  outputs:
+    create_directories:
+      - analysis
+      - investigations
+    create_artifacts:
+      - analysis/10_contract_baseline.candidate.md
+      - analysis/11_capability_contract_map.yaml
+      - analysis/12_contract_questions.md
+      - investigations/20_handoff.json
+    prompts:
+      - contract_baseline
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - analysis/10_contract_baseline.candidate.md
+      - analysis/11_capability_contract_map.yaml
+      - analysis/12_contract_questions.md
+      - investigations/20_handoff.json

@@ -1,0 +1,4 @@
+version=v1
+required_sections=ROLE|OBJECTIVE|INPUT|OUTPUT|OUTPUT_STRUCTURE|READ_SCOPE|WRITE_SCOPE|RULES|FORBIDDEN|FAIL_CONDITIONS
+required_substrings={{RUNTIME_ENVIRONMENT}}|{{CARD_DIR}}/analysis/30_interaction_semantics.candidate.md|{{CARD_DIR}}/analysis/31_interaction_contract.yaml|{{CARD_DIR}}/analysis/32_contract_decisions.yaml|from_phase=interaction_semantics
+forbidden_words=
