@@ -7,7 +7,7 @@ phase:
   skills: []
   prompt:
     active: 1
-    path: templates/prompts/security_privacy_analysis/privacy_analysis/prompt_v1.md
+    path: templates/prompts/security_privacy_analysis/privacy_analysis/prompt_v<active>.md
   outputs:
     create_directories:
       - analysis
