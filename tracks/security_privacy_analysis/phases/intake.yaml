@@ -1,0 +1,21 @@
+config_version: 1
+
+phase:
+  id: intake
+  name: Intake
+  description: Transform the request and ingestion into objective, system boundary, analysis question, expected sources, constraints, audiences, and completion criteria; distinguish supplied information from unknowns.
+  skills: []
+  prompt:
+    active: 1
+    path: templates/prompts/security_privacy_analysis/intake/prompt_v1.md
+  outputs:
+    create_directories:
+      - investigations
+    create_artifacts:
+      - investigations/00_intake.md
+      - investigations/20_handoff.json
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - investigations/00_intake.md
+      - investigations/20_handoff.json

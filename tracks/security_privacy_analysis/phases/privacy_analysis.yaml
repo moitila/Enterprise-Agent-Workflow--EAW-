@@ -1,0 +1,24 @@
+config_version: 1
+
+phase:
+  id: privacy_analysis
+  name: Privacy Analysis
+  description: Analyze data flows/operations from a privacy perspective: evidenced actors/data subjects, purpose, minimization, retention, third parties/transfers, and risks; do not invent legal basis, jurisdiction, or obligation.
+  skills: []
+  prompt:
+    active: 1
+    path: templates/prompts/security_privacy_analysis/privacy_analysis/prompt_v1.md
+  outputs:
+    create_directories:
+      - analysis
+      - investigations
+    create_artifacts:
+      - analysis/40_privacy_assessment.md
+      - analysis/41_third_party_data_disclosures.yaml
+      - investigations/20_handoff.json
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - analysis/40_privacy_assessment.md
+      - analysis/41_third_party_data_disclosures.yaml
+      - investigations/20_handoff.json

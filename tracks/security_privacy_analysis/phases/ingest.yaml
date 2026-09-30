@@ -1,0 +1,21 @@
+config_version: 1
+
+phase:
+  id: ingest
+  name: Ingest
+  description: Preserve and inventory raw card inputs without evaluating or converting them into decisions.
+  skills: []
+  prompt:
+    active: 1
+    path: templates/prompts/security_privacy_analysis/ingest/prompt_v1.md
+  outputs:
+    create_directories:
+      - investigations
+    create_artifacts:
+      - investigations/01_ingest_manifest.yaml
+      - investigations/20_handoff.json
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - investigations/01_ingest_manifest.yaml
+      - investigations/20_handoff.json

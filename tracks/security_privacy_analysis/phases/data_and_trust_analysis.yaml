@@ -1,0 +1,26 @@
+config_version: 1
+
+phase:
+  id: data_and_trust_analysis
+  name: Data and Trust Analysis
+  description: Derive, with source references, relevant assets/data categories, flows, actors, trust boundaries, and classification assumptions; record missing taxonomy as a gap or mark generic taxonomy explicitly provisional.
+  skills: []
+  prompt:
+    active: 1
+    path: templates/prompts/security_privacy_analysis/data_and_trust_analysis/prompt_v1.md
+  outputs:
+    create_directories:
+      - analysis
+      - investigations
+    create_artifacts:
+      - analysis/20_data_asset_register.yaml
+      - analysis/21_data_flows_and_trust_boundaries.md
+      - analysis/22_data_classification.md
+      - investigations/20_handoff.json
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - analysis/20_data_asset_register.yaml
+      - analysis/21_data_flows_and_trust_boundaries.md
+      - analysis/22_data_classification.md
+      - investigations/20_handoff.json

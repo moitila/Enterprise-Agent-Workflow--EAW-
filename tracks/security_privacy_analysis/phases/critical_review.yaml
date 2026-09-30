@@ -1,0 +1,24 @@
+config_version: 1
+
+phase:
+  id: critical_review
+  name: Critical Review
+  description: Independently review traceability, coverage, contradictions, assumptions, inferences, limits, gap handling, and overclaims; record findings/disposition without acting as approval or gate.
+  skills: []
+  prompt:
+    active: 1
+    path: templates/prompts/security_privacy_analysis/critical_review/prompt_v1.md
+  outputs:
+    create_directories:
+      - analysis
+      - investigations
+    create_artifacts:
+      - analysis/60_critical_review.md
+      - analysis/61_review_findings.yaml
+      - investigations/20_handoff.json
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - analysis/60_critical_review.md
+      - analysis/61_review_findings.yaml
+      - investigations/20_handoff.json

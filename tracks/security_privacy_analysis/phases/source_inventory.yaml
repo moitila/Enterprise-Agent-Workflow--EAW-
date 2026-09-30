@@ -1,0 +1,26 @@
+config_version: 1
+
+phase:
+  id: source_inventory
+  name: Source Inventory
+  description: Identify sources actually available, their authority, version/date, provenance, coverage, conflicts, and gaps; determine whether external research is material and record provenance/claims researched.
+  skills: []
+  prompt:
+    active: 1
+    path: templates/prompts/security_privacy_analysis/source_inventory/prompt_v1.md
+  outputs:
+    create_directories:
+      - analysis
+      - investigations
+    create_artifacts:
+      - analysis/10_source_manifest.yaml
+      - analysis/11_source_provenance.md
+      - analysis/12_source_gaps.md
+      - investigations/20_handoff.json
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - analysis/10_source_manifest.yaml
+      - analysis/11_source_provenance.md
+      - analysis/12_source_gaps.md
+      - investigations/20_handoff.json

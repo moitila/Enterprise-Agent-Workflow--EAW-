@@ -45,3 +45,5 @@ tracks:
     status: installed
   - track_id: ai_pipeline_analysis
     status: installed
+  - track_id: security_privacy_analysis
+    status: installed

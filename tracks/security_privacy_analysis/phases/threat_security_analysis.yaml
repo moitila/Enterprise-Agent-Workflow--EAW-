@@ -1,0 +1,24 @@
+config_version: 1
+
+phase:
+  id: threat_security_analysis
+  name: Threat and Security Analysis
+  description: Identify threat scenarios and architectural risks, observed controls and gaps, linking each conclusion to an asset/flow/boundary and evidence; use a suitable method without attacks or security certification.
+  skills: []
+  prompt:
+    active: 1
+    path: templates/prompts/security_privacy_analysis/threat_security_analysis/prompt_v1.md
+  outputs:
+    create_directories:
+      - analysis
+      - investigations
+    create_artifacts:
+      - analysis/30_threat_model.md
+      - analysis/31_security_controls_and_risks.yaml
+      - investigations/20_handoff.json
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - analysis/30_threat_model.md
+      - analysis/31_security_controls_and_risks.yaml
+      - investigations/20_handoff.json

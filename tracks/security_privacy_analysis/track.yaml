@@ -1,0 +1,44 @@
+config_version: 1
+
+track:
+  id: security_privacy_analysis
+  name: Security and Privacy Analysis
+  description: >
+    Reusable evidence-based security and privacy analysis of a system described by card-provided sources; it records assets, data flows, trust boundaries, threats, controls, privacy implications, decisions and verification questions without implementing controls or asserting legal/compliance approval.
+  initial_phase: ingest
+  final_phase: analysis_package
+  phases:
+    - ingest
+    - intake
+    - source_inventory
+    - data_and_trust_analysis
+    - threat_security_analysis
+    - privacy_analysis
+    - decision_evaluation
+    - critical_review
+    - analysis_package
+  transitions:
+    ingest:
+      next: intake
+      contract: {emit_handoff: true, consume_previous: true}
+    intake:
+      next: source_inventory
+      contract: {emit_handoff: true, consume_previous: true}
+    source_inventory:
+      next: data_and_trust_analysis
+      contract: {emit_handoff: true, consume_previous: true}
+    data_and_trust_analysis:
+      next: threat_security_analysis
+      contract: {emit_handoff: true, consume_previous: true}
+    threat_security_analysis:
+      next: privacy_analysis
+      contract: {emit_handoff: true, consume_previous: true}
+    privacy_analysis:
+      next: decision_evaluation
+      contract: {emit_handoff: true, consume_previous: true}
+    decision_evaluation:
+      next: critical_review
+      contract: {emit_handoff: true, consume_previous: true}
+    critical_review:
+      next: analysis_package
+      contract: {emit_handoff: true, consume_previous: true}

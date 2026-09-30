@@ -1,0 +1,26 @@
+config_version: 1
+
+phase:
+  id: decision_evaluation
+  name: Decision Evaluation
+  description: Consolidate technical decisions/proposals, risks, prioritized controls/gaps, `TBD`/`NOT_REQUIRED`/`SUPERSEDED` items, upstream impacts, and verifiable questions using the allowed states; `DECIDED` is not legal, organizational, or production approval.
+  skills: []
+  prompt:
+    active: 1
+    path: templates/prompts/security_privacy_analysis/decision_evaluation/prompt_v1.md
+  outputs:
+    create_directories:
+      - analysis
+      - investigations
+    create_artifacts:
+      - analysis/50_security_privacy_decisions.yaml
+      - analysis/51_upstream_impacts.md
+      - analysis/52_verification_questions.md
+      - investigations/20_handoff.json
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - analysis/50_security_privacy_decisions.yaml
+      - analysis/51_upstream_impacts.md
+      - analysis/52_verification_questions.md
+      - investigations/20_handoff.json
