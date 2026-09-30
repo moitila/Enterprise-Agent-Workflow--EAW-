@@ -6,7 +6,7 @@ phase:
   description: Persist a coherent, self-contained analysis package in the selected target repository and report its location.
   skills: []
   prompt:
-    active: 2
+    active: 3
     path: templates/prompts/ai_pipeline_analysis/analysis_package/prompt_v<active>.md
   outputs:
     create_directories:

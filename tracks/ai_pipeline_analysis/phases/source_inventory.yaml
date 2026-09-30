@@ -6,7 +6,7 @@ phase:
   description: Inventory target, card, upstream, and relevant external sources with provenance and gaps.
   skills: []
   prompt:
-    active: 2
+    active: 3
     path: templates/prompts/ai_pipeline_analysis/source_inventory/prompt_v<active>.md
   outputs:
     create_directories:
