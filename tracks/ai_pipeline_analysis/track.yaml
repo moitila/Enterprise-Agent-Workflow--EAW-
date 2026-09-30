@@ -13,6 +13,7 @@ track:
     - ingest
     - intake
     - source_inventory
+    - evidence_analysis
     - capability_mapping
     - pipeline_design
     - decision_evaluation
@@ -30,6 +31,11 @@ track:
         emit_handoff: true
         consume_previous: true
     source_inventory:
+      next: evidence_analysis
+      contract:
+        emit_handoff: true
+        consume_previous: true
+    evidence_analysis:
       next: capability_mapping
       contract:
         emit_handoff: true

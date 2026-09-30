@@ -23,6 +23,7 @@ phase:
     - "{{CARD_DIR}}/analysis"
     - "{{CARD_DIR}}/investigations/00_intake.md"
     - "{{CARD_DIR}}/analysis/01_analysis_scope.yaml"
+    - "{{CARD_DIR}}/ingest"
   completion:
     strategy: required_artifacts_exist
     required_artifacts:

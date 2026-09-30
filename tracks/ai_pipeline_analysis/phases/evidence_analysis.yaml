@@ -1,0 +1,33 @@
+config_version: 1
+
+phase:
+  id: evidence_analysis
+  name: Evidence Analysis
+  description: Analyze selected supplied evidence and record traceable observations, coverage, and limitations before capability mapping.
+  skills: []
+  prompt:
+    active: 1
+    path: templates/prompts/ai_pipeline_analysis/evidence_analysis/prompt_v<active>.md
+  outputs:
+    create_directories:
+      - analysis
+      - investigations
+    create_artifacts:
+      - analysis/15_evidence_register.yaml
+      - analysis/16_evidence_analysis.md
+      - investigations/20_handoff.json
+    prompts:
+      - evidence_analysis
+  read_sources:
+    - "{{CARD_DIR}}/analysis"
+    - "{{CARD_DIR}}/investigations/00_intake.md"
+    - "{{CARD_DIR}}/ingest"
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - path: analysis/15_evidence_register.yaml
+        validation_mode: blocking
+      - path: analysis/16_evidence_analysis.md
+        validation_mode: blocking
+      - path: investigations/20_handoff.json
+        validation_mode: blocking

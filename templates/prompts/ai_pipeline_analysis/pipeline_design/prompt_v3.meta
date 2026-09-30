@@ -1,0 +1,3 @@
+version=v3
+required_substrings=ROLE|OBJECTIVE|INPUT|OUTPUT|READ_SCOPE|WRITE_SCOPE|RULES|FORBIDDEN|FAIL_CONDITIONS|15_evidence_register.yaml|16_evidence_analysis.md
+forbidden_words=
