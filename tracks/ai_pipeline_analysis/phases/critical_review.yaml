@@ -21,6 +21,8 @@ phase:
   read_sources:
     - "{{CARD_DIR}}/analysis"
     - "{{CARD_DIR}}/investigations/00_intake.md"
+  read_sources_from: required_inventory_sources
+  evidence_manifest: analysis/10_source_manifest.yaml
   completion:
     strategy: required_artifacts_exist
     required_artifacts:

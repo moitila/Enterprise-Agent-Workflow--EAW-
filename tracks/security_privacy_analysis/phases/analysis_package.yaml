@@ -8,6 +8,8 @@ phase:
   prompt:
     active: 1
     path: templates/prompts/security_privacy_analysis/analysis_package/prompt_v<active>.md
+  delivery_contract: required
+  package_artifact: analysis/70_package_handoff.md
   outputs:
     create_directories:
       - analysis

@@ -2044,6 +2044,49 @@ ${skill_lines%$'\n'}"
 	fi
 	local read_sources_section=""
 	[[ -n "$read_sources_block" ]] && read_sources_section=$'READ_SOURCES:\n'"${read_sources_block}"
+	local declared_evidence_section=""
+	local declared_evidence_sources
+	declared_evidence_sources="$(eaw_delivery_phase_sources "${phase_file:-}")"
+	if [[ -n "$declared_evidence_sources" ]]; then
+		local resolved_declarations
+		resolved_declarations="$(eaw_delivery_resolve_phase_sources "${phase_file:-}" "${EAW_CONFIG_DIR}/repos.conf")" || { echo "RUNTIME: phase evidence source declaration rejected for phase $step_id" >&2; return 1; }
+		declared_evidence_section=$'PHASE_DECLARED_EVIDENCE_SOURCES (only these explicit phase paths; unavailable paths remain gaps):\n'
+		declared_evidence_section+="${resolved_declarations:-no paths currently available}"
+	else
+		local evidence_scope_rel source_declaration
+		evidence_scope_rel="$(awk '/^  evidence_sources_from:[[:space:]]*/ {sub(/^  evidence_sources_from:[[:space:]]*/, ""); print; exit}' "${phase_file:-}")"
+		source_declaration="$(awk '/^  evidence_sources:[[:space:]]*/ {sub(/^  evidence_sources:[[:space:]]*/, ""); print; exit}' "${phase_file:-}")"
+		if [[ -n "$evidence_scope_rel" ]]; then
+			[[ "$evidence_scope_rel" != /* && "$evidence_scope_rel" != *"/../"* && "$evidence_scope_rel" != ../* && "$evidence_scope_rel" != *"/.." && "$evidence_scope_rel" != *".."* ]] || { echo "RUNTIME: unsafe card evidence scope path: $evidence_scope_rel" >&2; return 1; }
+			local resolved_scope_sources
+			resolved_scope_sources="$(eaw_delivery_resolve_scope_sources "$card_dir/$evidence_scope_rel" "${EAW_CONFIG_DIR}/repos.conf")" || { echo "RUNTIME: card evidence scope rejected for phase $step_id" >&2; return 1; }
+			declared_evidence_section=$'PHASE_DELEGATED_EVIDENCE_SOURCES (only exact card-scope paths, canonicalized within mapped target roots):\n'
+			declared_evidence_section+="${resolved_scope_sources:-no explicitly authorized target paths}"
+		fi
+		if [[ -z "$evidence_scope_rel" && "$source_declaration" == '[]' ]]; then
+			declared_evidence_section="PHASE_DECLARED_EVIDENCE_SOURCES: none; target source access is not authorized by this phase."
+		fi
+	fi
+	local inventory_sources_section=""
+	local source_policy="$(awk '/^  read_sources_from:[[:space:]]*/ {sub(/^  read_sources_from:[[:space:]]*/, ""); print; exit}' "${phase_file:-}")"
+	if [[ "$source_policy" == required_inventory_sources ]]; then
+		local manifest_rel manifest_path resolved_inventory_sources inventory_phase_file inventory_scope_rel inventory_scope_file
+		manifest_rel="$(awk '/^  evidence_manifest:[[:space:]]*/ {sub(/^  evidence_manifest:[[:space:]]*/, ""); print; exit}' "${phase_file:-}")"
+		manifest_path="$card_dir/${manifest_rel:-analysis/10_source_manifest.yaml}"
+		inventory_phase_file="$EAW_ROOT_DIR/tracks/$track_id/phases/source_inventory.yaml"
+		inventory_scope_rel="$(awk '/^  evidence_sources_from:[[:space:]]*/ {sub(/^  evidence_sources_from:[[:space:]]*/, ""); print; exit}' "$inventory_phase_file")"
+		inventory_scope_file="${inventory_scope_rel:+$card_dir/$inventory_scope_rel}"
+		resolved_inventory_sources="$(eaw_delivery_resolve_inventory_sources "$manifest_path" "${EAW_CONFIG_DIR}/repos.conf" "$inventory_scope_file")" || {
+			echo "RUNTIME: inventory evidence resolution rejected the declaration for phase $step_id" >&2
+			return 1
+		}
+		inventory_sources_section=$'AUTHORIZED_INVENTORY_EVIDENCE (only required, available records; canonical paths contained by mapped target root):\n'
+		if [[ -n "$resolved_inventory_sources" ]]; then
+			inventory_sources_section+="$resolved_inventory_sources"
+		else
+			inventory_sources_section+="(no required available inventory source; gaps remain explicit)"
+		fi
+	fi
 
 	cat <<EOF
 RUNTIME_ENVIRONMENT
@@ -2055,6 +2098,7 @@ CANONICAL_PATH: $PATH
 WORKDIR: $workdir
 CARD_DIR: $card_dir
 OUT_DIR: $EAW_OUT_DIR
+ANALYSIS_DELIVERY_HELPER: $EAW_ROOT_DIR/scripts/lib/analysis_delivery_contract.sh
 
 TARGET_REPOSITORIES:
 $target_repos
@@ -2064,6 +2108,8 @@ WRITE_ALLOWLIST:
 $write_allowlist
 $write_allowlist_extra
 ${read_sources_section}
+${declared_evidence_section:+${declared_evidence_section}$'\n'}
+${inventory_sources_section:+${inventory_sources_section}$'\n'}
 CRITICAL_PATHS:
 $critical_paths
 EOF

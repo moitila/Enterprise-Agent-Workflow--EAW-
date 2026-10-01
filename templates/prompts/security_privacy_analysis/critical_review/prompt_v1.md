@@ -15,7 +15,7 @@ READ_SCOPE
 - `{{CARD_DIR}}/investigations/00_intake.md`
 - `{{CARD_DIR}}/investigations/01_ingest_manifest.yaml`
 - `{{CARD_DIR}}/investigations/20_handoff.json`
-- Todos os artefatos `{{CARD_DIR}}/analysis/` explicitamente listados como outputs de fases anteriores; fontes originais apenas sob escopo autorizado.
+- Todos os artefatos `{{CARD_DIR}}/analysis/` explicitamente listados como outputs de fases anteriores; fontes originais somente em `AUTHORIZED_INVENTORY_EVIDENCE`, conforme política explícita da fase.
 
 WRITE_SCOPE
 - `{{CARD_DIR}}/analysis/60_critical_review.md`
@@ -38,6 +38,7 @@ RULES
 - Evidencia ausente, conflito ou acesso negado e gap/limitacao, nao blocker automatico da analise inteira; blocker operacional impede somente a operacao dependente.
 - Distinguir observacao, inferencia, premissa, proposta e desconhecido; rastrear claims materiais ate fonte identificavel. Nao converter analise em pentest, certificacao, parecer juridico, aprovacao ou gate de release.
 - Executar o pre-check comum. Verificar completude contra o design e rastreabilidade entre fontes, ativos/fluxos, threats, privacidade, decisões e perguntas. Não apagar divergências: classificá-las e orientar a consolidação.
+- Distinguir inventário de análise semântica; uma fonte requerida disponível mas não examinada deve constar como gap de cobertura.
 - Emitir handoff compacto em uma única linha com `from_phase":"critical_review"` e `codes:[]`.
 - Emitir handoff: printf '%s\n' '{"from_phase":"critical_review","status":"completed","messages":[],"codes":[]}' > "{{CARD_DIR}}/investigations/20_handoff.json"
 

@@ -8,6 +8,9 @@ phase:
   prompt:
     active: 1
     path: templates/prompts/security_privacy_analysis/source_inventory/prompt_v<active>.md
+  evidence_sources_from: analysis/01_analysis_scope.yaml
+  read_sources:
+    - "{{CARD_DIR}}/analysis/01_analysis_scope.yaml"
   outputs:
     create_directories:
       - analysis

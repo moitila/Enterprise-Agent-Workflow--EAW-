@@ -30,6 +30,7 @@ OUTPUT
 OUTPUT_STRUCTURE
 - Relatório autocontido sintetiza escopo, método, ativos/fluxos/fronteiras, ameaças/controles, implicações de privacidade/terceiros, decisões, gaps, evidências, limitações e findings ainda abertos, com referências cruzadas/provenance e níveis de certeza. YAML consolidado mantém os estados permitidos e racional/evidência. Perguntas de verificação são acionáveis sem implicar gate.
 - `70_package_handoff.md` lista inclusões/exclusões, limitações/findings, paths exatos e status separado `ANALYSIS_STATUS` / `PERSISTENCE_STATUS`; registra target/ref somente se observáveis e as cópias efetivamente persistidas. Se allowlist faltar/negar escrita, `ANALYSIS_STATUS` ainda pode ser `COMPLETE` para pacote adequado; `PERSISTENCE_STATUS` reporta `BLOCKED` ou `NOT_AUTHORIZED` sem contorno.
+- Declarar campos literais separados `ANALYSIS_STATUS: COMPLETE|INCOMPLETE`, `COVERAGE_STATUS: COMPLETE|GAPS_ACCEPTED`, `REQUIRED_AVAILABLE_NOT_EXAMINED: true|false`, `PERSISTENCE_STATUS: PERSISTED|NOT_AUTHORIZED|NOT_APPLICABLE|BLOCKED|FAILED` e `PERSISTED_PATHS:` com paths exatos ou `none`. `PERSISTED` exige paths confirmados; cobertura requerida disponível sem exame impede `COMPLETE`.
 
 RULES
 - Executar pre-check antes de qualquer acao:

@@ -23,6 +23,7 @@ OUTPUT_STRUCTURE
 READ_SCOPE
 - Prior {{CARD_DIR}}/analysis/ and {{CARD_DIR}}/investigations/00_intake.md.
 - Target only within {{CARD_DIR}}/analysis/01_analysis_scope.yaml read scope.
+- Runtime-authorized originals only under `AUTHORIZED_INVENTORY_EVIDENCE`; do not infer authorization from an inventory record.
 
 WRITE_SCOPE
 - {{CARD_DIR}}/analysis/50_critical_review.md
@@ -33,6 +34,7 @@ RULES
 - Run the pre-check: cd "{{RUNTIME_ROOT}}"; test -f ./scripts/eaw; test -f "{{CONFIG_SOURCE}}".
 - Independently challenge need for AI, deterministic boundaries, source-of-truth, upstream fit, evidence/provenance, failure modes, evaluation, complexity/sustainability, and open questions.
 - Tie each finding to evidence or label it as an unverified concern. Do not manufacture findings to fill a quota; explicitly record reviewed areas with no finding.
+- Check source-level coverage dispositions; an inventory row is not proof of semantic examination, and required available but unexamined evidence must remain an explicit completeness gap.
 - Emit handoff on one line: printf '%s\n' '{"from_phase":"critical_review","status":"completed","messages":[],"codes":[]}' > "{{CARD_DIR}}/investigations/20_handoff.json"
 
 FORBIDDEN

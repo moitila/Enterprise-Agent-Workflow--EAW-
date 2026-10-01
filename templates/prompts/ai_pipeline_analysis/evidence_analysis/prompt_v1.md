@@ -19,12 +19,13 @@ OUTPUT
 
 OUTPUT_STRUCTURE
 - Register entries use stable evidence, source, and segment IDs; exact reproducible locators; source state (analyzed, partial, not_analyzed, unreadable, or not_applicable); observed excerpt/fact distinct from interpretation; provenance; conflicts/ambiguity; limitations; and scoped question/capability link where identifiable.
+- Record coverage independently from inventory: inventory presence alone is not analysis. Include `COVERAGE_STATUS` and per-source dispositions. A required available source not examined makes analysis incomplete.
 - Narrative summarizes coverage and gives central-question status (answered, partially_answered, or insufficient_evidence) with reasons. It must not imply more coverage than source-level records.
 
 READ_SCOPE
 - Prior artifacts under {{CARD_DIR}}/analysis/ and intake at {{CARD_DIR}}/investigations/00_intake.md.
 - Supplied materials under {{CARD_DIR}}/ingest/.
-- The target selected in analysis/01_analysis_scope.yaml is not available as a dynamically enforceable read path in this phase contract. Do not open target files. Record selected target-only sources as not_analyzed and state this scope limitation; analyze selected supplied ingest sources that are readable.
+- Target files are available only when listed by the runtime under `AUTHORIZED_INVENTORY_EVIDENCE`. The runtime exposes only manifest entries marked required and available, resolved through `repos.conf` and canonical containment. Do not open other target files. Inventory presence alone is not authorization or analysis. If a required available source is not examined, set `ANALYSIS_STATUS: INCOMPLETE` and name it.
 - Open only sources/segments selected by stable IDs in the source manifest. Official/primary external sources may be considered only when materially needed and permitted by the effective runtime read scope; otherwise record the unresolved question.
 
 WRITE_SCOPE
@@ -36,7 +37,7 @@ RULES
 - Run the pre-check: cd "{{RUNTIME_ROOT}}"; test -f ./scripts/eaw; test -f "{{CONFIG_SOURCE}}".
 - Resolve target identity from {{EAW_WORKDIR}}/config/repos.conf and validate selection/scope from analysis/01_analysis_scope.yaml before any permitted reads. Never broaden or change scope.
 - Read material content, not only names or metadata. Do not require OCR; record partial or inaccessible content and reasons. Cite stable source IDs and exact reproducible locators for material claims; preserve conflicting evidence and uncertainty; do not infer absent facts.
-- The phase read_sources contract exposes card artifacts and ingest only, not selected target paths. Do not bypass that contract or claim target content was analyzed. The handoff must explicitly report this limitation when relevant.
+- Consume only the canonical paths under `AUTHORIZED_INVENTORY_EVIDENCE`; do not bypass the phase policy. Preserve `repository`, relative path, and source ID in the register.
 - Emit the compact handoff on one shell command line: printf '%s\n' '{"from_phase":"evidence_analysis","status":"completed","messages":[],"codes":[]}' > "{{CARD_DIR}}/investigations/20_handoff.json"
 
 FORBIDDEN

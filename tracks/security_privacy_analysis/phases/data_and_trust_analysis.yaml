@@ -8,6 +8,8 @@ phase:
   prompt:
     active: 1
     path: templates/prompts/security_privacy_analysis/data_and_trust_analysis/prompt_v<active>.md
+  read_sources_from: required_inventory_sources
+  evidence_manifest: analysis/10_source_manifest.yaml
   outputs:
     create_directories:
       - analysis

@@ -11,6 +11,7 @@ OBJECTIVE
 INPUT
 - Intake, manifesto/provenance/gaps de fontes e entradas do card.
 - Fontes de arquitetura/dados somente conforme inventário e escopo autorizado na execução.
+- O runtime fornece `AUTHORIZED_INVENTORY_EVIDENCE` apenas para entradas required/available; usar exclusivamente esses paths canônicos e registrar exame/coverage por source ID. Manifestar não equivale a analisar. Fonte requerida disponível não examinada exige `ANALYSIS_STATUS: INCOMPLETE`.
 
 READ_SCOPE
 - `{{CARD_DIR}}/investigations/00_intake.md`
@@ -42,6 +43,7 @@ RULES
 - Evidencia ausente, conflito ou acesso negado e gap/limitacao, nao blocker automatico da analise inteira; blocker operacional impede somente a operacao dependente.
 - Distinguir observacao, inferencia, premissa, proposta e desconhecido; rastrear claims materiais ate fonte identificavel. Nao converter analise em pentest, certificacao, parecer juridico, aprovacao ou gate de release.
 - Executar o pre-check comum. Referenciar IDs de fonte do manifesto e diferenciar observado, inferido, premissa e desconhecido. Não preencher atributos sensíveis ou identidade de titulares sem evidência.
+- Para cada fonte requerida, registrar `examined`, `unavailable`, `not_authorized` ou `not_examined`; nunca declarar análise completa com fonte requerida disponível sem exame.
 - Emitir handoff compacto em uma única linha com `from_phase":"data_and_trust_analysis"` e `codes:[]`.
 - Emitir handoff: printf '%s\n' '{"from_phase":"data_and_trust_analysis","status":"completed","messages":[],"codes":[]}' > "{{CARD_DIR}}/investigations/20_handoff.json"
 

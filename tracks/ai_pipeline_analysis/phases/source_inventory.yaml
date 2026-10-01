@@ -8,6 +8,7 @@ phase:
   prompt:
     active: 3
     path: templates/prompts/ai_pipeline_analysis/source_inventory/prompt_v<active>.md
+  evidence_sources_from: analysis/01_analysis_scope.yaml
   outputs:
     create_directories:
       - analysis

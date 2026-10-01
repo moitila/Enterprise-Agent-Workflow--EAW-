@@ -1,0 +1,13 @@
+contract:
+  selector_artifact: analysis/01_analysis_scope.yaml
+  selector_key: authorized_sources
+  selector_fields: [repo_key, paths, required]
+  target_authority: repos.conf_target_only
+  empty_selector: fail_closed
+  source_authority: explicit_phase_declaration
+  inventory_authority: false
+  source_states: [examined, unavailable, not_authorized, not_examined]
+  analysis_status: [COMPLETE, INCOMPLETE]
+  persistence_status: [PERSISTED, NOT_AUTHORIZED, NOT_APPLICABLE, BLOCKED, FAILED]
+  required_available_unexamined_allows_complete: false
+  persistence_requires_exact_allowlisted_path: true

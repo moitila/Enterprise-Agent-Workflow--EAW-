@@ -113,6 +113,51 @@ eaw_validate_workflow_phase_completion() {
 	return "$errors"
 }
 
+eaw_validate_workflow_evidence_contract() {
+	local track_id="$1" phase_id="$2" phase_file="$3" mode
+	local errors=0 scope_source
+	mode="$(awk '/^  read_sources_from:[[:space:]]*/ {sub(/^  read_sources_from:[[:space:]]*/, ""); print; exit}' "$phase_file")"
+	if [[ -n "$mode" && "$mode" != required_inventory_sources ]]; then
+		eaw_validate_workflow_error "$track_id" "$phase_id" "read_sources_from" "unsupported source policy '$mode'"
+		errors=$((errors + 1))
+	fi
+	if [[ "$mode" == required_inventory_sources ]]; then
+		if ! awk '/^  evidence_manifest:[[:space:]]*analysis\/10_source_manifest\.yaml$/ {found=1} END {exit !found}' "$phase_file"; then
+			eaw_validate_workflow_error "$track_id" "$phase_id" "evidence_manifest" "required_inventory_sources must name analysis/10_source_manifest.yaml"
+			errors=$((errors + 1))
+		fi
+	fi
+	scope_source="$(awk '/^  evidence_sources_from:[[:space:]]*/ {sub(/^  evidence_sources_from:[[:space:]]*/, ""); print; exit}' "$phase_file")"
+	if [[ -n "$scope_source" ]]; then
+		if [[ "$scope_source" == /* || "$scope_source" == *"/../"* || "$scope_source" == ../* || "$scope_source" == *"/.." || "$scope_source" == *".."* ]]; then
+			eaw_validate_workflow_error "$track_id" "$phase_id" "evidence_sources_from" "selector artifact path must be relative and traversal-free"
+			errors=$((errors + 1))
+		fi
+		if ! grep -Fq -- "{{CARD_DIR}}/$scope_source" "$phase_file"; then
+			eaw_validate_workflow_error "$track_id" "$phase_id" "evidence_sources_from" "selector artifact must also be declared in phase.read_sources"
+			errors=$((errors + 1))
+		fi
+		if [[ "$(awk '/^  evidence_sources:/ {sub(/^  evidence_sources:[[:space:]]*/, ""); print; exit}' "$phase_file")" != "" ]]; then
+			eaw_validate_workflow_error "$track_id" "$phase_id" "evidence_sources" "direct and delegated source selectors cannot be mixed"
+			errors=$((errors + 1))
+		fi
+	fi
+	local delivery package
+	delivery="$(awk '/^  delivery_contract:[[:space:]]*/ {sub(/^  delivery_contract:[[:space:]]*/, ""); print; exit}' "$phase_file")"
+	if [[ -n "$delivery" ]]; then
+		package="$(awk '/^  package_artifact:[[:space:]]*/ {sub(/^  package_artifact:[[:space:]]*/, ""); print; exit}' "$phase_file")"
+		if [[ "$delivery" != required || -z "$package" ]]; then
+			eaw_validate_workflow_error "$track_id" "$phase_id" "delivery_contract" "required delivery contract needs a package_artifact path"
+			errors=$((errors + 1))
+		fi
+	fi
+	if [[ -f "${EAW_CONFIG_DIR:-}/repos.conf" ]] && ! eaw_delivery_validate_evidence_declaration "$phase_file" "${EAW_CONFIG_DIR}/repos.conf"; then
+		eaw_validate_workflow_error "$track_id" "$phase_id" "evidence_sources" "invalid repository/path authorization declaration"
+		errors=$((errors + 1))
+	fi
+	return "$errors"
+}
+
 eaw_validate_workflow_phase_tooling_hints() {
 	local track_id="$1"
 	local phase_id="$2"
@@ -527,6 +572,11 @@ eaw_validate_workflow_track() {
 			errors=$((errors + phase_errors))
 		fi
 		eaw_validate_workflow_phase_completion "$track_id" "$phase_id" "$phase_file"
+		phase_errors=$?
+		if [[ "$phase_errors" -gt 0 ]]; then
+			errors=$((errors + phase_errors))
+		fi
+		eaw_validate_workflow_evidence_contract "$track_id" "$phase_id" "$phase_file"
 		phase_errors=$?
 		if [[ "$phase_errors" -gt 0 ]]; then
 			errors=$((errors + phase_errors))

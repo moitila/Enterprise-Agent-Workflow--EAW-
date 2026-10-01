@@ -18,6 +18,8 @@ phase:
   read_sources:
     - "{{CARD_DIR}}/analysis"
     - "{{CARD_DIR}}/investigations/00_intake.md"
+  delivery_contract: required
+  package_artifact: analysis/60_package_handoff.md
   completion:
     strategy: required_artifacts_exist
     required_artifacts:

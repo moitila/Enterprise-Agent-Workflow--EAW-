@@ -19,6 +19,7 @@ OUTPUT
 OUTPUT_STRUCTURE
 - Target documents are self-consistent and retain provenance, evidence IDs/locators and coverage/status, observed/inferred/unverified distinctions, decisions, open questions, critical findings, and limitations.
 - Handoff lists exact persisted paths, observable source revision if available, included/omitted content, open questions, completion status, and observed byte sizes. If authorization/evidence is insufficient, state incomplete and name the specific blocker. Never treat this handoff as proof of persistence or a structural runtime completion gate.
+- Declare literal, separate fields `ANALYSIS_STATUS: COMPLETE|INCOMPLETE`, `COVERAGE_STATUS: COMPLETE|GAPS_ACCEPTED`, `REQUIRED_AVAILABLE_NOT_EXAMINED: true|false`, `PERSISTENCE_STATUS: PERSISTED|NOT_AUTHORIZED|NOT_APPLICABLE|BLOCKED|FAILED`, and `PERSISTED_PATHS:` followed by exact paths or `none`. `PERSISTED` requires exact persisted paths; never mark `COMPLETE` if a required available source remains unexamined.
 
 READ_SCOPE
 - Prior artifacts under {{CARD_DIR}}/analysis/ and {{CARD_DIR}}/investigations/00_intake.md.

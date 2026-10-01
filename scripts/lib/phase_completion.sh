@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 
+EAW_ANALYSIS_DELIVERY_LIB="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/analysis_delivery_contract.sh"
+# shellcheck disable=SC1090
+source "$EAW_ANALYSIS_DELIVERY_LIB"
+
 eaw_phase_completion_strategy_name() {
 	local file="$1"
 	awk '
@@ -484,7 +488,13 @@ eaw_phase_completion_evaluate() {
 	strategy="$(eaw_phase_completion_strategy_name "$phase_file")"
 	case "$strategy" in
 	"" | required_artifacts_exist)
-		eaw_phase_completion_evaluate_required_artifacts_exist "$card" "$card_dir" "$phase_id" "$phase_file"
+		eaw_phase_completion_evaluate_required_artifacts_exist "$card" "$card_dir" "$phase_id" "$phase_file" || return
+		if [[ "$(awk '/^  delivery_contract:[[:space:]]*required$/ {print "required"; exit}' "$phase_file")" == required ]]; then
+			local package_rel
+			package_rel="$(awk '/^  delivery_contract:[[:space:]]*required$/ {found=1} found && /^  package_artifact:/ {sub(/^  package_artifact:[[:space:]]*/, ""); print; exit}' "$phase_file")"
+			[[ -n "$package_rel" ]] || { echo "delivery_contract requires package_artifact" >&2; return 1; }
+			eaw_delivery_validate_package "$card_dir/$package_rel"
+		fi
 		;;
 	*)
 		echo "ERROR: card ${card} phase '${phase_id}' uses unsupported completion strategy '${strategy}'" >&2
@@ -506,7 +516,13 @@ eaw_phase_completion_evaluate_strict() {
 		if ! eaw_phase_completion_evaluate_required_artifacts_filled "$card" "$card_dir" "$phase_id" "$phase_file"; then
 			return 1
 		fi
-		eaw_phase_completion_evaluate_required_artifacts_substantive "$card" "$card_dir" "$phase_id" "$phase_file"
+		eaw_phase_completion_evaluate_required_artifacts_substantive "$card" "$card_dir" "$phase_id" "$phase_file" || return
+		if [[ "$(awk '/^  delivery_contract:[[:space:]]*required$/ {print "required"; exit}' "$phase_file")" == required ]]; then
+			local package_rel
+			package_rel="$(awk '/^  delivery_contract:[[:space:]]*required$/ {found=1} found && /^  package_artifact:/ {sub(/^  package_artifact:[[:space:]]*/, ""); print; exit}' "$phase_file")"
+			[[ -n "$package_rel" ]] || { echo "delivery_contract requires package_artifact" >&2; return 1; }
+			eaw_delivery_validate_package "$card_dir/$package_rel"
+		fi
 		;;
 	*)
 		eaw_phase_completion_evaluate "$card" "$card_dir" "$phase_id" "$phase_file"
