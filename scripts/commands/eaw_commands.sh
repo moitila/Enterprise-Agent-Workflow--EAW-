@@ -635,6 +635,35 @@ eaw_emit_context_summary() {
 		phase_summary="$(echo "$normalized" | grep -o '"summary":"[^"]*"' 2>/dev/null | head -1 | sed 's/"summary":"//;s/"//')"
 	fi
 
+	if [[ -z "$phase_status" || "$phase_status" == "unknown" ]]; then
+		local state_file state_current_phase state_phase_status state_phase_completed completed_phase
+		for state_file in "$card_dir"/state_card_*.yaml "$card_dir"/intake/state_card_*.yaml; do
+			[[ -f "$state_file" ]] || continue
+			state_current_phase="$(eaw_state_scalar_or_default "$state_file" "current_phase" "")"
+			state_phase_status="$(eaw_state_scalar_or_default "$state_file" "phase_status" "")"
+			state_phase_completed="$(eaw_state_scalar_or_default "$state_file" "phase_completed" "false")"
+			while IFS= read -r completed_phase; do
+				if [[ "$completed_phase" == "$phase_id" ]]; then
+					phase_status="completed"
+					break
+				fi
+			done < <(eaw_yaml_state_completed_phases "$state_file")
+			if [[ "$phase_status" != "unknown" ]]; then
+				break
+			fi
+			if [[ "$state_current_phase" == "$phase_id" ]]; then
+				case "$state_phase_status" in
+					COMPLETE) phase_status="completed" ;;
+					RUN) phase_status="in_progress" ;;
+					FAILED|FAIL) phase_status="failed" ;;
+					SKIPPED|SKIP) phase_status="skipped" ;;
+					*) [[ "$state_phase_completed" == "true" ]] && phase_status="completed" ;;
+				esac
+			fi
+			break
+		done
+	fi
+
 	mkdir -p "$inv_dir"
 	if [[ ! -f "$summary_file" ]]; then
 		printf "# Context Summary\n\n" >"$summary_file"
@@ -1747,7 +1776,8 @@ eaw_scope_lock_allowlist_paths() {
 		capture && in_fence && /\// { print; next }
 		capture && !in_fence && /^(- |[0-9]+[.)][[:space:]]|\||[A-Z]+: \/)/ { print; next }
 	' "$scope_lock_file" | \
-	grep -oE '/[^ |]+' | \
+	grep -oE '(^|[[:space:]|`])(/[a-zA-Z0-9_./-]+)' | \
+	sed 's/^[[:space:]|`]*//' | \
 	tr -d '`' | \
 	sed 's/[^a-zA-Z0-9_./-]*$//' | \
 	grep -Ev '[*?]' | \

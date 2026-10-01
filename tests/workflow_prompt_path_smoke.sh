@@ -446,4 +446,19 @@ set -e
 [[ "$context_runtime_rc" -ne 0 ]] || fail "expected dynamic context runtime without materialization to fail"
 grep -Fq "template directory not found for context 'dynamic' template 'repo-diff'" <<<"$context_runtime_output" || fail "missing deterministic runtime error for absent dynamic context template"
 
+# Scope-lock allowlist parsing must accept absolute paths and ignore slash fragments in prose.
+source "$RUNTIME_ROOT/scripts/commands/eaw_commands.sh"
+scope_lock_fixture="$tmp_root/scope-lock-allowlist.md"
+cat >"$scope_lock_fixture" <<'EOF'
+## Allowlist de Escrita
+
+- `/tmp/eaw-fixture/scripts/eaw`
+- A configuração/template opcional não faz parte da allowlist.
+EOF
+parsed_scope_paths="$(eaw_scope_lock_allowlist_paths "$scope_lock_fixture")"
+grep -Fxq "/tmp/eaw-fixture/scripts/eaw" <<<"$parsed_scope_paths" || fail "scope.lock parser omitted an absolute allowlist path"
+if grep -Fxq "/template" <<<"$parsed_scope_paths"; then
+	fail "scope.lock parser treated prose fragment configuração/template as an absolute path"
+fi
+
 printf "workflow_prompt_path_smoke OK\n"

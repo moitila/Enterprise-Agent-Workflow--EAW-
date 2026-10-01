@@ -253,4 +253,36 @@ fi
 
 pass "C6 — Card normal completo: pending=none, sem skipped_phase_artifacts"
 
+# ─── H2 — Context summary falls back to canonical state without an envelope ───
+source "$REPO_ROOT/scripts/eaw_core.sh"
+source "$REPO_ROOT/scripts/commands/eaw_commands.sh"
+SUMMARY_COMPLETE_DIR="$OUTDIR/H2_SUMMARY_COMPLETE"
+mkdir -p "$SUMMARY_COMPLETE_DIR/investigations"
+cat >"$SUMMARY_COMPLETE_DIR/state_card_fixture.yaml" <<'EOF'
+card_state:
+  current_phase: implementation_planning
+  phase_status: RUN
+  phase_completed: false
+  completed_phases:
+    - findings
+EOF
+eaw_emit_context_summary findings "$SUMMARY_COMPLETE_DIR"
+grep -Fq -- "- **Status**: completed" "$SUMMARY_COMPLETE_DIR/investigations/_context_summary.md" \
+	|| fail "H2: a phase recorded in completed_phases became unknown without its optional envelope"
+
+SUMMARY_RUNNING_DIR="$OUTDIR/H2_SUMMARY_RUNNING"
+mkdir -p "$SUMMARY_RUNNING_DIR/investigations"
+cat >"$SUMMARY_RUNNING_DIR/state_card_fixture.yaml" <<'EOF'
+card_state:
+  current_phase: findings
+  phase_status: RUN
+  phase_completed: false
+  completed_phases: []
+EOF
+printf 'stale output artifact\n' >"$SUMMARY_RUNNING_DIR/investigations/20_findings.md"
+eaw_emit_context_summary findings "$SUMMARY_RUNNING_DIR"
+grep -Fq -- "- **Status**: in_progress" "$SUMMARY_RUNNING_DIR/investigations/_context_summary.md" \
+	|| fail "H2: an artifact without completion evidence promoted an active phase"
+pass "H2 — Context summary falls back to state and does not infer completion from artifact presence"
+
 printf "\nsmoke_status_skip.sh: ALL PASSED\n"
