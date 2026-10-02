@@ -15,7 +15,7 @@ INPUT
 
 READ_SCOPE
 - `{{CARD_DIR}}/investigations/00_intake.md`
-- `{{CARD_DIR}}/analysis/00_source_manifest.yaml`
+- `{{CARD_DIR}}/analysis/10_source_manifest.yaml`
 - `{{CARD_DIR}}/analysis/01_source_provenance.md`
 - `{{CARD_DIR}}/analysis/02_source_gaps.md`
 - Relevant propagated sources from role=`target` roots.
@@ -35,6 +35,7 @@ OUTPUT_STRUCTURE
 
 RULES
 - Run standard pre-check. Carry forward inventory statuses and provenance; mark inferred links as inferred.
+- Consume discovered evidence through `read_sources_from: required_inventory_sources` and `analysis/10_source_manifest.yaml`; use only available required records from role=`target` repositories with relative paths.
 - Keep verification (conformance to documented requirements/contracts/decisions) distinct from validation (suitability for documented use/outcomes). Do not claim either activity has been executed.
 - Emit compact handoff for `traceability_model` to `{{CARD_DIR}}/investigations/20_handoff.json`.
 

@@ -13,7 +13,7 @@ phase:
       - analysis
       - investigations
     create_artifacts:
-      - analysis/00_source_manifest.yaml
+      - analysis/10_source_manifest.yaml
       - analysis/01_source_provenance.md
       - analysis/02_source_gaps.md
       - investigations/20_handoff.json
@@ -25,7 +25,7 @@ phase:
   completion:
     strategy: required_artifacts_exist
     required_artifacts:
-      - path: analysis/00_source_manifest.yaml
+      - path: analysis/10_source_manifest.yaml
         validation_mode: blocking
       - path: analysis/01_source_provenance.md
         validation_mode: blocking

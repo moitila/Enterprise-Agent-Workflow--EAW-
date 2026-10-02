@@ -21,6 +21,8 @@ phase:
   read_sources:
     - "{{CARD_DIR}}"
     - "{{CONFIG_SOURCE}}"
+  read_sources_from: required_inventory_sources
+  evidence_manifest: analysis/10_source_manifest.yaml
   completion:
     strategy: required_artifacts_exist
     required_artifacts:

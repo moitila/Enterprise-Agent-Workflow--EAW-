@@ -27,4 +27,85 @@ grep -qi 'orchestration' "$base/analysis_package/prompt_v1.md"
 # J: strategy is analysis only; it must not execute or implement tests.
 grep -qi 'Running or implementing tests' "$base/verification_strategy/prompt_v1.md"
 grep -qi 'implementing fixes' "$base/critical_review/prompt_v1.md"
+# K: exercise the existing resolver, delivery, persistence, scope, and completion helpers.
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+source "$ROOT/scripts/lib/analysis_delivery_contract.sh"
+source "$ROOT/scripts/lib/phase_completion.sh"
+tmp="$(mktemp -d)"
+trap 'rm -rf "$tmp"' EXIT
+selected="$tmp/selected"
+other="$tmp/other"
+infra="$tmp/infra"
+card="$tmp/card"
+mkdir -p "$selected/src" "$selected/docs" "$other/src" "$other/docs" "$infra/src" "$card/analysis" "$card/implementation"
+printf 'distinctive propagated evidence\n' > "$other/src/evidence.md"
+printf 'selected root\n' > "$selected/src/evidence.md"
+cat > "$tmp/repos.conf" <<EOF
+selected|$selected|target
+other|$other|target
+infra|$infra|infra
+EOF
+export EAW_CONFIG_DIR="$tmp"
+cat > "$card/analysis/10_source_manifest.yaml" <<'EOF'
+sources:
+  - id: E1
+    repository: other
+    path: src/evidence.md
+    required: true
+    availability: available
+EOF
+resolved="$(eaw_delivery_resolve_inventory_sources "$card/analysis/10_source_manifest.yaml" "$tmp/repos.conf")"
+grep -Fq "$other/src/evidence.md" <<< "$resolved"
+grep -Fq 'distinctive propagated evidence' "$(cut -f3 <<< "$resolved")"
+cat > "$card/analysis/bad.yaml" <<'EOF'
+sources:
+  - id: BAD
+    repository: infra
+    path: src/evidence.md
+    required: true
+    availability: available
+EOF
+if eaw_delivery_resolve_inventory_sources "$card/analysis/bad.yaml" "$tmp/repos.conf" 2>/dev/null; then exit 1; fi
+sed 's#src/evidence.md#../escape.md#' "$card/analysis/10_source_manifest.yaml" > "$card/analysis/traversal.yaml"
+if eaw_delivery_resolve_inventory_sources "$card/analysis/traversal.yaml" "$tmp/repos.conf" 2>/dev/null; then exit 1; fi
+ln -s "$infra/src/evidence.md" "$other/src/escape.md"
+sed 's#src/evidence.md#src/escape.md#' "$card/analysis/10_source_manifest.yaml" > "$card/analysis/symlink.yaml"
+if eaw_delivery_resolve_inventory_sources "$card/analysis/symlink.yaml" "$tmp/repos.conf" 2>/dev/null; then exit 1; fi
+cat > "$card/analysis/70_package_handoff.md" <<'EOF'
+DELIVERY_TARGETS:
+  - selected
+ANALYSIS_STATUS: COMPLETE
+COVERAGE_STATUS: COMPLETE
+REQUIRED_AVAILABLE_NOT_EXAMINED: false
+PERSISTENCE_STATUS: NOT_PERSISTED
+EOF
+cat > "$card/implementation/00_scope.lock.md" <<EOF
+$selected/docs/verification-validation-analysis.md
+$selected/docs/verification-validation-matrix.yaml
+$selected/docs/verification-validation-decisions.yaml
+EOF
+for path in docs/verification-validation-analysis.md docs/verification-validation-matrix.yaml docs/verification-validation-decisions.yaml; do
+  printf 'content for %s\n' "$path" > "$card/analysis/$(basename "$path").source"
+done
+if eaw_phase_completion_evaluate TEST-CARD "$card" analysis_package "$track/phases/analysis_package.yaml" 2>/dev/null; then exit 1; fi
+mkdir -p "$selected/docs"
+for path in docs/verification-validation-analysis.md docs/verification-validation-matrix.yaml docs/verification-validation-decisions.yaml; do
+  src="$card/analysis/$(basename "$path").source"
+  eaw_delivery_persist_selected_file "$src" "$selected/$path" "$tmp/repos.conf" "$track/phases/analysis_package.yaml" "$card/implementation/00_scope.lock.md" TEST-CARD "$card/analysis/70_package_handoff.md"
+  test -s "$selected/$path"
+  test ! -e "$other/$path"
+done
+cat >> "$card/analysis/70_package_handoff.md" <<EOF
+PERSISTENCE_STATUS: PERSISTED
+PERSISTED_PATHS:
+- $selected/docs/verification-validation-analysis.md
+- $selected/docs/verification-validation-matrix.yaml
+- $selected/docs/verification-validation-decisions.yaml
+EOF
+eaw_phase_completion_evaluate TEST-CARD "$card" analysis_package "$track/phases/analysis_package.yaml"
+if grep -E 'CARD_ID|TEST-CARD' "$track/phases/analysis_package.yaml"; then exit 1; fi
+grep -q 'analysis/40_quality_evaluation.md' "$track/phases/quality_evaluation.yaml"
+grep -q 'analysis/40_quality_evaluation.md' "$base/quality_evaluation/prompt_v1.md"
+grep -q 'NOT_APPLICABLE' "$base/quality_evaluation/prompt_v1.md"
+grep -q 'TBD' "$base/quality_evaluation/prompt_v1.md"
 printf 'PASS: A-J V&V track implementation contracts\n'

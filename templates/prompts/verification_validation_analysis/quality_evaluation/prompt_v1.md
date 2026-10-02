@@ -18,7 +18,7 @@ READ_SCOPE
 - Relevant propagated target evidence identified by the source inventory.
 
 WRITE_SCOPE
-- `{{CARD_DIR}}/analysis/40_quality_ai_evaluation.md`
+- `{{CARD_DIR}}/analysis/40_quality_evaluation.md`
 - `{{CARD_DIR}}/analysis/41_evidence_and_observability.yaml`
 - `{{CARD_DIR}}/investigations/20_handoff.json`
 
@@ -27,7 +27,7 @@ OUTPUT
 
 OUTPUT_STRUCTURE
 - Assessment lists source-indicated quality attributes/special characteristics, rationale and evidence, evaluation approach, dependencies, and limitations. For each, distinguish verification, validation, and where relevant AI behavior evaluation.
-- If no AI is evidenced in scope, explicitly record AI model evaluation as not applicable on the examined evidence; if evidence is insufficient to determine applicability, record a gap rather than assume absence.
+- If no AI is evidenced in scope, explicitly record AI model evaluation as `NOT_APPLICABLE` on the examined evidence; if evidence is insufficient to determine applicability, record `TBD` and the evidence gap rather than assume absence.
 - Evidence/observability catalog records needed data, instrumentation or logs, external dependencies, access/retention considerations when evidenced, collection purpose, and status (available, proposed, missing, unknown). Do not invent measurements.
 
 RULES

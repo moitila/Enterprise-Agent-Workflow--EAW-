@@ -15,7 +15,7 @@ INPUT
 
 READ_SCOPE
 - `{{CARD_DIR}}/investigations/00_intake.md`
-- `{{CARD_DIR}}/analysis/00_source_manifest.yaml`
+- `{{CARD_DIR}}/analysis/10_source_manifest.yaml`
 - `{{CARD_DIR}}/analysis/01_source_provenance.md`
 - `{{CARD_DIR}}/analysis/02_source_gaps.md`
 - `{{CARD_DIR}}/analysis/10_traceability_matrix.yaml`
@@ -36,6 +36,7 @@ OUTPUT_STRUCTURE
 
 RULES
 - Run standard pre-check. Keep validation distinct from software conformance and from any model behavior evaluation. Record whether intended use and outcome criteria are documented or unknown.
+- Consume discovered evidence through `read_sources_from: required_inventory_sources` and `analysis/10_source_manifest.yaml`; use only available required records from role=`target` repositories with relative paths.
 - Do not assert domain suitability based on requirements conformance alone. Do not claim validation was performed.
 - Emit compact one-line handoff for `validation_strategy`.
 

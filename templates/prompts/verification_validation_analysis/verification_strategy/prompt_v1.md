@@ -14,7 +14,7 @@ INPUT
 - Relevant propagated source evidence and handoffs.
 
 READ_SCOPE
-- `{{CARD_DIR}}/analysis/00_source_manifest.yaml`
+- `{{CARD_DIR}}/analysis/10_source_manifest.yaml`
 - `{{CARD_DIR}}/analysis/01_source_provenance.md`
 - `{{CARD_DIR}}/analysis/02_source_gaps.md`
 - `{{CARD_DIR}}/analysis/10_traceability_matrix.yaml`
@@ -36,6 +36,7 @@ OUTPUT_STRUCTURE
 
 RULES
 - Run standard pre-check. Derive cases from the matrix and sources; preserve source locators and distinguish proposed methods from executed checks.
+- Consume discovered evidence through `read_sources_from: required_inventory_sources` and `analysis/10_source_manifest.yaml`; use only available required records from role=`target` repositories with relative paths.
 - Include external dependencies and relevant boundary conditions when evidence supports them. Do not invent thresholds or imply availability of datasets, environments, or test harnesses.
 - Emit compact one-line handoff for `verification_strategy`.
 

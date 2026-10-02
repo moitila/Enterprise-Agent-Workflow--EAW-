@@ -13,7 +13,7 @@ phase:
       - analysis
       - investigations
     create_artifacts:
-      - analysis/40_quality_ai_evaluation.md
+      - analysis/40_quality_evaluation.md
       - analysis/41_evidence_and_observability.yaml
       - investigations/20_handoff.json
     prompts:
@@ -21,10 +21,12 @@ phase:
   read_sources:
     - "{{CARD_DIR}}"
     - "{{CONFIG_SOURCE}}"
+  read_sources_from: required_inventory_sources
+  evidence_manifest: analysis/10_source_manifest.yaml
   completion:
     strategy: required_artifacts_exist
     required_artifacts:
-      - path: analysis/40_quality_ai_evaluation.md
+      - path: analysis/40_quality_evaluation.md
         validation_mode: blocking
       - path: analysis/41_evidence_and_observability.yaml
         validation_mode: blocking

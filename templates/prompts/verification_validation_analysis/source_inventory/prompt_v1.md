@@ -20,7 +20,7 @@ READ_SCOPE
 - Official external primary sources only when needed for a material, time-sensitive claim; record publisher, URL, access date, and supported claim.
 
 WRITE_SCOPE
-- `{{CARD_DIR}}/analysis/00_source_manifest.yaml`
+- `{{CARD_DIR}}/analysis/10_source_manifest.yaml`
 - `{{CARD_DIR}}/analysis/01_source_provenance.md`
 - `{{CARD_DIR}}/analysis/02_source_gaps.md`
 - `{{CARD_DIR}}/investigations/20_handoff.json`
@@ -29,7 +29,7 @@ OUTPUT
 - The four paths in `WRITE_SCOPE`.
 
 OUTPUT_STRUCTURE
-- Manifest provides stable source IDs, repository/path or URL, source type, authority/freshness when observable, discovery status, examination status, and relevance.
+- Write the manifest at `analysis/10_source_manifest.yaml`. Each propagated record has a stable ID, `repository` key mapped to a `role=target` entry in `repos.conf`, relative `path`, explicit boolean `required`, and `availability`; only `available` required records propagate. Never use absolute paths or infra repositories as evidence records.
 - Provenance explains precedence, conflicts, and evidence propagation for consumer phases.
 - Gaps distinguishes unavailable, unreadable, stale, conflicting, irrelevant, and discovered-but-not-examined sources. Do not equate discovery with examination or absence of a document with absence of a system property.
 - Handoff records unresolved source questions and confirms evidence is passed to downstream consumers through the runtime-supported mechanism.

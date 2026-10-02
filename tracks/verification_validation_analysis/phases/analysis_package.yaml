@@ -23,3 +23,9 @@ phase:
     required_artifacts:
       - path: analysis/70_package_handoff.md
         validation_mode: blocking
+  delivery_contract: required
+  package_artifact: analysis/70_package_handoff.md
+  target_delivery_paths:
+    - docs/verification-validation-analysis.md
+    - docs/verification-validation-matrix.yaml
+    - docs/verification-validation-decisions.yaml
