@@ -8,7 +8,6 @@ phase:
   prompt:
     active: 3
     path: templates/prompts/ai_pipeline_analysis/source_inventory/prompt_v<active>.md
-  evidence_sources_from: analysis/01_analysis_scope.yaml
   outputs:
     create_directories:
       - analysis
@@ -23,7 +22,6 @@ phase:
   read_sources:
     - "{{CARD_DIR}}/analysis"
     - "{{CARD_DIR}}/investigations/00_intake.md"
-    - "{{CARD_DIR}}/analysis/01_analysis_scope.yaml"
     - "{{CARD_DIR}}/ingest"
   completion:
     strategy: required_artifacts_exist

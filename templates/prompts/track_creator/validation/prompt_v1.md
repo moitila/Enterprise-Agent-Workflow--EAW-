@@ -8,7 +8,8 @@ ROLE
 OBJECTIVE
 - Verificar existencia e conteudo dos arquivos criados pelo implementation_executor.
 - Validar estruturalmente `evidence_sources`, `read_sources_from` e `delivery_contract`: repository keys devem resolver para role `target` em repos.conf, paths são relativos e sem traversal, consumidores apontam ao mesmo manifesto, e pacotes declaram os estados requeridos.
-- Não executar leitura semântica nem inferir autorização a partir de TARGET_REPOSITORIES. Confirmar que consumidores usam `read_sources_from: required_inventory_sources` sem fallback para root ou glob amplo.
+- `repos.conf` role=target é a fronteira de leitura e escrita; source_inventory descobre/seleciona arquivos sem `analysis_scope` ou autorização por arquivo. Consumers may use `read_sources_from: required_inventory_sources` so discovered manifest sources reach cognitive phases; validate containment and target role.
+- Para `delivery_contract: required`, validar que `target_delivery_paths` declara paths relativos seguros que o runtime pode derivar para roots target. Um scope.lock explícito só estreita essa allowlist. Rejeitar required delivery sem caminho target derivável.
 - Confirmar phase.skills por fase conforme a matriz aprovada em 10_change_plan.md.
 - Confirmar registro da track em tracks/tracks.yaml.
 - Executar ./scripts/eaw validate workflow --all e confirmar ausencia de erros

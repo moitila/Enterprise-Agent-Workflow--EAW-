@@ -1807,6 +1807,10 @@ eaw_card_write_allowlist_entries() {
 	local card_allowlist_file=""
 	local file
 	local -a markdown_candidates=()
+	if [[ -n "$phase_file" && -f "$phase_file" ]] && grep -q '^  target_delivery_paths:[[:space:]]*$' "$phase_file"; then
+		eaw_delivery_derive_write_allowlist "${EAW_CONFIG_DIR}/repos.conf" "$phase_file" "$scope_lock_file" "$(basename "$card_dir")" "$card_dir/analysis/10_source_manifest.yaml"
+		return
+	fi
 
 	if [[ -f "$scope_lock_file" ]]; then
 		local parsed_allowlist
@@ -1995,7 +1999,16 @@ $write_allowlist_source
 WRITE_ALLOWLIST_RESOLVED_FROM_SCOPE_LOCK:
 ${resolved_from_scope_lock:-(not available — scope.lock ausente ou formato nao suportado)}
 
-NOTE: This resolved list is derived from scope.lock. scope.lock is authoritative."
+
+NOTE: repos.conf role=target is root write authority. A supplied scope.lock narrows the runtime-derived delivery paths; without it, target_delivery_paths are derived for all target roots."
+	fi
+	if [[ -n "$phase_file" && -f "$phase_file" ]] && grep -q '^  target_delivery_paths:[[:space:]]*$' "$phase_file"; then
+		local derived_delivery
+		derived_delivery="$(eaw_delivery_derive_write_allowlist "${EAW_CONFIG_DIR}/repos.conf" "$phase_file" "$scope_lock_file" "$card" "$card_dir/analysis/10_source_manifest.yaml")" || return 1
+		write_allowlist_extra+="
+TARGET_DELIVERY_ALLOWLIST_SOURCE: repos.conf role=target + phase target_delivery_paths${scope_lock_file:+ narrowed by explicit scope.lock}
+TARGET_DELIVERY_ALLOWLIST:
+${derived_delivery:-(no target delivery paths resolved)}"
 	fi
 
 	local registry_file="$EAW_ROOT_DIR/skills/registry.yaml"
@@ -2068,15 +2081,20 @@ ${skill_lines%$'\n'}"
 		fi
 	fi
 	local inventory_sources_section=""
+	local discovery_roots_section=""
+	if [[ "$step_id" == source_inventory ]]; then
+		local target_roots
+		target_roots="$(eaw_delivery_target_roots "${EAW_CONFIG_DIR}/repos.conf")" || return 1
+		discovery_roots_section=$'SOURCE_DISCOVERY_TARGET_ROOTS (repos.conf role=target; discovery is not file-by-file preauthorized):\n'
+		discovery_roots_section+="${target_roots:-no configured target roots}"
+	fi
 	local source_policy="$(awk '/^  read_sources_from:[[:space:]]*/ {sub(/^  read_sources_from:[[:space:]]*/, ""); print; exit}' "${phase_file:-}")"
 	if [[ "$source_policy" == required_inventory_sources ]]; then
 		local manifest_rel manifest_path resolved_inventory_sources inventory_phase_file inventory_scope_rel inventory_scope_file
 		manifest_rel="$(awk '/^  evidence_manifest:[[:space:]]*/ {sub(/^  evidence_manifest:[[:space:]]*/, ""); print; exit}' "${phase_file:-}")"
 		manifest_path="$card_dir/${manifest_rel:-analysis/10_source_manifest.yaml}"
 		inventory_phase_file="$EAW_ROOT_DIR/tracks/$track_id/phases/source_inventory.yaml"
-		inventory_scope_rel="$(awk '/^  evidence_sources_from:[[:space:]]*/ {sub(/^  evidence_sources_from:[[:space:]]*/, ""); print; exit}' "$inventory_phase_file")"
-		inventory_scope_file="${inventory_scope_rel:+$card_dir/$inventory_scope_rel}"
-		resolved_inventory_sources="$(eaw_delivery_resolve_inventory_sources "$manifest_path" "${EAW_CONFIG_DIR}/repos.conf" "$inventory_scope_file")" || {
+		resolved_inventory_sources="$(eaw_delivery_resolve_inventory_sources "$manifest_path" "${EAW_CONFIG_DIR}/repos.conf")" || {
 			echo "RUNTIME: inventory evidence resolution rejected the declaration for phase $step_id" >&2
 			return 1
 		}
@@ -2109,6 +2127,7 @@ $write_allowlist
 $write_allowlist_extra
 ${read_sources_section}
 ${declared_evidence_section:+${declared_evidence_section}$'\n'}
+${discovery_roots_section:+${discovery_roots_section}$'\n'}
 ${inventory_sources_section:+${inventory_sources_section}$'\n'}
 CRITICAL_PATHS:
 $critical_paths

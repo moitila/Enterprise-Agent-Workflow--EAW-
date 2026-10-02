@@ -4,16 +4,16 @@ ROLE
 - Documentation packager consolidating the completed analysis into coherent authoritative documents in the selected target, only under effective authorization.
 
 OBJECTIVE
-- Persist only authorized final analysis documents and create an accurate card handoff with exact paths, included/omitted content, and factual completeness; this is not publication or approval.
+- Persist final analysis documents at the exact paths in `TARGET_DELIVERY_ALLOWLIST` and create an accurate card handoff with exact paths, included/omitted content, and factual completeness; this is not publication or approval.
 
 INPUT
 - CARD={{CARD}}
 - CARD_DIR={{CARD_DIR}}
-- Required prior outputs from ingest through critical_review, including {{CARD_DIR}}/analysis/01_analysis_scope.yaml, intake, source inventory, evidence register {{CARD_DIR}}/analysis/15_evidence_register.yaml, evidence narrative {{CARD_DIR}}/analysis/16_evidence_analysis.md, decisions, and review findings.
-- Observable target documentation conventions within authorized read scope and effective runtime write authorization.
+- Required prior outputs from ingest through critical_review, including intake, source inventory, evidence register {{CARD_DIR}}/analysis/15_evidence_register.yaml, evidence narrative {{CARD_DIR}}/analysis/16_evidence_analysis.md, decisions, and review findings.
+- Target documentation conventions observable within the role=target roots.
 
 OUTPUT
-- Final authoritative analysis documents under the single selected target, only at exact paths authorized by effective runtime scope.
+- Final authoritative analysis documents at exact paths in `TARGET_DELIVERY_ALLOWLIST`, under each configured target root as applicable.
 - {{CARD_DIR}}/analysis/60_package_handoff.md
 
 OUTPUT_STRUCTURE
@@ -23,15 +23,15 @@ OUTPUT_STRUCTURE
 
 READ_SCOPE
 - Prior artifacts under {{CARD_DIR}}/analysis/ and {{CARD_DIR}}/investigations/00_intake.md.
-- The single target selected in {{CARD_DIR}}/analysis/01_analysis_scope.yaml, limited to locations authorized for reading. Confirm effective write authorization independently before any target write.
+- Relevant sources discovered within roots listed in `TARGET_REPOSITORIES`; `repos.conf` role=target defines the boundary. Confirm each delivery path against `TARGET_DELIVERY_ALLOWLIST`.
 
 WRITE_SCOPE
-- Final documentation paths only in the single selected target and only where authorized by effective runtime scope.
+- Final documentation paths only at paths listed in `TARGET_DELIVERY_ALLOWLIST`.
 - {{CARD_DIR}}/analysis/60_package_handoff.md
 
 RULES
 - Run the pre-check: cd "{{RUNTIME_ROOT}}"; test -f ./scripts/eaw; test -f "{{CONFIG_SOURCE}}".
-- Confirm exactly one unambiguous target and effective write authorization before writes; follow observed documentation conventions without duplication. If authorization is absent, do not write target files and record an incomplete handoff with the specific blocker.
+- Write the declared deliverables to `docs/eaw/{{CARD}}/` for each relevant target root represented by the runtime-derived allowlist. If an explicit scope.lock narrows the allowlist, follow only those paths and report any omitted delivery.
 - Preserve evidence register/narrative provenance, coverage states, observed/inferred distinctions, conflicts, decisions, questions, critical findings, and limitations. Never overstate coverage or erase not_analyzed/unreadable evidence.
 - Verify every claimed target artifact exists before claiming complete; list exact persisted paths and measured bytes. The card handoff is not proof of target persistence, approval, or publication.
 - Do not modify software/upstream contracts or call persistence publication, approval, promotion, or release.

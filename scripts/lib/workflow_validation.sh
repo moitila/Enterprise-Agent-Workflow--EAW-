@@ -150,6 +150,19 @@ eaw_validate_workflow_evidence_contract() {
 			eaw_validate_workflow_error "$track_id" "$phase_id" "delivery_contract" "required delivery contract needs a package_artifact path"
 			errors=$((errors + 1))
 		fi
+		local delivery_paths
+		delivery_paths="$(awk '/^  target_delivery_paths:[[:space:]]*$/ {capture=1; next} capture && /^    - / {sub(/^    - /, ""); print; next} capture && /^  [^ ]/ {exit}' "$phase_file")"
+		if [[ -z "$delivery_paths" ]]; then
+			eaw_validate_workflow_error "$track_id" "$phase_id" "target_delivery_paths" "required delivery needs runtime-derivable target paths"
+			errors=$((errors + 1))
+		fi
+		while IFS= read -r delivery_path; do
+			[[ -n "$delivery_path" ]] || continue
+			if [[ "$delivery_path" == /* || "$delivery_path" == *"/../"* || "$delivery_path" == ../* || "$delivery_path" == *"/.." ]]; then
+				eaw_validate_workflow_error "$track_id" "$phase_id" "target_delivery_paths" "delivery path must be relative and traversal-free: $delivery_path"
+				errors=$((errors + 1))
+			fi
+		done <<< "$delivery_paths"
 	fi
 	if [[ -f "${EAW_CONFIG_DIR:-}/repos.conf" ]] && ! eaw_delivery_validate_evidence_declaration "$phase_file" "${EAW_CONFIG_DIR}/repos.conf"; then
 		eaw_validate_workflow_error "$track_id" "$phase_id" "evidence_sources" "invalid repository/path authorization declaration"

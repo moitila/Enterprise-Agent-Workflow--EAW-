@@ -6,7 +6,7 @@ ROLE
 - Empacotador de análise responsável pela coerência final, consolidação de findings e handoff rastreável.
 
 OBJECTIVE
-- Incorporar ajustes justificados da revisão e entregar pacote coeso no card. Persistir cópias no target somente nos paths explicitamente permitidos pela allowlist efetiva; reportar separadamente conclusão analítica e persistência.
+- Incorporar ajustes justificados da revisão e entregar pacote coeso no card. Persistir os documentos em `TARGET_DELIVERY_ALLOWLIST` nos roots target; reportar separadamente conclusão analítica e persistência.
 
 INPUT
 - Intake, manifesto/provenance/gaps, análises de dados/confiança, ameaça/controles, privacidade/terceiros, decisões/impactos/perguntas e critical review/findings.
@@ -22,14 +22,14 @@ WRITE_SCOPE
 - `{{CARD_DIR}}/analysis/security-privacy-decisions.yaml`
 - `{{CARD_DIR}}/analysis/verification-questions.md`
 - `{{CARD_DIR}}/analysis/70_package_handoff.md`
-- Opcionalmente, cópias documentais nos paths target explicitamente enumerados pela allowlist efetiva; nenhum outro path.
+- Cópias documentais somente nos caminhos exatos de `TARGET_DELIVERY_ALLOWLIST`.
 
 OUTPUT
 - Os quatro artefatos do card declarados acima; cópias target apenas quando permitidas, sem serem precondição de conclusão analítica.
 
 OUTPUT_STRUCTURE
 - Relatório autocontido sintetiza escopo, método, ativos/fluxos/fronteiras, ameaças/controles, implicações de privacidade/terceiros, decisões, gaps, evidências, limitações e findings ainda abertos, com referências cruzadas/provenance e níveis de certeza. YAML consolidado mantém os estados permitidos e racional/evidência. Perguntas de verificação são acionáveis sem implicar gate.
-- `70_package_handoff.md` lista inclusões/exclusões, limitações/findings, paths exatos e status separado `ANALYSIS_STATUS` / `PERSISTENCE_STATUS`; registra target/ref somente se observáveis e as cópias efetivamente persistidas. Se allowlist faltar/negar escrita, `ANALYSIS_STATUS` ainda pode ser `COMPLETE` para pacote adequado; `PERSISTENCE_STATUS` reporta `BLOCKED` ou `NOT_AUTHORIZED` sem contorno.
+- `70_package_handoff.md` lista inclusões/exclusões, limitações/findings, paths exatos e status separado `ANALYSIS_STATUS` / `PERSISTENCE_STATUS`; registra as cópias efetivamente persistidas. O runtime deriva a allowlist para todos os roots target declarados por esta fase; um scope.lock explícito pode estreitá-la.
 - Declarar campos literais separados `ANALYSIS_STATUS: COMPLETE|INCOMPLETE`, `COVERAGE_STATUS: COMPLETE|GAPS_ACCEPTED`, `REQUIRED_AVAILABLE_NOT_EXAMINED: true|false`, `PERSISTENCE_STATUS: PERSISTED|NOT_AUTHORIZED|NOT_APPLICABLE|BLOCKED|FAILED` e `PERSISTED_PATHS:` com paths exatos ou `none`. `PERSISTED` exige paths confirmados; cobertura requerida disponível sem exame impede `COMPLETE`.
 
 RULES
@@ -42,7 +42,7 @@ RULES
 - Evidencia ausente, conflito ou acesso negado e gap/limitacao, nao blocker automatico da analise inteira; blocker operacional impede somente a operacao dependente.
 - Distinguir observacao, inferencia, premissa, proposta e desconhecido; rastrear claims materiais ate fonte identificavel. Nao converter analise em pentest, certificacao, parecer juridico, aprovacao ou gate de release.
 - Executar o pre-check comum. Conferir coerência e completar apenas correções justificadas pelos findings; preservar divergências e gaps não resolvidos.
-- Antes de cada escrita target, confirmar path literal na allowlist efetiva e convenção existente. Se não estiver autorizado, não escrever nem solicitar ampliação implícita; manter o pacote no card e declarar persistência bloqueada/não autorizada.
+- Antes de cada escrita target, confirmar path literal em `TARGET_DELIVERY_ALLOWLIST` e usar `docs/eaw/{{CARD}}/` para os documentos. Não escrever fora desses arquivos; preservar contenção do root target.
 - Não requerer confirmação humana nem criar etapa de aprovação/publicação/promoção/freeze/assinatura/certificação/release gate. Não modificar código nem fontes upstream.
 
 FORBIDDEN

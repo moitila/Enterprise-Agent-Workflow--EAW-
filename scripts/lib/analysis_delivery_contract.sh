@@ -1,8 +1,18 @@
 #!/usr/bin/env bash
 
-# Shared, fail-closed helpers for explicitly selected target evidence.
-# The phase YAML is the authorization declaration; TARGET_REPOSITORIES alone
-# never grants access to repository contents.
+# Shared helpers for evidence discovered within repositories configured as
+# role=target. Repository roots are the authority boundary; containment checks
+# remain mandatory for every selected path.
+
+eaw_delivery_target_roots() {
+	local repos_conf="${1:-}" key root role canonical
+	[[ -f "$repos_conf" ]] || return 2
+	while IFS='|' read -r key root role; do
+		[[ -n "$key" && "$role" == target && -d "$root" ]] || continue
+		canonical="$(realpath -e -- "$root")" || return 2
+		printf '%s\t%s\n' "$key" "$canonical"
+	done < "$repos_conf"
+}
 
 eaw_delivery_phase_sources() {
 	local file="${1:-}"
@@ -129,15 +139,10 @@ eaw_delivery_validate_evidence_declaration() {
 # source inventory. This function is called only for phases declaring
 # read_sources_from: required_inventory_sources.
 eaw_delivery_resolve_inventory_sources() {
-	local manifest="${1:-}" repos_conf="${2:-}" scope_file="${3:-}" repository rel required availability root canonical authorized
+	local manifest="${1:-}" repos_conf="${2:-}" scope_file="${3:-}" repository rel required availability root canonical
 	[[ -s "$manifest" && -f "$repos_conf" ]] || return 0
 	while IFS=$'\t' read -r repository rel required availability; do
 		[[ "$required" == true && "$availability" == available ]] || continue
-		authorized=0
-		while IFS=$'\t' read -r auth_repo auth_pattern auth_required _; do
-			[[ "$auth_repo" == "$repository" && "$auth_required" == true && "$rel" == $auth_pattern ]] && { authorized=1; break; }
-		done < <(eaw_delivery_scope_sources "$scope_file")
-		[[ $authorized -eq 1 ]] || continue
 		IFS='|' read -r _ root role < <(awk -F'|' -v key="$repository" '$1==key {print $1"|"$2"|"$3; exit}' "$repos_conf")
 		[[ -n "${root:-}" && "$role" == target ]] || { echo "inventory names unknown/non-target repository: $repository" >&2; return 1; }
 		root="$(realpath -e -- "$root")" || return 1
@@ -158,9 +163,50 @@ eaw_delivery_resolve_inventory_sources() {
 	' "$manifest")
 }
 
+# Derive destination write paths from the target roots. A supplied scope.lock
+# is a narrowing filter; without one, declared package artifacts may be written
+# anywhere below a target root as required by the requested delivery.
+eaw_delivery_derive_write_allowlist() {
+	local repos_conf="${1:-}" phase_file="${2:-}" scope_file="${3:-}" card_id="${4:-}" manifest="${5:-}" target_rel root key role canonical selected_repos
+	[[ -f "$repos_conf" && -f "$phase_file" ]] || return 2
+	local delivery_paths
+	delivery_paths="$(awk '/^  target_delivery_paths:[[:space:]]*$/ {capture=1; next} capture && /^    - / {sub(/^    - /, ""); print; next} capture && /^  [^ ]/ {exit}' "$phase_file")"
+	[[ -n "$delivery_paths" ]] || return 0
+	selected_repos=""
+	if [[ -s "$manifest" ]]; then
+		selected_repos="$(awk '
+			/^sources:[[:space:]]*$/ {in_sources=1; next}
+			in_sources && /^[^[:space:]]/ {in_sources=0}
+			in_sources && /^  - / {if (record && available) print repo; record=1; repo=""; available=0; required=0; next}
+			in_sources && record && /^    repository:[[:space:]]*/ {sub(/^    repository:[[:space:]]*/, ""); repo=$0; next}
+			in_sources && record && /^    availability:[[:space:]]*available[[:space:]]*$/ {available=1; next}
+			in_sources && record && /^    required:[[:space:]]*true[[:space:]]*$/ {required=1; next}
+			END {if (record && available) print repo}
+		' "$manifest" | sort -u)"
+		[[ -n "$selected_repos" ]] || return 0
+	fi
+	while IFS=$'\t' read -r key root; do
+		if [[ -n "$selected_repos" ]] && ! grep -Fxq -- "$key" <<< "$selected_repos"; then continue; fi
+	while IFS= read -r target_rel; do
+		target_rel="${target_rel#\"}"
+		target_rel="${target_rel%\"}"
+		target_rel="${target_rel#\'}"
+		target_rel="${target_rel%\'}"
+		target_rel="${target_rel//\{\{CARD\}\}/$card_id}"
+			[[ -n "$target_rel" && "$target_rel" != /* && "$target_rel" != *"/../"* && "$target_rel" != ../* && "$target_rel" != *"/.." ]] || { echo "unsafe target delivery path: $target_rel" >&2; return 2; }
+			canonical="$(realpath -m -- "$root/$target_rel")" || return 2
+			case "$canonical" in "$root"/*) ;; *) echo "delivery path escapes target root: $key:$target_rel" >&2; return 2 ;; esac
+			if [[ -f "$scope_file" ]]; then
+				grep -Fq -- "$canonical" "$scope_file" || continue
+			fi
+			printf '%s\n' "$canonical"
+		done <<< "$delivery_paths"
+	done < <(eaw_delivery_target_roots "$repos_conf")
+}
+
 # Validate package handoff state before a regression analysis package completes.
 eaw_delivery_validate_package() {
-	local package="${1:-}" status persistence persisted_paths target
+	local package="${1:-}" delivery_required="${2:-false}" effective_allowlist="${3:-}" status persistence persisted_paths target
 	[[ -s "$package" ]] || { echo "delivery package is missing or empty: $package" >&2; return 1; }
 	status="$(sed -nE 's/^[[:space:]`*-]*ANALYSIS_STATUS:[[:space:]`]*([^[:space:]`]+).*/\1/p' "$package" | tail -n 1)"
 	persistence="$(sed -nE 's/^[[:space:]`*-]*PERSISTENCE_STATUS:[[:space:]`]*([^[:space:]`]+).*/\1/p' "$package" | tail -n 1)"
@@ -169,17 +215,25 @@ eaw_delivery_validate_package() {
 		PERSISTED)
 			persisted_paths="$(awk '
 				/^PERSISTED_PATHS:[[:space:]]*/ {v=$0; sub(/^PERSISTED_PATHS:[[:space:]]*/, "", v); if (v!="" && v!="none") print v; in_paths=1; next}
-				in_paths && /^- \/\// {sub(/^- /, ""); print; next}
+				in_paths && /^- \/[^[:space:]]/ {sub(/^- /, ""); print; next}
 				in_paths && /^[^[:space:]-]/ {in_paths=0}
 			' "$package")"
 			[[ -n "$persisted_paths" ]] || { echo "PERSISTED requires exact absolute PERSISTED_PATHS" >&2; return 1; }
 			while IFS= read -r target; do
 				[[ "$target" == /* && -e "$target" ]] || { echo "persisted path is not absolute or does not exist: $target" >&2; return 1; }
+				eaw_delivery_path_is_target "$target" "${EAW_CONFIG_DIR:-}/repos.conf" || { echo "persisted path is outside configured target roots: $target" >&2; return 1; }
+				if [[ "$delivery_required" == true && -n "$effective_allowlist" ]]; then
+					grep -Fxq -- "$target" <<< "$effective_allowlist" || { echo "persisted path is outside effective target delivery allowlist: $target" >&2; return 1; }
+				fi
 			done <<< "$persisted_paths"
 			;;
 		NOT_AUTHORIZED|NOT_APPLICABLE|BLOCKED|FAILED) : ;;
 		*) echo "unrecognized PERSISTENCE_STATUS: $persistence" >&2; return 1 ;;
 	esac
+	if [[ "$delivery_required" == true && "$persistence" != PERSISTED ]]; then
+		echo "required target delivery is not persisted: $persistence" >&2
+		return 1
+	fi
 	case "$status" in COMPLETE|INCOMPLETE) : ;; *) echo "unrecognized ANALYSIS_STATUS: $status" >&2; return 1 ;; esac
 	if [[ "$status" == COMPLETE ]]; then
 		grep -Eq 'COVERAGE_STATUS:[[:space:]]*(COMPLETE|GAPS_ACCEPTED)' "$package" || { echo "ANALYSIS_STATUS COMPLETE requires an explicit coverage disposition" >&2; return 1; }
@@ -189,6 +243,21 @@ eaw_delivery_validate_package() {
 	fi
 }
 
+eaw_delivery_path_is_target() {
+	local path="${1:-}" repos_conf="${2:-}" root canonical
+	[[ "$path" == /* && -f "$repos_conf" ]] || return 1
+	if [[ -e "$path" ]]; then
+		canonical="$(realpath -e -- "$path")" || return 1
+	else
+		[[ -d "$(dirname "$path")" ]] || return 1
+		canonical="$(realpath -e -- "$(dirname "$path")")/$(basename "$path")" || return 1
+	fi
+	while IFS=$'\t' read -r _ root; do
+		case "$canonical" in "$root"/*) return 0 ;; esac
+	done < <(eaw_delivery_target_roots "$repos_conf")
+	return 1
+}
+
 # Persist one artifact only when the literal target path appears in the
 # effective allowlist. The destination directory must already exist so this
 # helper cannot create unlisted hierarchy as a side effect.
@@ -196,6 +265,7 @@ eaw_delivery_persist_file() {
 	local source="${1:-}" target="${2:-}" allowlist="${3:-}" temp canonical_parent
 	[[ -f "$source" && -f "$allowlist" && "$target" == /* ]] || { echo "invalid persistence arguments" >&2; return 2; }
 	grep -Fxq -- "$target" "$allowlist" || { echo "target path is not exactly allowlisted: $target" >&2; return 1; }
+	eaw_delivery_path_is_target "$target" "${EAW_CONFIG_DIR:-}/repos.conf" || { echo "target path is outside configured role=target roots: $target" >&2; return 1; }
 	[[ -d "$(dirname "$target")" ]] || { echo "allowlisted destination directory does not exist: $(dirname "$target")" >&2; return 1; }
 	canonical_parent="$(realpath -e -- "$(dirname "$target")")" || return 1
 	[[ "$canonical_parent/$(basename "$target")" == "$target" ]] || { echo "destination path is non-canonical or traverses a symlink: $target" >&2; return 1; }

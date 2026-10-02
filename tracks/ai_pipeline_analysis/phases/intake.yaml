@@ -3,7 +3,7 @@ config_version: 1
 phase:
   id: intake
   name: Intake
-  description: Define analysis scope and select exactly one unambiguous target repository.
+  description: Define the analysis question and constraints; identify relevant repositories during discovery without requiring a single-target choice.
   skills: []
   prompt:
     active: 2
@@ -14,7 +14,6 @@ phase:
       - analysis
     create_artifacts:
       - investigations/00_intake.md
-      - analysis/01_analysis_scope.yaml
       - investigations/20_handoff.json
     prompts:
       - intake
@@ -26,8 +25,6 @@ phase:
     strategy: required_artifacts_exist
     required_artifacts:
       - path: investigations/00_intake.md
-        validation_mode: blocking
-      - path: analysis/01_analysis_scope.yaml
         validation_mode: blocking
       - path: investigations/20_handoff.json
         validation_mode: blocking

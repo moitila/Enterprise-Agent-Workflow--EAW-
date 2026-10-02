@@ -490,10 +490,11 @@ eaw_phase_completion_evaluate() {
 	"" | required_artifacts_exist)
 		eaw_phase_completion_evaluate_required_artifacts_exist "$card" "$card_dir" "$phase_id" "$phase_file" || return
 		if [[ "$(awk '/^  delivery_contract:[[:space:]]*required$/ {print "required"; exit}' "$phase_file")" == required ]]; then
-			local package_rel
+			local package_rel effective_delivery_allowlist
 			package_rel="$(awk '/^  delivery_contract:[[:space:]]*required$/ {found=1} found && /^  package_artifact:/ {sub(/^  package_artifact:[[:space:]]*/, ""); print; exit}' "$phase_file")"
 			[[ -n "$package_rel" ]] || { echo "delivery_contract requires package_artifact" >&2; return 1; }
-			eaw_delivery_validate_package "$card_dir/$package_rel"
+			effective_delivery_allowlist="$(eaw_delivery_derive_write_allowlist "${EAW_CONFIG_DIR:-}/repos.conf" "$phase_file" "$card_dir/implementation/00_scope.lock.md" "$card" "$card_dir/analysis/10_source_manifest.yaml")" || return 1
+			eaw_delivery_validate_package "$card_dir/$package_rel" true "$effective_delivery_allowlist"
 		fi
 		;;
 	*)
@@ -518,10 +519,11 @@ eaw_phase_completion_evaluate_strict() {
 		fi
 		eaw_phase_completion_evaluate_required_artifacts_substantive "$card" "$card_dir" "$phase_id" "$phase_file" || return
 		if [[ "$(awk '/^  delivery_contract:[[:space:]]*required$/ {print "required"; exit}' "$phase_file")" == required ]]; then
-			local package_rel
+			local package_rel effective_delivery_allowlist
 			package_rel="$(awk '/^  delivery_contract:[[:space:]]*required$/ {found=1} found && /^  package_artifact:/ {sub(/^  package_artifact:[[:space:]]*/, ""); print; exit}' "$phase_file")"
 			[[ -n "$package_rel" ]] || { echo "delivery_contract requires package_artifact" >&2; return 1; }
-			eaw_delivery_validate_package "$card_dir/$package_rel"
+			effective_delivery_allowlist="$(eaw_delivery_derive_write_allowlist "${EAW_CONFIG_DIR:-}/repos.conf" "$phase_file" "$card_dir/implementation/00_scope.lock.md" "$card" "$card_dir/analysis/10_source_manifest.yaml")" || return 1
+			eaw_delivery_validate_package "$card_dir/$package_rel" true "$effective_delivery_allowlist"
 		fi
 		;;
 	*)
