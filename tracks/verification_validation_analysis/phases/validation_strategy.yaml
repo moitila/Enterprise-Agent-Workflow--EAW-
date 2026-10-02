@@ -1,0 +1,32 @@
+config_version: 1
+
+phase:
+  id: validation_strategy
+  name: Validation Strategy
+  description: Validation Strategy for source-grounded V&V analysis.
+  skills: []
+  prompt:
+    active: 1
+    path: templates/prompts/verification_validation_analysis/validation_strategy/prompt_v<active>.md
+  outputs:
+    create_directories:
+      - analysis
+      - investigations
+    create_artifacts:
+      - analysis/30_validation_strategy.md
+      - analysis/31_validation_scenarios.yaml
+      - investigations/20_handoff.json
+    prompts:
+      - validation_strategy
+  read_sources:
+    - "{{CARD_DIR}}"
+    - "{{CONFIG_SOURCE}}"
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - path: analysis/30_validation_strategy.md
+        validation_mode: blocking
+      - path: analysis/31_validation_scenarios.yaml
+        validation_mode: blocking
+      - path: investigations/20_handoff.json
+        validation_mode: blocking

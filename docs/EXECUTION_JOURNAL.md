@@ -106,3 +106,6 @@ The investigation for card 595 confirmed an observable pattern of repeated phase
 - Remaining hypothesis set: external reexecution of the phase chain, possible supervisor or scheduler requeue, or agent reemission of the same phase.
 - Open gap: the available evidence does not prove whether the retries came from the agent, the runtime, or an external condition.
 - Operational consequence: this document remains descriptive only; it does not authorize any retry-policy change, runtime gate change, or other behavioral modification.
+# Phase reexecution
+
+Reopening a prior completed phase appends `phase_reopened` and `phase_started` events to `execution_journal.jsonl`; the journal is never rewritten. Reexecution events include an `attempt` number, and `phase_reopened` records the invalidated paths. The phase completion event is appended by the normal lifecycle after its rewritten outputs pass validation.

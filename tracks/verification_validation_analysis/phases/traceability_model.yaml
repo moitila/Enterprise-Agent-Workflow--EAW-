@@ -1,0 +1,32 @@
+config_version: 1
+
+phase:
+  id: traceability_model
+  name: Traceability Model
+  description: Traceability Model for source-grounded V&V analysis.
+  skills: []
+  prompt:
+    active: 1
+    path: templates/prompts/verification_validation_analysis/traceability_model/prompt_v<active>.md
+  outputs:
+    create_directories:
+      - analysis
+      - investigations
+    create_artifacts:
+      - analysis/10_traceability_matrix.yaml
+      - analysis/11_traceability_gaps.md
+      - investigations/20_handoff.json
+    prompts:
+      - traceability_model
+  read_sources:
+    - "{{CARD_DIR}}"
+    - "{{CONFIG_SOURCE}}"
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - path: analysis/10_traceability_matrix.yaml
+        validation_mode: blocking
+      - path: analysis/11_traceability_gaps.md
+        validation_mode: blocking
+      - path: investigations/20_handoff.json
+        validation_mode: blocking

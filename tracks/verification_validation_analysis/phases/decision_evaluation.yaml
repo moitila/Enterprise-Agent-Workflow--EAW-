@@ -1,0 +1,32 @@
+config_version: 1
+
+phase:
+  id: decision_evaluation
+  name: Decision Evaluation
+  description: Decision Evaluation for source-grounded V&V analysis.
+  skills: []
+  prompt:
+    active: 1
+    path: templates/prompts/verification_validation_analysis/decision_evaluation/prompt_v<active>.md
+  outputs:
+    create_directories:
+      - analysis
+      - investigations
+    create_artifacts:
+      - analysis/50_decisions.yaml
+      - analysis/51_open_questions.md
+      - investigations/20_handoff.json
+    prompts:
+      - decision_evaluation
+  read_sources:
+    - "{{CARD_DIR}}"
+    - "{{CONFIG_SOURCE}}"
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - path: analysis/50_decisions.yaml
+        validation_mode: blocking
+      - path: analysis/51_open_questions.md
+        validation_mode: blocking
+      - path: investigations/20_handoff.json
+        validation_mode: blocking

@@ -93,6 +93,13 @@ test ! -f "$dynamic_context_prompt_phase" || fail "phase-driven dynamic_context 
 grep -Fq "CARD $feature_card: ingest -> intake" <<<"$next_output" || fail "next output missing ingest->intake transition summary"
 grep -Fq "RUNTIME: phase=intake action=phase_driven_execution" <<<"$next_output" || fail "next output missing intake phase execution summary"
 
+# The next prompt must be regenerated from revised scope after reopening intake.
+mkdir -p "$workdir/out/$feature_card/implementation"
+cat >"$workdir/out/$feature_card/implementation/00_scope.lock.md" <<'EOF'
+## Allowlist de Escrita
+
+- `/tmp/eaw-authority-before`
+EOF
 next_output="$(EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" next "$feature_card" 2>&1)" || fail "feature next command failed after intake was filled"
 
 grep -Fq "current_phase: dynamic_context" "$state_file" || fail "feature card did not advance to dynamic_context"
@@ -100,6 +107,62 @@ grep -Fq "previous_phase: intake" "$state_file" || fail "feature card previous_p
 grep -Fq "    - intake" "$state_file" || fail "feature card completed_phases missing intake"
 [[ -f "$dynamic_context_manifest" ]] || fail "missing dynamic context scope manifest after next"
 [[ -f "$dynamic_context_prompt_phase" ]] || fail "missing phase-driven dynamic_context prompt after next"
+grep -Fq '/tmp/eaw-authority-before' "$dynamic_context_prompt_phase" || fail "initial dynamic_context prompt missing original write authority"
+
+intake_prompt_before="$workdir/out/$feature_card/prompts/intake.md"
+intake_prompt_snapshot="$(cat "$intake_prompt_before")"
+EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" reexecute "$feature_card" intake >/dev/null || fail "reexecute intake failed"
+[[ "$(cat "$intake_prompt_before")" == "$intake_prompt_snapshot" ]] || fail "reexecute changed target phase prompt"
+[[ ! -f "$dynamic_context_prompt_phase" ]] || fail "reexecute did not invalidate downstream prompt"
+[[ ! -e "$dynamic_context_manifest" ]] || fail "reexecute did not invalidate downstream artifact"
+grep -Fq 'current_phase: intake' "$state_file" || fail "reexecute did not reset phase cursor"
+EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" next "$feature_card" >"$tmp_root/reexecute_stale.out" 2>&1 || fail "next failed while waiting for rewritten intake outputs"
+grep -Eq '(unfilled required artifacts|missing required artifacts)' "$tmp_root/reexecute_stale.out" || fail "stale reexecution output was not rejected: $(cat "$tmp_root/reexecute_stale.out")"
+grep -Fq '"event_type":"phase_reopened"' "$workdir/out/$feature_card/execution_journal.jsonl" || fail "reopen journal event missing"
+grep -Fq '"invalidated_paths":["investigations/00_intake.md"' "$workdir/out/$feature_card/execution_journal.jsonl" || fail "reopen journal does not list invalidated paths"
+reexecute_attempt="$(grep -F '"event_type":"phase_reopened"' "$workdir/out/$feature_card/execution_journal.jsonl" | tail -n 1 | sed -n 's/.*"attempt":\([0-9][0-9]*\).*/\1/p')"
+[[ -n "$reexecute_attempt" ]] || fail "reopened phase attempt missing"
+grep -Eq '"event_type":"phase_started".*"attempt":'"$reexecute_attempt" "$workdir/out/$feature_card/execution_journal.jsonl" || fail "reopened phase start attempt not journaled"
+
+cat >"$intake_file" <<'EOF'
+Revised intake output for reexecution fixture. This artifact records the corrected scope.
+EOF
+pad_markdown_artifact "$intake_file"
+cat >"$workdir/out/$feature_card/investigations/_intake_provenance.md" <<'EOF'
+Revised provenance for reexecution fixture.
+EOF
+pad_markdown_artifact "$workdir/out/$feature_card/investigations/_intake_provenance.md"
+# Simulate unchanged output timestamps to prove stale artifacts cannot close the attempt.
+while IFS=$'\t' read -r rel stamp; do
+	[[ -n "$rel" && -f "$workdir/out/$feature_card/$rel" ]] || continue
+	stamp_now="$(stat -c '%y' "$workdir/out/$feature_card/$rel")"
+	awk -F '\t' -v path="$rel" -v stamp="$stamp_now" 'BEGIN{OFS="\t"} NR==1{print;next} $1==path{$2=stamp} {print}' \
+		"$workdir/out/$feature_card/runtime/reexecute_pending.tsv" >"$tmp_root/pending.tsv"
+	mv "$tmp_root/pending.tsv" "$workdir/out/$feature_card/runtime/reexecute_pending.tsv"
+done < <(tail -n +2 "$workdir/out/$feature_card/runtime/reexecute_pending.tsv")
+if EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" next "$feature_card" >"$tmp_root/reexecute_stale_timestamp.out" 2>&1; then
+	fail "next accepted unchanged timestamps for reopened outputs"
+fi
+grep -Fq 'outputs are stale' "$tmp_root/reexecute_stale_timestamp.out" || fail "unchanged reopened output timestamps were not rejected"
+touch -d '+2 seconds' "$intake_file" "$workdir/out/$feature_card/investigations/_intake_provenance.md"
+cat >"$workdir/out/$feature_card/implementation/00_scope.lock.md" <<'EOF'
+## Allowlist de Escrita
+
+- `/tmp/eaw-authority-after`
+EOF
+mkdir -p "$workdir/out/$feature_card/implementation"
+if [[ ! -f "$workdir/out/$feature_card/implementation/10_change_plan.md" ]]; then
+	cat >"$workdir/out/$feature_card/implementation/10_change_plan.md" <<'EOF'
+# Change plan fixture
+
+Implementation plan retained as an unrelated validation prerequisite.
+EOF
+fi
+next_output="$(EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" next "$feature_card" 2>&1)" || fail "reopened intake did not advance after fresh outputs"
+[[ -f "$dynamic_context_prompt_phase" ]] || fail "downstream prompt was not regenerated"
+grep -Fq '/tmp/eaw-authority-after' "$dynamic_context_prompt_phase" || fail "regenerated prompt did not reflect revised write authority"
+if grep -Fq '/tmp/eaw-authority-before' "$dynamic_context_prompt_phase"; then fail "regenerated prompt retained superseded write authority"; fi
+grep -Eq '"event_type":"phase_completed".*"attempt":'"$reexecute_attempt" "$workdir/out/$feature_card/execution_journal.jsonl" || fail "reopened phase completion attempt not journaled after validation"
 test ! -f "$workdir/out/$feature_card/investigations/findings_agent_prompt.md" || fail "legacy findings prompt should not be mirrored into investigations"
 grep -Eq '^workflow_phase_dynamic_context\|OK\|' "$execution_log" || fail "execution log missing workflow phase entry for dynamic_context"
 grep -Fq "CARD $feature_card: intake -> dynamic_context" <<<"$next_output" || fail "next output missing intake->dynamic_context transition summary"
@@ -146,7 +209,7 @@ cat >"$findings_handoff_file" <<'EOF'
 {"from_phase":"findings","status":"completed","messages":[],"codes":[]}
 EOF
 
-validate_output="$(EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" validate 2>&1)" || fail "validate should pass after findings receives meaningful content"
+validate_output="$(EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" validate 2>&1)" || fail "validate should pass after findings receives meaningful content: $validate_output"
 grep -Fq "SUMMARY: errors=0" <<<"$validate_output" || fail "validate success output missing zero-error summary after findings fill"
 
 validate_output="$(EAW_WORKDIR="$workdir" "$REPO_ROOT/scripts/eaw" validate 2>&1)" || fail "validate should pass after findings receives meaningful content"

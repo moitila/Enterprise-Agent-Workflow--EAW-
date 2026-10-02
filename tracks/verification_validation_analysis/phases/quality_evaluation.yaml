@@ -1,0 +1,32 @@
+config_version: 1
+
+phase:
+  id: quality_evaluation
+  name: Quality Evaluation
+  description: Quality Evaluation for source-grounded V&V analysis.
+  skills: []
+  prompt:
+    active: 1
+    path: templates/prompts/verification_validation_analysis/quality_evaluation/prompt_v<active>.md
+  outputs:
+    create_directories:
+      - analysis
+      - investigations
+    create_artifacts:
+      - analysis/40_quality_ai_evaluation.md
+      - analysis/41_evidence_and_observability.yaml
+      - investigations/20_handoff.json
+    prompts:
+      - quality_evaluation
+  read_sources:
+    - "{{CARD_DIR}}"
+    - "{{CONFIG_SOURCE}}"
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - path: analysis/40_quality_ai_evaluation.md
+        validation_mode: blocking
+      - path: analysis/41_evidence_and_observability.yaml
+        validation_mode: blocking
+      - path: investigations/20_handoff.json
+        validation_mode: blocking

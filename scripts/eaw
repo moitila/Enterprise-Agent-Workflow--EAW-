@@ -124,6 +124,11 @@ main() {
 		validate_runtime_workdir
 		cmd_next "$2"
 		;;
+	reexecute)
+		if [[ $# -ne 3 ]]; then die "usage: eaw reexecute <CARD> <PHASE>"; fi
+		validate_runtime_workdir
+		cmd_reexecute "$2" "$3"
+		;;
 	smoke)
 		validate_runtime_workdir
 		cmd_smoke "${@:2}"

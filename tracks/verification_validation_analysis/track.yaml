@@ -1,0 +1,55 @@
+config_version: 1
+
+track:
+  id: verification_validation_analysis
+  name: Verification and Validation Analysis
+  description: Reusable, source-grounded documentation of verification and validation strategies, evidence needs, gaps, and recommendations.
+  initial_phase: ingest
+  final_phase: analysis_package
+  initial_outputs:
+    create_directories: [ingest, investigations, analysis]
+  phases:
+    - ingest
+    - intake
+    - source_inventory
+    - traceability_model
+    - verification_strategy
+    - validation_strategy
+    - quality_evaluation
+    - decision_evaluation
+    - critical_review
+    - analysis_package
+
+  transitions:
+    ingest:
+      next: intake
+      contract: {emit_handoff: true, consume_previous: true}
+    intake:
+      next: source_inventory
+      contract: {emit_handoff: true, consume_previous: true}
+    source_inventory:
+      next: traceability_model
+      contract: {emit_handoff: true, consume_previous: true}
+    traceability_model:
+      next: verification_strategy
+      contract: {emit_handoff: true, consume_previous: true}
+    verification_strategy:
+      next: validation_strategy
+      contract: {emit_handoff: true, consume_previous: true}
+    validation_strategy:
+      next: quality_evaluation
+      contract: {emit_handoff: true, consume_previous: true}
+    quality_evaluation:
+      next: decision_evaluation
+      contract: {emit_handoff: true, consume_previous: true}
+    decision_evaluation:
+      next: critical_review
+      contract: {emit_handoff: true, consume_previous: true}
+    critical_review:
+      next: analysis_package
+      contract: {emit_handoff: true, consume_previous: true}
+
+  rules:
+    one_prompt_per_phase: true
+    generated_artifacts_of_each_phase_must_be_non_empty: true
+    allow_manual_phase_skip: false

@@ -3140,7 +3140,10 @@ cmd_next() {
 		return 0
 	fi
 
-	eaw_materialize_current_phase "$card" || return 1
+	local _pending_reexecute="$card_dir/runtime/reexecute_pending.tsv"
+	if [[ ! -f "$_pending_reexecute" ]]; then
+		eaw_materialize_current_phase "$card" || return 1
+	fi
 	if ! eaw_load_card_workflow_context "$card_dir"; then
 		return 1
 	fi
@@ -3180,13 +3183,36 @@ cmd_next() {
 		printf "%s\n" "$validation_output" >&2
 		return 1
 	fi
-
 	# 616: validate agent envelope schema before emit overwrites
 	if ! eaw_validate_envelope_schema "$EAW_CARD_WORKFLOW_TRACK_FILE" "$current_phase" "$card_dir"; then
 		echo "CARD ${card}: ${current_phase} envelope schema validation failed" >&2
 		return 1
 	fi
-
+	if [[ -f "$_pending_reexecute" ]]; then
+		local _pending_phase _pending_attempt _pending_path _pending_stamp _observed
+		IFS=$'\t' read -r _pending_phase _pending_attempt <"$_pending_reexecute"
+		[[ "$_pending_phase" == "$current_phase" ]] || { echo "ERROR: pending reexecution phase does not match card cursor" >&2; return 1; }
+		local _fresh=true
+		while IFS=$'\t' read -r _pending_path _pending_stamp; do
+			[[ -n "$_pending_path" ]] || continue
+			[[ "$_pending_path" != /* && "/$_pending_path/" != *"/../"* ]] || { echo "ERROR: unsafe pending artifact path" >&2; return 1; }
+			local _pending_resolved
+			_pending_resolved="$(realpath -m -- "$card_dir/$_pending_path")"
+			[[ "$_pending_resolved" == "$card_dir/"* ]] || { echo "ERROR: pending artifact path escapes card directory" >&2; return 1; }
+			[[ -f "$card_dir/$_pending_path" ]] || { _fresh=false; break; }
+			if [[ "$_pending_stamp" != ABSENT ]]; then
+				_observed="$(stat -c '%y' "$card_dir/$_pending_path")"
+				[[ "$_observed" != "$_pending_stamp" ]] || { _fresh=false; break; }
+			fi
+		done < <(tail -n +2 "$_pending_reexecute")
+		if [[ "$_fresh" != true ]]; then
+			echo "ERROR: reexecuted phase outputs are stale; refresh every required artifact before eaw next" >&2
+			return 1
+		fi
+		OUTDIR="$card_dir"
+		eaw_journal_append "$card" "$EAW_CARD_WORKFLOW_TRACK_ID" "$current_phase" OK 0 phase_completed "" "$_pending_attempt"
+		rm -f -- "$_pending_reexecute"
+	fi
 	# H3/H4/H5: detect waiting envelope and manage WAITING state
 	local _hf_next="${card_dir}/investigations/20_handoff.json"
 	local _hf_next_status=""
@@ -3232,6 +3258,107 @@ cmd_next() {
 		printf "Agent bundle: %s\n" "$card_dir/runtime/agent_bundle_${next_phase}.md"
 	fi
 	eaw_materialize_current_phase "$card" || return 1
+	return 0
+}
+
+# Reopen a completed phase in the current card, retaining that phase's prompt.
+# All file removals are constrained to declared card-local output paths.
+cmd_reexecute() {
+	local card="$1" requested="$2" card_dir="$EAW_OUT_DIR/$1" phase index current index_now
+	local -a phases=() completed=() invalidate=()
+	local -A required_mtime=()
+	[[ "$card" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]] || { echo "ERROR: invalid card id" >&2; return 1; }
+	[[ "$requested" =~ ^[A-Za-z0-9_-]+$ ]] || { echo "ERROR: invalid phase id" >&2; return 1; }
+	card_dir="$(realpath -m -- "$card_dir")"
+	local _out_dir
+	_out_dir="$(realpath -m -- "$EAW_OUT_DIR")"
+	[[ "$card_dir" == "$_out_dir/"* ]] || { echo "ERROR: card path is outside EAW output" >&2; return 1; }
+	eaw_load_card_workflow_context "$card_dir" || return 1
+	[[ "${EAW_CARD_WORKFLOW_PHASE_STATUS:-}" != COMPLETE && "${EAW_CARD_WORKFLOW_PHASE_STATUS:-}" != COMPLETED ]] || { echo "ERROR: card is complete" >&2; return 1; }
+	current="$EAW_CARD_WORKFLOW_CURRENT_PHASE"
+	grep -Fxq "$requested" <<<"${EAW_CARD_WORKFLOW_COMPLETED_PHASES:-}" || { echo "ERROR: phase is not recorded as completed" >&2; return 1; }
+	while IFS= read -r phase; do [[ -n "$phase" ]] && phases+=("$phase"); done < <(awk '/^  phases:/{on=1;next} on && /^  [^ ]/{exit} on && /^    - /{sub(/^    - /,"");print}' "$EAW_CARD_WORKFLOW_TRACK_FILE")
+	index=-1; index_now=-1
+	for i in "${!phases[@]}"; do [[ "${phases[$i]}" == "$requested" ]] && index=$i; [[ "${phases[$i]}" == "$current" ]] && index_now=$i; done
+	(( index >= 0 && index_now > index )) || { echo "ERROR: phase must be completed and earlier than current phase" >&2; return 1; }
+	[[ -f "$card_dir/runtime/external_package_persisted" ]] && { echo "ERROR: downstream package already persisted externally" >&2; return 1; }
+	local phase_file="$card_dir/intake/phase_${requested}.yaml" attempt pending="$card_dir/runtime/reexecute_pending.tsv"
+	if [[ "$EAW_CARD_WORKFLOW_SOURCE" == official ]]; then
+		local _official_dir
+		_official_dir="$(eaw_official_track_dir "$EAW_CARD_WORKFLOW_TRACK_ID")"
+		phase_file="$_official_dir/phases/${requested}.yaml"
+	fi
+	[[ -f "$phase_file" ]] || { echo "ERROR: missing phase contract $phase_file" >&2; return 1; }
+	for ((i=index; i<${#phases[@]}; i++)); do
+		phase="${phases[$i]}"
+		if [[ "$EAW_CARD_WORKFLOW_SOURCE" == official ]]; then phase_file="$(eaw_official_track_dir "$EAW_CARD_WORKFLOW_TRACK_ID")/phases/${phase}.yaml"; else phase_file="$card_dir/intake/phase_${phase}.yaml"; fi
+		[[ -f "$phase_file" ]] || continue
+		local _package_rel
+		_package_rel="$(eaw_yaml_phase_scalar "$phase_file" package_artifact)"
+		if [[ -n "$_package_rel" && -f "$card_dir/$_package_rel" ]] && grep -Eq '^[[:space:]`*-]*PERSISTENCE_STATUS:[[:space:]`]*PERSISTED([[:space:]`]*)$' "$card_dir/$_package_rel"; then
+			echo "ERROR: downstream package $_package_rel records PERSISTENCE_STATUS: PERSISTED" >&2; return 1
+		fi
+	done
+	for ((i=index; i<=index_now; i++)); do
+		phase="${phases[$i]}"
+		if [[ "$EAW_CARD_WORKFLOW_SOURCE" == official ]]; then phase_file="$(eaw_official_track_dir "$EAW_CARD_WORKFLOW_TRACK_ID")/phases/${phase}.yaml"; else phase_file="$card_dir/intake/phase_${phase}.yaml"; fi
+		[[ -f "$phase_file" ]] || continue
+		while IFS= read -r rel; do
+			[[ -n "$rel" ]] || continue
+			# Absolute write authority may point into a target repo: never unlink it here.
+			[[ "$rel" != /* ]] || continue
+			[[ "/$rel/" != *"/../"* ]] || { echo "ERROR: unsafe declared output path: $rel" >&2; return 1; }
+			local _resolved
+			_resolved="$(realpath -m "$card_dir/$rel")"
+			[[ "$_resolved" == "$card_dir/"* ]] || { echo "ERROR: output path escapes card directory: $rel" >&2; return 1; }
+			[[ "$phase" != "$requested" || "$rel" != prompts/* ]] || continue
+			invalidate+=("$rel")
+		done < <( { eaw_yaml_phase_output_artifacts "$phase_file"; eaw_yaml_phase_output_write_paths "$phase_file"; } | sort -u)
+		while IFS= read -r rel; do
+			[[ -n "$rel" ]] || continue
+			[[ "$phase" != "$requested" ]] || continue
+			invalidate+=("$(eaw_phase_prompt_output_relpath "$rel")")
+		done < <(eaw_yaml_phase_output_prompts "$phase_file")
+		if [[ "$phase" != "$requested" ]]; then
+			invalidate+=("$(eaw_phase_prompt_output_relpath "$phase")" "runtime/context_bundle_${phase}.md" "runtime/agent_bundle_${phase}.md")
+		fi
+	done
+	local archive="$card_dir/runtime/reexecute_archive/${requested}_$(date -u +%Y%m%dT%H%M%S%N)" invalidated_json
+	phase_file="$card_dir/intake/phase_${requested}.yaml"
+	if [[ "$EAW_CARD_WORKFLOW_SOURCE" == official ]]; then phase_file="$(eaw_official_track_dir "$EAW_CARD_WORKFLOW_TRACK_ID")/phases/${requested}.yaml"; fi
+	while IFS= read -r rel; do
+		[[ -n "$rel" ]] || continue
+		[[ "$rel" != /* && "/$rel/" != *"/../"* ]] || { echo "ERROR: unsafe required artifact path: $rel" >&2; return 1; }
+		if [[ -f "$card_dir/$rel" ]]; then required_mtime["$rel"]="$(stat -c '%y' "$card_dir/$rel")"; else required_mtime["$rel"]=ABSENT; fi
+	done < <(eaw_phase_completion_required_artifacts "$phase_file")
+	mkdir -p "$archive"
+	for rel in "${invalidate[@]}"; do
+		[[ -e "$card_dir/$rel" ]] || continue
+		mkdir -p "$archive/$(dirname "$rel")"; mv "$card_dir/$rel" "$archive/$rel"
+	done
+	invalidated_json="$(printf '%s\n' "${invalidate[@]}" | awk 'BEGIN{printf "["} NF{gsub(/\\/,"\\\\");gsub(/"/,"\\\"");printf "%s\"%s\"",(n++?",":""),$0} END{print "]"}')"
+	attempt="$(awk -v p="$requested" '
+		index($0,"\"event_type\":\"phase_started\"") && (index($0,"\"phase\":\"" p "\"") || index($0,"\"phase\":\"workflow_phase_" p "\"")){n++}
+		END{print n+1}
+	' "$card_dir/execution_journal.jsonl" 2>/dev/null || echo 1)"
+	[[ "$attempt" =~ ^[0-9]+$ ]] || attempt=1
+	# Capture required artifact timestamps after invalidation. next requires fresh replacements.
+	mkdir -p "$card_dir/runtime"
+	completed=""
+	local previous_target="null"
+	if (( index > 0 )); then previous_target="${phases[$((index - 1))]}"; fi
+	{
+		printf '%s\t%s\n' "$requested" "$attempt"
+		for rel in "${!required_mtime[@]}"; do printf '%s\t%s\n' "$rel" "${required_mtime[$rel]}"; done
+	} >"$pending"
+	for phase in "${phases[@]}"; do
+		[[ "$phase" == "$requested" ]] && break
+		if grep -Fxq "$phase" <<<"${EAW_CARD_WORKFLOW_COMPLETED_PHASES:-}"; then completed+="${completed:+$'\n'}$phase"; fi
+	done
+	OUTDIR="$card_dir"
+	eaw_journal_append "$card" "$EAW_CARD_WORKFLOW_TRACK_ID" "$requested" "OK" 0 "phase_reopened" "" "$attempt" "$invalidated_json"
+	eaw_write_next_state "$EAW_CARD_WORKFLOW_STATE_FILE" "$previous_target" "$requested" "$completed" RUN "$(utc_timestamp)" false null
+	eaw_journal_append "$card" "$EAW_CARD_WORKFLOW_TRACK_ID" "$requested" STARTED 0 phase_started "" "$attempt"
 	return 0
 }
 

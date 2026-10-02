@@ -1,0 +1,32 @@
+config_version: 1
+
+phase:
+  id: verification_strategy
+  name: Verification Strategy
+  description: Verification Strategy for source-grounded V&V analysis.
+  skills: []
+  prompt:
+    active: 1
+    path: templates/prompts/verification_validation_analysis/verification_strategy/prompt_v<active>.md
+  outputs:
+    create_directories:
+      - analysis
+      - investigations
+    create_artifacts:
+      - analysis/20_verification_strategy.md
+      - analysis/21_verification_cases.yaml
+      - investigations/20_handoff.json
+    prompts:
+      - verification_strategy
+  read_sources:
+    - "{{CARD_DIR}}"
+    - "{{CONFIG_SOURCE}}"
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - path: analysis/20_verification_strategy.md
+        validation_mode: blocking
+      - path: analysis/21_verification_cases.yaml
+        validation_mode: blocking
+      - path: investigations/20_handoff.json
+        validation_mode: blocking

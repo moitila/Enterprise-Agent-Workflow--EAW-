@@ -47,3 +47,5 @@ tracks:
     status: installed
   - track_id: security_privacy_analysis
     status: installed
+  - track_id: verification_validation_analysis
+    status: installed

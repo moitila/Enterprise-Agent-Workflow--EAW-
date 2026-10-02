@@ -2043,22 +2043,21 @@ eaw_journal_append() {
 	local duration_ms="$5"
 	local event_type="${6:-phase_completed}"
 	local read_sources_json="${7:-}"
+	local attempt="${8:-}"
+	local invalidated_paths_json="${9:-}"
 	# H5/H6: guard — do not write without a card context
 	[[ -n "${OUTDIR:-}" && -n "${card_id:-}" ]] || return 0
 	local timestamp agent mode
 	timestamp="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 	agent="${EAW_AGENT:-runtime}"
 	mode="${EAW_MODE:-phase_driven}"
-	if [[ -n "$read_sources_json" ]]; then
-		printf '{"card_id":"%s","track":"%s","phase":"%s","timestamp":"%s","agent":"%s","mode":"%s","status":"%s","duration_ms":%s,"event_type":"%s","read_sources":%s}\n' \
-			"$card_id" "$track" "$phase" "$timestamp" "$agent" "$mode" \
-			"$status" "$duration_ms" "$event_type" "$read_sources_json" \
-			>>"${OUTDIR}/execution_journal.jsonl"
-	else
-		printf '{"card_id":"%s","track":"%s","phase":"%s","timestamp":"%s","agent":"%s","mode":"%s","status":"%s","duration_ms":%s,"event_type":"%s"}\n' \
-			"$card_id" "$track" "$phase" "$timestamp" "$agent" "$mode" "$status" "$duration_ms" "$event_type" \
-			>>"${OUTDIR}/execution_journal.jsonl"
-	fi
+	local extra_json=""
+	[[ -n "$read_sources_json" ]] && extra_json+=",\"read_sources\":$read_sources_json"
+	[[ "$attempt" =~ ^[0-9]+$ ]] && extra_json+=",\"attempt\":$attempt"
+	[[ -n "$invalidated_paths_json" ]] && extra_json+=",\"invalidated_paths\":$invalidated_paths_json"
+	printf '{"card_id":"%s","track":"%s","phase":"%s","timestamp":"%s","agent":"%s","mode":"%s","status":"%s","duration_ms":%s,"event_type":"%s"%s}\n' \
+		"$card_id" "$track" "$phase" "$timestamp" "$agent" "$mode" "$status" "$duration_ms" "$event_type" "$extra_json" \
+		>>"${OUTDIR}/execution_journal.jsonl"
 }
 
 eaw_emit_card_metrics() {

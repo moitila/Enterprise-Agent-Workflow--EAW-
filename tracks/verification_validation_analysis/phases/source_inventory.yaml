@@ -1,0 +1,35 @@
+config_version: 1
+
+phase:
+  id: source_inventory
+  name: Source Inventory
+  description: Source Inventory for source-grounded V&V analysis.
+  skills: []
+  prompt:
+    active: 1
+    path: templates/prompts/verification_validation_analysis/source_inventory/prompt_v<active>.md
+  outputs:
+    create_directories:
+      - analysis
+      - investigations
+    create_artifacts:
+      - analysis/00_source_manifest.yaml
+      - analysis/01_source_provenance.md
+      - analysis/02_source_gaps.md
+      - investigations/20_handoff.json
+    prompts:
+      - source_inventory
+  read_sources:
+    - "{{CARD_DIR}}"
+    - "{{CONFIG_SOURCE}}"
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - path: analysis/00_source_manifest.yaml
+        validation_mode: blocking
+      - path: analysis/01_source_provenance.md
+        validation_mode: blocking
+      - path: analysis/02_source_gaps.md
+        validation_mode: blocking
+      - path: investigations/20_handoff.json
+        validation_mode: blocking
