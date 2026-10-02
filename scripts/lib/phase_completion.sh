@@ -493,7 +493,8 @@ eaw_phase_completion_evaluate() {
 			local package_rel effective_delivery_allowlist
 			package_rel="$(awk '/^  delivery_contract:[[:space:]]*required$/ {found=1} found && /^  package_artifact:/ {sub(/^  package_artifact:[[:space:]]*/, ""); print; exit}' "$phase_file")"
 			[[ -n "$package_rel" ]] || { echo "delivery_contract requires package_artifact" >&2; return 1; }
-			effective_delivery_allowlist="$(eaw_delivery_derive_write_allowlist "${EAW_CONFIG_DIR:-}/repos.conf" "$phase_file" "$card_dir/implementation/00_scope.lock.md" "$card" "$card_dir/analysis/10_source_manifest.yaml")" || return 1
+			effective_delivery_allowlist="$(eaw_delivery_derive_write_allowlist "${EAW_CONFIG_DIR:-}/repos.conf" "$phase_file" "$card_dir/implementation/00_scope.lock.md" "$card" "" "$card_dir/$package_rel" true)" || return 1
+			[[ -n "$effective_delivery_allowlist" ]] || { echo "required target delivery has no selected allowlist paths" >&2; return 1; }
 			eaw_delivery_validate_package "$card_dir/$package_rel" true "$effective_delivery_allowlist"
 		fi
 		;;
@@ -522,7 +523,8 @@ eaw_phase_completion_evaluate_strict() {
 			local package_rel effective_delivery_allowlist
 			package_rel="$(awk '/^  delivery_contract:[[:space:]]*required$/ {found=1} found && /^  package_artifact:/ {sub(/^  package_artifact:[[:space:]]*/, ""); print; exit}' "$phase_file")"
 			[[ -n "$package_rel" ]] || { echo "delivery_contract requires package_artifact" >&2; return 1; }
-			effective_delivery_allowlist="$(eaw_delivery_derive_write_allowlist "${EAW_CONFIG_DIR:-}/repos.conf" "$phase_file" "$card_dir/implementation/00_scope.lock.md" "$card" "$card_dir/analysis/10_source_manifest.yaml")" || return 1
+			effective_delivery_allowlist="$(eaw_delivery_derive_write_allowlist "${EAW_CONFIG_DIR:-}/repos.conf" "$phase_file" "$card_dir/implementation/00_scope.lock.md" "$card" "" "$card_dir/$package_rel" true)" || return 1
+			[[ -n "$effective_delivery_allowlist" ]] || { echo "required target delivery has no selected allowlist paths" >&2; return 1; }
 			eaw_delivery_validate_package "$card_dir/$package_rel" true "$effective_delivery_allowlist"
 		fi
 		;;

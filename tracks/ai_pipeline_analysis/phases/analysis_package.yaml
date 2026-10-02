@@ -21,9 +21,9 @@ phase:
   delivery_contract: required
   package_artifact: analysis/60_package_handoff.md
   target_delivery_paths:
-    - "docs/eaw/{{CARD}}/ai-pipeline-analysis.md"
-    - "docs/eaw/{{CARD}}/ai-pipeline-decisions.yaml"
-    - "docs/eaw/{{CARD}}/verification-questions.md"
+    - "docs/ai-pipeline/ai-pipeline-analysis.md"
+    - "docs/ai-pipeline/ai-pipeline-decisions.yaml"
+    - "docs/ai-pipeline/verification-questions.md"
   completion:
     strategy: required_artifacts_exist
     required_artifacts:

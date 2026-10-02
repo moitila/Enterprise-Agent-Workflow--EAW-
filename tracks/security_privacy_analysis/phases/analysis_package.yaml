@@ -11,9 +11,9 @@ phase:
   delivery_contract: required
   package_artifact: analysis/70_package_handoff.md
   target_delivery_paths:
-    - "docs/eaw/{{CARD}}/security-privacy-analysis.md"
-    - "docs/eaw/{{CARD}}/security-privacy-decisions.yaml"
-    - "docs/eaw/{{CARD}}/verification-questions.md"
+    - "docs/security-privacy-analysis.md"
+    - "docs/security-privacy-decisions.yaml"
+    - "docs/verification-questions.md"
   outputs:
     create_directories:
       - analysis

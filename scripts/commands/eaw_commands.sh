@@ -1808,7 +1808,9 @@ eaw_card_write_allowlist_entries() {
 	local file
 	local -a markdown_candidates=()
 	if [[ -n "$phase_file" && -f "$phase_file" ]] && grep -q '^  target_delivery_paths:[[:space:]]*$' "$phase_file"; then
-		eaw_delivery_derive_write_allowlist "${EAW_CONFIG_DIR}/repos.conf" "$phase_file" "$scope_lock_file" "$(basename "$card_dir")" "$card_dir/analysis/10_source_manifest.yaml"
+		local package_rel
+		package_rel="$(eaw_yaml_phase_scalar "$phase_file" package_artifact)"
+		eaw_delivery_derive_write_allowlist "${EAW_CONFIG_DIR}/repos.conf" "$phase_file" "$scope_lock_file" "$(basename "$card_dir")" "" "$card_dir/$package_rel" false
 		return
 	fi
 
@@ -2000,15 +2002,25 @@ WRITE_ALLOWLIST_RESOLVED_FROM_SCOPE_LOCK:
 ${resolved_from_scope_lock:-(not available — scope.lock ausente ou formato nao suportado)}
 
 
-NOTE: repos.conf role=target is root write authority. A supplied scope.lock narrows the runtime-derived delivery paths; without it, target_delivery_paths are derived for all target roots."
+NOTE: repos.conf role=target defines eligible delivery roots. The analysis package must declare DELIVERY_TARGETS explicitly; the runtime derives paths only for those selected roots. A supplied scope.lock narrows the resulting paths. Evidence source manifests do not select delivery roots."
 	fi
 	if [[ -n "$phase_file" && -f "$phase_file" ]] && grep -q '^  target_delivery_paths:[[:space:]]*$' "$phase_file"; then
-		local derived_delivery
-		derived_delivery="$(eaw_delivery_derive_write_allowlist "${EAW_CONFIG_DIR}/repos.conf" "$phase_file" "$scope_lock_file" "$card" "$card_dir/analysis/10_source_manifest.yaml")" || return 1
+		local derived_delivery package_rel declared_delivery_paths candidate_targets
+		package_rel="$(eaw_yaml_phase_scalar "$phase_file" package_artifact)"
+		derived_delivery="$(eaw_delivery_derive_write_allowlist "${EAW_CONFIG_DIR}/repos.conf" "$phase_file" "$scope_lock_file" "$card" "" "$card_dir/$package_rel" false)" || return 1
+		declared_delivery_paths="$(awk '/^  target_delivery_paths:[[:space:]]*$/ {capture=1; next} capture && /^    - / {sub(/^    - /, ""); print; next} capture && /^  [^ ]/ {exit}' "$phase_file")"
+		candidate_targets="$(eaw_delivery_target_roots "${EAW_CONFIG_DIR}/repos.conf" | cut -f1)"
 		write_allowlist_extra+="
-TARGET_DELIVERY_ALLOWLIST_SOURCE: repos.conf role=target + phase target_delivery_paths${scope_lock_file:+ narrowed by explicit scope.lock}
+TARGET_DELIVERY_ALLOWLIST_SOURCE: explicit DELIVERY_TARGETS in package artifact + repos.conf role=target + phase target_delivery_paths${scope_lock_file:+ narrowed by explicit scope.lock}
 TARGET_DELIVERY_ALLOWLIST:
-${derived_delivery:-(no target delivery paths resolved)}"
+${derived_delivery:-(not materialized yet; select DELIVERY_TARGETS and derive through ANALYSIS_DELIVERY_HELPER)}
+TARGET_DELIVERY_CANDIDATES:
+${candidate_targets:-(none)}
+TARGET_DELIVERY_DECLARED_PATHS:
+${declared_delivery_paths:-(none)}
+TARGET_DELIVERY_SELECTION_FILE: $card_dir/$package_rel
+ANALYSIS_DELIVERY_PHASE_FILE: $phase_file
+ANALYSIS_DELIVERY_PERSIST_FUNCTION: eaw_delivery_persist_selected_file"
 	fi
 
 	local registry_file="$EAW_ROOT_DIR/skills/registry.yaml"

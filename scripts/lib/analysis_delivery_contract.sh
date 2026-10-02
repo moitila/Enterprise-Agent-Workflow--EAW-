@@ -163,37 +163,47 @@ eaw_delivery_resolve_inventory_sources() {
 	' "$manifest")
 }
 
-# Derive destination write paths from the target roots. A supplied scope.lock
-# is a narrowing filter; without one, declared package artifacts may be written
-# anywhere below a target root as required by the requested delivery.
+# Read the explicit delivery decision emitted by the analysis package phase.
+# This is deliberately separate from the evidence source manifest.
+eaw_delivery_selection_targets() {
+	local selection_file="${1:-}"
+	[[ -s "$selection_file" ]] || { echo "delivery selection is missing or empty: $selection_file" >&2; return 2; }
+	awk '
+		/^DELIVERY_TARGETS:[[:space:]]*$/ { if (seen++) { bad=1; exit }; in_targets=1; next }
+		in_targets && /^DELIVERY_TARGETS:/ { bad=1; exit }
+		in_targets && /^[[:space:]]*-[[:space:]]+[A-Za-z0-9_.-]+[[:space:]]*$/ { v=$0; sub(/^[[:space:]]*-[[:space:]]*/, "", v); print v; next }
+		in_targets && /^[[:space:]]*$/ { next }
+		in_targets && /^[^[:space:]-]/ { in_targets=0 }
+		END { if (bad || seen != 1) exit 2 }
+	' "$selection_file"
+}
+
+# Derive destination write paths only for explicitly selected role=target roots.
+# A supplied scope.lock is a narrowing filter; evidence manifests never select
+# delivery roots. strict_selection=false is used only while rendering the
+# prompt, before the analysis package has made its decision.
 eaw_delivery_derive_write_allowlist() {
-	local repos_conf="${1:-}" phase_file="${2:-}" scope_file="${3:-}" card_id="${4:-}" manifest="${5:-}" target_rel root key role canonical selected_repos
+	local repos_conf="${1:-}" phase_file="${2:-}" scope_file="${3:-}" card_id="${4:-}" _manifest="${5:-}" selection_file="${6:-}" strict_selection="${7:-true}" target_rel root key canonical selected_repos
 	[[ -f "$repos_conf" && -f "$phase_file" ]] || return 2
 	local delivery_paths
 	delivery_paths="$(awk '/^  target_delivery_paths:[[:space:]]*$/ {capture=1; next} capture && /^    - / {sub(/^    - /, ""); print; next} capture && /^  [^ ]/ {exit}' "$phase_file")"
 	[[ -n "$delivery_paths" ]] || return 0
-	selected_repos=""
-	if [[ -s "$manifest" ]]; then
-		selected_repos="$(awk '
-			/^sources:[[:space:]]*$/ {in_sources=1; next}
-			in_sources && /^[^[:space:]]/ {in_sources=0}
-			in_sources && /^  - / {if (record && available) print repo; record=1; repo=""; available=0; required=0; next}
-			in_sources && record && /^    repository:[[:space:]]*/ {sub(/^    repository:[[:space:]]*/, ""); repo=$0; next}
-			in_sources && record && /^    availability:[[:space:]]*available[[:space:]]*$/ {available=1; next}
-			in_sources && record && /^    required:[[:space:]]*true[[:space:]]*$/ {required=1; next}
-			END {if (record && available) print repo}
-		' "$manifest" | sort -u)"
-		[[ -n "$selected_repos" ]] || return 0
-	fi
+	if [[ ! -s "$selection_file" && "$strict_selection" != true ]]; then return 0; fi
+	selected_repos="$(eaw_delivery_selection_targets "$selection_file")" || return
+	[[ -n "$selected_repos" ]] || { echo "delivery selection has no target repositories" >&2; return 2; }
+	[[ "$(printf '%s\n' "$selected_repos" | sort -u | wc -l)" -eq "$(printf '%s\n' "$selected_repos" | wc -l)" ]] || { echo "delivery selection contains duplicate repositories" >&2; return 2; }
+	while IFS= read -r key; do
+		[[ -n "$key" ]] || continue
+		awk -F'|' -v wanted="$key" '$1==wanted && $3=="target" {found=1} END {exit !found}' "$repos_conf" || { echo "delivery selection names unknown or non-target repository: $key" >&2; return 2; }
+	done <<< "$selected_repos"
 	while IFS=$'\t' read -r key root; do
-		if [[ -n "$selected_repos" ]] && ! grep -Fxq -- "$key" <<< "$selected_repos"; then continue; fi
+		grep -Fxq -- "$key" <<< "$selected_repos" || continue
 	while IFS= read -r target_rel; do
 		target_rel="${target_rel#\"}"
 		target_rel="${target_rel%\"}"
 		target_rel="${target_rel#\'}"
 		target_rel="${target_rel%\'}"
-		target_rel="${target_rel//\{\{CARD\}\}/$card_id}"
-			[[ -n "$target_rel" && "$target_rel" != /* && "$target_rel" != *"/../"* && "$target_rel" != ../* && "$target_rel" != *"/.." ]] || { echo "unsafe target delivery path: $target_rel" >&2; return 2; }
+			[[ -n "$target_rel" && "$target_rel" != *'{{CARD}}'* && "$target_rel" != /* && "$target_rel" != *"/../"* && "$target_rel" != ../* && "$target_rel" != *"/.." ]] || { echo "unsafe or card-dependent target delivery path: $target_rel" >&2; return 2; }
 			canonical="$(realpath -m -- "$root/$target_rel")" || return 2
 			case "$canonical" in "$root"/*) ;; *) echo "delivery path escapes target root: $key:$target_rel" >&2; return 2 ;; esac
 			if [[ -f "$scope_file" ]]; then
@@ -202,6 +212,22 @@ eaw_delivery_derive_write_allowlist() {
 			printf '%s\n' "$canonical"
 		done <<< "$delivery_paths"
 	done < <(eaw_delivery_target_roots "$repos_conf")
+}
+
+# Persist one file after validating the analysis package's explicit root choice.
+eaw_delivery_persist_selected_file() {
+	local source="${1:-}" target="${2:-}" repos_conf="${3:-}" phase_file="${4:-}" scope_file="${5:-}" card_id="${6:-}" selection_file="${7:-}" effective_allowlist
+	[[ -f "$source" ]] || { echo "invalid persistence source" >&2; return 2; }
+	effective_allowlist="$(eaw_delivery_derive_write_allowlist "$repos_conf" "$phase_file" "$scope_file" "$card_id" "" "$selection_file" true)" || return
+	grep -Fxq -- "$target" <<< "$effective_allowlist" || { echo "target path is not in the selected delivery allowlist: $target" >&2; return 1; }
+	eaw_delivery_path_is_target "$target" "$repos_conf" || { echo "target path is outside configured role=target roots: $target" >&2; return 1; }
+	[[ -d "$(dirname "$target")" ]] || { echo "allowlisted destination directory does not exist: $(dirname "$target")" >&2; return 1; }
+	local canonical_parent temp
+	canonical_parent="$(realpath -e -- "$(dirname "$target")")" || return 1
+	[[ "$canonical_parent/$(basename "$target")" == "$target" ]] || { echo "destination path is non-canonical or traverses a symlink: $target" >&2; return 1; }
+	temp="$(mktemp "$canonical_parent/.eaw-delivery.XXXXXXXX")" || return 1
+	if ! cat -- "$source" > "$temp"; then rm -f -- "$temp"; return 1; fi
+	mv -f -- "$temp" "$target"
 }
 
 # Validate package handoff state before a regression analysis package completes.
