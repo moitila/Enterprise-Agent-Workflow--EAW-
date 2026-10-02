@@ -84,15 +84,16 @@ $selected/docs/verification-validation-analysis.md
 $selected/docs/verification-validation-matrix.yaml
 $selected/docs/verification-validation-decisions.yaml
 EOF
-for path in docs/verification-validation-analysis.md docs/verification-validation-matrix.yaml docs/verification-validation-decisions.yaml; do
-  printf 'content for %s\n' "$path" > "$card/analysis/$(basename "$path").source"
-done
+printf 'authoritative report bytes\n' > "$card/analysis/verification-validation-analysis.md"
+printf 'matrix: distinctive: 42\n' > "$card/analysis/verification-validation-matrix.yaml"
+printf 'decisions: distinctive: accepted\n' > "$card/analysis/verification-validation-decisions.yaml"
 if eaw_phase_completion_evaluate TEST-CARD "$card" analysis_package "$track/phases/analysis_package.yaml" 2>/dev/null; then exit 1; fi
 mkdir -p "$selected/docs"
 for path in docs/verification-validation-analysis.md docs/verification-validation-matrix.yaml docs/verification-validation-decisions.yaml; do
-  src="$card/analysis/$(basename "$path").source"
+  src="$card/analysis/$(basename "$path")"
   eaw_delivery_persist_selected_file "$src" "$selected/$path" "$tmp/repos.conf" "$track/phases/analysis_package.yaml" "$card/implementation/00_scope.lock.md" TEST-CARD "$card/analysis/70_package_handoff.md"
   test -s "$selected/$path"
+  cmp -s "$src" "$selected/$path"
   test ! -e "$other/$path"
 done
 cat >> "$card/analysis/70_package_handoff.md" <<EOF
@@ -103,6 +104,8 @@ PERSISTED_PATHS:
 - $selected/docs/verification-validation-decisions.yaml
 EOF
 eaw_phase_completion_evaluate TEST-CARD "$card" analysis_package "$track/phases/analysis_package.yaml"
+test "$(find "$selected/docs" -maxdepth 1 -type f | wc -l)" -eq 3
+test "$(find "$other/docs" -maxdepth 1 -type f | wc -l)" -eq 0
 if grep -E 'CARD_ID|TEST-CARD' "$track/phases/analysis_package.yaml"; then exit 1; fi
 grep -q 'analysis/40_quality_evaluation.md' "$track/phases/quality_evaluation.yaml"
 grep -q 'analysis/40_quality_evaluation.md' "$base/quality_evaluation/prompt_v1.md"

@@ -12,6 +12,9 @@ phase:
     create_directories:
       - analysis
     create_artifacts:
+      - analysis/verification-validation-analysis.md
+      - analysis/verification-validation-matrix.yaml
+      - analysis/verification-validation-decisions.yaml
       - analysis/70_package_handoff.md
     prompts:
       - analysis_package
@@ -21,6 +24,12 @@ phase:
   completion:
     strategy: required_artifacts_exist
     required_artifacts:
+      - path: analysis/verification-validation-analysis.md
+        validation_mode: blocking
+      - path: analysis/verification-validation-matrix.yaml
+        validation_mode: blocking
+      - path: analysis/verification-validation-decisions.yaml
+        validation_mode: blocking
       - path: analysis/70_package_handoff.md
         validation_mode: blocking
   delivery_contract: required

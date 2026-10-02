@@ -19,22 +19,28 @@ READ_SCOPE
 - Candidate root documentation needed to establish naming/path conventions, using only role=`target` roots from `{{CONFIG_SOURCE}}`; do not treat EAW runtime documentation as product evidence merely because EAW is a target.
 
 WRITE_SCOPE
+- `{{CARD_DIR}}/analysis/verification-validation-analysis.md`
+- `{{CARD_DIR}}/analysis/verification-validation-matrix.yaml`
+- `{{CARD_DIR}}/analysis/verification-validation-decisions.yaml`
 - `{{CARD_DIR}}/analysis/70_package_handoff.md`
 - Product documents only at exact destinations derived by the delivery helper from explicit `DELIVERY_TARGETS` and runtime-declared paths.
 
 OUTPUT
-- Product-facing V&V report, traceability matrix, and decisions/questions document(s) at semantically named paths selected from available destination conventions; no card ID in product paths.
+- Card-local authoritative sources: `analysis/verification-validation-analysis.md`, `analysis/verification-validation-matrix.yaml`, and `analysis/verification-validation-decisions.yaml`.
+- Product-facing copies at the corresponding declared paths: `docs/verification-validation-analysis.md`, `docs/verification-validation-matrix.yaml`, and `docs/verification-validation-decisions.yaml`; no card ID in product paths.
 - `{{CARD_DIR}}/analysis/70_package_handoff.md`.
 
 OUTPUT_STRUCTURE
 - Product documents preserve evidence IDs/locators, provenance, coverage and status, observed/inferred/unknown distinctions, separate verification and validation, applicable special/AI evaluation, decisions, questions, critical findings/dispositions, and limitations.
-- Handoff begins with a YAML `DELIVERY_TARGETS:` list of exact keys from `TARGET_DELIVERY_CANDIDATES`; records exact persisted paths, measured byte sizes, included/omitted material, unresolved questions, `ANALYSIS_STATUS`, `COVERAGE_STATUS`, `REQUIRED_AVAILABLE_NOT_EXAMINED`, and `PERSISTENCE_STATUS`.
+- Handoff begins with a YAML `DELIVERY_TARGETS:` list of exact keys from `TARGET_DELIVERY_CANDIDATES`; records `PERSISTENCE_STATUS: PERSISTED` and the three exact absolute `PERSISTED_PATHS` only after successful persistence and verification, measured byte sizes, included/omitted material, unresolved questions, `ANALYSIS_STATUS`, `COVERAGE_STATUS`, and `REQUIRED_AVAILABLE_NOT_EXAMINED`.
 - Report completion only for the status supported by examined sources and verified persisted files. It is a record, not proof of persistence or a runtime gate.
 - Product-facing content must not expose phase names, prompt mechanics, card state, EAW paths, orchestration commands, or internal implementation details unless strictly needed as technical evidence provenance.
 
 RULES
 - Run standard pre-check. Read and validate `{{CONFIG_SOURCE}}`; choose only suitable role=`target` candidates based on objective and observed conventions. Never select all roots by default or derive delivery from the evidence-source manifest.
-- Before target writes, create `{{CARD_DIR}}/analysis/70_package_handoff.md` declaring the explicit `DELIVERY_TARGETS` list. Source `ANALYSIS_DELIVERY_HELPER` and invoke `eaw_delivery_persist_selected_file` with source, destination, `{{CONFIG_SOURCE}}`, the runtime-provided `ANALYSIS_DELIVERY_PHASE_FILE`, `{{CARD_DIR}}/implementation/00_scope.lock.md`, `{{CARD}}`, and the handoff path, in that order.
+- Consolidate the reviewed analysis into the three card-local authoritative source files listed in `WRITE_SCOPE`. Before target writes, create `{{CARD_DIR}}/analysis/70_package_handoff.md` declaring the explicit `DELIVERY_TARGETS` list and `PERSISTENCE_STATUS: NOT_PERSISTED`.
+- Source `ANALYSIS_DELIVERY_HELPER` and invoke `eaw_delivery_persist_selected_file` once for each source/destination pair, in this order: `{{CARD_DIR}}/analysis/verification-validation-analysis.md` → `docs/verification-validation-analysis.md`; `{{CARD_DIR}}/analysis/verification-validation-matrix.yaml` → `docs/verification-validation-matrix.yaml`; `{{CARD_DIR}}/analysis/verification-validation-decisions.yaml` → `docs/verification-validation-decisions.yaml`. For every call pass source, absolute destination under the selected target root, `{{CONFIG_SOURCE}}`, the runtime-provided `ANALYSIS_DELIVERY_PHASE_FILE`, `{{CARD_DIR}}/implementation/00_scope.lock.md`, `{{CARD}}`, and the handoff path, in that order.
+- After all helper calls, verify each source and destination exists and compare their bytes. Only then update the handoff to `PERSISTENCE_STATUS: PERSISTED` and list the three exact absolute destinations under `PERSISTED_PATHS`; otherwise record a specific blocked/failed persistence status and do not claim persistence.
 - Do not create or edit a manual allowlist and do not write directly to target. Persist only exact paths in the helper-derived `TARGET_DELIVERY_ALLOWLIST`; honor scope-lock restrictions. If the helper or scope prevents delivery, record the blocker and do not bypass it.
 - Verify every claimed persisted path exists and measure its size before reporting `PERSISTENCE_STATUS: PERSISTED`. Preserve review findings; do not claim publication, approval, test execution, certification, compliance, or release readiness.
 
