@@ -10,7 +10,7 @@ phase:
     - eaw_prompt_creator
 
   prompt:
-    active: 1
+    active: 3
     path: templates/prompts/track_creator/implementation_executor/prompt_v<active>.md
 
   outputs:
@@ -23,6 +23,14 @@ phase:
   read_sources:
     - "{{RUNTIME_ROOT}}/tracks/track_creator"
     - "{{CARD_DIR}}/implementation"
+    - "{{CARD_DIR}}/investigations/00_intake.md"
+    - "{{CARD_DIR}}/investigations/10_track_design.md"
+    - "{{CARD_DIR}}/investigations/20_prompt_design.md"
+    - "{{RUNTIME_ROOT}}/docs/WORKFLOW_YAML_CONTRACT.md"
+    - "{{RUNTIME_ROOT}}/scripts/commands/eaw_commands.sh"
+    - "{{RUNTIME_ROOT}}/scripts/lib/analysis_delivery_contract.sh"
+    - "{{RUNTIME_ROOT}}/tracks/verification_validation_analysis/phases/source_inventory.yaml"
+    - "{{RUNTIME_ROOT}}/tracks/verification_validation_analysis/phases/analysis_package.yaml"
 
   completion:
     strategy: required_artifacts_exist

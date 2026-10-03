@@ -16,10 +16,12 @@ for phase in "${phases[@]}"; do
   base="$REPO_ROOT/templates/prompts/track_creator/$phase"
 
   active_val="$(tr -d '[:space:]' <"$base/ACTIVE" 2>/dev/null || echo MISSING)"
-  if [[ "$active_val" == "2" ]]; then
-    pass "$phase: ACTIVE=2"
+  expected_active=2
+  [[ "$phase" == implementation_executor ]] && expected_active=3
+  if [[ "$active_val" == "$expected_active" ]]; then
+    pass "$phase: ACTIVE=$expected_active"
   else
-    fail "$phase: ACTIVE=2" "got '$active_val'"
+    fail "$phase: ACTIVE=$expected_active" "got '$active_val'"
   fi
 
   if [[ -s "$base/prompt_v2.md" ]]; then
