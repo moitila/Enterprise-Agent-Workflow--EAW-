@@ -1,0 +1,4 @@
+version=v1
+required_sections=ROLE|OBJECTIVE|INPUT|OUTPUT|OUTPUT_STRUCTURE|READ_SCOPE|WRITE_SCOPE|RULES|FORBIDDEN|FAIL_CONDITIONS
+required_substrings=ROLE|OBJECTIVE|INPUT|OUTPUT|OUTPUT_STRUCTURE|READ_SCOPE|WRITE_SCOPE|RULES|FORBIDDEN|FAIL_CONDITIONS|analysis/30_consistency_matrix.yaml|analysis/31_consistency_observations.md|investigations/20_handoff.json|"from_phase":"consistency_analysis"
+forbidden_words=

@@ -1,0 +1,32 @@
+config_version: 1
+phase:
+  id: intake
+  name: Intake
+  description: Analysis scoping analyst converting the supplied request into a bounded, neutral cross-document question.
+  skills: []
+  prompt:
+    active: 1
+    path: templates/prompts/cross_document_consistency_analysis/intake/prompt_v1.md
+  tooling_hints: []
+  outputs:
+    create_directories:
+      - analysis
+      - investigations
+    create_artifacts:
+      - investigations/00_intake.md
+      - investigations/20_handoff.json
+    prompts:
+      - intake
+  read_sources:
+    - '{{CONFIG_SOURCE}}'
+    - '{{CARD_DIR}}/analysis/00_ingest_manifest.yaml'
+    - '{{CARD_DIR}}/investigations/20_handoff.json'
+    - '{{CARD_DIR}}/ingest'
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - path: investigations/00_intake.md
+        validation_mode: blocking
+      - path: investigations/20_handoff.json
+        validation_mode: blocking
+  evidence_sources: []

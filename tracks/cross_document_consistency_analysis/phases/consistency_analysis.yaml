@@ -1,0 +1,41 @@
+config_version: 1
+phase:
+  id: consistency_analysis
+  name: Consistency Analysis
+  description: Cross-document comparison analyst identifying supported agreement, terminology drift, traceability gaps, and candidate incompatibilities.
+  skills: []
+  prompt:
+    active: 1
+    path: templates/prompts/cross_document_consistency_analysis/consistency_analysis/prompt_v1.md
+  tooling_hints: []
+  outputs:
+    create_directories:
+      - analysis
+      - investigations
+    create_artifacts:
+      - analysis/30_consistency_matrix.yaml
+      - analysis/31_consistency_observations.md
+      - investigations/20_handoff.json
+    prompts:
+      - consistency_analysis
+  read_sources:
+    - '{{CONFIG_SOURCE}}'
+    - '{{CARD_DIR}}/analysis/00_ingest_manifest.yaml'
+    - '{{CARD_DIR}}/investigations/00_intake.md'
+    - '{{CARD_DIR}}/analysis/10_source_manifest.yaml'
+    - '{{CARD_DIR}}/analysis/11_source_provenance.md'
+    - '{{CARD_DIR}}/analysis/12_source_gaps.md'
+    - '{{CARD_DIR}}/analysis/20_document_model.yaml'
+    - '{{CARD_DIR}}/analysis/21_claim_register.yaml'
+    - '{{CARD_DIR}}/investigations/20_handoff.json'
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - path: analysis/30_consistency_matrix.yaml
+        validation_mode: blocking
+      - path: analysis/31_consistency_observations.md
+        validation_mode: blocking
+      - path: investigations/20_handoff.json
+        validation_mode: blocking
+  read_sources_from: required_inventory_sources
+  evidence_manifest: analysis/10_source_manifest.yaml

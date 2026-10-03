@@ -1,0 +1,39 @@
+config_version: 1
+phase:
+  id: document_model
+  name: Document Model
+  description: Document and claim modeler establishing traceable document roles, atomic claims, applicable relationships, and declared authority.
+  skills: []
+  prompt:
+    active: 1
+    path: templates/prompts/cross_document_consistency_analysis/document_model/prompt_v1.md
+  tooling_hints: []
+  outputs:
+    create_directories:
+      - analysis
+      - investigations
+    create_artifacts:
+      - analysis/20_document_model.yaml
+      - analysis/21_claim_register.yaml
+      - investigations/20_handoff.json
+    prompts:
+      - document_model
+  read_sources:
+    - '{{CONFIG_SOURCE}}'
+    - '{{CARD_DIR}}/analysis/00_ingest_manifest.yaml'
+    - '{{CARD_DIR}}/investigations/00_intake.md'
+    - '{{CARD_DIR}}/analysis/10_source_manifest.yaml'
+    - '{{CARD_DIR}}/analysis/11_source_provenance.md'
+    - '{{CARD_DIR}}/analysis/12_source_gaps.md'
+    - '{{CARD_DIR}}/investigations/20_handoff.json'
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - path: analysis/20_document_model.yaml
+        validation_mode: blocking
+      - path: analysis/21_claim_register.yaml
+        validation_mode: blocking
+      - path: investigations/20_handoff.json
+        validation_mode: blocking
+  read_sources_from: required_inventory_sources
+  evidence_manifest: analysis/10_source_manifest.yaml

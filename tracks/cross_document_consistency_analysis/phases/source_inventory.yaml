@@ -1,0 +1,37 @@
+config_version: 1
+phase:
+  id: source_inventory
+  name: Source Inventory
+  description: Evidence inventory analyst discovering target-repository sources and recording stable provenance, availability, material relevance, coverage, and gaps.
+  skills: []
+  prompt:
+    active: 1
+    path: templates/prompts/cross_document_consistency_analysis/source_inventory/prompt_v1.md
+  tooling_hints: []
+  outputs:
+    create_directories:
+      - analysis
+      - investigations
+    create_artifacts:
+      - analysis/10_source_manifest.yaml
+      - analysis/11_source_provenance.md
+      - analysis/12_source_gaps.md
+      - investigations/20_handoff.json
+    prompts:
+      - source_inventory
+  read_sources:
+    - '{{CONFIG_SOURCE}}'
+    - '{{CARD_DIR}}/analysis/00_ingest_manifest.yaml'
+    - '{{CARD_DIR}}/investigations/00_intake.md'
+    - '{{CARD_DIR}}/investigations/20_handoff.json'
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - path: analysis/10_source_manifest.yaml
+        validation_mode: blocking
+      - path: analysis/11_source_provenance.md
+        validation_mode: blocking
+      - path: analysis/12_source_gaps.md
+        validation_mode: blocking
+      - path: investigations/20_handoff.json
+        validation_mode: blocking

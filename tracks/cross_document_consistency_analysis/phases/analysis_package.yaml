@@ -1,0 +1,63 @@
+config_version: 1
+phase:
+  id: analysis_package
+  name: Analysis Package
+  description: Cross-document analysis packager consolidating authoritative card-local products and persisting explicitly selected copies through the existing runtime delivery helper.
+  skills: []
+  prompt:
+    active: 1
+    path: templates/prompts/cross_document_consistency_analysis/analysis_package/prompt_v1.md
+  tooling_hints: []
+  outputs:
+    create_directories:
+      - analysis
+      - investigations
+    create_artifacts:
+      - analysis/cross-document-consistency-analysis.md
+      - analysis/cross-document-consistency-findings.yaml
+      - analysis/cross-document-consistency-decisions.yaml
+      - analysis/70_package_handoff.md
+    prompts:
+      - analysis_package
+  read_sources:
+    - '{{CONFIG_SOURCE}}'
+    - '{{CARD_DIR}}/analysis/00_ingest_manifest.yaml'
+    - '{{CARD_DIR}}/investigations/00_intake.md'
+    - '{{CARD_DIR}}/analysis/10_source_manifest.yaml'
+    - '{{CARD_DIR}}/analysis/11_source_provenance.md'
+    - '{{CARD_DIR}}/analysis/12_source_gaps.md'
+    - '{{CARD_DIR}}/analysis/20_document_model.yaml'
+    - '{{CARD_DIR}}/analysis/21_claim_register.yaml'
+    - '{{CARD_DIR}}/analysis/30_consistency_matrix.yaml'
+    - '{{CARD_DIR}}/analysis/31_consistency_observations.md'
+    - '{{CARD_DIR}}/analysis/40_conflict_register.yaml'
+    - '{{CARD_DIR}}/analysis/41_authority_assessment.md'
+    - '{{CARD_DIR}}/analysis/50_impact_map.yaml'
+    - '{{CARD_DIR}}/analysis/51_downstream_impact.md'
+    - '{{CARD_DIR}}/analysis/60_disposition_register.yaml'
+    - '{{CARD_DIR}}/analysis/61_recommendations.md'
+    - '{{CARD_DIR}}/analysis/65_critical_review.md'
+    - '{{CARD_DIR}}/analysis/66_review_observations.yaml'
+    - '{{CARD_DIR}}/investigations/20_handoff.json'
+    - '{{RUNTIME_ROOT}}/scripts/lib/analysis_delivery_contract.sh'
+    - '{{RUNTIME_ROOT}}/tracks/cross_document_consistency_analysis/phases/analysis_package.yaml'
+    - '{{CARD_DIR}}/implementation'
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - path: analysis/cross-document-consistency-analysis.md
+        validation_mode: blocking
+      - path: analysis/cross-document-consistency-findings.yaml
+        validation_mode: blocking
+      - path: analysis/cross-document-consistency-decisions.yaml
+        validation_mode: blocking
+      - path: analysis/70_package_handoff.md
+        validation_mode: blocking
+  read_sources_from: required_inventory_sources
+  evidence_manifest: analysis/10_source_manifest.yaml
+  delivery_contract: required
+  package_artifact: analysis/70_package_handoff.md
+  target_delivery_paths:
+    - docs/cross-document-consistency-analysis.md
+    - docs/cross-document-consistency-findings.yaml
+    - docs/cross-document-consistency-decisions.yaml

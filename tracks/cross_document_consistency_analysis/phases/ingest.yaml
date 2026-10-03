@@ -1,0 +1,31 @@
+config_version: 1
+phase:
+  id: ingest
+  name: Ingest
+  description: Intake recorder preserving and cataloging material explicitly supplied to this card, without substantive analysis.
+  skills: []
+  prompt:
+    active: 1
+    path: templates/prompts/cross_document_consistency_analysis/ingest/prompt_v1.md
+  tooling_hints: []
+  outputs:
+    create_directories:
+      - analysis
+      - investigations
+      - ingest
+    create_artifacts:
+      - analysis/00_ingest_manifest.yaml
+      - investigations/20_handoff.json
+    prompts:
+      - ingest
+  read_sources:
+    - '{{CONFIG_SOURCE}}'
+    - '{{CARD_DIR}}/ingest'
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - path: analysis/00_ingest_manifest.yaml
+        validation_mode: blocking
+      - path: investigations/20_handoff.json
+        validation_mode: blocking
+  evidence_sources: []

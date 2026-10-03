@@ -1,0 +1,43 @@
+config_version: 1
+phase:
+  id: conflict_analysis
+  name: Conflict Analysis
+  description: Conflict adjudication analyst testing whether candidate inconsistencies are materially incompatible and assessing authority and provenance.
+  skills: []
+  prompt:
+    active: 1
+    path: templates/prompts/cross_document_consistency_analysis/conflict_analysis/prompt_v1.md
+  tooling_hints: []
+  outputs:
+    create_directories:
+      - analysis
+      - investigations
+    create_artifacts:
+      - analysis/40_conflict_register.yaml
+      - analysis/41_authority_assessment.md
+      - investigations/20_handoff.json
+    prompts:
+      - conflict_analysis
+  read_sources:
+    - '{{CONFIG_SOURCE}}'
+    - '{{CARD_DIR}}/analysis/00_ingest_manifest.yaml'
+    - '{{CARD_DIR}}/investigations/00_intake.md'
+    - '{{CARD_DIR}}/analysis/10_source_manifest.yaml'
+    - '{{CARD_DIR}}/analysis/11_source_provenance.md'
+    - '{{CARD_DIR}}/analysis/12_source_gaps.md'
+    - '{{CARD_DIR}}/analysis/20_document_model.yaml'
+    - '{{CARD_DIR}}/analysis/21_claim_register.yaml'
+    - '{{CARD_DIR}}/analysis/30_consistency_matrix.yaml'
+    - '{{CARD_DIR}}/analysis/31_consistency_observations.md'
+    - '{{CARD_DIR}}/investigations/20_handoff.json'
+  completion:
+    strategy: required_artifacts_exist
+    required_artifacts:
+      - path: analysis/40_conflict_register.yaml
+        validation_mode: blocking
+      - path: analysis/41_authority_assessment.md
+        validation_mode: blocking
+      - path: investigations/20_handoff.json
+        validation_mode: blocking
+  read_sources_from: required_inventory_sources
+  evidence_manifest: analysis/10_source_manifest.yaml

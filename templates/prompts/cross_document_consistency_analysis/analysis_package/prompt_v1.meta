@@ -1,0 +1,4 @@
+version=v1
+required_sections=ROLE|OBJECTIVE|INPUT|OUTPUT|OUTPUT_STRUCTURE|READ_SCOPE|WRITE_SCOPE|RULES|FORBIDDEN|FAIL_CONDITIONS
+required_substrings=ROLE|OBJECTIVE|INPUT|OUTPUT|OUTPUT_STRUCTURE|READ_SCOPE|WRITE_SCOPE|RULES|FORBIDDEN|FAIL_CONDITIONS|analysis/cross-document-consistency-analysis.md|analysis/cross-document-consistency-findings.yaml|analysis/cross-document-consistency-decisions.yaml|analysis/70_package_handoff.md|eaw_delivery_persist_selected_file|DELIVERY_TARGETS
+forbidden_words=

@@ -1,0 +1,64 @@
+config_version: 1
+track:
+  id: cross_document_consistency_analysis
+  name: Cross Document Consistency Analysis
+  description: Generic document coherence analysis with provenance, authority, impact and evidence-based disposition.
+  initial_phase: ingest
+  final_phase: analysis_package
+  phases:
+    - ingest
+    - intake
+    - source_inventory
+    - document_model
+    - consistency_analysis
+    - conflict_analysis
+    - impact_analysis
+    - disposition_analysis
+    - critical_review
+    - analysis_package
+  transitions:
+    ingest:
+      next: intake
+      contract:
+        emit_handoff: true
+        consume_previous: true
+    intake:
+      next: source_inventory
+      contract:
+        emit_handoff: true
+        consume_previous: true
+    source_inventory:
+      next: document_model
+      contract:
+        emit_handoff: true
+        consume_previous: true
+    document_model:
+      next: consistency_analysis
+      contract:
+        emit_handoff: true
+        consume_previous: true
+    consistency_analysis:
+      next: conflict_analysis
+      contract:
+        emit_handoff: true
+        consume_previous: true
+    conflict_analysis:
+      next: impact_analysis
+      contract:
+        emit_handoff: true
+        consume_previous: true
+    impact_analysis:
+      next: disposition_analysis
+      contract:
+        emit_handoff: true
+        consume_previous: true
+    disposition_analysis:
+      next: critical_review
+      contract:
+        emit_handoff: true
+        consume_previous: true
+    critical_review:
+      next: analysis_package
+      contract:
+        emit_handoff: true
+        consume_previous: true

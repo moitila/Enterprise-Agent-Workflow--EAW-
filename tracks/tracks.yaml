@@ -49,3 +49,5 @@ tracks:
     status: installed
   - track_id: verification_validation_analysis
     status: installed
+  - track_id: cross_document_consistency_analysis
+    status: installed
