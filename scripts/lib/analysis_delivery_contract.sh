@@ -188,7 +188,18 @@ eaw_delivery_derive_write_allowlist() {
 	local delivery_paths
 	delivery_paths="$(awk '/^  target_delivery_paths:[[:space:]]*$/ {capture=1; next} capture && /^    - / {sub(/^    - /, ""); print; next} capture && /^  [^ ]/ {exit}' "$phase_file")"
 	[[ -n "$delivery_paths" ]] || return 0
-	if [[ ! -s "$selection_file" && "$strict_selection" != true ]]; then return 0; fi
+	if [[ "$strict_selection" != true ]]; then
+		[[ -s "$selection_file" ]] || return 0
+		# A nonempty scaffold/diagnostic can precede the explicit decision.
+		# Detect attempts separately: malformed declarations still reach the parser.
+		if grep -Eq '^[[:space:]]*DELIVERY_TARGETS([[:space:]:]|$)' "$selection_file"; then
+			:
+		else
+			local selection_rc=$?
+			[[ "$selection_rc" -eq 1 ]] && return 0
+			return "$selection_rc"
+		fi
+	fi
 	selected_repos="$(eaw_delivery_selection_targets "$selection_file")" || return
 	[[ -n "$selected_repos" ]] || { echo "delivery selection has no target repositories" >&2; return 2; }
 	[[ "$(printf '%s\n' "$selected_repos" | sort -u | wc -l)" -eq "$(printf '%s\n' "$selected_repos" | wc -l)" ]] || { echo "delivery selection contains duplicate repositories" >&2; return 2; }

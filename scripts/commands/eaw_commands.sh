@@ -2830,7 +2830,7 @@ eaw_generate_phase_prompt_artifacts() {
 	step_id="${EAW_CARD_WORKFLOW_CURRENT_PHASE:-$phase_id}"
 	write_allowlist="$(eaw_card_write_allowlist_block "$card_dir" "$phase_file")"
 	critical_paths="$(eaw_card_critical_paths_block "$card_dir")"
-	runtime_environment="$(eaw_runtime_environment_block "$card" "$card_dir" "$track_id" "$step_id" "$write_allowlist" "$critical_paths" "$target_repos")"
+	runtime_environment="$(eaw_runtime_environment_block "$card" "$card_dir" "$track_id" "$step_id" "$write_allowlist" "$critical_paths" "$target_repos")" || return "$?"
 	tooling_hints="$(eaw_render_tooling_hints_block "$phase_file" "$card" "$type" "$card_dir" "$track_id" "$step_id" "$target_repos")"
 
 	for prompt_alias in "${declared_prompts[@]}"; do
@@ -2838,7 +2838,7 @@ eaw_generate_phase_prompt_artifacts() {
 		template_file="$(load_prompt "$prompt_track" "$prompt_phase" "$card" "$EAW_OUT_DIR")" || return 1
 		prompt_relpath="$(eaw_phase_prompt_output_relpath "$prompt_alias")"
 		output_file="$card_dir/$prompt_relpath"
-		eaw_render_phase_prompt_template "$template_file" "$output_file" "${prompt_alias^^}" "$card" "$type" "$card_dir" "$target_repos" "$excluded_repos" "- none" "$track_id" "$step_id" "$write_allowlist" "$critical_paths" "$runtime_environment" "$tooling_hints"
+		eaw_render_phase_prompt_template "$template_file" "$output_file" "${prompt_alias^^}" "$card" "$type" "$card_dir" "$target_repos" "$excluded_repos" "- none" "$track_id" "$step_id" "$write_allowlist" "$critical_paths" "$runtime_environment" "$tooling_hints" || return "$?"
 	done
 }
 
@@ -2872,7 +2872,7 @@ eaw_execute_workflow_phase() {
 		eaw_scaffold_phase_artifact "$card" "$card_dir" "$phase_id" "$rel_path"
 	done < <(eaw_yaml_phase_output_artifacts "$phase_file")
 
-	eaw_generate_phase_prompt_artifacts "$card"
+	eaw_generate_phase_prompt_artifacts "$card" || return "$?"
 	echo "RUNTIME: phase=$phase_id action=phase_driven_execution"
 	return 0
 }
